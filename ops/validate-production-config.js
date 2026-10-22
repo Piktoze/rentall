@@ -1,5 +1,6 @@
-import {productionConfigReport} from '../config.js';
+import {productionConfigReport,productionStorageReport} from '../config.js';
 
 const report=productionConfigReport();
-console.log(JSON.stringify(report,null,2));
-if(!report.production||!report.ready)process.exitCode=1;
+const storage=productionStorageReport();
+console.log(JSON.stringify({configuration:report,storage},null,2));
+if(!report.production||!report.ready||!storage.ready)process.exitCode=1;

@@ -23,6 +23,21 @@
       "ready": true
     },
     {
+      "id": "railway_iac",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "validated_startup",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "public_smoke",
+      "required": true,
+      "ready": true
+    },
+    {
       "id": "browser_e2e",
       "required": true,
       "ready": true
@@ -43,12 +58,27 @@
       "ready": true
     },
     {
+      "id": "node_environment",
+      "required": true,
+      "ready": true
+    },
+    {
       "id": "app_url_https",
       "required": true,
       "ready": false
     },
     {
+      "id": "public_base_url",
+      "required": true,
+      "ready": false
+    },
+    {
       "id": "session_secret",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "trust_proxy",
       "required": true,
       "ready": false
     },
@@ -68,14 +98,24 @@
       "ready": true
     },
     {
-      "id": "database_not_ephemeral",
+      "id": "database_not_project_local",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "database_volume_configured",
       "required": true,
       "ready": false
     },
     {
       "id": "database_on_volume",
-      "required": false,
-      "ready": true
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "uploads_on_volume",
+      "required": true,
+      "ready": false
     },
     {
       "id": "stripe_mode",
@@ -131,13 +171,53 @@
       "id": "support_email",
       "required": true,
       "ready": false
+    },
+    {
+      "id": "maps_configuration",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "sms_provider",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "push_provider",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "storage_volume_exists",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "storage_volume_directory",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "storage_volume_writable",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "storage_database_on_volume",
+      "required": true,
+      "ready": false
     }
   ],
   "blockers": [
     "app_url_https",
+    "public_base_url",
     "session_secret",
+    "trust_proxy",
     "database_explicit",
-    "database_not_ephemeral",
+    "database_not_project_local",
+    "database_volume_configured",
+    "database_on_volume",
+    "uploads_on_volume",
     "stripe_mode",
     "stripe_secret",
     "stripe_publishable",
@@ -148,21 +228,40 @@
     "email_api_key",
     "email_worker",
     "email_worker_token",
-    "support_email"
+    "support_email",
+    "storage_volume_exists",
+    "storage_volume_directory",
+    "storage_volume_writable",
+    "storage_database_on_volume"
   ],
   "database": {
     "driver": "sqlite",
+    "source": "default-local",
+    "persistent": false,
+    "volumeConfigured": false
+  },
+  "uploads": {
     "source": "default-local",
     "persistent": false
   },
   "stripe": {
     "configured": false,
     "mode": "unset",
-    "keyType": "unset"
+    "keyType": "unset",
+    "webhookConfigured": false
   },
   "email": {
     "provider": "unset",
-    "workerEnabled": false
+    "workerEnabled": false,
+    "fromConfigured": false
   },
-  "generatedAt": "2026-10-22T18:13:54.847Z"
+  "maps": {
+    "provider": "stub",
+    "configured": false
+  },
+  "notifications": {
+    "sms": "disabled",
+    "push": "disabled"
+  },
+  "generatedAt": "2026-10-22T18:28:22.476Z"
 }

@@ -65,14 +65,16 @@ import {
   claimTransactionalEmails,
   completeTransactionalEmail,
   failTransactionalEmail,
+  recoverInterruptedTransactionalEmails,
   beginBookingIdempotency,
   completeBookingIdempotency,
   releaseBookingIdempotency
   ,databaseRuntime
   ,checkDatabase
   ,closeDatabase
+  ,REQUIRED_SCHEMA_VERSION
 } from './db.js';
-import {assertProductionConfig,productionConfigReport,runtimeConfig} from './config.js';
+import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig} from './config.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -80,6 +82,16 @@ import { fileURLToPath } from 'url';
 assertProductionConfig();
 
 const app = express();
+
+function safeOperationalError(error){
+  let message=String(error?.message||error||'Operational error');
+  for(const name of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','RESEND_API_KEY','SESSION_SECRET','EMAIL_WORKER_TOKEN']){
+    const secret=String(process.env[name]||'');
+    if(secret.length>=8)message=message.split(secret).join('[redacted]');
+  }
+  message=message.replace(/(?:[sr]k_(?:live|test)|whsec_|re_)[A-Za-z0-9_\-]{8,}/g,'[redacted]');
+  return {name:String(error?.name||'Error'),code:String(error?.code||'UNKNOWN'),message:message.slice(0,300)};
+}
 
 const trustProxyHops=Number(process.env.TRUST_PROXY_HOPS||0);
 if(Number.isInteger(trustProxyHops) && trustProxyHops>0){
@@ -697,10 +709,11 @@ function platformDiagnostics(){
 
 function launchGate(){
   const report=productionConfigReport();
+  const storage=productionStorageReport();
   const database=checkDatabase();
-  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=146}];
+  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),...storage.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=REQUIRED_SCHEMA_VERSION},{id:'accepting_traffic',required:true,ready:!shuttingDown}];
   const blocking=checks.filter(x=>x.required&&!x.ready).map(x=>x.id);
-  return {ready:blocking.length===0,production:report.production,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,migrationVersion:database.migrationVersion},stripe:report.stripe,email:report.email};
+  return {ready:blocking.length===0,production:report.production,deployment:report.deployment,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,volumeConfigured:storage.database.volumeConfigured,migrationVersion:database.migrationVersion},stripe:report.stripe,email:report.email,maps:report.maps,notifications:report.notifications};
 }
 
 app.get('/api/launch-readiness',(req,res)=>{
@@ -1914,7 +1927,7 @@ app.post('/api/customer/bookings/:bookingId/revoke-guest-link', requireRole('cus
 });
 
 
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = runtimeConfig.uploadsDir;
 fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir,{
   dotfiles:'deny', fallthrough:false,
@@ -1971,15 +1984,24 @@ app.post('/api/uploads/image', simpleRateLimit({windowMs:60000,max:30,keyPrefix:
 app.use(express.static(__dirname));
 
 const server=app.listen(port,runtimeConfig.host, () => {
-  console.log(JSON.stringify({type:'startup',service:'rentall',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent},stripe:{configured:Boolean(stripe),mode:runtimeConfig.stripeMode}}));
+  const database=checkDatabase();
+  const config=productionConfigReport();
+  console.log(JSON.stringify({type:'startup',service:'rentall',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,email:config.email,ready:launchGate().ready}));
 });
 let emailWorkerTimer=null;
+let emailWorkerPromise=null;
+function runEmailWorker(){
+  if(emailWorkerPromise)return emailWorkerPromise;
+  emailWorkerPromise=processTransactionalEmailOutbox().finally(()=>{emailWorkerPromise=null});
+  return emailWorkerPromise;
+}
 if(process.env.EMAIL_WORKER_ENABLED==='true'){
+  const recovered=recoverInterruptedTransactionalEmails();
   const interval=Math.max(5000,Math.min(300000,Number(process.env.EMAIL_WORKER_INTERVAL_MS)||15000));
-  emailWorkerTimer=setInterval(()=>processTransactionalEmailOutbox().catch(err=>console.error('Email worker error',err)),interval);
+  emailWorkerTimer=setInterval(()=>runEmailWorker().catch(err=>console.error(JSON.stringify({type:'email_worker_error',error:safeOperationalError(err)}))),interval);
   emailWorkerTimer.unref?.();
-  setTimeout(()=>processTransactionalEmailOutbox().catch(err=>console.error('Email worker startup error',err)),500).unref?.();
-  console.log(`Transactional email worker enabled (${process.env.EMAIL_PROVIDER||'console'}, ${interval}ms).`);
+  setTimeout(()=>runEmailWorker().catch(err=>console.error(JSON.stringify({type:'email_worker_startup_error',error:safeOperationalError(err)}))),500).unref?.();
+  console.log(JSON.stringify({type:'email_worker_started',provider:process.env.EMAIL_PROVIDER||'console',intervalMs:interval,recovered}));
 }
 
 let shuttingDown=false;
@@ -1989,9 +2011,12 @@ function gracefulShutdown(signal){
   clearInterval(rentallExpiryTimer);
   if(emailWorkerTimer)clearInterval(emailWorkerTimer);
   if(!server.listening){try{closeDatabase()}catch{}process.exit(process.exitCode||1);return}
-  server.close(err=>{
-    if(err){console.error('HTTP shutdown error',err);process.exitCode=1}
-    try{closeDatabase()}catch(dbError){console.error('Database shutdown error',dbError);process.exitCode=1}
+  server.close(async err=>{
+    if(err){console.error(JSON.stringify({type:'http_shutdown_error',error:safeOperationalError(err)}));process.exitCode=1}
+    if(emailWorkerPromise){
+      await Promise.race([emailWorkerPromise.catch(()=>{}),new Promise(resolve=>setTimeout(resolve,5000))]);
+    }
+    try{closeDatabase()}catch(dbError){console.error(JSON.stringify({type:'database_shutdown_error',error:safeOperationalError(dbError)}));process.exitCode=1}
     process.exit(process.exitCode||0);
   });
   server.closeIdleConnections?.();
@@ -1999,5 +2024,10 @@ function gracefulShutdown(signal){
 }
 process.on('SIGTERM',()=>gracefulShutdown('SIGTERM'));
 process.on('SIGINT',()=>gracefulShutdown('SIGINT'));
-process.on('unhandledRejection',err=>console.error('Unhandled rejection',err));
-process.on('uncaughtException',err=>{console.error('Uncaught exception',err);gracefulShutdown('uncaughtException')});
+server.on('error',error=>{
+  console.error(JSON.stringify({type:'server_error',code:String(error?.code||'UNKNOWN'),syscall:String(error?.syscall||'listen')}));
+  process.exitCode=1;
+  gracefulShutdown('serverError');
+});
+process.on('unhandledRejection',err=>console.error(JSON.stringify({type:'unhandled_rejection',error:safeOperationalError(err)})));
+process.on('uncaughtException',err=>{console.error(JSON.stringify({type:'uncaught_exception',error:safeOperationalError(err)}));gracefulShutdown('uncaughtException')});

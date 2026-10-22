@@ -1,49 +1,62 @@
-# RentAll RC44 Railway deployment
+# RentAll RC45 Railway production deployment
 
-## Service and persistent storage
+RC45 uses Railway Infrastructure as Code in `.railway/railway.ts`. It declares the GitHub `Piktoze/rentall` `main` source, one European web replica, one 1 GB persistent volume mounted at `/data`, `npm start`, and `/api/readiness` as the deployment health check. `railway.toml` remains only as a compatibility fallback for an already-existing legacy service; Railway has deprecated that format for new services.
 
-1. Deploy the GitHub `main` branch as a Railway service. `railway.toml` installs production dependencies, starts `npm start`, checks `/healthz`, and restarts failed processes.
-2. Attach a Railway volume at `/data`. Set `RENTALL_DB_PATH=/data/rentall.sqlite` and `RAILWAY_VOLUME_MOUNT_PATH=/data`.
-3. Run `npm run db:init` once in the Railway service shell. It is safe to rerun and must report migration version 146 or newer.
-4. Do not set a PostgreSQL `DATABASE_URL` in RC44. The application rejects unsupported database URLs rather than silently writing to ephemeral SQLite. A `file:` or `sqlite:///` URL is accepted only when it resolves to persistent storage.
+## Storage and startup contract
 
-## Required Railway Variables
+- Keep exactly one application replica while RentAll uses SQLite. Multiple replicas cannot safely share a SQLite volume.
+- The volume mount is exactly `/data`. Railway supplies `RAILWAY_VOLUME_MOUNT_PATH=/data` automatically when the declared volume is attached; do not create or override that variable manually.
+- Set `RENTALL_DB_PATH=/data/rentall.sqlite` and `UPLOADS_DIR=/data/uploads`. Leave `DATABASE_URL` and `DB_PATH` unset. As an alternative outside the supplied IaC, `DATABASE_URL=sqlite:///data/rentall.sqlite` is accepted only when the other DB-path variables are unset.
+- Migrations run idempotently inside `npm start`, after Railway mounts the volume. Do not move SQLite migrations to Railway's pre-deploy command: Railway does not mount volumes in pre-deploy containers.
+- Startup fails before listening if the volume is absent, not a directory, not writable, or the selected database/uploads directory is outside the mounted volume. Readiness stays closed until migration 147 and a live database query succeed. Listing uploads are therefore durable on the same Railway volume.
 
-Store these as Railway service variables. Never commit their values or expose them in diagnostics.
+## Required Railway service variables
 
-- `NODE_ENV=production`
-- `APP_URL=https://<public-domain>`
-- `PUBLIC_BASE_URL=https://<public-domain>`
-- `SESSION_SECRET=<at-least-32-random-characters>`
-- `TRUST_PROXY_HOPS=1`
-- `RENTALL_DB_PATH=/data/rentall.sqlite`
-- `RAILWAY_VOLUME_MOUNT_PATH=/data`
-- `STRIPE_MODE=test` for staging or `live` for public payments
-- `STRIPE_SECRET_KEY=<mode-matched restricted rk_ key where permissions allow>`
-- `STRIPE_PUBLISHABLE_KEY=<mode-matched pk_ key>`
-- `STRIPE_WEBHOOK_SECRET=<endpoint-specific whsec_ secret>`
-- `STRIPE_CONNECT_V2_PROVISIONING=true` only after Accounts v2 recipient provisioning is sandbox-verified
-- `EMAIL_PROVIDER=resend`
-- `RESEND_API_KEY=<secret>`
-- `EMAIL_FROM=RentAll <bookings@verified-domain>`
-- `EMAIL_WORKER_ENABLED=true`
-- `EMAIL_WORKER_TOKEN=<at-least-32-random-characters>`
-- `SUPPORT_EMAIL=<monitored-address>`
+The IaC file supplies safe literals such as `NODE_ENV`, `RENTALL_DB_PATH`, provider modes, and worker enablement. Add the following preserved values in Railway Variables before the first deploy:
 
-Use separate Stripe sandboxes/keys/webhook endpoints for staging and production. The webhook endpoint is `POST /api/stripe/webhook`; signature verification is mandatory. Never place a Stripe secret or restricted key in frontend variables.
+```text
+APP_URL=https://<generated-or-custom-domain>
+PUBLIC_BASE_URL=https://<same-domain>
+SESSION_SECRET=<32+-character cryptographically-random value>
 
-## Release procedure
+STRIPE_MODE=test
+STRIPE_SECRET_KEY=<mode-matched restricted rk_ key where permissions allow>
+STRIPE_PUBLISHABLE_KEY=<mode-matched pk_ key>
+STRIPE_WEBHOOK_SECRET=<endpoint-specific whsec_ secret>
+STRIPE_CONNECT_V2_PROVISIONING=true
 
-1. Run `NODE_ENV=production npm run validate:production` with the Railway variables injected.
-2. Run `npm run db:init`, then deploy one instance.
-3. Confirm `/healthz` returns 200 and `/api/readiness` returns 200 without secret values.
-4. Run `RENTALL_BASE_URL=https://<public-domain> npm run smoke:production`.
-5. Run the Playwright suite and Stripe sandbox lifecycle before changing `STRIPE_MODE` to `live`.
-6. Verify a booking email is sent and the outbox drains before public traffic.
+EMAIL_FROM=RentAll <bookings@verified-sending-domain>
+RESEND_API_KEY=<re_ key>
+EMAIL_WORKER_TOKEN=<different 32+-character cryptographically-random value>
+SUPPORT_EMAIL=<monitored mailbox>
+```
 
-## Restart, backup, and rollback
+`STRIPE_CONNECT_V2_PROVISIONING=true` is valid only after Accounts v2 recipient provisioning and the `stripe_transfers` capability gate have been verified in the corresponding Stripe sandbox/live account. Use separate Stripe sandboxes, keys, and webhook endpoints for staging and production. Register `POST /api/stripe/webhook`; signed webhooks remain mandatory and provider events remain the payment/deposit source of truth.
 
-- SIGTERM stops expiry/email timers, drains HTTP connections for up to 10 seconds, checkpoints the SQLite WAL, and closes the database.
-- Keep the Railway volume attached across deploys. Back up `/data/rentall.sqlite` with `npm run backup:db` and verify it with `npm run backup:verify` before schema-changing releases.
-- Roll back application code to the previous commit without replacing the volume. Never restore an older database file over a live newer database without a tested migration/restore plan.
-- If readiness fails, keep traffic closed, inspect only the reported check identifiers, and correct Railway variables. Diagnostics deliberately never return secret values.
+Prefer a least-privilege Stripe restricted key and store all secret values only in Railway Variables. Never place a Stripe secret or restricted key in frontend variables, source files, build arguments, or smoke-test output.
+
+## Optional integrations
+
+- The IaC default is `MAPS_PROVIDER=stub`, which preserves the production-safe map fallback. To enable a supported live map provider, set `MAPS_PROVIDER=mapbox` or `google` and add the browser-safe `MAPS_PUBLIC_TOKEN`.
+- Keep `SMS_PROVIDER=disabled` and `PUSH_PROVIDER=disabled`; RC45 deliberately refuses unsupported notification-provider claims. Transactional booking email is delivered through Resend.
+- `OBJECT_STORAGE_PROVIDER` and `MONITORING_DSN` are not launch-authoritative in RC45. Uploaded listing media is durable on the single attached volume; move it to object storage before horizontal scaling.
+
+## First deployment
+
+1. Install Railway CLI 5.63 or newer and authenticate with `railway login`.
+2. Link or create the intended Railway project and production environment.
+3. Add the preserved variables above, enable public networking, and choose the generated/custom HTTPS domain for both URL variables.
+4. Run `railway config plan` and verify it adds one `rentall` service and one `rentall-data` volume without deleting unrelated resources.
+5. Run `railway config apply`. The service builds from GitHub `main`; startup initializes the mounted database and migration 147 before listening.
+6. Confirm `/healthz` and `/api/readiness` return 200, then run `npm run smoke:production -- https://<domain>` from this repository.
+
+## Operations, backup, and rollback
+
+- `/healthz` is the process liveness endpoint. Railway uses `/api/readiness`, which additionally requires configuration, mounted storage, database connectivity, migration 147, and traffic acceptance.
+- On SIGTERM, RentAll stops workers, drains HTTP, checkpoints the SQLite WAL, and closes the database. The IaC service remains single-replica to avoid shared-SQLite corruption.
+- Transactional email rows interrupted during delivery are safely returned to the retry queue on restart; shutdown briefly drains the active worker before closing SQLite.
+- Enable Railway volume backups. Before schema-changing releases, also run `npm run backup:db` and `npm run backup:verify` from a service shell with an explicit backup target on persistent storage.
+- Roll back application code without replacing the volume. Never overwrite a newer live database with an older file unless a tested restore plan explicitly requires it.
+- If readiness fails, keep traffic closed and use only the returned check identifiers. Startup/readiness diagnostics expose modes and booleans, never secret values or the database path.
+
+Railway references: [Infrastructure as Code](https://docs.railway.com/infrastructure-as-code/reference), [Volumes](https://docs.railway.com/volumes), and [Healthchecks](https://docs.railway.com/deployments/healthchecks).

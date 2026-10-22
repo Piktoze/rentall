@@ -1835,3 +1835,12 @@ Supplier Dashboard now opens with live inventory, action-needed bookings, upcomi
 - Added mode-matched Stripe key validation, explicit test/live environments, latest Stripe SDK/API configuration, and non-secret operational summaries.
 - Added production Resend/worker requirements, HTTPS/session validation, Railway deployment configuration, and a complete deployment/rollback runbook.
 - Unified liveness, readiness, launch, and operations endpoints on the current release version while preserving webhook signatures, guest tokens, and server authority.
+
+## V147 / RC45 — Railway deployment runtime
+
+- Added Railway Infrastructure as Code for GitHub `main`, a single European service replica, a persistent `/data` volume, and readiness-gated traffic activation; retained `railway.toml` only as a legacy compatibility fallback.
+- Added a validated startup orchestrator that blocks Railway/production boot before listening when HTTPS origins, strong secrets, Stripe modes, Resend, proxy trust, notification modes, or mounted writable storage are invalid; interrupted email deliveries now recover safely after restart.
+- Made both SQLite and listing uploads persistent on the Railway volume. Schema initialization remains idempotent and now records migration 147 only after the complete schema loads successfully.
+- Strengthened `/api/readiness` with live configuration, storage, migration, database, shutdown, Stripe, email, maps, and notification checks while keeping `/healthz` as a minimal liveness probe.
+- Added a public post-deployment smoke gate that verifies the homepage, health, readiness, operations, integration capabilities, persistent migration state, and secret non-disclosure using only the public URL.
+- Preserved signed Stripe webhooks, Accounts v2 transfer capability gates, guest booking access tokens, and server-authoritative pricing, availability, payment, deposit, and payout state.

@@ -1,6 +1,6 @@
 import fs from'node:fs';
 const read=p=>fs.readFileSync(p,'utf8'), must=(v,m)=>{if(!v)throw new Error(m)};
-const h=read('index.html'),s=read('server.js'),css=read('styles.css');
+const h=read('index.html'),s=read('server.js'),css=read('styles.css'),start=read('ops/start.js'),smoke=read('release/smoke-production.mjs');
 const modules=fs.readdirSync('modules').filter(x=>x.endsWith('.js')).map(x=>read('modules/'+x)).join('\n');
 const checks={
  customer:[
@@ -31,6 +31,10 @@ const checks={
   ['health',s.includes("'/healthz'")||s.includes('"/healthz"')],
   ['readiness',s.includes("'/api/readiness'")],
   ['ops_status',s.includes("'/api/ops/status'")],
+  ['validated_startup',start.includes('assertProductionStorage')],
+  ['railway_iac',fs.existsSync('.railway/railway.ts')],
+  ['persistent_uploads',s.includes('runtimeConfig.uploadsDir')],
+  ['public_smoke',smoke.includes("await request('/')")],
   ['mobile_css',/@media\(max-width:/.test(css)]
  ]
 };

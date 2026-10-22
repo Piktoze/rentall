@@ -1,4 +1,4 @@
-const CACHE='rentall-rc44-shell';
+const CACHE='rentall-rc45-shell';
 const CORE=[
   '/',
   '/index.html',

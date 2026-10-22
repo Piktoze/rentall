@@ -3,15 +3,17 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'url';
-import {assertProductionConfig,runtimeConfig} from './config.js';
+import {assertProductionConfig,assertProductionStorage,runtimeConfig} from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 assertProductionConfig();
+assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentall.sqlite');
 fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
+export const REQUIRED_SCHEMA_VERSION=147;
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -1787,6 +1789,12 @@ export function failTransactionalEmail(id,error,{maxAttempts=5}={}){
   return markEmailFailedStmt.run(status,String(error||'Delivery failed').slice(0,1000),Number(id)).changes===1;
 }
 
+export function recoverInterruptedTransactionalEmails(){
+  return db.prepare(`UPDATE email_outbox
+    SET status='pending', last_error='Recovered after process restart'
+    WHERE status='sending'`).run().changes;
+}
+
 // V57: durable protection against duplicate booking submissions.
 db.exec(`
 CREATE TABLE IF NOT EXISTS booking_idempotency (
@@ -1824,3 +1832,8 @@ export function releaseBookingIdempotency(key,requestHash){
     WHERE idempotency_key=? AND request_hash=? AND status='processing'`)
     .run(String(key||'').trim().slice(0,160),String(requestHash)).changes===1;
 }
+
+// This marker is written only after every idempotent schema operation and
+// prepared statement above initialized successfully. Startup readiness requires it.
+db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
+  .run(REQUIRED_SCHEMA_VERSION,'rc45-railway-deployment-runtime');

@@ -1,7 +1,7 @@
-import {databaseRuntime,checkDatabase,closeDatabase} from '../db.js';
+import {databaseRuntime,checkDatabase,closeDatabase,REQUIRED_SCHEMA_VERSION} from '../db.js';
 
 const check=checkDatabase();
-if(!check.ok||check.migrationVersion<146){
+if(!check.ok||check.migrationVersion<REQUIRED_SCHEMA_VERSION){
   console.error(JSON.stringify({ok:false,error:'Database initialization failed',driver:check.driver,source:check.source,migrationVersion:check.migrationVersion}));
   process.exitCode=1;
 }else{

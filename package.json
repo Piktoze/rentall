@@ -1,16 +1,16 @@
 {
   "name": "rentall-marketplace-mvp",
-  "version": "1.0.0-rc.44",
+  "version": "1.0.0-rc.45",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node ops/start.js",
     "dev": "node --watch server.js",
     "test:availability": "node availability.test.js",
     "test:trust": "node trust.test.js",
     "test:auth": "node auth.test.js",
     "test:audit": "node audit.test.js",
-    "check": "node --check app.js && node --check server.js && node --check db.js && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js",
+    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check .railway/railway.ts && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js",
     "test:expiration": "node expiration.test.js",
     "test:security": "node security.test.js",
     "test:geo": "node geo.test.js",
@@ -109,17 +109,20 @@
     "smoke:production-startup": "node release/production-startup-smoke.mjs",
     "preflight:production": "node release/preflight-production.mjs",
     "audit:surface": "node release/rc40-surface-audit.mjs",
+    "audit:secrets": "node ops/audit-secrets.js",
     "test:supplier-pro-v144": "node supplier-pro-v144.test.js",
     "test:customer-handoff-v145": "node customer-handoff-v145.test.js",
-    "test:production-foundation-v146": "node production-foundation-v146.test.js"
+    "test:production-foundation-v146": "node production-foundation-v146.test.js",
+    "test:deployment-runtime-v147": "node deployment-runtime-v147.test.js"
   },
   "dependencies": {
+    "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "stripe": "^22.6.0",
-    "better-sqlite3": "^11.7.0"
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "railway": "^3.16.0"
   }
 }

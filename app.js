@@ -3934,7 +3934,7 @@ async function prepareStripePayment(bookingId,paymentToken){
     if(!config.stripeConfigured || !config.stripePublishableKey){
       panel.hidden=false;
       message.textContent='Booking created. Stripe payment is not configured on this server yet.';
-      state.textContent='Add STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY to .env.';
+      state.textContent='Payment setup is incomplete. Please contact RentAll support.';
       document.getElementById('confirmStripePaymentBtn').hidden=true;
       return;
     }
