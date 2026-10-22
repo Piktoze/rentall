@@ -1812,3 +1812,18 @@ Supplier Dashboard now opens with live inventory, action-needed bookings, upcomi
 - Added inventory/publishing and revenue health signals plus direct operational jumps to bookings, inventory, calendar, and earnings/payouts.
 - Kept the dashboard read-only where financial authority matters: checkout price, availability, payment state, and Stripe settlement remain server-authoritative.
 - Added responsive mobile layout and `supplier-command-v143.test.js` regression coverage.
+
+## V144 / RC42 — Supplier planning workspace
+- Added a professional monthly occupancy calendar driven by supplier booking projections, with cancelled/declined/expired rentals excluded.
+- Added pricing intelligence cards combining current daily rate and per-listing demand signals without granting browser authority over prices.
+- Added responsive mobile calendar/pricing layouts and event-driven refreshes when booking or inventory projections change.
+- Added `supplier-pro-v144.test.js`; RentAll remains server-authoritative for booking, availability, pricing and payment state.
+
+## V145 / RC43 — Live customer checkout handoff
+- Repaired the discovery-to-listing date contract so listing details retain the selected `from` / `to` dates and quantity.
+- Turned availability into a real conversion step: selected dates are preserved, quantity is explicit, the server checks the full rental window, and only an available selection can continue.
+- Added a direct availability-to-checkout handoff that pins the exact listing instead of allowing heuristic listing selection.
+- Added a second server availability preflight before delivery details and clarified that the final reservation action continues to Stripe rather than claiming payment too early.
+- Added responsive states, accessibility announcements, cache invalidation, and `customer-handoff-v145.test.js` regression coverage. Price, availability, booking and payment authority remain on the server.
+- Browser hardening removed three production startup failures caused by a deleted demo control, quarantined demo state, and authentication state initialization order; the Playwright server port contract is now explicit.
+- The complete browser suite passes with 11 tests passing and the credential-gated Stripe lifecycle test skipped; all 109 root regression tests pass.

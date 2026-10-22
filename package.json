@@ -1,6 +1,6 @@
 {
   "name": "rentall-marketplace-mvp",
-  "version": "1.0.0-rc.41",
+  "version": "1.0.0-rc.43",
   "private": true,
   "type": "module",
   "scripts": {
@@ -105,7 +105,9 @@
     "test:e2e:1.0-rc": "playwright test e2e/rentall-1.0-rc.spec.js",
     "smoke:production": "node release/smoke-production.mjs",
     "preflight:production": "node release/preflight-production.mjs",
-    "audit:surface": "node release/rc40-surface-audit.mjs"
+    "audit:surface": "node release/rc40-surface-audit.mjs",
+    "test:supplier-pro-v144": "node supplier-pro-v144.test.js",
+    "test:customer-handoff-v145": "node customer-handoff-v145.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

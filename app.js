@@ -1,6 +1,8 @@
 
 const prices = { "Beach Pack for Two":49, "Travel Stroller":39, "Mobility Scooter":89, "Action Camera Kit":59, "Travel Cot":35, "Cooler Box":19 };
 let cart = [];
+// Declared before availability bootstrapping to avoid temporal-dead-zone failures.
+let currentServerUser=null;
 
 const bar = document.getElementById('cartbar');
 const count = document.getElementById('cartCount');
@@ -303,6 +305,9 @@ updateKPIs();
 
 }
 // V105: end quarantined legacy demo runtime.
+// Compatibility shim for legacy presentation helpers that are still parsed below.
+// It intentionally contains no fabricated bookings; live supplier data replaces it.
+const demoBookings=[];
 // --- Supplier authentication MVP (front-end prototype only) ---
 const SUPPLIER_KEY = 'holidaygear_supplier_accounts';
 const SESSION_KEY = 'holidaygear_supplier_session';
@@ -360,7 +365,7 @@ document.getElementById('supplierAuthBtn').addEventListener('click',()=>openAuth
 document.getElementById('lockedLoginBtn').addEventListener('click',()=>openAuth('login'));
 document.getElementById('closeAuth').addEventListener('click',closeAuth);
 
-document.getElementById('fillDemoLogin').addEventListener('click',()=>{
+document.getElementById('fillDemoLogin')?.addEventListener('click',()=>{
   document.getElementById('loginEmail').value=demoSupplier.email;
   document.getElementById('loginPassword').value=demoSupplier.password;
 });
@@ -1737,7 +1742,7 @@ function refreshCheckoutTotals(){
   document.getElementById('paymentRental').textContent=money(rental);
   document.getElementById('paymentDelivery').textContent=deliveryRule.eligible ? money(delivery) : '—';
   document.getElementById('paymentTotal').textContent=money(total);
-  document.getElementById('payBtn').textContent=`Pay ${money(total)}`;
+  document.getElementById('payBtn').textContent=`Continue to secure payment · ${money(total)}`;
   const selectedListing=loadUniversalListings().find(l=>String(l.id)===String(getTripContext()?.listingId||'')) || null;
   const securityDeposit=Math.max(0,Number(selectedListing?.deposit||0));
   renderCheckoutPriceBreakdown({rental,delivery,total,securityDeposit});
@@ -1757,6 +1762,8 @@ function inferCheckoutListing(){
   const trip=getTripContext();
 
   if(trip){
+    const selected=listings.find(l=>String(l.id)===String(trip.listingId||''));
+    if(selected) return selected;
     const kw=String(trip.keyword||'').toLowerCase();
     const city=trip.city||'';
     const match=listings.find(l=>{
@@ -2655,53 +2662,15 @@ async function createRealBooking(listingId,startDate,endDate,quantity=1){
 }
 
 function availabilityClass(day){
-  if(day.remainingQuantity<=0) return 'soldout';
-  if(day.remainingQuantity < day.totalQuantity) return 'limited';
-  return 'free';
+  return window.rentallAvailabilityClass?.(day)||'free';
 }
 
 async function openAvailabilityCalendar(listingId){
-  const listing=loadUniversalListings().find(l=>String(l.id)===String(listingId));
-  if(!listing) return;
-  activeAvailabilityListing=listing;
-
-  const modal=document.getElementById('availabilityModal');
-  document.getElementById('availabilityTitle').textContent=`${listing.title} availability`;
-
-  const today=new Date();
-  const from=today.toISOString().slice(0,10);
-  const toDate=new Date(today);
-  toDate.setDate(toDate.getDate()+28);
-  const to=toDate.toISOString().slice(0,10);
-
-  document.getElementById('availabilityFrom').value=from;
-  document.getElementById('availabilityTo').value=to;
-
-  modal.classList.add('open');
-  await renderAvailabilityCalendar();
+  return window.rentallOpenAvailabilityV145?.(listingId);
 }
 
 async function renderAvailabilityCalendar(){
-  if(!activeAvailabilityListing) return;
-  const from=document.getElementById('availabilityFrom').value;
-  const to=document.getElementById('availabilityTo').value;
-  const grid=document.getElementById('availabilityCalendarGrid');
-  if(!from||!to) return;
-
-  grid.innerHTML='<div>Loading…</div>';
-
-  try{
-    await syncListingsToServer();
-    const data=await apiJson(`/api/rentals/calendar?listingId=${encodeURIComponent(activeAvailabilityListing.id)}&fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}`);
-    grid.innerHTML=data.days.map(day=>`
-      <div class="availability-day ${availabilityClass(day)}">
-        <b>${day.date}</b>
-        <small>${day.remainingQuantity} of ${day.totalQuantity} available</small>
-      </div>
-    `).join('');
-  }catch(err){
-    grid.innerHTML=`<div class="webhook-error">${escapeHtml(err.message||"Unknown error")}</div>`;
-  }
+  return window.rentallRenderAvailabilityCalendar?.();
 }
 
 document.getElementById('refreshAvailabilityBtn')?.addEventListener('click',renderAvailabilityCalendar);
@@ -3272,13 +3241,13 @@ async function openListingDetail(listingId){
   const rating=reviewData.summary?.averageRating,reviewCount=reviewData.summary?.reviewCount||0;
   const location=[listing.city,listing.country].filter(Boolean).join(', ');
   const fulfillment=[listing.pickupEnabled!==false?'Pickup':null,listing.deliveryEnabled?'Delivery':null].filter(Boolean);
-  const quantity=Math.max(1,Number(ctx.quantity||1)),dateReady=Boolean(ctx.startDate&&ctx.endDate);
-  const dateLabel=dateReady?`${escapeHtml(ctx.startDate)} → ${escapeHtml(ctx.endDate)}`:'Choose rental dates';
+  const quantity=Math.max(1,Number(ctx.qty||1)),dateReady=Boolean(ctx.from&&ctx.to);
+  const dateLabel=dateReady?`${escapeHtml(ctx.from)} → ${escapeHtml(ctx.to)}`:'Choose rental dates';
   const supplierName=listing.ownerName||listing.company||'Verified RentAll supplier';
   document.getElementById('listingDetailContent').innerHTML=`
     <div class="v92-listing-layout">
       <div class="v92-listing-main">
-        <div class="v92-photo-stage" aria-label="${escapeHtml(listing.title)}"><div class="v92-photo-icon">${listing.category==='Photo & video'?'📷':listing.category==='Furniture'?'🪑':listing.category==='Tools & equipment'?'🛠️':listing.category==='Transport'?'🚲':'📦'}</div><span class="v92-availability-pill">● Available to rent</span></div>
+        <div class="v92-photo-stage" aria-label="${escapeHtml(listing.title)}"><div class="v92-photo-icon">${listing.category==='Photo & video'?'📷':listing.category==='Furniture'?'🪑':listing.category==='Tools & equipment'?'🛠️':listing.category==='Transport'?'🚲':'📦'}</div><span class="v92-availability-pill">● Live availability</span></div>
         <div class="eyebrow">${escapeHtml(listing.category||'Rental item')}</div>
         <h2>${escapeHtml(listing.title)}</h2>
         <div class="v92-listing-subline"><b>${rating?`★ ${Number(rating).toFixed(1)} · ${reviewCount} review${reviewCount===1?'':'s'}`:'New listing'}</b><span>•</span><span>${escapeHtml(location||'Location shown after booking')}</span></div>
@@ -3736,7 +3705,6 @@ setTimeout(()=>renderUniversalListings(),150);
 let serverUser=null;
 // Canonical account alias used by later customer/search/booking features.
 // Keep it synchronized with serverUser to avoid cross-version runtime regressions.
-let currentServerUser=null;
 
 async function refreshServerUser(){
   try{
@@ -4093,10 +4061,22 @@ function wireAuthoritativeCheckout(){
   }
 
   cleanForm.querySelectorAll('.next-step').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click',async()=>{
       const pricing=refreshCheckoutTotals();
       if((bookingStep===1 || bookingStep===2) && !pricing.deliveryRule.eligible) return;
       if(!validateStep(bookingStep)) return;
+      if(bookingStep===1){
+        const listing=activeCheckoutListing || inferCheckoutListing();
+        const startDate=document.getElementById('rentalStart')?.value||'';
+        const endDate=document.getElementById('rentalEnd')?.value||'';
+        const trip=getTripContext();
+        const quantity=Math.max(1,Number(trip?.qty||document.getElementById('quantitySearch')?.value||1));
+        btn.disabled=true;
+        try{
+          const available=await window.rentallCheckoutAvailabilityPreflight?.({listing,startDate,endDate,quantity});
+          if(!available) return;
+        }finally{btn.disabled=false;}
+      }
       if(bookingStep===4) renderReview();
       showStep(Number(btn.dataset.next));
     });
@@ -5657,4 +5637,3 @@ function renderMapListingPreviewV101(listing){
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
-

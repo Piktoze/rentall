@@ -1,0 +1,75 @@
+{
+  "ready": false,
+  "mode": "production",
+  "checks": [
+    {
+      "id": "source_server",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "source_frontend",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "env_template",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "browser_e2e",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "stripe_e2e",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "recovery_runbook",
+      "ready": true,
+      "required": true
+    },
+    {
+      "id": "stripe_secret",
+      "ready": false,
+      "required": true
+    },
+    {
+      "id": "stripe_webhook",
+      "ready": false,
+      "required": true
+    },
+    {
+      "id": "https_app_url",
+      "ready": false,
+      "required": true
+    },
+    {
+      "id": "session_secret",
+      "ready": false,
+      "required": true
+    },
+    {
+      "id": "email_provider",
+      "ready": false,
+      "required": true
+    },
+    {
+      "id": "support_email",
+      "ready": false,
+      "required": true
+    }
+  ],
+  "blockers": [
+    "stripe_secret",
+    "stripe_webhook",
+    "https_app_url",
+    "session_secret",
+    "email_provider",
+    "support_email"
+  ],
+  "generatedAt": "2026-10-22T18:04:34.912Z"
+}

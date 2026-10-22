@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+const html=fs.readFileSync('index.html','utf8'), js=fs.readFileSync('modules/supplier-command-v143.js','utf8'), css=fs.readFileSync('styles.css','utf8'), pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+const ok=(x,m)=>{if(!x)throw new Error(m)};
+ok(html.includes('v143SupplierCommand'),'supplier command center missing');
+ok(html.includes('modules/supplier-command-v143.js'),'module not loaded');
+ok(/RC(?:4[2-9]|[5-9]\d|\d{3,})/.test(html),'RC badge not advanced');
+ok(js.includes('Server-authoritative checkout'),'authority guarantee missing');
+ok(js.includes("['failed','requires_action']"),'payment attention states missing');
+ok(js.includes('rentall:supplier-inventory'),'inventory refresh integration missing');
+ok(css.includes('@media(max-width:560px)'),'mobile supplier command UX missing');
+ok(Number(pkg.version.split('.').at(-1))>=42,'package version mismatch');
+console.log('supplier command v143 regression: ok');

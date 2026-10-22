@@ -1,0 +1,1 @@
+import fs from'fs';const f=process.argv[2];if(!f)throw new Error('Usage: node ops/verify-backup.js <backup.db>');const b=fs.readFileSync(f);if(b.length<100||b.subarray(0,16).toString()!=='SQLite format 3\u0000')throw new Error('Invalid SQLite backup');console.log(JSON.stringify({ok:true,file:f,bytes:b.length}));

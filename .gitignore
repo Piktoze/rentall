@@ -1,0 +1,10 @@
+node_modules/
+.env
+rentall.sqlite
+rentall.sqlite-shm
+rentall.sqlite-wal
+test-results/
+e2e/report/
+
+uploads/*
+!uploads/.gitkeep

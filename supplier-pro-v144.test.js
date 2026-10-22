@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+const html=fs.readFileSync('index.html','utf8'),js=fs.readFileSync('modules/supplier-pro-v144.js','utf8'),css=fs.readFileSync('styles.css','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+const ok=(x,m)=>{if(!x)throw new Error(m)};
+ok(html.includes('v144Calendar')&&html.includes('v144Pricing'),'professional supplier surfaces missing');
+ok(html.includes('modules/supplier-pro-v144.js'),'supplier pro module not loaded');
+ok(/RC(?:4[2-9]|[5-9]\d|\d{3,})/.test(html),'RC badge not advanced');
+ok(js.includes("['cancelled','declined','expired']"),'cancelled booking calendar exclusion missing');
+ok(js.includes('Final customer pricing')===false,'authority copy should live in HTML');
+ok(html.includes('Final customer pricing remains server-authoritative'),'pricing authority guarantee missing');
+ok(css.includes('@media(max-width:700px)'),'mobile supplier planning UX missing');
+ok(Number(pkg.version.split('.').at(-1))>=42,'package version mismatch');
+console.log('supplier pro v144 regression: ok');
