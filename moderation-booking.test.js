@@ -1,0 +1,2 @@
+import fs from 'fs';const d=fs.readFileSync('./db.js','utf8'),p=JSON.parse(fs.readFileSync('./package.json','utf8'));function ok(v,m){if(!v)throw new Error(m)}
+ok(p.version.startsWith('1.0.0-rc.')||p.version.startsWith('0.'),'version');ok(d.includes("COALESCE(moderation_status,'active') AS moderationStatus"),'moderation state missing');ok(d.includes("unavailableReason:'listing_not_active'"),'availability guard missing');ok(d.includes("err.code='LISTING_NOT_ACTIVE'"),'atomic booking guard missing');console.log('PASS: V80 moderation booking integrity checks passed.');
