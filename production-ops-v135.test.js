@@ -1,1 +1,15 @@
-import fs from'fs';const s=fs.readFileSync('./server.js','utf8'),r=fs.readFileSync('./release/PRODUCTION_RUNBOOK.md','utf8'),m=fs.readFileSync('./release/smoke-production.mjs','utf8'),p=JSON.parse(fs.readFileSync('./package.json','utf8'));function ok(v,x){if(!v)throw new Error(x)}ok(p.version.startsWith('1.0.0-rc.'),'version');ok(s.includes("'/api/ops/status'"),'ops endpoint');ok(s.includes("productionReady=checks.runtime.ok&&checks.stripe.ok&&checks.database.ok"),'critical readiness');ok(!s.includes("secretValue:"),'no secret field');ok(r.includes('Persistent database'),'runbook database');ok(r.includes('signed webhook secret'),'runbook webhook');ok(m.includes("whsec_"),'smoke secret leak check');ok(s.includes('stripe.webhooks.constructEvent'),'webhook');ok(s.includes('requireSupplierTransferCapability'),'transfer gate');ok(s.includes('verifyBookingPaymentToken'),'guest');ok(s.includes('amount_capturable_updated'),'deposit webhook');console.log('PASS V135 production ops');
+import fs from'fs';
+const s=fs.readFileSync('./server.js','utf8'),r=fs.readFileSync('./release/RAILWAY_DEPLOYMENT.md','utf8'),m=fs.readFileSync('./release/smoke-production.mjs','utf8'),p=JSON.parse(fs.readFileSync('./package.json','utf8'));
+function ok(v,x){if(!v)throw new Error(x)}
+ok(p.version.startsWith('1.0.0-rc.'),'version');
+ok(s.includes("'/api/ops/status'"),'ops endpoint');
+ok(s.includes('productionReady=gate.ready&&checks.runtime.ok&&checks.stripe.ok&&checks.database.ok'),'critical readiness');
+ok(!s.includes('secretValue:'),'no secret field');
+ok(r.includes('persistent storage'),'runbook database');
+ok(r.includes('STRIPE_WEBHOOK_SECRET'),'runbook webhook');
+ok(m.includes('whsec_'),'smoke secret leak check');
+ok(s.includes('stripe.webhooks.constructEvent'),'webhook');
+ok(s.includes('requireSupplierTransferCapability'),'transfer gate');
+ok(s.includes('verifyBookingPaymentToken'),'guest');
+ok(s.includes('amount_capturable_updated'),'deposit webhook');
+console.log('PASS V135 production ops');

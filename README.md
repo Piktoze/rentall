@@ -1827,3 +1827,11 @@ Supplier Dashboard now opens with live inventory, action-needed bookings, upcomi
 - Added responsive states, accessibility announcements, cache invalidation, and `customer-handoff-v145.test.js` regression coverage. Price, availability, booking and payment authority remain on the server.
 - Browser hardening removed three production startup failures caused by a deleted demo control, quarantined demo state, and authentication state initialization order; the Playwright server port contract is now explicit.
 - The complete browser suite passes with 11 tests passing and the credential-gated Stripe lifecycle test skipped; all 109 root regression tests pass.
+
+## V146 / RC44 — Production Foundation
+- Added a single fail-closed production configuration contract loaded before database initialization.
+- Railway deployments now require explicit persistent SQLite storage; unsupported `DATABASE_URL` providers are rejected rather than silently falling back to ephemeral disk.
+- Added migration version 146, idempotent database initialization, WAL checkpointing, database health checks, and restart-safe shutdown.
+- Added mode-matched Stripe key validation, explicit test/live environments, latest Stripe SDK/API configuration, and non-secret operational summaries.
+- Added production Resend/worker requirements, HTTPS/session validation, Railway deployment configuration, and a complete deployment/rollback runbook.
+- Unified liveness, readiness, launch, and operations endpoints on the current release version while preserving webhook signatures, guest tokens, and server authority.

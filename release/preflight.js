@@ -1,20 +1,21 @@
-import fs from'fs';import path from'path';
-const production=process.env.NODE_ENV==='production';
-const checks=[
- ['source_server',fs.existsSync('server.js'),true],
- ['source_frontend',fs.existsSync('index.html')&&fs.existsSync('app.js'),true],
- ['env_template',fs.existsSync('.env.example'),true],
- ['browser_e2e',fs.existsSync('e2e/customer-journey.spec.js'),true],
- ['stripe_e2e',fs.existsSync('e2e/stripe-lifecycle.spec.js'),true],
- ['recovery_runbook',fs.existsSync('ops/RECOVERY.md'),true],
- ['stripe_secret',Boolean(process.env.STRIPE_SECRET_KEY),production],
- ['stripe_webhook',Boolean(process.env.STRIPE_WEBHOOK_SECRET),production],
- ['https_app_url',/^https:\/\//i.test(process.env.APP_URL||''),production],
- ['session_secret',String(process.env.SESSION_SECRET||'').length>=32,production],
- ['email_provider',Boolean(process.env.EMAIL_PROVIDER&&process.env.EMAIL_FROM&&process.env.EMAIL_WORKER_TOKEN),production],
- ['support_email',Boolean(process.env.SUPPORT_EMAIL),production]
-].map(([id,ready,required])=>({id,ready,required}));
-const blockers=checks.filter(x=>x.required&&!x.ready);
-const report={ready:blockers.length===0,mode:production?'production':'development',checks,blockers:blockers.map(x=>x.id),generatedAt:new Date().toISOString()};
-fs.mkdirSync('release',{recursive:true});fs.writeFileSync('release/preflight-report.json',JSON.stringify(report,null,2));
-console.log(JSON.stringify(report,null,2));if(blockers.length)process.exitCode=1;
+import fs from 'node:fs';
+import {productionConfigReport} from '../config.js';
+
+const config=productionConfigReport();
+const sourceChecks=[
+  {id:'source_server',required:true,ready:fs.existsSync('server.js')},
+  {id:'source_frontend',required:true,ready:fs.existsSync('index.html')&&fs.existsSync('app.js')},
+  {id:'env_template',required:true,ready:fs.existsSync('.env.example')},
+  {id:'railway_config',required:true,ready:fs.existsSync('railway.toml')},
+  {id:'browser_e2e',required:true,ready:fs.existsSync('e2e/customer-journey.spec.js')},
+  {id:'stripe_e2e',required:true,ready:fs.existsSync('e2e/stripe-lifecycle.spec.js')},
+  {id:'recovery_runbook',required:true,ready:fs.existsSync('ops/RECOVERY.md')},
+  {id:'production_runbook',required:true,ready:fs.existsSync('release/RAILWAY_DEPLOYMENT.md')}
+];
+const checks=[...sourceChecks,...config.checks.map(({id,required,ready})=>({id,required,ready}))];
+const blockers=checks.filter(check=>check.required&&!check.ready).map(check=>check.id);
+const report={ready:blockers.length===0,mode:config.production?'production':'development',checks,blockers,database:config.database,stripe:config.stripe,email:config.email,generatedAt:new Date().toISOString()};
+fs.mkdirSync('release',{recursive:true});
+fs.writeFileSync('release/preflight-report.json',JSON.stringify(report,null,2));
+console.log(JSON.stringify(report,null,2));
+if(blockers.length)process.exitCode=1;

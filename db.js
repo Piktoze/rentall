@@ -1,16 +1,44 @@
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'url';
+import {assertProductionConfig,runtimeConfig} from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'rentall.sqlite');
+assertProductionConfig();
+const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentall.sqlite');
+fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
+db.pragma('synchronous = NORMAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(146,'rc44-production-foundation');
+`);
+
+export const databaseRuntime=Object.freeze({driver:'sqlite',source:runtimeConfig.database.source,path:dbPath,persistent:runtimeConfig.database.source!=='default-local'});
+export function checkDatabase(){
+  try{
+    const row=db.prepare('SELECT 1 AS ok').get();
+    const migration=db.prepare('SELECT MAX(version) AS version FROM schema_migrations').get();
+    return {ok:row?.ok===1,migrationVersion:Number(migration?.version||0),driver:'sqlite',source:databaseRuntime.source,persistent:databaseRuntime.persistent};
+  }catch{return {ok:false,migrationVersion:0,driver:'sqlite',source:databaseRuntime.source,persistent:databaseRuntime.persistent}}
+}
+
+export function closeDatabase(){
+  if(db.open){db.pragma('wal_checkpoint(TRUNCATE)');db.close();}
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS webhook_events (
@@ -1796,4 +1824,3 @@ export function releaseBookingIdempotency(key,requestHash){
     WHERE idempotency_key=? AND request_hash=? AND status='processing'`)
     .run(String(key||'').trim().slice(0,160),String(requestHash)).changes===1;
 }
-

@@ -1,6 +1,5 @@
 import express from 'express';
 import Stripe from 'stripe';
-import dotenv from 'dotenv';
 import {
   beginWebhookEvent,
   markWebhookProcessed,
@@ -69,12 +68,16 @@ import {
   beginBookingIdempotency,
   completeBookingIdempotency,
   releaseBookingIdempotency
+  ,databaseRuntime
+  ,checkDatabase
+  ,closeDatabase
 } from './db.js';
+import {assertProductionConfig,productionConfigReport,runtimeConfig} from './config.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
+assertProductionConfig();
 
 const app = express();
 
@@ -170,10 +173,10 @@ app.use('/api',(req,res,next)=>{
 });
 
 
-const port = process.env.PORT || 4242;
-const appUrl = process.env.APP_URL || `http://localhost:${port}`;
+const port = runtimeConfig.port;
+const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
-const stripe = stripeKey ? new Stripe(stripeKey) : null;
+const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentAll',version:runtimeConfig.appVersion}}) : null;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -675,16 +678,16 @@ app.use(express.json({ limit: '15mb' }));
 
 
 
-const APP_VERSION=process.env.APP_VERSION || '0.53.0';
+const APP_VERSION=runtimeConfig.appVersion;
 
 function platformDiagnostics(){
-  let database='ok';
-  try{ db.prepare('SELECT 1 AS ok').get(); }catch{ database='error'; }
+  const databaseCheck=checkDatabase();
   return {
-    ok:database==='ok',
+    ok:databaseCheck.ok,
     service:'rentall-marketplace',
     version:APP_VERSION,
-    database,
+    database:databaseCheck.ok?'ok':'error',
+    migrationVersion:databaseCheck.migrationVersion,
     stripe:stripe ? 'configured' : 'not_configured',
     environment:process.env.NODE_ENV || 'development',
     timestamp:new Date().toISOString()
@@ -693,19 +696,11 @@ function platformDiagnostics(){
 
 
 function launchGate(){
-  const production=(process.env.NODE_ENV==='production');
-  const checks=[
-    {id:'database',required:true,ready:platformDiagnostics().database==='ok'},
-    {id:'stripe_secret',required:production,ready:Boolean(process.env.STRIPE_SECRET_KEY)},
-    {id:'stripe_webhook',required:production,ready:Boolean(process.env.STRIPE_WEBHOOK_SECRET)},
-    {id:'app_url_https',required:production,ready:/^https:\/\//i.test(String(process.env.APP_URL||''))},
-    {id:'email_provider',required:production,ready:Boolean(process.env.EMAIL_PROVIDER&&process.env.EMAIL_FROM)},
-    {id:'email_worker_token',required:production,ready:Boolean(process.env.EMAIL_WORKER_TOKEN)},
-    {id:'support_email',required:production,ready:Boolean(process.env.SUPPORT_EMAIL)},
-    {id:'session_secret',required:production,ready:Boolean(process.env.SESSION_SECRET)&&String(process.env.SESSION_SECRET).length>=32}
-  ];
-  const blocking=checks.filter(x=>x.required&&!x.ready);
-  return {ready:blocking.length===0,production,checks:checks.map(({id,required,ready})=>({id,required,ready})),blocking:blocking.map(x=>x.id)};
+  const report=productionConfigReport();
+  const database=checkDatabase();
+  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=146}];
+  const blocking=checks.filter(x=>x.required&&!x.ready).map(x=>x.id);
+  return {ready:blocking.length===0,production:report.production,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,migrationVersion:database.migrationVersion},stripe:report.stripe,email:report.email};
 }
 
 app.get('/api/launch-readiness',(req,res)=>{
@@ -1049,16 +1044,18 @@ app.delete('/api/supplier/listings/:listingId', requireRole('supplier','admin'),
 
 // V135 production diagnostics: safe operational signal, never secrets.
 app.get('/api/ops/status',(req,res)=>{
+  const gate=launchGate();
+  const database=checkDatabase();
   const checks={
-    runtime:{ok:process.env.NODE_ENV==='production',detail:process.env.NODE_ENV||'development'},
-    stripe:{ok:Boolean(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_WEBHOOK_SECRET),detail:process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_WEBHOOK_SECRET?'configured':'missing'},
-    database:{ok:Boolean(process.env.DATABASE_URL||process.env.RENTALL_DB_PATH),detail:process.env.DATABASE_URL?'external':(process.env.RENTALL_DB_PATH?'persistent-path':'default-local')},
+    runtime:{ok:runtimeConfig.production,detail:runtimeConfig.nodeEnv},
+    stripe:{ok:gate.stripe.configured&&['test','live'].includes(gate.stripe.mode),detail:gate.stripe.configured?`${gate.stripe.mode}-${gate.stripe.keyType}`:'missing'},
+    database:{ok:database.ok&&(!runtimeConfig.production||database.persistent),detail:database.ok?`${database.driver}-${database.source}`:'unavailable'},
     maps:{ok:Boolean(process.env.MAPS_PUBLIC_TOKEN),detail:process.env.MAPS_PUBLIC_TOKEN?(process.env.MAPS_PROVIDER||'configured'):'stub'},
     notifications:{ok:Boolean(process.env.EMAIL_PROVIDER&&process.env.EMAIL_PROVIDER!=='console'),detail:process.env.EMAIL_PROVIDER||'console'},emailWorker:{ok:process.env.EMAIL_WORKER_ENABLED==='true',detail:process.env.EMAIL_WORKER_ENABLED==='true'?'enabled':'disabled'}
   };
-  const productionReady=checks.runtime.ok&&checks.stripe.ok&&checks.database.ok;
+  const productionReady=gate.ready&&checks.runtime.ok&&checks.stripe.ok&&checks.database.ok&&checks.notifications.ok&&checks.emailWorker.ok;
   res.set('Cache-Control','no-store');
-  res.status(productionReady||process.env.NODE_ENV!=='production'?200:503).json({ok:productionReady,checks,version:'1.0.0-rc.33'});
+  res.status(productionReady||!runtimeConfig.production?200:503).json({ok:productionReady,checks,version:APP_VERSION});
 });
 
 // V130 non-secret integration capability contract.
@@ -1068,14 +1065,12 @@ app.get('/api/integrations/capabilities',(req,res)=>{
 });
 
 // V125 non-secret production readiness.
-app.get('/healthz',(req,res)=>res.status(200).json({ok:true,service:'rentall',version:'1.0.0-rc.24'}));
+app.get('/healthz',(req,res)=>res.status(shuttingDown?503:200).json({ok:!shuttingDown,service:'rentall',version:APP_VERSION}));
 
 app.get('/api/readiness',(req,res)=>{
   res.set('Cache-Control','no-store');
-  const checks={stripeSecret:Boolean(process.env.STRIPE_SECRET_KEY),stripeWebhook:Boolean(process.env.STRIPE_WEBHOOK_SECRET),publicBaseUrl:Boolean(process.env.PUBLIC_BASE_URL),emailProvider:Boolean(process.env.EMAIL_PROVIDER&&process.env.EMAIL_PROVIDER!=='console'),connectV2:Boolean(process.env.STRIPE_CONNECT_V2_PROVISIONING==='true'),objectStorage:Boolean(process.env.OBJECT_STORAGE_PROVIDER),monitoring:Boolean(process.env.MONITORING_DSN),productionDatabase:Boolean(process.env.DATABASE_URL)};
-  const required=['stripeSecret','stripeWebhook','publicBaseUrl','emailProvider','connectV2'];
-  const ready=process.env.NODE_ENV!=='production'||required.every(k=>checks[k]);
-  res.status(ready?200:503).json({ready,environment:process.env.NODE_ENV||'development',checks,requiredForProduction:required,version:'1.0.0-rc.23'});
+  const gate=launchGate();
+  res.status(gate.ready?200:503).json({ready:gate.ready,environment:runtimeConfig.nodeEnv,checks:gate.checks,blocking:gate.blocking,database:gate.database,stripe:gate.stripe,email:gate.email,version:APP_VERSION});
 });
 
 // Stripe Connect for authenticated suppliers.
@@ -1975,9 +1970,8 @@ app.post('/api/uploads/image', simpleRateLimit({windowMs:60000,max:30,keyPrefix:
 
 app.use(express.static(__dirname));
 
-const server=app.listen(port, () => {
-  console.log(`RentAll running at ${appUrl}`);
-  console.log(stripe ? 'Stripe configured.' : 'Stripe not configured yet.');
+const server=app.listen(port,runtimeConfig.host, () => {
+  console.log(JSON.stringify({type:'startup',service:'rentall',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent},stripe:{configured:Boolean(stripe),mode:runtimeConfig.stripeMode}}));
 });
 let emailWorkerTimer=null;
 if(process.env.EMAIL_WORKER_ENABLED==='true'){
@@ -1992,8 +1986,16 @@ let shuttingDown=false;
 function gracefulShutdown(signal){
   if(shuttingDown)return;shuttingDown=true;
   console.log(JSON.stringify({type:'shutdown',signal,timestamp:new Date().toISOString()}));
-  server.close(err=>{if(err){console.error('HTTP shutdown error',err);process.exitCode=1}process.exit()});
-  setTimeout(()=>{console.error('Forced shutdown after timeout');process.exit(1)},10000).unref();
+  clearInterval(rentallExpiryTimer);
+  if(emailWorkerTimer)clearInterval(emailWorkerTimer);
+  if(!server.listening){try{closeDatabase()}catch{}process.exit(process.exitCode||1);return}
+  server.close(err=>{
+    if(err){console.error('HTTP shutdown error',err);process.exitCode=1}
+    try{closeDatabase()}catch(dbError){console.error('Database shutdown error',dbError);process.exitCode=1}
+    process.exit(process.exitCode||0);
+  });
+  server.closeIdleConnections?.();
+  setTimeout(()=>{console.error('Forced shutdown after timeout');server.closeAllConnections?.();try{closeDatabase()}catch{}process.exit(1)},10000).unref();
 }
 process.on('SIGTERM',()=>gracefulShutdown('SIGTERM'));
 process.on('SIGINT',()=>gracefulShutdown('SIGINT'));

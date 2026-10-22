@@ -1,6 +1,6 @@
 {
   "name": "rentall-marketplace-mvp",
-  "version": "1.0.0-rc.43",
+  "version": "1.0.0-rc.44",
   "private": true,
   "type": "module",
   "scripts": {
@@ -93,6 +93,8 @@
     "test:launch-gate-v114": "node launch-gate-v114.test.js",
     "backup:db": "node ops/backup-db.js",
     "backup:verify": "node ops/verify-backup.js",
+    "db:init": "node ops/init-db.js",
+    "validate:production": "node ops/validate-production-config.js",
     "test:ops-v115": "node ops-v115.test.js",
     "release:preflight": "node release/preflight.js",
     "test:release-gate-v116": "node release-gate-v116.test.js",
@@ -104,15 +106,17 @@
     "test:e2e:rc": "playwright test e2e/release-candidate.spec.js",
     "test:e2e:1.0-rc": "playwright test e2e/rentall-1.0-rc.spec.js",
     "smoke:production": "node release/smoke-production.mjs",
+    "smoke:production-startup": "node release/production-startup-smoke.mjs",
     "preflight:production": "node release/preflight-production.mjs",
     "audit:surface": "node release/rc40-surface-audit.mjs",
     "test:supplier-pro-v144": "node supplier-pro-v144.test.js",
-    "test:customer-handoff-v145": "node customer-handoff-v145.test.js"
+    "test:customer-handoff-v145": "node customer-handoff-v145.test.js",
+    "test:production-foundation-v146": "node production-foundation-v146.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "stripe": "^17.4.0",
+    "stripe": "^22.6.0",
     "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {

@@ -7,12 +7,12 @@ const s=fs.readFileSync('./server.js','utf8');
 const e2e=fs.readFileSync('./e2e/playwright.config.js','utf8');
 const p=JSON.parse(fs.readFileSync('./package.json','utf8'));
 function ok(value,message){if(!value)throw new Error(message)}
-ok(p.version==='1.0.0-rc.43','RC43 version');
+ok(Number(p.version.split('.').at(-1))>=43,'RC43 or newer version');
 ok(h.includes('availabilityQuantity'),'availability quantity control');
 ok(h.includes('v145AvailabilityContinue'),'availability checkout CTA');
 ok(h.includes('v145CheckoutPreflight'),'checkout preflight status');
 ok(h.includes('modules/customer-handoff-v145.js'),'customer handoff module');
-ok(h.includes('>RC43<'),'visible RC43 badge');
+ok(/>RC(?:4[3-9]|[5-9]\d|\d{3,})</.test(h),'visible RC43 or newer badge');
 ok(a.includes('ctx.from&&ctx.to'),'listing detail date contract');
 ok(a.includes('String(trip.listingId||\'\')'),'exact listing selection');
 ok(m.includes('async function checkSelection()'),'live availability check');

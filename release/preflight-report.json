@@ -4,72 +4,165 @@
   "checks": [
     {
       "id": "source_server",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
     },
     {
       "id": "source_frontend",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
     },
     {
       "id": "env_template",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "railway_config",
+      "required": true,
+      "ready": true
     },
     {
       "id": "browser_e2e",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
     },
     {
       "id": "stripe_e2e",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
     },
     {
       "id": "recovery_runbook",
-      "ready": true,
-      "required": true
+      "required": true,
+      "ready": true
     },
     {
-      "id": "stripe_secret",
-      "ready": false,
-      "required": true
+      "id": "production_runbook",
+      "required": true,
+      "ready": true
     },
     {
-      "id": "stripe_webhook",
-      "ready": false,
-      "required": true
-    },
-    {
-      "id": "https_app_url",
-      "ready": false,
-      "required": true
+      "id": "app_url_https",
+      "required": true,
+      "ready": false
     },
     {
       "id": "session_secret",
-      "ready": false,
-      "required": true
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "database_supported",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "database_explicit",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "database_absolute",
+      "required": true,
+      "ready": true
+    },
+    {
+      "id": "database_not_ephemeral",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "database_on_volume",
+      "required": false,
+      "ready": true
+    },
+    {
+      "id": "stripe_mode",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "stripe_secret",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "stripe_publishable",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "stripe_webhook",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "connect_v2",
+      "required": true,
+      "ready": false
     },
     {
       "id": "email_provider",
-      "ready": false,
-      "required": true
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "email_from",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "email_api_key",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "email_worker",
+      "required": true,
+      "ready": false
+    },
+    {
+      "id": "email_worker_token",
+      "required": true,
+      "ready": false
     },
     {
       "id": "support_email",
-      "ready": false,
-      "required": true
+      "required": true,
+      "ready": false
     }
   ],
   "blockers": [
-    "stripe_secret",
-    "stripe_webhook",
-    "https_app_url",
+    "app_url_https",
     "session_secret",
+    "database_explicit",
+    "database_not_ephemeral",
+    "stripe_mode",
+    "stripe_secret",
+    "stripe_publishable",
+    "stripe_webhook",
+    "connect_v2",
     "email_provider",
+    "email_from",
+    "email_api_key",
+    "email_worker",
+    "email_worker_token",
     "support_email"
   ],
-  "generatedAt": "2026-10-22T18:04:34.912Z"
+  "database": {
+    "driver": "sqlite",
+    "source": "default-local",
+    "persistent": false
+  },
+  "stripe": {
+    "configured": false,
+    "mode": "unset",
+    "keyType": "unset"
+  },
+  "email": {
+    "provider": "unset",
+    "workerEnabled": false
+  },
+  "generatedAt": "2026-10-22T18:13:54.847Z"
 }
