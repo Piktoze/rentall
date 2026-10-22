@@ -1652,6 +1652,8 @@ function resolveDeliveryPricing(){
   const trip=getTripContext();
   const city=(document.getElementById('deliveryArea')?.value || trip?.city || '').trim();
   const accommodation=(document.getElementById('hotelName')?.value || trip?.accommodation || '').trim();
+  const handoverMethod=(document.getElementById('accommodationType')?.value||'').trim();
+  const pickupSelected=/pickup/i.test(handoverMethod);
   const subtotal=getCheckoutRentalSubtotal();
 
   if(!activeCheckoutListing){
@@ -1664,7 +1666,23 @@ function resolveDeliveryPricing(){
   }
 
   const hotelDelivery = activeCheckoutListing.accommodationDelivery==='yes' || activeCheckoutListing.accommodationDelivery===true;
+  if(pickupSelected){
+    return {
+      eligible:true,
+      fee:0,
+      minOrder:0,
+      reason:'Pickup from the owner · no delivery fee.'
+    };
+  }
   if(!hotelDelivery){
+    if(!handoverMethod){
+      return {
+        eligible:true,
+        fee:0,
+        minOrder:0,
+        reason:'Pickup is available. Choose your handover method in the next step.'
+      };
+    }
     return {
       eligible:false,
       fee:0,
@@ -4086,7 +4104,7 @@ function wireAuthoritativeCheckout(){
     btn.addEventListener('click',()=>showStep(Number(btn.dataset.prev)));
   });
 
-  ['deliveryArea','hotelName','rentalStart','rentalEnd'].forEach(id=>{
+  ['accommodationType','deliveryArea','hotelName','rentalStart','rentalEnd'].forEach(id=>{
     document.getElementById(id)?.addEventListener('input',refreshCheckoutTotals);
     document.getElementById(id)?.addEventListener('change',refreshCheckoutTotals);
   });
