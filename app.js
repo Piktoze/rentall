@@ -81,13 +81,15 @@ const translations = {
   }
 };
 
+if(!window.RentAllI18n){
 document.getElementById('lang').addEventListener('change',e=>{
   const lang=e.target.value;
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const key=el.dataset.i18n;
-    if(translations[lang][key]) el.innerHTML=translations[lang][key];
+    if(translations[lang] && translations[lang][key]) el.innerHTML=translations[lang][key];
   });
 });
+}
 
 
 const modal = document.getElementById('checkoutModal');

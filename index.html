@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="light-premium-v161.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -41,8 +42,11 @@
       <button class="nav-auth-btn" id="supplierAuthBtn">Supplier login</button>
     </nav>
     <select id="lang" aria-label="Language">
+      <option value="lt">LT</option>
       <option value="en">EN</option>
       <option value="es">ES</option>
+      <option value="de">DE</option>
+      <option value="ru">RU</option>
     </select>
   </div>
 <button type="button" class="secondary v102-bell" id="v102NotificationBtn" aria-label="Notifications">🔔 <span id="v102NotificationBadge" hidden>0</span></button></header>
@@ -1513,6 +1517,7 @@
   </div>
 </footer>
 
+<script defer src="modules/i18n-v161.js"></script>
 <script defer src="app.js"></script>
   <script defer src="modules/customer-handoff-v145.js"></script>
   <script defer src="modules/customer-notifications.js"></script>
@@ -1584,19 +1589,16 @@
       <div class="onboarding-form-grid">
         <label>Language
           <select id="onboardingLanguage">
-            <option value="en">English</option>
             <option value="lt">Lietuvių</option>
+            <option value="en">English</option>
             <option value="es">Español</option>
             <option value="de">Deutsch</option>
-            <option value="fr">Français</option>
-            <option value="it">Italiano</option>
+            <option value="ru">Русский</option>
           </select>
         </label>
         <label>Currency
           <select id="onboardingCurrency">
             <option value="EUR">EUR €</option>
-            <option value="GBP">GBP £</option>
-            <option value="USD">USD $</option>
           </select>
         </label>
       </div>
