@@ -113,7 +113,8 @@
     "test:supplier-pro-v144": "node supplier-pro-v144.test.js",
     "test:customer-handoff-v145": "node customer-handoff-v145.test.js",
     "test:production-foundation-v146": "node production-foundation-v146.test.js",
-    "test:deployment-runtime-v147": "node deployment-runtime-v147.test.js"
+    "test:deployment-runtime-v147": "node deployment-runtime-v147.test.js",
+    "test:staging-mode": "node staging-mode.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
