@@ -40,6 +40,12 @@ function sqlitePathFromUrl(raw){
   return null;
 }
 
+// Explicit opt-in: relaxes ONLY the Stripe and email provider checks. Every other
+// production check (HTTPS URLs, secrets, proxy, volume-backed DB/uploads) stays required.
+export function isStagingEnvironment(env=process.env){
+  return String(env.RENTALL_STAGING||'').trim()==='true';
+}
+
 export function isDeploymentEnvironment(env=process.env){
   return String(env.NODE_ENV||'')==='production'||Boolean(env.RAILWAY_ENVIRONMENT_ID||env.RAILWAY_PROJECT_ID||env.RAILWAY_SERVICE_ID);
 }
@@ -74,6 +80,8 @@ function stripeModeFor(secret){
 export function productionConfigReport(env=process.env){
   const production=String(env.NODE_ENV||'')==='production';
   const deployment=isDeploymentEnvironment(env);
+  const staging=isStagingEnvironment(env);
+  const integrationRequired=deployment&&!staging;
   const railway=Boolean(env.RAILWAY_ENVIRONMENT_ID||env.RAILWAY_PROJECT_ID||env.RAILWAY_SERVICE_ID);
   const dbConfig=resolveDatabaseConfig(env);
   const uploadsConfig=resolveUploadsConfig(env);
@@ -103,24 +111,25 @@ export function productionConfigReport(env=process.env){
     {id:'database_volume_configured',required:deployment,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)},
     {id:'database_on_volume',required:deployment,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)&&inside(dbConfig.path,dbConfig.volumeRoot)},
     {id:'uploads_on_volume',required:deployment,ready:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
-    {id:'stripe_mode',required:deployment,ready:['test','live'].includes(stripeMode)},
-    {id:'stripe_secret',required:deployment,ready:/^[sr]k_(?:test|live)_[A-Za-z0-9_\-]{12,}$/.test(stripeSecret)&&detectedStripeMode===stripeMode},
-    {id:'stripe_publishable',required:deployment,ready:new RegExp(`^pk_${stripeMode}_[A-Za-z0-9_\\-]{12,}$`).test(publishable)},
-    {id:'stripe_webhook',required:deployment,ready:/^whsec_[A-Za-z0-9_\-]{12,}$/.test(webhookSecret)},
-    {id:'connect_v2',required:deployment,ready:String(env.STRIPE_CONNECT_V2_PROVISIONING||'')==='true'},
-    {id:'email_provider',required:deployment,ready:emailProvider==='resend'},
-    {id:'email_from',required:deployment,ready:validEmail(emailFrom)},
-    {id:'email_api_key',required:deployment,ready:emailProvider==='resend'&&/^re_[A-Za-z0-9_\-]{8,}$/.test(String(env.RESEND_API_KEY||''))},
-    {id:'email_worker',required:deployment,ready:String(env.EMAIL_WORKER_ENABLED||'')==='true'},
-    {id:'email_worker_token',required:deployment,ready:strongSecret(env.EMAIL_WORKER_TOKEN)},
-    {id:'support_email',required:deployment,ready:validEmail(env.SUPPORT_EMAIL)},
+    {id:'stripe_mode',required:integrationRequired,ready:['test','live'].includes(stripeMode)},
+    {id:'stripe_secret',required:integrationRequired,ready:/^[sr]k_(?:test|live)_[A-Za-z0-9_\-]{12,}$/.test(stripeSecret)&&detectedStripeMode===stripeMode},
+    {id:'stripe_publishable',required:integrationRequired,ready:new RegExp(`^pk_${stripeMode}_[A-Za-z0-9_\\-]{12,}$`).test(publishable)},
+    {id:'stripe_webhook',required:integrationRequired,ready:/^whsec_[A-Za-z0-9_\-]{12,}$/.test(webhookSecret)},
+    {id:'connect_v2',required:integrationRequired,ready:String(env.STRIPE_CONNECT_V2_PROVISIONING||'')==='true'},
+    {id:'email_provider',required:integrationRequired,ready:emailProvider==='resend'},
+    {id:'email_from',required:integrationRequired,ready:validEmail(emailFrom)},
+    {id:'email_api_key',required:integrationRequired,ready:emailProvider==='resend'&&/^re_[A-Za-z0-9_\-]{8,}$/.test(String(env.RESEND_API_KEY||''))},
+    {id:'email_worker',required:integrationRequired,ready:String(env.EMAIL_WORKER_ENABLED||'')==='true'},
+    {id:'email_worker_token',required:integrationRequired,ready:strongSecret(env.EMAIL_WORKER_TOKEN)},
+    {id:'support_email',required:integrationRequired,ready:validEmail(env.SUPPORT_EMAIL)},
+    {id:'staging_no_live_stripe',required:deployment&&staging,ready:detectedStripeMode!=='live'},
     {id:'maps_configuration',required:deployment,ready:['stub','mapbox','google'].includes(mapsProvider)&&(mapsProvider==='stub'||Boolean(String(env.MAPS_PUBLIC_TOKEN||'').trim()))},
     {id:'sms_provider',required:deployment,ready:smsProvider==='disabled'},
     {id:'push_provider',required:deployment,ready:pushProvider==='disabled'}
   ];
   const blocking=checks.filter(check=>check.required&&!check.ready).map(check=>check.id);
   return {
-    ready:blocking.length===0,production,deployment,railway,checks,blocking,
+    ready:blocking.length===0,production,deployment,staging,railway,checks,blocking,
     database:{driver:dbConfig.driver,source:dbConfig.source,persistent:dbConfig.source!=='default-local',volumeConfigured:Boolean(dbConfig.volumeRoot)},
     uploads:{source:uploadsConfig.source,persistent:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
     stripe:{configured:Boolean(stripeSecret),mode:stripeMode||'unset',keyType:stripeSecret.startsWith('rk_')?'restricted':stripeSecret.startsWith('sk_')?'secret':'unset',webhookConfigured:Boolean(webhookSecret)},
