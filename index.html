@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css"/>
-  <link rel="stylesheet" href="light-premium-v161.css"/>
+  <link rel="stylesheet" href="styles.css?v=178"/>
+  <link rel="stylesheet" href="light-premium-v161.css?v=178"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -20,7 +20,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RentAll">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="/manifest.webmanifest?v=178">
 </head>
 <body class="theme-aurora">
 
@@ -221,30 +221,7 @@
   <span><i></i> Local delivery</span>
 </div>
     </div>
-
-    <div class="hero-card">
-      <div class="mock-phone">
-        <div class="phone-top">RentAll <span class="preview-badge">Preview</span></div>
-        <div class="phone-location">📍 Klaipėda · 3 days</div>
-        <div class="mini-card">
-          <div class="emoji">🪑</div>
-          <div><strong>10 Folding Chairs</strong><small>Individual · pickup or delivery</small></div>
-          <b>€25/day</b>
-        </div>
-        <div class="mini-card">
-          <div class="emoji">🛠️</div>
-          <div><strong>Cordless Drill</strong><small>3 available nearby</small></div>
-          <b>€9/day</b>
-        </div>
-        <div class="mini-card">
-          <div class="emoji">📽️</div>
-          <div><strong>Projector + Screen</strong><small>Business · delivery available</small></div>
-          <b>€25/day</b>
-        </div>
-        <button class="mock-btn">Browse local rentals</button>
-      </div>
-    </div>
-  </div>
+</div>
 </section>
 
 
@@ -654,6 +631,20 @@
 
 <section class="section dashboard-section protected-dashboard" id="supplier-dashboard">
   <div class="container">
+    <div class="supplier-dashboard-control">
+      <div>
+        <div class="eyebrow" data-i18n="supplier_panel_eyebrow">Tiekėjo paskyra</div>
+        <h2 data-i18n="supplier_panel_title">Valdymo skydas</h2>
+        <p data-i18n="supplier_panel_copy">Skelbimus, užsakymus, kalendorių ir pajamas atverk tik tada, kai jų reikia.</p>
+      </div>
+      <div class="supplier-dashboard-control-actions">
+        <button class="primary" id="supplierDashboardToggle" type="button" aria-expanded="false" data-i18n="supplier_panel_show">Rodyti valdymo skydą</button>
+        <div class="supplier-view-switch" id="supplierViewSwitch" hidden role="group" aria-label="Dashboard view">
+          <button type="button" class="active" data-supplier-view="grid" data-i18n="supplier_view_grid">Tinklelis</button>
+          <button type="button" data-supplier-view="list" data-i18n="supplier_view_list">Sąrašas</button>
+        </div>
+      </div>
+    </div>
     <nav class="v124-supplier-nav" aria-label="Supplier dashboard navigation">
       <button type="button" data-v124-target="supplierOverview">Overview</button>
       <button type="button" data-v124-target="v94InventoryBody">Inventory & pricing</button>
@@ -1555,29 +1546,30 @@
   </div>
 </footer>
 
-<script defer src="modules/i18n-v161.js"></script>
-<script defer src="app.js"></script>
-  <script defer src="modules/customer-handoff-v145.js"></script>
-  <script defer src="modules/customer-notifications.js"></script>
-  <script defer src="modules/post-booking-live-status.js"></script>
-  <script defer src="modules/post-booking-journey.js"></script>
-  <script defer src="modules/supplier-finance.js"></script>
-  <script defer src="modules/supplier-workspace.js"></script>
-  <script defer src="modules/supplier-command-v143.js"></script>
-  <script defer src="modules/supplier-pro-v144.js"></script>
-  <script defer src="modules/supplier-operations.js"></script>
-  <script defer src="modules/launch-readiness.js"></script>
-  <script defer src="modules/mobile-checkout-journey.js"></script>
-  <script defer src="modules/checkout-confidence.js"></script>
-  <script defer src="modules/integration-readiness.js"></script>
-  <script defer src="modules/booking-command-center.js"></script>
-  <script defer src="modules/customer-booking-hub.js"></script>
-  <script defer src="modules/customer-journey.js"></script>
-  <script defer src="modules/supplier-revenue.js"></script>
-  <script defer src="modules/product-polish.js"></script>
-  <script defer src="modules/supplier-onboarding.js"></script>
-  <script defer src="modules/listing-creation.js"></script>
-  <script defer src="modules/marketplace-trust-v172.js"></script>
+<script defer src="modules/i18n-v161.js?v=178"></script>
+<script defer src="app.js?v=178"></script>
+  <script defer src="modules/customer-handoff-v145.js?v=178"></script>
+  <script defer src="modules/customer-notifications.js?v=178"></script>
+  <script defer src="modules/post-booking-live-status.js?v=178"></script>
+  <script defer src="modules/post-booking-journey.js?v=178"></script>
+  <script defer src="modules/supplier-finance.js?v=178"></script>
+  <script defer src="modules/supplier-workspace.js?v=178"></script>
+  <script defer src="modules/supplier-command-v143.js?v=178"></script>
+  <script defer src="modules/supplier-pro-v144.js?v=178"></script>
+  <script defer src="modules/supplier-operations.js?v=178"></script>
+  <script defer src="modules/launch-readiness.js?v=178"></script>
+  <script defer src="modules/mobile-checkout-journey.js?v=178"></script>
+  <script defer src="modules/checkout-confidence.js?v=178"></script>
+  <script defer src="modules/integration-readiness.js?v=178"></script>
+  <script defer src="modules/booking-command-center.js?v=178"></script>
+  <script defer src="modules/customer-booking-hub.js?v=178"></script>
+  <script defer src="modules/customer-journey.js?v=178"></script>
+  <script defer src="modules/supplier-revenue.js?v=178"></script>
+  <script defer src="modules/product-polish.js?v=178"></script>
+  <script defer src="modules/supplier-onboarding.js?v=178"></script>
+  <script defer src="modules/listing-creation.js?v=178"></script>
+  <script defer src="modules/marketplace-trust-v172.js?v=178"></script>
+  <script defer src="modules/supplier-ux-v178.js?v=178"></script>
 
 
 

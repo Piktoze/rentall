@@ -1,10 +1,12 @@
-const CACHE='rentall-rc45-shell';
+const CACHE='rentall-v178-shell';
 const CORE=[
   '/',
   '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/manifest.webmanifest',
+  '/styles.css?v=177',
+  '/light-premium-v161.css?v=177',
+  '/modules/i18n-v161.js?v=177',
+  '/app.js?v=177',
+  '/manifest.webmanifest?v=177',
   '/icon-192.svg',
   '/icon-512.svg'
 ];
@@ -45,7 +47,7 @@ self.addEventListener('fetch',event=>{
       .catch(async()=>{
         const hit=await caches.match(req);
         if(hit) return hit;
-        if(req.mode==='navigate') return caches.match('/index.html');
+        if(req.mode==='navigate') return caches.match('/index.html') || caches.match('/');
         return Response.error();
       })
   );

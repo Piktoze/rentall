@@ -5253,7 +5253,7 @@ window.addEventListener('appinstalled',()=>{
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/service-worker.js').catch(err=>{
+    navigator.serviceWorker.register('/service-worker.js?v=178').catch(err=>{
       console.warn('Service worker registration failed',err);
     });
   });
@@ -5505,14 +5505,20 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
     });
   }
 
+  function updateCustomerPromise(){
+    const bar=qs('.v56-customer-promise');
+    if(!bar) return;
+    bar.innerHTML=`<span>✓ ${escapeHtml(uiText('Clear total price'))}</span><span>✓ ${escapeHtml(uiText('Secure booking record'))}</span><span>✓ ${escapeHtml(uiText('Pickup or delivery details before payment'))}</span>`;
+  }
+
   function addCustomerPromise(){
-    if(qs('.v56-customer-promise')) return;
+    if(qs('.v56-customer-promise')){updateCustomerPromise();return;}
     const target=qs('main') || document.body;
     const bar=document.createElement('div');
     bar.className='v56-customer-promise';
     bar.setAttribute('role','note');
-    bar.innerHTML=`<span>✓ ${escapeHtml(uiText('Clear total price'))}</span><span>✓ ${escapeHtml(uiText('Secure booking record'))}</span><span>✓ ${escapeHtml(uiText('Pickup or delivery details before payment'))}</span>`;
     target.prepend(bar);
+    updateCustomerPromise();
   }
 
   function enhanceCards(){
@@ -5552,6 +5558,7 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
 
   function init(){
     enhanceSearch(); addCustomerPromise(); enhanceCards(); mobileFilterSummary(); observeResults();
+    document.addEventListener('rentall:language-changed',updateCustomerPromise);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
@@ -5761,4 +5768,58 @@ function renderMapListingPreviewV101(listing){
     if(pending&&bookingsBtn){new MutationObserver(()=>bookingsBtn.classList.toggle('attention',Number(pending.textContent||0)>0)).observe(pending,{childList:true,characterData:true,subtree:true});}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+
+// --- V176: public focus + compact supplier dashboard ---
+(function rentAllV176SupplierUi(){
+  const dashboard=document.getElementById('supplier-dashboard');
+  const toggle=document.getElementById('supplierDashboardToggle');
+  const switcher=document.getElementById('supplierViewSwitch');
+  if(!dashboard || !toggle) return;
+
+  function tr(key,fallback){
+    try{return window.RentAllI18n?.keyTranslations?.[window.RentAllI18n.getLanguage()]?.[key] || fallback;}catch{return fallback;}
+  }
+  function setExpanded(expanded,{persist=true}={}){
+    dashboard.classList.toggle('dashboard-expanded',expanded);
+    toggle.setAttribute('aria-expanded',String(expanded));
+    toggle.dataset.i18n=expanded?'supplier_panel_hide':'supplier_panel_show';
+    toggle.textContent=expanded?tr('supplier_panel_hide','Hide dashboard'):tr('supplier_panel_show','Show dashboard');
+    if(switcher) switcher.hidden=!expanded;
+    if(persist){try{localStorage.setItem('rentall_supplier_dashboard_open',expanded?'1':'0')}catch{}}
+  }
+  function setView(view,{persist=true}={}){
+    const next=view==='list'?'list':'grid';
+    dashboard.classList.toggle('supplier-view-list',next==='list');
+    dashboard.classList.toggle('supplier-view-grid',next==='grid');
+    dashboard.querySelectorAll('[data-supplier-view]').forEach(btn=>{
+      const active=btn.dataset.supplierView===next;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-pressed',String(active));
+    });
+    if(persist){try{localStorage.setItem('rentall_supplier_dashboard_view',next)}catch{}}
+  }
+  toggle.addEventListener('click',()=>setExpanded(!dashboard.classList.contains('dashboard-expanded')));
+  switcher?.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-supplier-view]');
+    if(btn) setView(btn.dataset.supplierView);
+  });
+  document.addEventListener('rentall:language-changed',()=>setExpanded(dashboard.classList.contains('dashboard-expanded'),{persist:false}));
+  let savedOpen='0', savedView='grid';
+  try{savedOpen=localStorage.getItem('rentall_supplier_dashboard_open')||'0';savedView=localStorage.getItem('rentall_supplier_dashboard_view')||'grid'}catch{}
+  setView(savedView,{persist:false});
+  setExpanded(savedOpen==='1',{persist:false});
+
+  const previous=window.refreshAuthUI || refreshAuthUI;
+  if(typeof previous==='function'){
+    refreshAuthUI=function(){
+      const result=previous.apply(this,arguments);
+      const active=!!currentSupplier?.();
+      document.body.classList.toggle('supplier-authenticated',active);
+      if(!active) setExpanded(false,{persist:false});
+      return result;
+    };
+    refreshAuthUI();
+  }
 })();
