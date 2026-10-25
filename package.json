@@ -10,7 +10,7 @@
     "test:trust": "node trust.test.js",
     "test:auth": "node auth.test.js",
     "test:audit": "node audit.test.js",
-    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check .railway/railway.ts && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js",
+    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check .railway/railway.ts && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js && node --check modules/marketplace-trust-v172.js && node --check ops/backup-and-verify.js",
     "test:expiration": "node expiration.test.js",
     "test:security": "node security.test.js",
     "test:geo": "node geo.test.js",
@@ -114,7 +114,10 @@
     "test:customer-handoff-v145": "node customer-handoff-v145.test.js",
     "test:production-foundation-v146": "node production-foundation-v146.test.js",
     "test:deployment-runtime-v147": "node deployment-runtime-v147.test.js",
-    "test:staging-mode": "node staging-mode.test.js"
+    "test:staging-mode": "node staging-mode.test.js",
+    "backup:auto": "node ops/backup-and-verify.js",
+    "test:marketplace-trust-v172": "node marketplace-trust-v172.test.js",
+    "test:backup-launch-gate-v172": "node backup-launch-gate-v172.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

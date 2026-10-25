@@ -42,7 +42,7 @@ try{
   const railwayDefinition=await railwayProgram(createRailwayContext({environment:'production',environmentName:'production'}),project);
   ok(railwayDefinition.name==='rentall'&&railwayDefinition.resources.some(resource=>resource.type==='service'&&resource.name==='rentall')&&railwayDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentall-data'),'Railway IaC evaluates to service and volume');
   ok(start.includes('assertProductionConfig')&&start.includes('assertProductionStorage')&&start.includes("await import('../server.js')"),'fail-closed startup orchestration');
-  ok(db.includes('REQUIRED_SCHEMA_VERSION=147')&&db.includes('rc45-railway-deployment-runtime'),'migration 147');
+  ok(db.includes('REQUIRED_SCHEMA_VERSION=172')&&db.includes('v172-marketplace-trust-foundation'),'migration 172');
   ok(server.includes('runtimeConfig.uploadsDir'),'persistent uploads');
   ok(server.includes('stripe.webhooks.constructEvent'),'signed Stripe webhooks');
   ok(server.includes('verifyBookingPaymentToken'),'guest booking token protection');
@@ -51,7 +51,7 @@ try{
   ok(server.includes('recoverInterruptedTransactionalEmails')&&server.includes('emailWorkerPromise'),'restart-safe transactional email worker');
   ok(publicSmoke.includes("await request('/')")&&publicSmoke.includes("'/api/readiness'")&&publicSmoke.includes("'/api/ops/status'")&&publicSmoke.includes("'/api/integrations/capabilities'"),'public deployment smoke surface');
   ok(publicSmoke.includes('Secret leakage detected'),'public secret leakage gate');
-  ok(runbook.includes('RAILWAY_VOLUME_MOUNT_PATH=/data')&&runbook.includes('migration 147'),'exact volume and migration runbook');
+  ok(runbook.includes('RAILWAY_VOLUME_MOUNT_PATH=/data')&&runbook.includes('migration 172'),'exact volume and migration runbook');
 
   const blockedSecret='NeverPrintThis-Session-Secret-abcdef123456';
   const blocked=spawnSync(process.execPath,['ops/start.js'],{cwd:process.cwd(),env:{PATH:process.env.PATH,NODE_ENV:'production',SESSION_SECRET:blockedSecret},encoding:'utf8',timeout:5000});
@@ -62,7 +62,7 @@ try{
   const initialized=spawnSync(process.execPath,['ops/init-db.js'],{cwd:process.cwd(),env:{...process.env,...base},encoding:'utf8',timeout:10000});
   ok(initialized.status===0,`production database init failed: ${initialized.stderr}`);
   const result=JSON.parse(initialized.stdout.trim().split('\n').at(-1));
-  ok(result.ok&&result.persistent&&result.migrationVersion>=147,'production migration 147 initialized on volume');
+  ok(result.ok&&result.persistent&&result.migrationVersion>=172,'production migration 172 initialized on volume');
 
   const emailDb=path.join(temp,'email-recovery.sqlite');
   const emailEnv={...process.env,NODE_ENV:'test',RENTALL_DB_PATH:emailDb,DATABASE_URL:'',DB_PATH:''};

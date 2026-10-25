@@ -3895,7 +3895,15 @@ refreshAuthUI=function(){
   const supplier=currentSupplier();
   const authBtn=document.getElementById('supplierAuthBtn');
   if(authBtn && supplier){
-    authBtn.innerHTML=`${supplier.businessName} <span class="auth-role-badge">${supplier.role||'supplier'}</span>`;
+    const accountName=supplier.businessName||supplier.displayName||supplier.email||'Account';
+    authBtn.innerHTML=`${escapeHtml(accountName)} <span class="auth-role-badge">${supplier.role||'supplier'}</span>`;
+  }else if(authBtn && serverUser?.role==='customer'){
+    const accountName=serverUser.displayName||serverUser.email||'Account';
+    authBtn.innerHTML=`${escapeHtml(accountName)} <span class="auth-role-badge">customer</span>`;
+    authBtn.onclick=()=>document.getElementById('myBookingsBtn')?.click();
+  }else if(authBtn && !serverUser){
+    authBtn.textContent='Log in';
+    authBtn.onclick=()=>openAuth('login');
   }
   document.body.classList.toggle('is-admin',serverUser?.role==='admin');
 };
@@ -4154,7 +4162,8 @@ function wireAuthoritativeCheckout(){
           roomNumber:delivery.roomNumber,
           contactPerson:delivery.bookingName || customer.name,
           deliveryInstructions:delivery.instructions,
-          orderValue:pricing.total
+          orderValue:pricing.total,
+          termsAccepted:document.getElementById('termsCheck')?.checked===true
         });
 
       renderBookingConfirmation(result);
@@ -4225,13 +4234,17 @@ function wireAuthoritativeAuth(){
       e.preventDefault();
       const email=form.querySelector('input[type="email"]')?.value?.trim()||'';
       const password=form.querySelector('input[type="password"]')?.value||'';
-      const company=form.querySelector('#registerCompany')?.value?.trim()
-        || form.querySelector('input[type="text"]')?.value?.trim()
-        || 'Rental business';
+      const role=document.getElementById('regRole')?.value==='supplier'?'supplier':'customer';
+      const profileName=document.getElementById('regBusinessName')?.value?.trim()
+        || document.getElementById('regContactName')?.value?.trim()
+        || 'RentAll user';
+      const contactName=document.getElementById('regContactName')?.value?.trim()||profileName;
       try{
         await serverRegister({
-          email,password,role:'supplier',
-          displayName:company,businessName:company
+          email,password,role,
+          displayName:contactName,businessName:role==='supplier'?profileName:null,
+          country:document.getElementById('regCountry')?.value||null,
+          city:document.getElementById('regArea')?.value?.trim()||null
         });
         closeAuth();
         await hydrateListingsFromServer();
@@ -4358,6 +4371,15 @@ function wireSecureReviewForm(){
   });
 }
 
+
+function updateRegistrationRoleUI(){
+  const role=document.getElementById('regRole')?.value||'customer';
+  document.querySelectorAll('[data-supplier-register-field]').forEach(el=>el.hidden=role!=='supplier');
+  const note=document.getElementById('registerNextNote');
+  if(note) note.textContent=role==='supplier'?'Next: publish your first rental item and configure availability.':'Next: browse rentals, save bookings and message suppliers.';
+}
+document.getElementById('regRole')?.addEventListener('change',updateRegistrationRoleUI);
+setTimeout(updateRegistrationRoleUI,0);
 
 // V33 final boot.
 (async()=>{
@@ -5298,7 +5320,7 @@ async function loadUnifiedCustomerBookings(){
     const canCancel=['pending','confirmed'].includes(b.status);
     const canReview=['returned','completed'].includes(b.status);
     const canDispute=['active','returned','completed','cancelled','declined'].includes(b.status);
-    return `<div class="customer-booking-card">
+    return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">
       <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(b.status||'pending')}</span></div>
       <div class="customer-booking-grid">
         <div><span>Rental dates</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
@@ -5310,6 +5332,8 @@ async function loadUnifiedCustomerBookings(){
       <div class="customer-booking-actions">
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">Cancel booking</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">Leave review</button>`:''}
+        <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">View agreement</button>
+        ${currentServerUser?`<button class="secondary v172-booking-message" data-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">Messages</button>`:''}
         ${canDispute?`<button class="secondary v89-open-dispute" data-id="${escapeHtml(b.bookingId)}">Report a problem</button>`:''}
         ${currentServerUser && !guestAccess?.revoked?`<button class="secondary v88-revoke-guest" data-id="${escapeHtml(b.bookingId)}">Revoke guest link</button>`:''}
         ${currentServerUser && guestAccess?.revoked?`<span class="muted">Guest link revoked</span>`:''}
@@ -5472,6 +5496,20 @@ async function handleCustomerDeepLinkV81(){
   const bookingId=String(qs.get('booking')||'').trim();
   const access=String(qs.get('access')||'').trim();
   const view=String(qs.get('view')||'').trim();
+  const listingId=String(qs.get('listing')||'').trim();
+
+  if(listingId){
+    for(let attempt=0;attempt<12;attempt++){
+      const listing=loadUniversalListings().find(l=>String(l.id)===listingId);
+      if(listing){
+        await openListingDetail(listingId);
+        const clean=new URL(window.location.href);clean.searchParams.delete('listing');
+        history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);
+        return;
+      }
+      await new Promise(resolve=>setTimeout(resolve,150));
+    }
+  }
 
   if(bookingId && access){
     // Persist the guest credential only in the existing per-booking access store.

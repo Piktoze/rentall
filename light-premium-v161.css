@@ -157,3 +157,477 @@ footer b{color:var(--dark)!important}
   .product-grid{grid-template-columns:1fr!important}
   .section{padding:52px 0!important}
 }
+
+/* RentAll V166 — precision premium hero/layout polish */
+:root{
+  --premium-gold:#b79a67;
+  --premium-ink:#13382b;
+  --premium-cream:#fbfaf6;
+  --premium-sage:#eef3ef;
+  --premium-line:rgba(23,56,43,.105);
+  --premium-shadow:0 22px 60px rgba(25,52,41,.09);
+  --premium-shadow-card:0 16px 42px rgba(25,52,41,.075);
+}
+
+/* Strict hero geometry: no component may bleed into the adjacent column. */
+.hero{padding:68px 0 54px!important;overflow:hidden!important}
+.hero-grid{
+  grid-template-columns:minmax(0,1.48fr) minmax(330px,.72fr)!important;
+  gap:64px!important;
+  align-items:start!important;
+}
+.hero-grid>div:first-child{min-width:0!important}
+.hero .eyebrow{
+  margin:6px 0 18px!important;
+  font-size:11px!important;
+  letter-spacing:.16em!important;
+  color:var(--accent)!important;
+}
+.hero .eyebrow::before{
+  width:6px!important;height:6px!important;
+  background:var(--premium-gold)!important;
+  box-shadow:none!important;
+}
+.hero h1{
+  max-width:700px!important;
+  margin:0 0 22px!important;
+  font-size:clamp(52px,5.3vw,76px)!important;
+  line-height:1.02!important;
+  letter-spacing:-.055em!important;
+  text-wrap:balance;
+}
+.hero h1 span{display:block!important;margin-top:3px!important}
+.hero-copy{
+  max-width:650px!important;
+  margin:0!important;
+  font-size:18px!important;
+  line-height:1.62!important;
+  color:#647068!important;
+}
+
+.search-mode-wrap{margin-top:30px!important;max-width:760px!important}
+.search-mode-tabs{margin-bottom:12px!important}
+
+/* Replace legacy 8-column search layout with a contained premium grid. */
+.hero .universal-search,
+.hero .trip-search{
+  width:100%!important;
+  max-width:760px!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;
+  padding:10px!important;
+  margin-top:0!important;
+  background:#fff!important;
+  border:1px solid var(--premium-line)!important;
+  border-radius:20px!important;
+  box-shadow:0 18px 48px rgba(25,52,41,.08)!important;
+  overflow:hidden!important;
+}
+.hero .search-card label{
+  min-width:0!important;
+  background:#fafbf8!important;
+  border:1px solid rgba(23,56,43,.07)!important;
+  border-radius:12px!important;
+  padding:9px 11px!important;
+}
+.hero .search-card label.wide{grid-column:span 2!important;min-width:0!important}
+.hero .search-card input,.hero .search-card select{
+  width:100%!important;
+  min-width:0!important;
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+  font-size:14px!important;
+}
+.hero .search-card .primary{
+  min-height:54px!important;
+  align-self:stretch!important;
+  padding:0 18px!important;
+  background:var(--accent)!important;
+  color:#fff!important;
+  border-radius:12px!important;
+  box-shadow:none!important;
+}
+.hero .universal-search .primary,
+.hero .trip-search .primary{grid-column:span 2!important}
+.hero .search-card .primary:hover{background:#1e503d!important;filter:none!important}
+
+/* Trust is text-led; avoid badge overload inside hero. */
+.trust-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:22px!important;
+  margin:18px 0 0!important;
+  color:#56645c!important;
+  font-size:12px!important;
+}
+.trust-row span{display:inline-flex!important;align-items:center!important;gap:5px!important;white-space:nowrap}
+.trust-row span::first-letter{color:var(--accent)}
+.hero-feature-pills{display:none!important}
+.quick-category-row{
+  margin-top:22px!important;
+  gap:9px!important;
+}
+.quick-category{
+  min-height:42px!important;
+  padding:9px 14px!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  border:1px solid var(--premium-line)!important;
+  box-shadow:0 5px 16px rgba(25,52,41,.035)!important;
+  font-size:12px!important;
+}
+.quick-category-icon{
+  width:21px!important;height:21px!important;border-radius:7px!important;
+  background:var(--premium-sage)!important;color:var(--accent)!important;
+}
+
+/* Right-side marketplace preview: deliberate, aligned, and quiet. */
+.hero-card{
+  align-self:start!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  padding-top:108px!important;
+  min-width:0!important;
+}
+.mock-phone{
+  width:min(360px,100%)!important;
+  padding:16px!important;
+  border-radius:26px!important;
+  background:rgba(255,255,255,.96)!important;
+  border:1px solid rgba(23,56,43,.09)!important;
+  box-shadow:var(--premium-shadow)!important;
+  transform:none!important;
+}
+.phone-top{font-size:13px!important;font-weight:800!important;color:var(--premium-ink)!important;letter-spacing:.01em}
+.phone-location{margin:10px 0 14px!important;font-size:12px!important;color:#6a756e!important}
+.mini-card{
+  grid-template-columns:38px minmax(0,1fr) auto!important;
+  gap:10px!important;
+  padding:11px!important;
+  margin:8px 0!important;
+  border-radius:14px!important;
+  background:#fafbf8!important;
+  border:1px solid rgba(23,56,43,.07)!important;
+  box-shadow:none!important;
+}
+.mini-card .emoji{font-size:23px!important}
+.mini-card strong{font-size:14px!important;color:#1d2d25!important;line-height:1.25!important}
+.mini-card small{font-size:11px!important;line-height:1.35!important;color:#6b776f!important}
+.mini-card>b{font-size:13px!important;color:#17231d!important;white-space:nowrap!important}
+.mock-btn{
+  margin-top:10px!important;
+  min-height:46px!important;
+  border-radius:12px!important;
+  background:var(--accent)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+}
+
+/* Trust band: premium, restrained, aligned to the same grid rhythm. */
+.brand-proof-strip{
+  background:#fff!important;
+  border-top:1px solid var(--premium-line)!important;
+  border-bottom:1px solid var(--premium-line)!important;
+  padding:0!important;
+}
+.brand-proof-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:0!important;
+}
+.brand-proof-grid>div{
+  position:relative!important;
+  padding:22px 28px!important;
+  min-width:0!important;
+}
+.brand-proof-grid>div+div{border-left:1px solid var(--premium-line)!important}
+.brand-proof-grid strong{display:block!important;font-size:13px!important;color:var(--premium-ink)!important;margin-bottom:5px!important}
+.brand-proof-grid span{display:block!important;font-size:12px!important;line-height:1.45!important;color:#6b766f!important}
+
+/* Consistent premium geometry across primary cards and surfaces. */
+.product,.listing-card,.dashboard-panel,.kpi-card,.admin-card,.customer-booking-card,.workspace-card,
+.checkout-panel,.auth-panel,.onboarding-panel{
+  border-radius:18px!important;
+  border-color:var(--premium-line)!important;
+  box-shadow:var(--premium-shadow-card)!important;
+}
+.product:hover{transform:translateY(-2px)!important;box-shadow:0 20px 48px rgba(25,52,41,.10)!important}
+.primary,.secondary,.chip,.outline-btn,.primary-link{transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease!important}
+
+@media(max-width:1120px){
+  .hero-grid{grid-template-columns:minmax(0,1fr) 330px!important;gap:38px!important}
+  .hero h1{font-size:clamp(48px,6vw,66px)!important}
+  .hero-card{padding-top:102px!important}
+}
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr!important;gap:30px!important}
+  .hero-card{padding-top:0!important;justify-content:flex-start!important}
+  .mock-phone{width:min(520px,100%)!important}
+  .hero .universal-search,.hero .trip-search{max-width:none!important}
+  .brand-proof-grid{grid-template-columns:1fr 1fr!important}
+  .brand-proof-grid>div:nth-child(3){border-left:0!important;border-top:1px solid var(--premium-line)!important}
+  .brand-proof-grid>div:nth-child(4){border-top:1px solid var(--premium-line)!important}
+}
+@media(max-width:680px){
+  .hero{padding:42px 0 38px!important}
+  .hero h1{font-size:clamp(42px,12vw,55px)!important;line-height:1.03!important}
+  .hero-copy{font-size:16px!important}
+  .hero .universal-search,.hero .trip-search{grid-template-columns:1fr 1fr!important;padding:9px!important}
+  .hero .search-card label.wide{grid-column:span 2!important}
+  .hero .universal-search .primary,.hero .trip-search .primary{grid-column:1/-1!important}
+  .trust-row{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
+  .hero-card{display:none!important}
+  .brand-proof-grid{grid-template-columns:1fr!important}
+  .brand-proof-grid>div+div{border-left:0!important;border-top:1px solid var(--premium-line)!important}
+}
+@media(max-width:430px){
+  .hero .universal-search,.hero .trip-search{grid-template-columns:1fr!important}
+  .hero .search-card label.wide{grid-column:1!important}
+  .quick-category-row{margin-inline:-2px!important}
+}
+
+/* RentAll V167 — balanced light palette + contrast repair */
+:root{
+  --surface-cream:#f6f3eb;
+  --surface-sage:#edf3ee;
+  --surface-sage-2:#e5eee7;
+  --surface-white:#ffffff;
+  --surface-muted:#f8f9f6;
+  --ink-strong:#183126;
+  --ink-body:#3f5048;
+  --ink-muted:#69766f;
+  --border-soft:#dbe3dc;
+}
+
+/* Prevent legacy dark-aurora !important rules from leaking into the light theme. */
+body.theme-aurora .search-card,
+body.theme-aurora .mock-phone,
+body.theme-aurora .product,
+body.theme-aurora .step,
+body.theme-aurora .plan,
+body.theme-aurora .payment-card,
+body.theme-aurora .dashboard-panel,
+body.theme-aurora .inventory-card,
+body.theme-aurora .booking-card,
+body.theme-aurora .listing-card,
+body.theme-aurora .customer-booking-card,
+body.theme-aurora .notification-item,
+body.theme-aurora .admin-card,
+body.theme-aurora .checkout-panel,
+body.theme-aurora .auth-panel,
+body.theme-aurora .profile-panel,
+body.theme-aurora .results-map-shell,
+body.theme-aurora .locked-card,
+body.theme-aurora .webhook-filters,
+body.theme-aurora .kpi-card,
+body.theme-aurora .mini-card,
+body.theme-aurora .checkout-item,
+body.theme-aurora .setup-step,
+body.theme-aurora .next-payout-box,
+body.theme-aurora .delivery-info-box,
+body.theme-aurora .price-preview-box,
+body.theme-aurora .booking-summary,
+body.theme-aurora .dashboard-summary,
+body.theme-aurora .review-card,
+body.theme-aurora .calendar-summary,
+body.theme-aurora .status-banner,
+body.theme-aurora .account-card,
+body.theme-aurora .settings-card{
+  background:var(--surface-white)!important;
+  color:var(--ink-body)!important;
+  border-color:var(--border-soft)!important;
+  backdrop-filter:none!important;
+}
+
+body.theme-aurora .price-preview-box,
+body.theme-aurora .delivery-info-box,
+body.theme-aurora .booking-summary,
+body.theme-aurora .dashboard-summary,
+body.theme-aurora .calendar-summary,
+body.theme-aurora .review-card{
+  background:var(--surface-sage)!important;
+  color:var(--ink-body)!important;
+  box-shadow:none!important;
+}
+body.theme-aurora .price-preview-row,
+body.theme-aurora .price-preview-row span,
+body.theme-aurora .price-preview-row b,
+body.theme-aurora .price-preview-row strong,
+body.theme-aurora .delivery-summary-card,
+body.theme-aurora .delivery-summary-card span,
+body.theme-aurora .delivery-summary-card b,
+body.theme-aurora .delivery-summary-grid div,
+body.theme-aurora .delivery-summary-grid span,
+body.theme-aurora .delivery-summary-grid b{
+  color:var(--ink-body)!important;
+}
+body.theme-aurora .price-preview-row.total{
+  border-color:#cbd8ce!important;
+  color:var(--ink-strong)!important;
+}
+body.theme-aurora .price-preview-note{color:var(--ink-muted)!important}
+body.theme-aurora .price-preview-note.ok{color:#22704f!important}
+
+/* Listings: high readability, subtle tonal separation instead of white-on-white. */
+body.theme-aurora .listing-card{
+  background:linear-gradient(180deg,#fff 0%,#fbfcf9 100%)!important;
+  border:1px solid #dce4dd!important;
+  box-shadow:0 10px 28px rgba(27,55,43,.07)!important;
+}
+body.theme-aurora .listing-card h3,
+body.theme-aurora .listing-card h4,
+body.theme-aurora .listing-card strong,
+body.theme-aurora .listing-card b{color:var(--ink-strong)!important}
+body.theme-aurora .listing-card p,
+body.theme-aurora .listing-card small{color:var(--ink-muted)!important}
+body.theme-aurora .listing-card .secondary{
+  background:#fff!important;
+  color:#205c45!important;
+  border-color:#cddbd1!important;
+}
+body.theme-aurora .listing-card .primary{
+  background:#245f49!important;
+  color:#fff!important;
+}
+
+/* Add premium rhythm: sections alternate warm cream, white and sage rather than a flat white sheet. */
+body.theme-aurora{background:var(--surface-cream)!important;color:var(--ink-body)!important}
+body.theme-aurora main{background:var(--surface-cream)!important}
+body.theme-aurora .section{background:transparent!important}
+body.theme-aurora .section:nth-of-type(even){background:rgba(255,255,255,.62)!important}
+body.theme-aurora .dashboard-section{background:var(--surface-sage)!important}
+body.theme-aurora .customer-bookings-shell{background:#f8f7f1!important}
+body.theme-aurora .brand-proof-strip{background:var(--surface-sage)!important}
+body.theme-aurora .brand-proof-grid>div+div{border-color:#d6e0d8!important}
+
+/* Search remains a stronger brand anchor, but no black / charcoal slab. */
+body.theme-aurora .hero .search-card{
+  background:#e9f0ea!important;
+  border:1px solid #d0ddd3!important;
+  box-shadow:0 15px 38px rgba(25,58,44,.10)!important;
+}
+body.theme-aurora .hero .search-card label{
+  background:#fff!important;
+  border:1px solid #e1e6e1!important;
+}
+body.theme-aurora .hero .search-card label span{color:#64736b!important}
+body.theme-aurora .hero .search-card input,
+body.theme-aurora .hero .search-card select{color:#1f3329!important}
+
+/* Buttons / controls: clear contrast without visual heaviness. */
+body.theme-aurora .secondary{
+  background:#fff!important;
+  color:#245f49!important;
+  border-color:#ccd9cf!important;
+}
+body.theme-aurora .secondary:hover{background:#f2f6f2!important}
+body.theme-aurora .chip{background:#fff!important;color:#31483c!important;border-color:#d9e1da!important}
+body.theme-aurora .chip.active{background:#245f49!important;color:#fff!important;border-color:#245f49!important}
+
+/* Reduce harsh empty white areas with contained content rhythm. */
+body.theme-aurora .product-grid,
+body.theme-aurora .dashboard-grid,
+body.theme-aurora .admin-grid,
+body.theme-aurora .customer-bookings-list{position:relative}
+body.theme-aurora .section>.container,
+body.theme-aurora .dashboard-section>.container{position:relative}
+
+/* Small semantic accents; never use gold for primary actions. */
+body.theme-aurora .status.confirmed,
+body.theme-aurora .pill{background:#e6f2e9!important;color:#246247!important}
+body.theme-aurora .status.pending{background:#f8efd9!important;color:#7b6228!important}
+body.theme-aurora .badge{background:#f5ead4!important;color:#765d2c!important}
+
+/* Accessibility floor for formerly inherited low-contrast text. */
+body.theme-aurora .listing-card *,
+body.theme-aurora .price-preview-box *,
+body.theme-aurora .delivery-info-box *,
+body.theme-aurora .booking-summary *{
+  text-shadow:none!important;
+}
+
+
+/* V169: public-surface cleanup — internal release/integration diagnostics never render to customers. */
+[data-internal-only="true"]{display:none!important}
+
+/* RentAll V170 — persistent primary navigation */
+.topbar{
+  position:fixed!important;
+  top:0!important;
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  z-index:1000!important;
+  background:rgba(251,250,246,.96)!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+  border-bottom:1px solid rgba(23,35,29,.08)!important;
+  box-shadow:0 8px 24px rgba(23,35,29,.05)!important;
+}
+body.theme-aurora{
+  padding-top:70px!important;
+}
+.v120-journey{
+  position:relative!important;
+  top:auto!important;
+  z-index:20!important;
+}
+@media(max-width:900px){
+  body.theme-aurora{padding-top:64px!important}
+  .nav{height:64px!important}
+}
+
+
+/* RentAll V171 — sustainability value, factual and understated */
+.sustainability-section{
+  background:linear-gradient(135deg,#e9f0e9 0%,#f4f0e6 100%)!important;
+  padding:72px 0!important;
+  border-top:1px solid #dde4dd;
+  border-bottom:1px solid #dde4dd;
+}
+.sustainability-shell{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:56px;align-items:center}
+.sustainability-copy h2{max-width:520px;margin-bottom:18px}
+.sustainability-copy>p{max-width:560px;color:#53655c!important;font-size:17px;line-height:1.72;margin:0}
+.sustainability-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.sustainability-card{
+  background:rgba(255,255,255,.8);
+  border:1px solid rgba(47,83,65,.12);
+  border-radius:20px;
+  padding:24px 22px;
+  box-shadow:0 12px 34px rgba(31,65,49,.06);
+  min-height:230px;
+}
+.sustainability-icon{
+  width:42px;height:42px;border-radius:14px;display:grid;place-items:center;
+  background:#dfece3;color:#1f6047;font-size:22px;font-weight:800;margin-bottom:20px;
+}
+.sustainability-card h3{font-size:18px;line-height:1.3;margin:0 0 10px;color:#17382b}
+.sustainability-card p{margin:0;color:#5e6c65!important;line-height:1.58;font-size:14px}
+@media(max-width:980px){
+  .sustainability-shell{grid-template-columns:1fr;gap:32px}
+  .sustainability-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .sustainability-section{padding:52px 0!important}
+  .sustainability-grid{grid-template-columns:1fr}
+  .sustainability-card{min-height:0}
+}
+
+/* V172 — trust, agreements, messaging and reputation */
+.messages-panel{width:min(980px,96vw)!important;max-height:88vh;overflow:hidden}
+.messages-layout{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.5fr);gap:18px;min-height:480px}
+.conversation-list{border:1px solid var(--line);border-radius:18px;background:var(--surface-sage,#eef4ef);padding:10px;overflow:auto;max-height:62vh}
+.conversation-row{width:100%;display:grid;text-align:left;gap:4px;border:0;border-bottom:1px solid #dfe6e0;background:transparent;padding:13px 12px;cursor:pointer;color:var(--text)}
+.conversation-row:last-child{border-bottom:0}.conversation-row:hover,.conversation-row.active{background:#fff;border-radius:12px}.conversation-row span,.conversation-row small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conversation-thread{display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden}
+.conversation-title{padding:16px 18px;border-bottom:1px solid var(--line);font-weight:800;color:var(--dark)}
+.message-list{flex:1;min-height:300px;max-height:48vh;overflow:auto;padding:18px;background:#fbfaf6;display:flex;flex-direction:column;gap:10px}
+.message-bubble{max-width:78%;padding:10px 13px;border-radius:16px;background:#edf3ef;border:1px solid #dce7df}.message-bubble.mine{align-self:flex-end;background:#255f49;color:#fff;border-color:#255f49}.message-bubble.theirs{align-self:flex-start}.message-bubble p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.message-bubble small{opacity:.75}.message-form{border-top:1px solid var(--line);padding:12px;background:#fff}.message-form textarea{width:100%;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text);background:#fff}.message-form-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}.message-form-row small{color:var(--muted);max-width:70%}
+.v172-marketplace-trust{margin-top:24px;padding:18px 20px;border:1px solid #dce5de;border-radius:18px;background:#f0f5f1;display:flex;align-items:center;justify-content:space-between;gap:18px}.v172-marketplace-trust>div:first-child{display:grid;gap:4px}.v172-marketplace-trust small,.v172-marketplace-trust span{color:var(--muted)}.v172-marketplace-trust strong{font-size:17px;color:var(--dark)}.v172-trust-actions,.v172-supplier-trust-actions{display:flex;gap:8px;flex-wrap:wrap}.v172-trust-actions a{display:inline-flex;align-items:center;text-decoration:none}
+.agreement-panel{width:min(780px,96vw)!important}.agreement-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.agreement-status-grid>div{display:grid;gap:4px;padding:13px;border:1px solid var(--line);border-radius:14px;background:#f4f7f3}.agreement-status-grid span{font-size:12px;color:var(--muted)}.agreement-terms{padding:18px;border-radius:16px;background:#f6f2e8;border:1px solid #e7dfcf}.agreement-terms h3{margin-top:0}.agreement-terms li{margin:8px 0;color:#3f5048}
+.v172-renter-trust{background:#f1f5f1!important}.v172-supplier-trust-actions{margin-top:12px}
+.seo-listing-page{max-width:900px;margin:40px auto}.seo-listing-page .primary{display:inline-flex;text-decoration:none}
+footer .footer-grid>div{align-content:start}footer .footer-grid a{display:block;margin:5px 0}
+@media(max-width:720px){.messages-layout{grid-template-columns:1fr;min-height:0}.conversation-list{max-height:190px}.message-list{min-height:280px}.v172-marketplace-trust{align-items:flex-start;flex-direction:column}.agreement-status-grid{grid-template-columns:1fr}.message-form-row{align-items:stretch;flex-direction:column}.message-form-row small{max-width:none}}

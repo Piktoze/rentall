@@ -13,7 +13,7 @@ assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentall.sqlite');
 fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
-export const REQUIRED_SCHEMA_VERSION=147;
+export const REQUIRED_SCHEMA_VERSION=172;
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -1833,7 +1833,149 @@ export function releaseBookingIdempotency(key,requestHash){
     .run(String(key||'').trim().slice(0,160),String(requestHash)).changes===1;
 }
 
+
+// V172: marketplace trust foundation — agreement audit, conversations and two-sided reputation.
+db.exec(`
+CREATE TABLE IF NOT EXISTS rental_agreements (
+  agreement_id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL UNIQUE,
+  terms_version TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  customer_accepted_at TEXT,
+  supplier_accepted_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(booking_id) REFERENCES rental_bookings(booking_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_rental_agreements_booking ON rental_agreements(booking_id);
+
+CREATE TABLE IF NOT EXISTS rental_conversations (
+  conversation_id TEXT PRIMARY KEY,
+  listing_id TEXT NOT NULL,
+  booking_id TEXT,
+  customer_email TEXT NOT NULL COLLATE NOCASE,
+  supplier_email TEXT NOT NULL COLLATE NOCASE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(listing_id) REFERENCES rental_listings(listing_id),
+  FOREIGN KEY(booking_id) REFERENCES rental_bookings(booking_id)
+);
+CREATE INDEX IF NOT EXISTS idx_rental_conversations_customer ON rental_conversations(customer_email,updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rental_conversations_supplier ON rental_conversations(supplier_email,updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rental_conversations_unique
+  ON rental_conversations(listing_id,customer_email,supplier_email,COALESCE(booking_id,''));
+
+CREATE TABLE IF NOT EXISTS rental_messages (
+  message_id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  sender_email TEXT NOT NULL COLLATE NOCASE,
+  sender_role TEXT NOT NULL CHECK(sender_role IN ('customer','supplier','admin')),
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(conversation_id) REFERENCES rental_conversations(conversation_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_rental_messages_conversation ON rental_messages(conversation_id,created_at ASC);
+
+CREATE TABLE IF NOT EXISTS renter_reviews (
+  review_id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL UNIQUE,
+  reviewer_email TEXT NOT NULL COLLATE NOCASE,
+  reviewee_email TEXT NOT NULL COLLATE NOCASE,
+  rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  comment TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(booking_id) REFERENCES rental_bookings(booking_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_renter_reviews_reviewee ON renter_reviews(reviewee_email,created_at DESC);
+`);
+
+const insertAgreementStmt=db.prepare(`INSERT INTO rental_agreements
+  (agreement_id,booking_id,terms_version,snapshot_json,customer_accepted_at,supplier_accepted_at,created_at,updated_at)
+  VALUES(@agreement_id,@booking_id,@terms_version,@snapshot_json,@customer_accepted_at,NULL,@created_at,@updated_at)`);
+const agreementByBookingStmt=db.prepare(`SELECT agreement_id AS agreementId,booking_id AS bookingId,terms_version AS termsVersion,
+  snapshot_json AS snapshotJson,customer_accepted_at AS customerAcceptedAt,supplier_accepted_at AS supplierAcceptedAt,
+  created_at AS createdAt,updated_at AS updatedAt FROM rental_agreements WHERE booking_id=?`);
+function publicAgreement(row){
+  if(!row)return null;let snapshot={};try{snapshot=JSON.parse(row.snapshotJson||'{}')}catch{}
+  const {snapshotJson,...rest}=row;return {...rest,snapshot};
+}
+export function createRentalAgreement({bookingId,termsVersion='rentall-rental-v1',snapshot,customerAcceptedAt=null}){
+  const existing=agreementByBookingStmt.get(String(bookingId));if(existing)return publicAgreement(existing);
+  const now=new Date().toISOString();
+  insertAgreementStmt.run({agreement_id:`AGR-${crypto.randomUUID()}`,booking_id:String(bookingId),terms_version:String(termsVersion),
+    snapshot_json:JSON.stringify(snapshot||{}),customer_accepted_at:customerAcceptedAt||null,created_at:now,updated_at:now});
+  return publicAgreement(agreementByBookingStmt.get(String(bookingId)));
+}
+export function getRentalAgreement(bookingId){return publicAgreement(agreementByBookingStmt.get(String(bookingId)));}
+export function acceptRentalAgreement(bookingId,role){
+  if(!['customer','supplier'].includes(role))throw new Error('Invalid agreement actor');
+  const field=role==='customer'?'customer_accepted_at':'supplier_accepted_at';
+  const now=new Date().toISOString();
+  db.prepare(`UPDATE rental_agreements SET ${field}=COALESCE(${field},?),updated_at=? WHERE booking_id=?`).run(now,now,String(bookingId));
+  return getRentalAgreement(bookingId);
+}
+
+const conversationByIdStmt=db.prepare(`SELECT conversation_id AS conversationId,listing_id AS listingId,booking_id AS bookingId,
+ customer_email AS customerEmail,supplier_email AS supplierEmail,created_at AS createdAt,updated_at AS updatedAt
+ FROM rental_conversations WHERE conversation_id=?`);
+export function createOrGetRentalConversation({listingId,bookingId=null,customerEmail,supplierEmail}){
+  const listing=String(listingId),customer=String(customerEmail||'').trim().toLowerCase(),supplier=String(supplierEmail||'').trim().toLowerCase();
+  if(!listing||!customer||!supplier)throw new Error('Conversation participants are required');
+  const existing=db.prepare(`SELECT conversation_id AS conversationId FROM rental_conversations
+    WHERE listing_id=? AND customer_email=? COLLATE NOCASE AND supplier_email=? COLLATE NOCASE AND COALESCE(booking_id,'')=COALESCE(?,'')`)
+    .get(listing,customer,supplier,bookingId?String(bookingId):null);
+  if(existing)return conversationByIdStmt.get(existing.conversationId);
+  const now=new Date().toISOString(),id=`CONV-${crypto.randomUUID()}`;
+  db.prepare(`INSERT INTO rental_conversations(conversation_id,listing_id,booking_id,customer_email,supplier_email,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?)`).run(id,listing,bookingId?String(bookingId):null,customer,supplier,now,now);
+  return conversationByIdStmt.get(id);
+}
+export function getRentalConversation(conversationId){return conversationByIdStmt.get(String(conversationId))||null;}
+export function listRentalConversationsForUser(email){
+  const e=String(email||'').trim().toLowerCase();if(!e)return [];
+  return db.prepare(`SELECT c.conversation_id AS conversationId,c.listing_id AS listingId,c.booking_id AS bookingId,
+    c.customer_email AS customerEmail,c.supplier_email AS supplierEmail,c.created_at AS createdAt,c.updated_at AS updatedAt,
+    l.title AS listingTitle,(SELECT body FROM rental_messages m WHERE m.conversation_id=c.conversation_id ORDER BY m.created_at DESC LIMIT 1) AS lastMessage
+    FROM rental_conversations c JOIN rental_listings l ON l.listing_id=c.listing_id
+    WHERE c.customer_email=? COLLATE NOCASE OR c.supplier_email=? COLLATE NOCASE ORDER BY c.updated_at DESC`).all(e,e);
+}
+export function listRentalMessages(conversationId){
+  return db.prepare(`SELECT message_id AS messageId,conversation_id AS conversationId,sender_email AS senderEmail,sender_role AS senderRole,
+    body,created_at AS createdAt FROM rental_messages WHERE conversation_id=? ORDER BY created_at ASC`).all(String(conversationId));
+}
+export function addRentalMessage({conversationId,senderEmail,senderRole,body}){
+  const clean=String(body||'').trim();if(!clean||clean.length>2000)throw new Error('Message must be 1–2000 characters');
+  const id=`MSG-${crypto.randomUUID()}`,now=new Date().toISOString();
+  db.prepare(`INSERT INTO rental_messages(message_id,conversation_id,sender_email,sender_role,body,created_at) VALUES(?,?,?,?,?,?)`)
+    .run(id,String(conversationId),String(senderEmail||'').toLowerCase(),String(senderRole),clean,now);
+  db.prepare(`UPDATE rental_conversations SET updated_at=? WHERE conversation_id=?`).run(now,String(conversationId));
+  return {messageId:id,conversationId:String(conversationId),senderEmail:String(senderEmail||'').toLowerCase(),senderRole,body:clean,createdAt:now};
+}
+
+export function createRenterReview({bookingId,reviewerEmail,revieweeEmail,rating,comment=null}){
+  const booking=getRentalBookingById(bookingId);if(!booking){const e=new Error('Booking not found');e.code='BOOKING_NOT_FOUND';throw e;}
+  if(!['returned','completed'].includes(booking.status)){const e=new Error('Renter review is allowed only after return/completion');e.code='REVIEW_NOT_ALLOWED';throw e;}
+  const safe=Number(rating);if(!Number.isInteger(safe)||safe<1||safe>5)throw new Error('Rating must be 1–5');
+  const id=`RR-${crypto.randomUUID()}`;
+  try{db.prepare(`INSERT INTO renter_reviews(review_id,booking_id,reviewer_email,reviewee_email,rating,comment,created_at) VALUES(?,?,?,?,?,?,?)`)
+    .run(id,String(bookingId),String(reviewerEmail||'').toLowerCase(),String(revieweeEmail||'').toLowerCase(),safe,String(comment||'').trim().slice(0,2000)||null,new Date().toISOString());}
+  catch(err){if(String(err.message).includes('UNIQUE constraint failed')){const e=new Error('This renter has already been reviewed for this booking');e.code='REVIEW_ALREADY_EXISTS';throw e;}throw err;}
+  return {reviewId:id,...getRenterReputation(revieweeEmail)};
+}
+export function getRenterReputation(email){
+  const e=String(email||'').toLowerCase();
+  const summary=db.prepare(`SELECT COUNT(*) AS reviewCount,ROUND(AVG(rating),2) AS averageRating FROM renter_reviews WHERE reviewee_email=? COLLATE NOCASE`).get(e);
+  const reviews=db.prepare(`SELECT review_id AS reviewId,booking_id AS bookingId,rating,comment,created_at AS createdAt FROM renter_reviews WHERE reviewee_email=? COLLATE NOCASE ORDER BY created_at DESC LIMIT 20`).all(e);
+  return {summary:{reviewCount:Number(summary?.reviewCount||0),averageRating:summary?.averageRating==null?null:Number(summary.averageRating)},reviews};
+}
+export function getSupplierReputation(ownerEmail){
+  const e=String(ownerEmail||'').toLowerCase();
+  const summary=db.prepare(`SELECT COUNT(rr.review_id) AS reviewCount,ROUND(AVG(rr.rating),2) AS averageRating
+    FROM rental_reviews rr JOIN rental_listings rl ON rl.listing_id=rr.listing_id WHERE rl.owner_email=? COLLATE NOCASE`).get(e);
+  return {reviewCount:Number(summary?.reviewCount||0),averageRating:summary?.averageRating==null?null:Number(summary.averageRating)};
+}
+
 // This marker is written only after every idempotent schema operation and
 // prepared statement above initialized successfully. Startup readiness requires it.
 db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
-  .run(REQUIRED_SCHEMA_VERSION,'rc45-railway-deployment-runtime');
+  .run(REQUIRED_SCHEMA_VERSION,'v172-marketplace-trust-foundation');

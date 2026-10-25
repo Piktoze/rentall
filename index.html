@@ -15,7 +15,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-  <meta name="theme-color" content="#09110f">
+  <meta name="theme-color" content="#f7f7f2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RentAll">
@@ -39,7 +39,8 @@
       <a href="#how" data-i18n="nav_how">How it works</a>
       <a href="#pricing" data-i18n="nav_partners">For partners</a><button class="install-app-btn" id="installAppBtn" type="button" hidden>Install app</button>
       <button class="v120-bookings-nav" id="myBookingsBtn" type="button">My bookings</button>
-      <button class="nav-auth-btn" id="supplierAuthBtn">Supplier login</button>
+      <button class="v120-bookings-nav" id="messagesBtn" type="button" hidden>Messages</button>
+      <button class="nav-auth-btn" id="supplierAuthBtn">Log in</button>
     </nav>
     <select id="lang" aria-label="Language">
       <option value="lt">LT</option>
@@ -189,12 +190,12 @@
       <div class="trip-summary" id="tripSearchSummary"></div>
     </div>
 
-      <div class="design-note-chip">Modern marketplace UI · dark aurora theme</div>
-        <div class="trust-row">
-        <span>✓ <b data-i18n="trust_1">Local owners & businesses</b></span>
-        <span>✓ <b data-i18n="trust_2">Pickup or delivery</b></span>
-        <span>✓ <b data-i18n="trust_3">One marketplace</b></span>
       
+        <div class="trust-row">
+          <span>✓ <b data-i18n="trust_1">Local owners & businesses</b></span>
+          <span>✓ <b data-i18n="trust_2">Pickup or delivery</b></span>
+          <span>✓ <b data-i18n="trust_3">One marketplace</b></span>
+        </div>
 
 <div class="quick-category-row" aria-label="Popular rental categories">
   <button type="button" class="quick-category" data-quick-category="Furniture">
@@ -218,7 +219,6 @@
   <span><i></i> Live availability</span>
   <span><i></i> Secure payments</span>
   <span><i></i> Local delivery</span>
-</div>
 </div>
     </div>
 
@@ -352,6 +352,33 @@
   </div>
 </section>
 
+<section class="section sustainability-section" id="sustainability">
+  <div class="container sustainability-shell">
+    <div class="sustainability-copy">
+      <div class="eyebrow" data-i18n="sustainability_eyebrow">A smarter way to use what already exists</div>
+      <h2 data-i18n="sustainability_title">Use more. Buy less.</h2>
+      <p data-i18n="sustainability_intro">Many things are needed only occasionally. RentAll helps useful items stay in use longer instead of being bought again for short-term needs.</p>
+    </div>
+    <div class="sustainability-grid">
+      <article class="sustainability-card">
+        <span class="sustainability-icon" aria-hidden="true">↻</span>
+        <h3 data-i18n="sustainability_item1_title">Longer use for useful items</h3>
+        <p data-i18n="sustainability_item1_copy">The same item can serve more people instead of sitting unused.</p>
+      </article>
+      <article class="sustainability-card">
+        <span class="sustainability-icon" aria-hidden="true">−</span>
+        <h3 data-i18n="sustainability_item2_title">Fewer unnecessary purchases</h3>
+        <p data-i18n="sustainability_item2_copy">Rent what you only need for a day, a weekend or a project.</p>
+      </article>
+      <article class="sustainability-card">
+        <span class="sustainability-icon" aria-hidden="true">＋</span>
+        <h3 data-i18n="sustainability_item3_title">More value from what you own</h3>
+        <p data-i18n="sustainability_item3_copy">Items and equipment you already own can become useful to others and generate extra income.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
 <section class="section" id="pricing">
   <div class="container">
     <div class="eyebrow">For rental partners</div>
@@ -419,9 +446,9 @@
 
     <div class="auth-view active" data-auth-view="login">
       <div class="eyebrow">Account access</div>
-      <h2>Log in to your partner account</h2>
+      <h2>Log in to RentAll</h2>
       <form id="supplierLoginForm" class="auth-form">
-        <label>Email<input type="email" id="loginEmail" required placeholder="partner@example.com"></label>
+        <label>Email<input type="email" id="loginEmail" required placeholder="name@example.com"></label>
         <label>Password<input type="password" id="loginPassword" required placeholder="••••••••"></label>
         <button class="primary" type="submit">Log in</button>
         <small id="loginMsg"></small>
@@ -431,21 +458,27 @@
 
     <div class="auth-view" data-auth-view="register">
       <div class="eyebrow">Create an account</div>
-      <h2>Start renting out in minutes</h2>
-      <p class="v110-onboarding-lead">Create your supplier account first. Listing details, delivery settings and payouts can be completed after sign-up.</p>
-      <div class="v110-onboarding-steps" aria-label="Supplier onboarding steps"><span class="active">1 · Account</span><span>2 · First listing</span><span>3 · Availability</span><span>4 · Payouts</span></div>
+      <h2>Create your RentAll account</h2>
+      <p class="v110-onboarding-lead">Create one account to rent items, or choose a supplier account if you also want to list items for rent.</p>
+      <div class="v110-onboarding-steps" aria-label="Account setup steps"><span class="active">1 · Account</span><span>2 · Profile</span><span>3 · Start using RentAll</span></div>
       <form id="supplierRegisterForm" class="auth-form">
         <div class="form-grid two">
-          <label>Account type
-            <select id="regAccountType" required>
+          <label>What do you want to do?
+            <select id="regRole" required>
+              <option value="customer">Rent items</option>
+              <option value="supplier">Rent out items</option>
+            </select>
+          </label>
+          <label data-supplier-register-field>Account type
+            <select id="regAccountType">
               <option value="individual">Individual</option>
               <option value="business">Business</option>
             </select>
           </label>
-          <label>Profile or business name<input id="regBusinessName" required placeholder="e.g. Jonas or Klaipėda Rentals"></label>
+          <label>Profile name<input id="regBusinessName" required placeholder="e.g. Jonas or Klaipėda Rentals"></label>
           <label>Contact person<input id="regContactName" required placeholder="Anna Smith"></label>
           <label>Email<input type="email" id="regEmail" required></label>
-          <label>Phone / WhatsApp<input id="regPhone" required placeholder="+34..."></label>
+          <label data-supplier-register-field>Phone / WhatsApp<input id="regPhone" placeholder="+370..."></label>
           
           <label>Country
             <select id="regCountry" required>
@@ -460,12 +493,12 @@
           </label>
           <label>City<input id="regArea" required placeholder="e.g. Klaipėda"></label>
           
-          <label>Password<input type="password" id="regPassword" required minlength="6"></label>
+          <label>Password<input type="password" id="regPassword" required minlength="8"></label>
           
           
         </div>
         <label class="checkline"><input type="checkbox" id="regTerms" required> I agree to the platform terms and confirm that my account information is correct.</label>
-        <button class="primary" type="submit">Create supplier account</button><small class="v110-next-note">Next: publish your first rental item. You can add payout details before accepting paid bookings.</small>
+        <button class="primary" type="submit">Create account</button><small class="v110-next-note" id="registerNextNote">Next: browse rentals, save bookings and message suppliers.</small>
         <small id="registerMsg"></small>
       </form>
     </div>
@@ -1158,12 +1191,10 @@
           <label>Preferred language
             <select id="preferredLanguage">
               <option>English</option>
+              <option>Lietuvių</option>
               <option>Español</option>
               <option>Deutsch</option>
-              <option>Français</option>
-              <option>Italiano</option>
-              <option>Lietuvių</option>
-              <option>Polski</option>
+              <option>Русский</option>
             </select>
           </label>
           <label class="full">Notes for owner<textarea id="supplierNotes" rows="4" placeholder="Anything the owner should know?"></textarea></label>
@@ -1181,7 +1212,7 @@
 
         <div class="review-card" id="reviewCard"></div>
 
-        <label class="checkline"><input type="checkbox" id="termsCheck" required> I agree to the rental terms and cancellation policy.</label>
+        <label class="checkline"><input type="checkbox" id="termsCheck" required> <span>I agree to the</span> <a href="/terms" data-legal-link="/terms" target="_blank" rel="noopener">rental terms</a> <span>and cancellation policy.</span></label>
         <label class="checkline"><input type="checkbox" id="shareCheck" required> I agree that my contact details may be shared with the rental partner fulfilling this booking.</label>
         <label class="checkline muted"><input type="checkbox"> Send me special offers and rental discounts by email.</label>
 
@@ -1495,11 +1526,11 @@
   </div>
 
   <div class="customer-booking-login">
-    <div class="secure-note">Bookings created on this device are protected by a per-booking access token. An email address alone cannot retrieve booking details.</div>
+    <div class="secure-note">Your booking details stay private and are only available through your secure booking access.</div>
     <button class="primary" id="loadCustomerBookingsBtn" type="button">Load my bookings</button>
   </div>
 
-  <div class="v127-booking-toolbar" aria-label="Booking filters"><button class="active" type="button" data-customer-booking-filter="upcoming">Upcoming</button><button type="button" data-customer-booking-filter="active">Active</button><button type="button" data-customer-booking-filter="past">Past</button><button type="button" data-customer-booking-filter="all">All</button><span id="v127BookingCount" aria-live="polite"></span></div><div class="customer-bookings-list" id="customerBookingsList"></div><section class="v140-booking-command" id="v140BookingCommand" aria-label="Booking command center"><div class="v140-command-head"><div><span class="eyebrow">Your rental</span><h3>Everything you need after booking</h3><p class="muted">Select a booking above to see the next action, payment state, pickup details and support path.</p></div><span class="v140-live">Live status</span></div><div class="v140-command-grid"><article><small>Next action</small><strong id="v140NextAction">Choose a booking</strong><span id="v140NextHint">Your next step will appear here.</span></article><article><small>Payment</small><strong id="v140PaymentState">—</strong><span>Server-confirmed status</span></article><article><small>Pickup / delivery</small><strong id="v140Fulfilment">—</strong><span id="v140FulfilmentHint">Details appear after confirmation.</span></article></div><div class="v140-command-actions"><button type="button" class="secondary" id="v140RefreshBooking">Refresh status</button><button type="button" class="secondary" id="v140CopyBooking">Copy booking ID</button></div></section><section class="v131-rc-status" id="v131RcStatus"><div><span class="eyebrow">RentAll 1.0</span><strong>Release Candidate</strong><small>Customer journey · Supplier operations · Payments · Production readiness</small></div><span class="v131-rc-badge">RC45</span></section><section class="v136-launch-center" id="v136LaunchCenter"><div class="v136-launch-head"><div><span class="eyebrow">Launch control</span><h3>RentAll 1.0 readiness</h3><p class="muted">Live checks for payments, storage and integrations. Secrets are never shown.</p></div><button type="button" id="v136RefreshLaunch" class="secondary">Recheck</button></div><div class="v136-launch-grid" id="v136LaunchGrid"><article><small>Environment</small><strong>Checking…</strong></article><article><small>Stripe</small><strong>Checking…</strong></article><article><small>Database</small><strong>Checking…</strong></article><article><small>Integrations</small><strong>Checking…</strong></article></div><div id="v136LaunchVerdict" class="v136-launch-verdict">Evaluating release readiness…</div></section><section class="v132-checkout-confidence" id="v132CheckoutConfidence" aria-label="Booking confidence"><div class="v132-confidence-head"><div><span class="eyebrow">Booking protection</span><h3>Know what happens before you pay</h3></div><span class="v132-secure-pill">Secure checkout</span></div><div class="v132-confidence-grid"><article><span>1</span><div><strong>Availability checked</strong><small>Your selected dates and quantity are validated before booking.</small></div></article><article><span>2</span><div><strong>Transparent total</strong><small>Rental total and deposit are kept separate.</small></div></article><article><span>3</span><div><strong>Protected payment</strong><small>Payment confirmation comes from the server, not the browser.</small></div></article><article><span>4</span><div><strong>Track everything</strong><small>Confirmation and next actions stay in My Bookings.</small></div></article></div></section><aside class="v130-trip-tools" id="v130TripTools" aria-label="Rental updates and location tools"><div><span class="eyebrow">Rental tools</span><h3>Updates & pickup</h3><p class="muted">Your booking stays the source of truth. Connected services add convenience without changing booking or payment authority.</p></div><div class="v130-tool-grid"><article><small>Booking updates</small><strong id="v130NotificationStatus">Checking…</strong><span id="v130NotificationHint">Email and optional mobile alerts.</span></article><article><small>Pickup map</small><strong id="v130MapStatus">Checking…</strong><span id="v130MapHint">Location provider readiness.</span></article></div></aside>
+  <div class="v127-booking-toolbar" aria-label="Booking filters"><button class="active" type="button" data-customer-booking-filter="upcoming">Upcoming</button><button type="button" data-customer-booking-filter="active">Active</button><button type="button" data-customer-booking-filter="past">Past</button><button type="button" data-customer-booking-filter="all">All</button><span id="v127BookingCount" aria-live="polite"></span></div><div class="customer-bookings-list" id="customerBookingsList"></div><section class="v140-booking-command" id="v140BookingCommand" aria-label="Booking command center"><div class="v140-command-head"><div><span class="eyebrow">Your rental</span><h3>Everything you need after booking</h3><p class="muted">Select a booking above to see the next action, payment state, pickup details and support path.</p></div><span class="v140-live">Live status</span></div><div class="v140-command-grid"><article><small>Next action</small><strong id="v140NextAction">Choose a booking</strong><span id="v140NextHint">Your next step will appear here.</span></article><article><small>Payment</small><strong id="v140PaymentState">—</strong><span>Updated securely</span></article><article><small>Pickup / delivery</small><strong id="v140Fulfilment">—</strong><span id="v140FulfilmentHint">Details appear after confirmation.</span></article></div><div class="v140-command-actions"><button type="button" class="secondary" id="v140RefreshBooking">Refresh status</button><button type="button" class="secondary" id="v140CopyBooking">Copy booking ID</button></div></section><section class="v131-rc-status" id="v131RcStatus" hidden aria-hidden="true" data-internal-only="true"><div><span class="eyebrow">RentAll 1.0</span><strong>Release Candidate</strong><small>Customer journey · Supplier operations · Payments · Production readiness</small></div><span class="v131-rc-badge">RC45</span></section><section class="v136-launch-center" id="v136LaunchCenter" hidden aria-hidden="true" data-internal-only="true"><div class="v136-launch-head"><div><span class="eyebrow">Launch control</span><h3>RentAll 1.0 readiness</h3><p class="muted">Live checks for payments, storage and integrations. Secrets are never shown.</p></div><button type="button" id="v136RefreshLaunch" class="secondary">Recheck</button></div><div class="v136-launch-grid" id="v136LaunchGrid"><article><small>Environment</small><strong>Checking…</strong></article><article><small>Stripe</small><strong>Checking…</strong></article><article><small>Database</small><strong>Checking…</strong></article><article><small>Integrations</small><strong>Checking…</strong></article></div><div id="v136LaunchVerdict" class="v136-launch-verdict">Evaluating release readiness…</div></section><section class="v132-checkout-confidence" id="v132CheckoutConfidence" aria-label="Booking confidence"><div class="v132-confidence-head"><div><span class="eyebrow">Booking protection</span><h3>Know what happens before you pay</h3></div><span class="v132-secure-pill">Secure checkout</span></div><div class="v132-confidence-grid"><article><span>1</span><div><strong>Availability checked</strong><small>Your selected dates and quantity are validated before booking.</small></div></article><article><span>2</span><div><strong>Transparent total</strong><small>Rental total and deposit are kept separate.</small></div></article><article><span>3</span><div><strong>Protected payment</strong><small>Your payment is confirmed securely before the booking continues.</small></div></article><article><span>4</span><div><strong>Track everything</strong><small>Confirmation and next actions stay in My Bookings.</small></div></article></div></section><aside class="v130-trip-tools" id="v130TripTools" aria-label="Rental updates and location tools" hidden aria-hidden="true" data-internal-only="true"><div><span class="eyebrow">Rental tools</span><h3>Updates & pickup</h3><p class="muted">Your booking stays the source of truth. Connected services add convenience without changing booking or payment authority.</p></div><div class="v130-tool-grid"><article><small>Booking updates</small><strong id="v130NotificationStatus">Checking…</strong><span id="v130NotificationHint">Email and optional mobile alerts.</span></article><article><small>Pickup map</small><strong id="v130MapStatus">Checking…</strong><span id="v130MapHint">Location provider readiness.</span></article></div></aside>
 </section>
 
 <nav class="v120-mobile-nav" aria-label="Primary mobile navigation">
@@ -1509,11 +1540,54 @@
   <button type="button" data-v120-mobile="account"><span>○</span>Account</button>
 </nav>
 
+
+<div class="availability-modal" id="messagesModal" aria-hidden="true">
+  <div class="auth-panel profile-panel messages-panel">
+    <button class="close-modal" id="closeMessagesModal" aria-label="Close">×</button>
+    <div class="eyebrow">RentAll messages</div>
+    <h2>Messages</h2>
+    <div class="messages-layout">
+      <aside class="conversation-list" id="conversationList"><p class="muted">Loading conversations…</p></aside>
+      <section class="conversation-thread">
+        <div class="conversation-title" id="conversationTitle">Choose a conversation</div>
+        <div class="message-list" id="messageList"><p class="muted">Messages stay linked to the listing or booking.</p></div>
+        <form id="messageForm" class="message-form" hidden>
+          <textarea id="messageBody" rows="3" maxlength="2000" placeholder="Write a message…" required></textarea>
+          <div class="message-form-row"><small id="messagePolicyNote">Contact details can be shared after a booking is confirmed.</small><button class="primary" type="submit">Send</button></div>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="availability-modal" id="agreementModal" aria-hidden="true">
+  <div class="auth-panel profile-panel agreement-panel">
+    <button class="close-modal" id="closeAgreementModal" aria-label="Close">×</button>
+    <div class="eyebrow">Rental agreement</div>
+    <h2>Electronic rental agreement</h2>
+    <div id="agreementContent"></div>
+  </div>
+</div>
+
+<div class="availability-modal" id="renterReviewModal" aria-hidden="true">
+  <div class="auth-panel profile-panel">
+    <button class="close-modal" id="closeRenterReviewModal" aria-label="Close">×</button>
+    <div class="eyebrow">Renter reputation</div>
+    <h2>Rate the renter</h2>
+    <form id="renterReviewForm" class="auth-form">
+      <input type="hidden" id="renterReviewBookingId">
+      <label>Rating<select id="renterReviewRating" required><option value="5">5 — Excellent</option><option value="4">4 — Very good</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Poor</option></select></label>
+      <label>Comment<textarea id="renterReviewComment" rows="4" maxlength="2000" placeholder="Communication, punctuality and return condition…"></textarea></label>
+      <button class="primary" type="submit">Publish renter review</button>
+    </form>
+  </div>
+</div>
+
 <footer>
   <div class="container footer-grid">
-    <div><b>RentAll</b><p>Rent smarter. Own less.</p></div>
-    <div><a href="#browse">Browse</a><a href="#pricing">For partners</a><a href="#how">How it works</a></div>
-    <div><small>Secure rentals · Clear pricing · Protected booking records</small></div>
+    <div><b>RentAll</b><p>Rent smarter. Buy less.</p></div>
+    <div><a href="#browse">Browse</a><a href="#how">How it works</a><a href="/help" data-legal-link="/help">Help & FAQ</a><a href="/fees" data-legal-link="/fees">Pricing & fees</a></div>
+    <div><a href="/terms" data-legal-link="/terms">Terms</a><a href="/privacy" data-legal-link="/privacy">Privacy</a><a href="/cookies" data-legal-link="/cookies">Cookies</a><small>Secure rentals · Clear pricing · Protected booking records</small></div>
   </div>
 </footer>
 
@@ -1539,6 +1613,7 @@
   <script defer src="modules/product-polish.js"></script>
   <script defer src="modules/supplier-onboarding.js"></script>
   <script defer src="modules/listing-creation.js"></script>
+  <script defer src="modules/marketplace-trust-v172.js"></script>
 
 
 

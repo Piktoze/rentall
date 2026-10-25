@@ -68,7 +68,18 @@ import {
   recoverInterruptedTransactionalEmails,
   beginBookingIdempotency,
   completeBookingIdempotency,
-  releaseBookingIdempotency
+  releaseBookingIdempotency,
+  createRentalAgreement,
+  getRentalAgreement,
+  acceptRentalAgreement,
+  createOrGetRentalConversation,
+  getRentalConversation,
+  listRentalConversationsForUser,
+  listRentalMessages,
+  addRentalMessage,
+  createRenterReview,
+  getRenterReputation,
+  getSupplierReputation
   ,databaseRuntime
   ,checkDatabase
   ,closeDatabase
@@ -647,13 +658,75 @@ Sitemap: ${origin}/sitemap.xml
 app.get('/sitemap.xml',(req,res)=>{
   const origin=publicOrigin(req);
   const updated=new Date().toISOString().slice(0,10);
-  res.type('application/xml').send(
-`<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${origin}/</loc><lastmod>${updated}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-</urlset>`
-  );
+  const fixed=['/','/help','/terms','/privacy','/cookies','/fees'];
+  const listingUrls=listPublicRentalListings().map(l=>`/listing/${encodeURIComponent(l.id)}/${seoSlug(l.title)}`);
+  const urls=[...fixed,...listingUrls].map((url,i)=>`  <url><loc>${escapeXml(origin+url)}</loc><lastmod>${updated}</lastmod><changefreq>${i===0?'daily':'weekly'}</changefreq><priority>${i===0?'1.0':url.startsWith('/listing/')?'0.8':'0.5'}</priority></url>`).join('\n');
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
 });
+
+function escapeXml(value){return String(value??'').replace(/[<>&"']/g,ch=>({"<":'&lt;',">":'&gt;',"&":'&amp;',"\"":'&quot;',"'":'&apos;'}[ch]||ch));}
+function seoSlug(value){return String(value||'rental').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'rental';}
+function absoluteAsset(origin,url){const v=String(url||'');if(!v)return null;if(/^https?:\/\//i.test(v))return v;if(v.startsWith('/'))return origin+v;return origin+'/'+v.replace(/^\/+/, '');}
+function pageLanguage(req){
+  const supported=['lt','en','es','de','ru'];
+  const q=String(req.query.lang||'').toLowerCase();if(supported.includes(q))return q;
+  const accept=String(req.get('accept-language')||'').toLowerCase();const found=supported.find(x=>accept.startsWith(x)||accept.includes(','+x));
+  return found||'lt';
+}
+const PAGE_SHELL_COPY={
+  lt:{marketplace:'Nuomos platforma',help:'Pagalba',tagline:'Nuomokis protingiau. Pirk rečiau.',terms:'Taisyklės',privacy:'Privatumas',cookies:'Slapukai',fees:'Kainos ir mokesčiai'},
+  en:{marketplace:'Marketplace',help:'Help',tagline:'Rent smarter. Buy less.',terms:'Terms',privacy:'Privacy',cookies:'Cookies',fees:'Fees'},
+  es:{marketplace:'Marketplace',help:'Ayuda',tagline:'Alquila de forma más inteligente. Compra menos.',terms:'Condiciones',privacy:'Privacidad',cookies:'Cookies',fees:'Comisiones'},
+  de:{marketplace:'Marktplatz',help:'Hilfe',tagline:'Cleverer mieten. Weniger kaufen.',terms:'Bedingungen',privacy:'Datenschutz',cookies:'Cookies',fees:'Gebühren'},
+  ru:{marketplace:'Маркетплейс',help:'Помощь',tagline:'Арендуй разумнее. Покупай реже.',terms:'Условия',privacy:'Конфиденциальность',cookies:'Cookies',fees:'Комиссии'}
+};
+const LISTING_SEO_COPY={
+  lt:{eyebrow:'RentAll nuomos platforma',fallbackDescription:'Nuomojamas daiktas per RentAll.',location:'Vieta',seeListing:'Žiūrėti skelbimą',dailyPrice:'Kaina dienai',available:'Kiekis',fulfilment:'Atsiėmimas / pristatymas',delivery:'Galimas pristatymas',pickup:'Atsiėmimas',cta:'Peržiūrėti prieinamumą ir rezervuoti'},
+  en:{eyebrow:'RentAll marketplace',fallbackDescription:'Rental item available through RentAll.',location:'Location',seeListing:'See listing',dailyPrice:'Daily price',available:'Available',fulfilment:'Pickup / delivery',delivery:'Delivery available',pickup:'Pickup',cta:'View availability & book'},
+  es:{eyebrow:'Marketplace RentAll',fallbackDescription:'Artículo disponible para alquilar en RentAll.',location:'Ubicación',seeListing:'Ver anuncio',dailyPrice:'Precio por día',available:'Disponibles',fulfilment:'Recogida / entrega',delivery:'Entrega disponible',pickup:'Recogida',cta:'Ver disponibilidad y reservar'},
+  de:{eyebrow:'RentAll Marktplatz',fallbackDescription:'Mietartikel über RentAll verfügbar.',location:'Ort',seeListing:'Anzeige ansehen',dailyPrice:'Preis pro Tag',available:'Verfügbar',fulfilment:'Abholung / Lieferung',delivery:'Lieferung verfügbar',pickup:'Abholung',cta:'Verfügbarkeit prüfen & buchen'},
+  ru:{eyebrow:'Маркетплейс RentAll',fallbackDescription:'Вещь доступна для аренды через RentAll.',location:'Место',seeListing:'Открыть объявление',dailyPrice:'Цена за день',available:'Доступно',fulfilment:'Самовывоз / доставка',delivery:'Доставка доступна',pickup:'Самовывоз',cta:'Проверить доступность и забронировать'}
+};
+function pageShell({req,title,description,body,canonicalPath}){
+  const origin=publicOrigin(req),canonical=origin+canonicalPath,lang=pageLanguage(req),c=PAGE_SHELL_COPY[lang]||PAGE_SHELL_COPY.en;
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeEmailHtml(title)}</title><meta name="description" content="${escapeEmailHtml(description)}"><link rel="canonical" href="${escapeEmailHtml(canonical)}"><meta property="og:title" content="${escapeEmailHtml(title)}"><meta property="og:description" content="${escapeEmailHtml(description)}"><meta property="og:url" content="${escapeEmailHtml(canonical)}"><meta property="og:type" content="website"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/light-premium-v161.css"></head><body class="theme-aurora"><header class="topbar"><div class="container nav"><a class="brand" href="/">RentAll</a><nav class="navlinks"><a href="/">${c.marketplace}</a><a href="/help?lang=${lang}">${c.help}</a></nav></div></header><main class="section"><div class="container">${body}</div></main><footer><div class="container footer-grid"><div><b>RentAll</b><p>${c.tagline}</p></div><div><a href="/terms?lang=${lang}">${c.terms}</a><a href="/privacy?lang=${lang}">${c.privacy}</a><a href="/cookies?lang=${lang}">${c.cookies}</a></div><div><a href="/fees?lang=${lang}">${c.fees}</a><a href="/help?lang=${lang}">${c.help}</a></div></div></footer></body></html>`;
+}
+
+app.get('/listing/:listingId/:slug?',(req,res)=>{
+  const listing=getFullRentalListing(req.params.listingId);
+  if(!listing||listing.moderationStatus==='blocked'||listing.moderationStatus==='paused')return res.status(404).send('Listing not found');
+  const origin=publicOrigin(req),canonicalPath=`/listing/${encodeURIComponent(listing.id)}/${seoSlug(listing.title)}`;
+  const lang=pageLanguage(req),seoCopy=LISTING_SEO_COPY[lang]||LISTING_SEO_COPY.en;
+  const location=[listing.city,listing.country].filter(Boolean).join(', '),description=String(listing.description||seoCopy.fallbackDescription).slice(0,160);
+  const image=absoluteAsset(origin,listing.coverPhoto||listing.photos?.[0]);
+  const title=`${listing.title}${location?' · '+location:''} | RentAll`;
+  const body=`<article class="seo-listing-page"><div class="eyebrow">${seoCopy.eyebrow}</div><h1>${escapeEmailHtml(listing.title)}</h1><p class="hero-copy">${escapeEmailHtml(listing.description||seoCopy.fallbackDescription)}</p>${image?`<img src="${escapeEmailHtml(image)}" alt="${escapeEmailHtml(listing.title)}" style="width:min(720px,100%);max-height:480px;object-fit:cover;border-radius:22px;border:1px solid #dde4de">`:''}<div class="v92-facts" style="margin:24px 0"><div><span>${seoCopy.location}</span><b>${escapeEmailHtml(location||seoCopy.seeListing)}</b></div><div><span>${seoCopy.dailyPrice}</span><b>€${Number(listing.priceDay||0).toFixed(2)}</b></div><div><span>${seoCopy.available}</span><b>${Number(listing.quantity||1)}</b></div><div><span>${seoCopy.fulfilment}</span><b>${listing.deliveryEnabled?seoCopy.delivery:seoCopy.pickup}</b></div></div><p><a class="primary" href="/?listing=${encodeURIComponent(listing.id)}">${seoCopy.cta}</a></p></article>`;
+  let html=pageShell({req,title,description,body,canonicalPath});
+  if(image)html=html.replace('</head>',`<meta property="og:image" content="${escapeEmailHtml(image)}"></head>`);
+  res.type('html').send(html);
+});
+
+const LEGAL_COPY={
+  lt:{
+    help:['Pagalba ir DUK','RentAll sujungia nuomininkus su privačiais ir verslo tiekėjais. Prieš rezervuojant matysi kainą, prieinamumą, atsiėmimo ar pristatymo sąlygas ir atšaukimo taisykles.','Užsakymą, mokėjimo būseną, sutartį, žinutes ir problemos pranešimą rasi skiltyje „Mano užsakymai“.'],
+    terms:['Naudojimosi ir nuomos taisyklės','Rezervuodamas patvirtini konkretaus skelbimo kainą, datas, kiekį, pristatymo ar atsiėmimo sąlygas, užstatą ir atšaukimo politiką. RentAll veikia kaip marketplace tarpininkas, o daikto nuomos santykis sudaromas tarp nuomininko ir tiekėjo.','Daiktas turi būti naudojamas pagal paskirtį, grąžintas sutartu laiku ir tokios būklės, kokios buvo perduotas, išskyrus normalų nusidėvėjimą. Ginčai ir žala nagrinėjami pagal užsakymo įrašus bei nuomos sutartį.'],
+    privacy:['Privatumo politika','Tvarkome tik duomenis, reikalingus paskyrai, skelbimams, rezervacijoms, mokėjimams, saugumui, pagalbai ir teisinių pareigų vykdymui. Mokėjimo kortelių duomenų RentAll nesaugo — juos tvarko mokėjimų paslaugų teikėjas.','Kontaktiniai duomenys iki patvirtintos rezervacijos nėra skirti sandoriui išvesti už platformos ribų. Dėl duomenų teisių galima kreiptis į RentAll pagalbos kontaktą.'],
+    cookies:['Slapukai','RentAll naudoja būtinus slapukus prisijungimui, saugumui ir sesijai palaikyti. Nebūtini analitiniai ar reklaminiai slapukai neturėtų būti įjungiami be tinkamo pasirinkimo ir sutikimo.','Kalbos ir dalis vartotojo pasirinkimų gali būti saugomi naršyklėje, kad platforma prisimintų nustatymus.'],
+    fees:['Kainos ir mokesčiai','Prieš apmokėjimą klientui turi būti parodyta visa mokėtina suma: nuoma, pristatymas, platformos mokestis (jei taikomas) ir atskirai nurodytas užstatas.','Tiekėjo gaunama suma ir RentAll mokestis apskaičiuojami serveryje. Galutinė kainodara gali priklausyti nuo tiekėjo plano ir užsakymo dydžio, tačiau netikėtų mokesčių po patvirtinimo neturi atsirasti.']
+  },
+  en:{help:['Help & FAQ','RentAll connects renters with private and business suppliers. Before booking you can see price, availability, pickup or delivery conditions and the cancellation policy.','Your booking, payment status, agreement, messages and problem reporting are available in My bookings.'],terms:['Platform and rental terms','By booking you confirm the listing price, dates, quantity, pickup or delivery conditions, deposit and cancellation policy. RentAll operates as a marketplace intermediary; the rental relationship is between the renter and supplier.','Use the item only as intended and return it on time in the condition received, allowing for normal wear. Damage and disputes are handled using booking records and the rental agreement.'],privacy:['Privacy policy','We process data needed for accounts, listings, bookings, payments, safety, support and legal obligations. RentAll does not store payment-card details; the payment provider processes them.','Contact details before a confirmed booking are not intended to move the transaction off-platform. Contact RentAll support to exercise applicable data rights.'],cookies:['Cookies','RentAll uses essential cookies for sign-in, security and sessions. Non-essential analytics or advertising cookies should not be enabled without the appropriate choice and consent.','Language and some preferences may be stored in the browser so the marketplace can remember your settings.'],fees:['Pricing & fees','Before payment, the customer must see the full amount: rental, delivery, platform fee (if applicable), with any security deposit shown separately.','Supplier proceeds and RentAll fees are calculated server-side. Final pricing may vary by supplier plan and order size, but no unexpected fee should appear after confirmation.']},
+  es:{help:['Ayuda y preguntas frecuentes','RentAll conecta a arrendatarios con proveedores particulares y empresas. Antes de reservar puedes ver precio, disponibilidad, recogida o entrega y política de cancelación.','Tus reservas, estado de pago, contrato, mensajes y reportes están en Mis reservas.'],terms:['Condiciones de la plataforma y del alquiler','Al reservar confirmas precio, fechas, cantidad, recogida o entrega, depósito y cancelación. RentAll actúa como intermediario del marketplace; la relación de alquiler es entre arrendatario y proveedor.','Usa el artículo para su finalidad y devuélvelo a tiempo en el estado recibido, salvo desgaste normal. Los daños y disputas se gestionan con los registros de la reserva y el contrato.'],privacy:['Política de privacidad','Tratamos los datos necesarios para cuentas, anuncios, reservas, pagos, seguridad, soporte y obligaciones legales. RentAll no almacena datos de tarjeta.','Los datos de contacto antes de una reserva confirmada no deben usarse para sacar la operación fuera de la plataforma.'],cookies:['Cookies','RentAll utiliza cookies esenciales para inicio de sesión, seguridad y sesión. Las cookies analíticas o publicitarias no esenciales requieren la elección y consentimiento correspondientes.','El idioma y algunas preferencias pueden guardarse en el navegador.'],fees:['Precios y comisiones','Antes del pago se muestra el total: alquiler, entrega, comisión de plataforma si aplica y el depósito por separado.','Los ingresos del proveedor y las comisiones de RentAll se calculan en el servidor y no deben aparecer cargos inesperados después de confirmar.']},
+  de:{help:['Hilfe & FAQ','RentAll verbindet Mieter mit privaten und gewerblichen Anbietern. Vor der Buchung siehst du Preis, Verfügbarkeit, Abholung oder Lieferung und die Stornierungsbedingungen.','Buchung, Zahlungsstatus, Vertrag, Nachrichten und Problemmeldungen findest du unter Meine Buchungen.'],terms:['Plattform- und Mietbedingungen','Mit der Buchung bestätigst du Preis, Zeitraum, Menge, Abholung/Lieferung, Kaution und Stornierungsregeln. RentAll ist Marktplatzvermittler; das Mietverhältnis besteht zwischen Mieter und Anbieter.','Nutze den Artikel bestimmungsgemäß und gib ihn rechtzeitig im erhaltenen Zustand zurück, normale Abnutzung ausgenommen.'],privacy:['Datenschutz','Wir verarbeiten Daten für Konten, Inserate, Buchungen, Zahlungen, Sicherheit, Support und gesetzliche Pflichten. Kartendaten werden nicht von RentAll gespeichert.','Kontaktdaten vor einer bestätigten Buchung sollen nicht dazu dienen, die Transaktion außerhalb der Plattform abzuwickeln.'],cookies:['Cookies','RentAll nutzt notwendige Cookies für Anmeldung, Sicherheit und Sitzungen. Nicht notwendige Analyse- oder Werbe-Cookies benötigen die passende Auswahl und Einwilligung.','Sprache und einige Einstellungen können im Browser gespeichert werden.'],fees:['Preise & Gebühren','Vor der Zahlung wird der Gesamtbetrag angezeigt: Miete, Lieferung, Plattformgebühr falls zutreffend und eine Kaution separat.','Anbieterauszahlung und RentAll-Gebühren werden serverseitig berechnet; nach Bestätigung sollen keine unerwarteten Gebühren entstehen.']},
+  ru:{help:['Помощь и вопросы','RentAll связывает арендаторов с частными и коммерческими поставщиками. До бронирования видны цена, доступность, самовывоз/доставка и правила отмены.','Бронирование, оплата, договор, сообщения и обращение по проблеме доступны в разделе «Мои бронирования».'],terms:['Условия платформы и аренды','Бронируя, вы подтверждаете цену, даты, количество, условия получения/доставки, депозит и отмену. RentAll выступает посредником marketplace; договор аренды заключается между арендатором и поставщиком.','Используйте вещь по назначению и возвращайте вовремя в полученном состоянии с учётом нормального износа.'],privacy:['Политика конфиденциальности','Мы обрабатываем данные для аккаунтов, объявлений, бронирований, платежей, безопасности, поддержки и юридических обязанностей. RentAll не хранит данные банковских карт.','Контактные данные до подтверждённого бронирования не предназначены для вывода сделки за пределы платформы.'],cookies:['Cookies','RentAll использует необходимые cookies для входа, безопасности и сессий. Необязательные аналитические или рекламные cookies требуют соответствующего выбора и согласия.','Язык и некоторые настройки могут сохраняться в браузере.'],fees:['Цены и комиссии','До оплаты показывается полная сумма: аренда, доставка, комиссия платформы при наличии, а депозит указывается отдельно.','Выплата поставщику и комиссия RentAll рассчитываются на сервере; после подтверждения не должно появляться неожиданных сборов.']}
+};
+for(const [pathName,key] of [['/help','help'],['/terms','terms'],['/privacy','privacy'],['/cookies','cookies'],['/fees','fees']]){
+  app.get(pathName,(req,res)=>{
+    const lang=pageLanguage(req),copy=LEGAL_COPY[lang]?.[key]||LEGAL_COPY.en[key];
+    const stageNote=process.env.RENTALL_STAGING==='true'?'<div class="review-card"><b>Staging note</b><p>This policy text must receive professional legal review before public production launch.</p></div>':'';
+    const body=`<div class="eyebrow">RentAll</div><h1>${escapeEmailHtml(copy[0])}</h1><div class="review-card"><p>${escapeEmailHtml(copy[1])}</p><p>${escapeEmailHtml(copy[2])}</p></div>${stageNote}<p><a class="secondary" href="/">← RentAll</a></p>`;
+    res.type('html').send(pageShell({req,title:`${copy[0]} | RentAll`,description:copy[1],body,canonicalPath:pathName}));
+  });
+}
 
 
 function bookingRequestHash(body){
@@ -707,13 +780,30 @@ function platformDiagnostics(){
 }
 
 
+function databaseBackupStatus(){
+  const required=Boolean(runtimeConfig.deployment&&String(process.env.RENTALL_STAGING||'').trim()!=='true');
+  const enabled=String(process.env.DB_BACKUP_ENABLED||'').trim().toLowerCase()==='true';
+  const maxAgeHours=Math.max(1,Math.min(168,Number(process.env.DB_BACKUP_MAX_AGE_HOURS)||30));
+  const defaultEvidence=path.join(path.dirname(runtimeConfig.database.path),'backups','last-verified-backup.json');
+  const evidencePath=String(process.env.DB_BACKUP_EVIDENCE_PATH||defaultEvidence);
+  let verifiedAt=null,integrity=null,ageHours=null,evidenceValid=false;
+  try{
+    const evidence=JSON.parse(fs.readFileSync(evidencePath,'utf8'));
+    verifiedAt=String(evidence.verifiedAt||'');integrity=String(evidence.integrity||'');
+    const ts=new Date(verifiedAt).getTime();
+    if(Number.isFinite(ts)){ageHours=(Date.now()-ts)/3600000;evidenceValid=integrity==='ok'&&ageHours>=0&&ageHours<=maxAgeHours;}
+  }catch{}
+  return {required,enabled,evidenceValid,verifiedAt:verifiedAt||null,ageHours:ageHours==null?null:Number(ageHours.toFixed(2)),maxAgeHours};
+}
+
 function launchGate(){
   const report=productionConfigReport();
   const storage=productionStorageReport();
   const database=checkDatabase();
-  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),...storage.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=REQUIRED_SCHEMA_VERSION},{id:'accepting_traffic',required:true,ready:!shuttingDown}];
+  const backup=databaseBackupStatus();
+  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),...storage.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=REQUIRED_SCHEMA_VERSION},{id:'database_backup_enabled',required:backup.required,ready:backup.enabled},{id:'database_backup_recent_verified',required:backup.required,ready:backup.enabled&&backup.evidenceValid},{id:'accepting_traffic',required:true,ready:!shuttingDown}];
   const blocking=checks.filter(x=>x.required&&!x.ready).map(x=>x.id);
-  return {ready:blocking.length===0,production:report.production,deployment:report.deployment,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,volumeConfigured:storage.database.volumeConfigured,migrationVersion:database.migrationVersion},stripe:report.stripe,email:report.email,maps:report.maps,notifications:report.notifications};
+  return {ready:blocking.length===0,production:report.production,deployment:report.deployment,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,volumeConfigured:storage.database.volumeConfigured,migrationVersion:database.migrationVersion,backup},stripe:report.stripe,email:report.email,maps:report.maps,notifications:report.notifications};
 }
 
 app.get('/api/launch-readiness',(req,res)=>{
@@ -1397,6 +1487,9 @@ app.get('/api/rentals/availability', simpleRateLimit({windowMs:60000,max:120,key
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
     }
+    if(termsAccepted!==true){
+      return res.status(400).json({error:'Rental terms must be accepted before booking',code:'TERMS_REQUIRED'});
+    }
     validateAvailabilityWindow(startDate,endDate);
     const requestedQuantity=validateRequestedQuantity(quantity);
     const availability = getAvailability({
@@ -1436,7 +1529,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       customerName = null, customerEmail = null, customerPhone = null,
       accommodationName = null, deliveryCity = null, deliveryAddress = null,
       roomNumber = null, contactPerson = null, deliveryInstructions = null,
-      orderValue = null
+      orderValue = null, termsAccepted = false
     } = req.body || {};
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
@@ -1485,6 +1578,19 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       orderValue:authoritativePrice.total,
       securityDepositAmount:authoritativePrice.securityDeposit,
       holdMinutes:Number(process.env.BOOKING_HOLD_MINUTES || 30)
+    });
+    const agreement=createRentalAgreement({
+      bookingId,
+      termsVersion:'rentall-rental-v1',
+      customerAcceptedAt:new Date().toISOString(),
+      snapshot:{
+        platform:'RentAll',bookingId,listingId,listingTitle:listingForBooking.title,
+        supplierEmail:listingForBooking.ownerEmail||null,customerName:effectiveCustomerName||null,customerEmail:effectiveCustomerEmail||null,
+        startDate,endDate,quantity:qty,currency:'EUR',rentalAmount:authoritativePrice.rental,deliveryFee:authoritativePrice.delivery,
+        total:authoritativePrice.total,securityDeposit:authoritativePrice.securityDeposit,
+        cancellationPolicy:listingForBooking.cancellationPolicy||'moderate',
+        terms:['Use the item only for its intended purpose.','Return the item on time in the condition received, allowing for normal wear.','Damage, loss, cancellation and deposit handling follow the listing and RentAll terms.']
+      }
     });
 
     if(isEmail(effectiveCustomerEmail)){
@@ -1558,7 +1664,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       });
     }
 
-    res.json({...result,price:authoritativePrice});
+    res.json({...result,price:authoritativePrice,agreement});
   } catch (err) {
     if (err.code === 'INSUFFICIENT_AVAILABILITY') {
       return res.status(409).json({
@@ -1621,6 +1727,9 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       req.body?.reason || null
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if(requestedStatus==='confirmed'){
+      try{acceptRentalAgreement(req.params.bookingId,'supplier')}catch{}
+    }
 
     const availability = getAvailability({
       listingId: booking.listingId,
@@ -1724,6 +1833,94 @@ app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admi
     res.status(err.code==='INVALID_TRANSITION'?409:400)
       .json({error:err.message,code:err.code||null});
   }
+});
+
+
+app.get('/api/rentals/bookings/:bookingId/agreement',(req,res)=>{
+  try{
+    if(!bookingAccessAllowed(req,req.params.bookingId) && !canSupplierManageBooking(sessionUser(req),req.params.bookingId)){
+      return res.status(403).json({error:'Booking access denied'});
+    }
+    const agreement=getRentalAgreement(req.params.bookingId);
+    if(!agreement)return res.status(404).json({error:'Agreement not found'});
+    res.setHeader('Cache-Control','no-store, private');
+    res.json({agreement});
+  }catch(err){res.status(400).json({error:err.message});}
+});
+
+function conversationParticipant(user,conversation){
+  if(!user||!conversation)return false;
+  const e=String(user.email||'').toLowerCase();
+  return user.role==='admin'||e===String(conversation.customerEmail||'').toLowerCase()||e===String(conversation.supplierEmail||'').toLowerCase();
+}
+function containsOffPlatformContact(text){
+  const v=String(text||'');
+  if(/https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/i.test(v)) return true;
+  // Do not treat ISO dates such as 2026-10-30 as phone numbers.
+  const withoutDates=v.replace(/\b\d{4}-\d{2}-\d{2}\b/g,'');
+  return /(?:\+?\d[\s().-]*){7,}/.test(withoutDates);
+}
+app.get('/api/conversations',requireRole('customer','supplier','admin'),(req,res)=>{
+  res.json({conversations:listRentalConversationsForUser(req.appUser.email)});
+});
+app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleRateLimit({windowMs:60000,max:30,keyPrefix:'conversation-create'}),(req,res)=>{
+  try{
+    const listingId=String(req.body?.listingId||'');
+    const listing=getFullRentalListing(listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
+    let customerEmail=null,supplierEmail=String(listing.ownerEmail||'').toLowerCase(),bookingId=req.body?.bookingId?String(req.body.bookingId):null;
+    if(req.appUser.role==='customer') customerEmail=req.appUser.email;
+    else if(req.appUser.role==='supplier'){
+      if(String(listing.ownerEmail||'').toLowerCase()!==String(req.appUser.email||'').toLowerCase())return res.status(403).json({error:'Forbidden'});
+      if(!bookingId)return res.status(400).json({error:'bookingId is required for supplier conversations'});
+      const booking=getRentalBookingById(bookingId);if(!booking)return res.status(404).json({error:'Booking not found'});
+      customerEmail=booking.customerEmail;
+    }else{
+      customerEmail=String(req.body?.customerEmail||'').toLowerCase();
+    }
+    if(!customerEmail||!supplierEmail)return res.status(400).json({error:'Conversation participants are unavailable'});
+    if(bookingId){const b=getRentalBookingById(bookingId);if(!b||String(b.listingId)!==listingId)return res.status(400).json({error:'Booking does not match listing'});}
+    res.json({conversation:createOrGetRentalConversation({listingId,bookingId,customerEmail,supplierEmail})});
+  }catch(err){res.status(400).json({error:err.message});}
+});
+app.get('/api/conversations/:conversationId/messages',requireRole('customer','supplier','admin'),(req,res)=>{
+  const conversation=getRentalConversation(req.params.conversationId);
+  if(!conversation)return res.status(404).json({error:'Conversation not found'});
+  if(!conversationParticipant(req.appUser,conversation))return res.status(403).json({error:'Forbidden'});
+  res.setHeader('Cache-Control','no-store, private');
+  res.json({conversation,messages:listRentalMessages(conversation.conversationId)});
+});
+app.post('/api/conversations/:conversationId/messages',requireRole('customer','supplier','admin'),simpleRateLimit({windowMs:60000,max:60,keyPrefix:'message-create'}),(req,res)=>{
+  try{
+    const conversation=getRentalConversation(req.params.conversationId);
+    if(!conversation)return res.status(404).json({error:'Conversation not found'});
+    if(!conversationParticipant(req.appUser,conversation))return res.status(403).json({error:'Forbidden'});
+    const body=String(req.body?.body||'').trim();
+    const booking=conversation.bookingId?getRentalBookingById(conversation.bookingId):null;
+    const contactAllowed=booking&&['confirmed','active','returned','completed'].includes(booking.status);
+    if(!contactAllowed&&containsOffPlatformContact(body))return res.status(400).json({error:'Contact details can be shared after the booking is confirmed',code:'CONTACT_DETAILS_BLOCKED'});
+    const message=addRentalMessage({conversationId:conversation.conversationId,senderEmail:req.appUser.email,senderRole:req.appUser.role,body});
+    const recipient=String(req.appUser.email).toLowerCase()===String(conversation.customerEmail).toLowerCase()?conversation.supplierEmail:conversation.customerEmail;
+    if(recipient)createRentalNotification({uniqueKey:`message:${message.messageId}`,audience:String(recipient).toLowerCase()===String(conversation.supplierEmail).toLowerCase()?'supplier':'customer',userEmail:recipient,bookingId:conversation.bookingId||null,type:'message.received',title:'New message',message:'You have a new RentAll message.'});
+    res.json({message});
+  }catch(err){res.status(400).json({error:err.message,code:err.code||null});}
+});
+
+app.get('/api/listings/:listingId/reputation',(req,res)=>{
+  const listing=getFullRentalListing(req.params.listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
+  res.json({supplier:getSupplierReputation(listing.ownerEmail)});
+});
+app.get('/api/supplier/bookings/:bookingId/customer-reputation',requireRole('supplier','admin'),(req,res)=>{
+  if(!canSupplierManageBooking(req.appUser,req.params.bookingId))return res.status(403).json({error:'Forbidden'});
+  const booking=getRentalBookingById(req.params.bookingId);if(!booking)return res.status(404).json({error:'Booking not found'});
+  res.json({customer:getRenterReputation(booking.customerEmail)});
+});
+app.post('/api/supplier/bookings/:bookingId/customer-review',requireRole('supplier','admin'),simpleRateLimit({windowMs:60000,max:20,keyPrefix:'renter-review'}),(req,res)=>{
+  try{
+    if(!canSupplierManageBooking(req.appUser,req.params.bookingId))return res.status(403).json({error:'Forbidden'});
+    const booking=getRentalBookingById(req.params.bookingId);if(!booking)return res.status(404).json({error:'Booking not found'});
+    if(!booking.customerEmail)return res.status(400).json({error:'Customer identity is unavailable for this booking',code:'CUSTOMER_IDENTITY_REQUIRED'});
+    res.json(createRenterReview({bookingId:booking.bookingId,reviewerEmail:req.appUser.email,revieweeEmail:booking.customerEmail,rating:Number(req.body?.rating),comment:req.body?.comment||null}));
+  }catch(err){const status=err.code==='REVIEW_ALREADY_EXISTS'||err.code==='REVIEW_NOT_ALLOWED'?409:400;res.status(status).json({error:err.message,code:err.code||null});}
 });
 
 app.get('/api/rentals/reviews', (req, res) => {
