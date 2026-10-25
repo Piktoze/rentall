@@ -164,6 +164,5 @@
 
   function sync(){portalizeModals();bindAccountForAnyMember();interceptDrawerActions();interceptPartnerUpgrade();localizeCalendar();configureAccountDrawer();}
   document.addEventListener('rentall:language-changed',()=>setTimeout(sync,0));
-  const obs=new MutationObserver(()=>setTimeout(sync,0));obs.observe(document.body,{childList:true,subtree:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{sync();strengthenModalExit();},{once:true});else{sync();strengthenModalExit();}
 })();

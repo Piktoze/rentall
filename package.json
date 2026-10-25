@@ -10,7 +10,7 @@
     "test:trust": "node trust.test.js",
     "test:auth": "node auth.test.js",
     "test:audit": "node audit.test.js",
-    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js && node --check modules/marketplace-trust-v172.js && node --check ops/backup-and-verify.js && node --check modules/help-center-content-v177.js && node --check help-center-v177.test.js && node --check modules/supplier-ux-v178.js && node supplier-ux-v178.test.cjs && node --check modules/supplier-ux-v179.js && node supplier-ux-v179.test.cjs && node full-demo-v180.test.js",
+    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js && node --check modules/marketplace-trust-v172.js && node --check ops/backup-and-verify.js && node --check modules/help-center-content-v177.js && node --check help-center-v177.test.js && node --check modules/supplier-ux-v178.js && node supplier-ux-v178.test.cjs && node --check modules/supplier-ux-v179.js && node supplier-ux-v179.test.cjs && node full-demo-v180.test.js && node performance-v181.test.js",
     "test:expiration": "node expiration.test.js",
     "test:security": "node security.test.js",
     "test:geo": "node geo.test.js",
@@ -119,7 +119,7 @@
     "test:marketplace-trust-v172": "node marketplace-trust-v172.test.js",
     "test:backup-launch-gate-v172": "node backup-launch-gate-v172.test.js",
     "test:help-center-v177": "node help-center-v177.test.js",
-    "test:full-demo-v180": "node full-demo-v180.test.js"
+    "test:full-demo-v180": "node full-demo-v180.test.js && node performance-v181.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

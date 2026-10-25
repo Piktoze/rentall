@@ -23,13 +23,16 @@
     if(lang==='en') return clean;
     return dictionaries[lang]?.[clean]||null;
   }
-  function translateI18nElements(lang){
-    document.querySelectorAll('[data-i18n]').forEach(el=>{
+  function translateI18nElements(lang,root=document){
+    const els=[];
+    if(root?.nodeType===1 && root.matches?.('[data-i18n]')) els.push(root);
+    if(root?.querySelectorAll) els.push(...root.querySelectorAll('[data-i18n]'));
+    els.forEach(el=>{
       const k=el.dataset.i18n;
       if(!originalI18nHtml.has(el)) originalI18nHtml.set(el,el.innerHTML);
       const translated=keyTranslations[lang]?.[k];
-      if(translated!=null) el.innerHTML=translated;
-      else if(lang==='en') el.innerHTML=keyTranslations.en?.[k]||originalI18nHtml.get(el);
+      const desired=translated!=null?translated:(lang==='en'?(keyTranslations.en?.[k]||originalI18nHtml.get(el)):null);
+      if(desired!=null && el.innerHTML!==desired) el.innerHTML=desired;
     });
   }
   function withinKeyElement(node){
@@ -45,8 +48,8 @@
     const translated=lookup(trimmed,lang);
     const lead=original.match(/^\s*/)?.[0]||'';
     const trail=original.match(/\s*$/)?.[0]||'';
-    if(lang==='en') node.nodeValue=original;
-    else if(translated) node.nodeValue=lead+translated+trail;
+    const desired=lang==='en'?original:(translated?lead+translated+trail:null);
+    if(desired!=null && node.nodeValue!==desired) node.nodeValue=desired;
   }
   function translateAttrs(el,lang){
     const attrs=['placeholder','aria-label','title'];
@@ -56,7 +59,8 @@
       if(el.hasAttribute(attr)&&bag[attr]===undefined) bag[attr]=el.getAttribute(attr);
       const original=bag[attr]; if(!original) continue;
       const translated=lookup(original,lang);
-      if(lang==='en') el.setAttribute(attr,original); else if(translated) el.setAttribute(attr,translated);
+      const desired=lang==='en'?original:(translated||null);
+      if(desired!=null && el.getAttribute(attr)!==desired) el.setAttribute(attr,desired);
     }
   }
   function translateTree(root,lang){
@@ -99,18 +103,24 @@
     const old=document.getElementById('lang');
     if(old){const clone=old.cloneNode(true);old.replaceWith(clone);clone.addEventListener('change',e=>apply(e.target.value));}
     apply(current());
+    let queued=false,pending=[];
     const observer=new MutationObserver(records=>{
       if(applying) return;
-      const lang=current();
+      pending.push(...records);
+      if(queued) return;
+      queued=true;
       requestAnimationFrame(()=>{
+        queued=false;
+        const batch=pending.splice(0);
+        const lang=current();
         applying=true;
-        for(const r of records){
-          if(r.type==='childList') r.addedNodes.forEach(n=>translateTree(n,lang));
-          if(r.type==='characterData') translateTextNode(r.target,lang);
-          if(r.type==='attributes') translateAttrs(r.target,lang);
-        }
-        translateI18nElements(lang);
-        applying=false;
+        try{
+          for(const r of batch){
+            if(r.type==='childList') r.addedNodes.forEach(n=>{translateI18nElements(lang,n);translateTree(n,lang);});
+            if(r.type==='characterData') translateTextNode(r.target,lang);
+            if(r.type==='attributes') translateAttrs(r.target,lang);
+          }
+        }finally{applying=false;}
       });
     });
     observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});

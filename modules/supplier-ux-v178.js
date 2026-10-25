@@ -125,7 +125,7 @@
     const setWaiting=()=>{if(!modal.classList.contains('open'))return;if(!modal.querySelector('.conversation-row.active')){form.hidden=false;body.disabled=true;if(send)send.disabled=true;body.placeholder=t('chooseConversation');}};
     $('messagesBtn')?.addEventListener('click',()=>setTimeout(setWaiting,80));
     modal.addEventListener('click',e=>{if(e.target.closest('.conversation-row'))setTimeout(()=>{body.disabled=false;if(send)send.disabled=false;body.placeholder=window.RentAllI18n?.t?.('Write a message…')||'Write a message…';},80);});
-    const observer=new MutationObserver(()=>setWaiting());observer.observe(modal,{attributes:true,subtree:true,childList:true});
+    let waitQueued=false;const observer=new MutationObserver(()=>{if(waitQueued)return;waitQueued=true;requestAnimationFrame(()=>{waitQueued=false;setWaiting();});});observer.observe(modal,{subtree:true,childList:true});
   }
 
   const extra={

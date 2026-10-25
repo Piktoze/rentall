@@ -3,7 +3,7 @@ const assert=require('assert');
 const html=fs.readFileSync('index.html','utf8');
 const css=fs.readFileSync('light-premium-v161.css','utf8');
 const js=fs.readFileSync('modules/supplier-ux-v178.js','utf8');
-assert(html.includes('modules/supplier-ux-v178.js?v=180'),'v178 supplier UX module not loaded');
+assert(html.includes('modules/supplier-ux-v178.js?v=181'),'v178 supplier UX module not loaded');
 assert(css.includes('.supplier-action-drawer'),'supplier drawer CSS missing');
 assert(css.includes('z-index:2200!important'),'modal layer must sit above sticky header');
 assert(css.includes('body.supplier-authenticated #messagesBtn{display:none!important}'),'supplier top nav should be simplified');

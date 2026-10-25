@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const i18n=fs.readFileSync('modules/i18n-v161.js','utf8');
+const ux179=fs.readFileSync('modules/supplier-ux-v179.js','utf8');
+const ux178=fs.readFileSync('modules/supplier-ux-v178.js','utf8');
+assert(!ux179.includes("obs.observe(document.body,{childList:true,subtree:true})"),'supplier UX must not observe the entire body');
+assert(i18n.includes("el.innerHTML!==desired"),'i18n HTML writes must be idempotent');
+assert(i18n.includes("node.nodeValue!==desired"),'i18n text writes must be idempotent');
+assert(i18n.includes("el.getAttribute(attr)!==desired"),'i18n attribute writes must be idempotent');
+assert(!ux178.includes("observe(modal,{attributes:true"),'messages observer must not watch its own attribute writes');
+assert(ux178.includes("requestAnimationFrame"),'messages observer should be throttled');
+console.log('performance v181: PASS');
