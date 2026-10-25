@@ -224,7 +224,7 @@
 
     <div class="hero-card">
       <div class="mock-phone">
-        <div class="phone-top">RentAll</div>
+        <div class="phone-top">RentAll <span class="preview-badge">Preview</span></div>
         <div class="phone-location">📍 Klaipėda · 3 days</div>
         <div class="mini-card">
           <div class="emoji">🪑</div>
@@ -279,63 +279,7 @@
       <div><b id="v120ResultsTitle">Available rentals</b><small id="v120ResultsMeta">Choose an item to see live availability and total price.</small></div>
       <button type="button" class="secondary" id="v120EditSearch">Edit search</button>
     </div>
-
-    <div class="product-grid" id="productGrid">
-      <article class="product" data-cat="furniture">
-        <div class="product-img">🪑</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Furniture</span><span>Individual</span></div>
-          <h3>10 Folding Chairs</h3>
-          <p>Klaipėda · 10 available · pickup or delivery.</p>
-          <div class="price-row"><b>€2.50 / day each</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-      <article class="product" data-cat="tools">
-        <div class="product-img">🛠️</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Tools</span><span>Individual</span></div>
-          <h3>Cordless Drill Set</h3>
-          <p>Vilnius · 3 available · pickup only.</p>
-          <div class="price-row"><b>€9 / day</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-      <article class="product" data-cat="electronics">
-        <div class="product-img">📽️</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Electronics</span><span>Business</span></div>
-          <h3>Projector + Screen</h3>
-          <p>Kaunas · 2 available · delivery available.</p>
-          <div class="price-row"><b>€25 / day</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-      <article class="product" data-cat="events">
-        <div class="product-img">🎉</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Events</span><span>Business</span></div>
-          <h3>Party Table Set</h3>
-          <p>Klaipėda · 6 sets available.</p>
-          <div class="price-row"><b>€18 / day</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-      <article class="product" data-cat="garden">
-        <div class="product-img">🌿</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Garden</span><span>Individual</span></div>
-          <h3>Lawn Aerator</h3>
-          <p>Klaipėda · 1 available · pickup only.</p>
-          <div class="price-row"><b>€20 / day</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-      <article class="product" data-cat="sports">
-        <div class="product-img">🚲</div>
-        <div class="product-body">
-          <div class="row"><span class="pill">Sports</span><span>Business</span></div>
-          <h3>Road Bike</h3>
-          <p>Barcelona · 4 available.</p>
-          <div class="price-row"><b>€15 / day</b><button class="secondary addBtn">Add</button></div>
-        </div>
-      </article>
-    </div>
+    <div class="product-grid" id="productGrid" hidden aria-hidden="true"></div>
   </div>
 </section>
 
@@ -1068,19 +1012,39 @@
       <p>Join the pilot. No setup fee and no monthly charge on the Free plan.</p>
     </div>
     <form class="partner-form" id="partnerLead">
-      <input required placeholder="Business name">
-      <input required type="email" placeholder="Email">
-      <input placeholder="Phone / WhatsApp">
-      <select required>
+      <input id="partnerBusinessName" required placeholder="Business name">
+      <input id="partnerEmail" required type="email" placeholder="Email">
+      <input id="partnerPhone" placeholder="Phone / WhatsApp">
+      <select id="partnerCategory" required>
         <option value="">What do you rent?</option>
-        <option>Beach equipment</option>
-        <option>Baby equipment</option>
-        <option>Mobility equipment</option>
-        <option>Watersports / adventure gear</option>
-        <option>Other</option>
+        <option value="tools">Tools & equipment</option>
+        <option value="construction">Construction equipment</option>
+        <option value="cleaning">Cleaning equipment</option>
+        <option value="garden">Garden & outdoor</option>
+        <option value="furniture">Furniture</option>
+        <option value="events">Events & parties</option>
+        <option value="electronics">Electronics</option>
+        <option value="computers">Computers & IT</option>
+        <option value="photo">Photo & video</option>
+        <option value="audio">Audio & music equipment</option>
+        <option value="sports">Sports & fitness</option>
+        <option value="cycling">Bicycles & scooters</option>
+        <option value="travel">Travel equipment</option>
+        <option value="camping">Camping & outdoor adventure</option>
+        <option value="baby">Baby & family</option>
+        <option value="home">Home & kitchen</option>
+        <option value="diy">DIY & renovation</option>
+        <option value="office">Office & business equipment</option>
+        <option value="moving">Moving & storage equipment</option>
+        <option value="mobility">Medical & mobility equipment</option>
+        <option value="watersports">Watersports equipment</option>
+        <option value="winter">Winter sports equipment</option>
+        <option value="costumes">Fashion, costumes & accessories</option>
+        <option value="games">Games & entertainment</option>
+        <option value="other">Other</option>
       </select>
-      <button class="primary" type="submit">Join partner pilot</button>
-      <small id="partnerMsg"></small>
+      <button class="primary" type="submit">Continue supplier registration</button>
+      <small id="partnerMsg">This is the first step. You will create a password in the secure account form.</small>
     </form>
   </div>
 </section>

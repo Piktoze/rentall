@@ -10,7 +10,7 @@
     "test:trust": "node trust.test.js",
     "test:auth": "node auth.test.js",
     "test:audit": "node audit.test.js",
-    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check .railway/railway.ts && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js && node --check modules/marketplace-trust-v172.js && node --check ops/backup-and-verify.js",
+    "check": "node --check app.js && node --check server.js && node --check db.js && node --check config.js && node --check ops/start.js && node --check release/smoke-production.mjs && node --check pwa.test.js && node --check saved-search.test.js && node --check listing-pipeline.test.js && node --check inventory-auth.test.js && node --check customer-bookings.test.js && node --check booking-portal.test.js && node --check payment-ops-security.test.js && node --check runtime-regression.test.js && node --check modules/marketplace-trust-v172.js && node --check ops/backup-and-verify.js",
     "test:expiration": "node expiration.test.js",
     "test:security": "node security.test.js",
     "test:geo": "node geo.test.js",

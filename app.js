@@ -30,10 +30,14 @@ document.querySelectorAll('.chip').forEach(chip=>{
   chip.addEventListener('click',()=>{
     document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
     chip.classList.add('active');
-    const f = chip.dataset.filter;
-    document.querySelectorAll('.product').forEach(p=>{
-      p.style.display = (f==='all'||p.dataset.cat===f)?'block':'none';
-    });
+    const f=chip.dataset.filter;
+    if(typeof loadUniversalListings==='function'){
+      const source=loadUniversalListings();
+      const filtered=f==='all'?source:source.filter(item=>item.category===f);
+      if(typeof renderGeoAwareListings==='function') renderGeoAwareListings(filtered);
+      else if(typeof renderUniversalListings==='function') renderUniversalListings(filtered);
+      document.getElementById('list-item')?.scrollIntoView({behavior:'smooth'});
+    }
   });
 });
 
@@ -42,10 +46,20 @@ document.getElementById('searchForm').addEventListener('submit',e=>{
   document.getElementById('browse').scrollIntoView({behavior:'smooth'});
 });
 
-document.getElementById('partnerLead').addEventListener('submit',e=>{
+document.getElementById('partnerLead')?.addEventListener('submit',e=>{
   e.preventDefault();
-  document.getElementById('partnerMsg').textContent='Thanks — your partner request has been recorded in this prototype.';
-  e.target.reset();
+  const businessName=document.getElementById('partnerBusinessName')?.value?.trim()||'';
+  const email=document.getElementById('partnerEmail')?.value?.trim()||'';
+  const phone=document.getElementById('partnerPhone')?.value?.trim()||'';
+  openAuth('register');
+  const role=document.getElementById('regRole');
+  if(role){ role.value='supplier'; role.dispatchEvent(new Event('change',{bubbles:true})); }
+  const profile=document.getElementById('regBusinessName'); if(profile) profile.value=businessName;
+  const contact=document.getElementById('regContactName'); if(contact && !contact.value) contact.value=businessName;
+  const regEmail=document.getElementById('regEmail'); if(regEmail) regEmail.value=email;
+  const regPhone=document.getElementById('regPhone'); if(regPhone) regPhone.value=phone;
+  const msg=document.getElementById('partnerMsg');
+  if(msg) msg.textContent='Continue in the account form and create your password.';
 });
 
 
@@ -328,12 +342,10 @@ const demoSupplier = {
 };
 
 function loadAccounts(){
-  const existing = JSON.parse(localStorage.getItem(SUPPLIER_KEY) || '[]');
-  if(!existing.some(a=>a.email===demoSupplier.email)){
-    existing.push(demoSupplier);
-    localStorage.setItem(SUPPLIER_KEY, JSON.stringify(existing));
-  }
-  return existing;
+  try{
+    const existing=JSON.parse(localStorage.getItem(SUPPLIER_KEY)||'[]');
+    return Array.isArray(existing)?existing:[];
+  }catch{return [];}
 }
 function saveAccounts(accounts){ localStorage.setItem(SUPPLIER_KEY, JSON.stringify(accounts)); }
 function getSession(){ return localStorage.getItem(SESSION_KEY); }
@@ -1270,18 +1282,35 @@ function populateUniversalCities(){
 document.getElementById('countrySelect')?.addEventListener('change',populateUniversalCities);
 populateUniversalCities();
 
-const defaultListings = [
-  {id:1,title:'10 Folding Chairs',category:'furniture',quantity:10,country:'LT',city:'Klaipėda',priceDay:2.5,priceWeek:12,deposit:50,delivery:'Pickup or delivery',ownerType:'individual',description:'Folding event chairs in good condition.'},
-  {id:2,title:'Cordless Drill Set',category:'tools',quantity:3,country:'LT',city:'Vilnius',priceDay:9,priceWeek:45,deposit:80,delivery:'Pickup only',ownerType:'individual',description:'18V cordless drill with charger and bits.'},
-  {id:3,title:'Projector + Screen',category:'electronics',quantity:2,country:'LT',city:'Kaunas',priceDay:25,priceWeek:120,deposit:150,delivery:'Delivery available',ownerType:'business',description:'Full HD projector and portable screen.'},
-  {id:4,title:'Party Table Set',category:'events',quantity:6,country:'LT',city:'Klaipėda',priceDay:18,priceWeek:80,deposit:100,delivery:'Pickup or delivery',ownerType:'business',description:'Folding tables for events and parties.'},
-  {id:5,title:'Lawn Aerator',category:'garden',quantity:1,country:'LT',city:'Klaipėda',priceDay:20,priceWeek:90,deposit:120,delivery:'Pickup only',ownerType:'individual',description:'Electric lawn aerator.'},
-  {id:6,title:'Road Bike',category:'sports',quantity:4,country:'ES',city:'Palma de Mallorca',priceDay:15,priceWeek:70,deposit:100,delivery:'Pickup or delivery',ownerType:'business',description:'Aluminium road bikes in several sizes.'}
-];
+const LEGACY_DEMO_LISTINGS = new Map([
+  ['1','10 Folding Chairs'],
+  ['2','Cordless Drill Set'],
+  ['3','Projector + Screen'],
+  ['4','Party Table Set'],
+  ['5','Lawn Aerator'],
+  ['6','Road Bike']
+]);
+const defaultListings = [];
+
+function isLegacyDemoListing(listing){
+  if(!listing || typeof listing!=='object') return false;
+  const expected=LEGACY_DEMO_LISTINGS.get(String(listing.id||''));
+  if(!expected || listing.title!==expected) return false;
+  return !listing.ownerEmail && !listing.supplierId && !listing.createdAt;
+}
+function purgeLegacyDemoListings(items){
+  return Array.isArray(items)?items.filter(item=>!isLegacyDemoListing(item)):[];
+}
 
 function loadUniversalListings(){
-  const saved=JSON.parse(localStorage.getItem('rentall_listings')||'null');
-  return Array.isArray(saved)?saved:defaultListings;
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem('rentall_listings')||'null');}catch{}
+  const source=Array.isArray(saved)?saved:defaultListings;
+  const cleaned=purgeLegacyDemoListings(source);
+  if(Array.isArray(saved) && cleaned.length!==saved.length){
+    localStorage.setItem('rentall_listings',JSON.stringify(cleaned));
+  }
+  return cleaned;
 }
 function saveUniversalListings(items){
   localStorage.setItem('rentall_listings',JSON.stringify(items));
@@ -1954,6 +1983,19 @@ function calculateListingPreview(listing, ctx){
     note:`Delivery to ${ctx.accommodation||ctx.city}: ${listing.deliveryLeadTime||'same day'}`
   };
 }
+function localizePreviewNote(preview,ctx){
+  const note=String(preview?.note||'');
+  let m=note.match(/^Estimated for (\d+) days? × (\d+)$/);
+  if(m) return uiText('Estimated for {days} day(s) × {qty}',{days:m[1],qty:m[2]});
+  m=note.match(/^Delivery not available to (.+)$/);
+  if(m) return uiText('Delivery not available to {location}',{location:m[1]});
+  m=note.match(/^Minimum delivery order is €(.+)$/);
+  if(m) return uiText('Minimum delivery order is €{amount}',{amount:m[1]});
+  m=note.match(/^Delivery to (.+): (.+)$/);
+  if(m) return uiText('Delivery to {location}: {leadTime}',{location:m[1],leadTime:uiText(m[2])});
+  return note;
+}
+
 
 renderUniversalListings = function(items=loadUniversalListings()){
   const grid=document.getElementById('listingPreviewGrid');
@@ -3854,11 +3896,12 @@ document.addEventListener('click',e=>{
 async function hydrateListingsFromServer(){
   try{
     const data=await apiJson('/api/listings');
-    if(data.listings?.length){
-      localStorage.setItem('rentall_listings',JSON.stringify(data.listings));
-      renderUniversalListings(data.listings);
-    }
-    return data.listings||[];
+    const listings=purgeLegacyDemoListings(Array.isArray(data.listings)?data.listings:[]);
+    // Server inventory is authoritative even when empty: stale demo/local listings must disappear.
+    localStorage.setItem('rentall_listings',JSON.stringify(listings));
+    if(typeof renderGeoAwareListings==='function') renderGeoAwareListings(listings);
+    else renderUniversalListings(listings);
+    return listings;
   }catch{
     return loadUniversalListings();
   }
@@ -4221,6 +4264,8 @@ function wireAuthoritativeAuth(){
         closeAuth();
         await hydrateListingsFromServer();
         await renderBookings();
+        if(typeof showToast==='function') showToast('Signed in successfully.','success',2200);
+        if(serverUser?.role==='supplier') document.getElementById('supplier-dashboard')?.scrollIntoView({behavior:'smooth'});
         if(serverUser?.role==='admin') loadAdminDashboard().catch(()=>{});
       }catch(err){alert(err.message);}
     });
@@ -4248,6 +4293,8 @@ function wireAuthoritativeAuth(){
         });
         closeAuth();
         await hydrateListingsFromServer();
+        if(typeof showToast==='function') showToast('Account created — you are now signed in.','success',2600);
+        if(role==='supplier') document.getElementById('supplier-dashboard')?.scrollIntoView({behavior:'smooth'});
       }catch(err){alert(err.message);}
     });
   }
@@ -4571,53 +4618,71 @@ function safeImageUrl(value){
   return /^\/uploads\/[a-zA-Z0-9._-]+$/.test(v) ? v : '';
 }
 
+// Localize RentAll system labels; supplier-entered listing content stays in its original language.
+function uiText(key,vars){
+  return window.RentAllI18n?.t?.(key,vars)||key;
+}
+
 // Final sanitized listing renderer.
 renderUniversalListings=function(items=loadUniversalListings()){
   const grid=document.getElementById('listingPreviewGrid');
   if(!grid) return;
   const ctx=getCurrentSearchContext();
+  const cleanItems=purgeLegacyDemoListings(items);
 
-  grid.innerHTML=items.map(l=>{
+  if(!cleanItems.length){
+    const template=document.getElementById('listingEmptyStateTemplate');
+    grid.innerHTML=template?.innerHTML||`<div class="empty-state"><h3>${escapeHtml(uiText('No rentals found'))}</h3><p>${escapeHtml(uiText('Try a larger radius, different dates, or another category.'))}</p></div>`;
+    grid.querySelector('#resetSearchFromEmpty')?.addEventListener('click',()=>resetDiscoveryFilters());
+    return;
+  }
+
+  grid.innerHTML=cleanItems.map(l=>{
     const preview=calculateListingPreview(l,ctx);
     const zones=normalizeDeliveryZones(l.deliveryZones);
     const cover=safeImageUrl(l.coverPhoto);
     const favorite=isFavorite(l.id);
+    const ownerLabel=l.ownerType==='business'?uiText('Business'):uiText('Individual');
+    const leadTime=uiText(l.deliveryLeadTime||'Same day');
+    const deliveryValue=ctx.mode==='trip'
+      ? (preview.eligible?`€${preview.delivery.toFixed(2)}`:uiText('Not available'))
+      : uiText('Calculated at checkout');
 
     return `
       <div class="listing-card" data-listing-id="${escapeHtml(l.id)}">
         ${cover?`<img class="listing-card-cover" src="${cover}" alt="${escapeHtml(l.title)}">`:''}
-        <button class="favorite-btn ${favorite?'active':''}" type="button" data-favorite-id="${escapeHtml(l.id)}" aria-pressed="${favorite?'true':'false'}" aria-label="${favorite?'Remove from favorites':'Save to favorites'}">${favorite?'♥':'♡'}</button>
-        <small>${escapeHtml(l.ownerType==='business'?'Business':'Individual')} · ${escapeHtml(l.city||'')}</small>
+        <button class="favorite-btn ${favorite?'active':''}" type="button" data-favorite-id="${escapeHtml(l.id)}" aria-pressed="${favorite?'true':'false'}" aria-label="${escapeHtml(uiText(favorite?'Remove from favorites':'Save to favorites'))}">${favorite?'♥':'♡'}</button>
+        <small>${escapeHtml(ownerLabel)} · ${escapeHtml(l.city||'')}</small>
         <h4>${escapeHtml(l.title)}</h4>
-        <p>${escapeHtml(l.description||'Local rental listing')}</p>
+        <p>${escapeHtml(l.description||uiText('Local rental listing'))}</p>
 
         <div class="listing-meta">
-          <div><span>Available</span><b>${Number(l.quantity||0)}</b></div>
-          <div><span>Per day</span><b>€${Number(l.priceDay||0).toFixed(2)}</b></div>
-          <div><span>Per week</span><b>${l.priceWeek?`€${Number(l.priceWeek).toFixed(2)}`:'—'}</b></div>
-          <div><span>Deposit</span><b>${l.deposit?`€${Number(l.deposit).toFixed(2)}`:'—'}</b></div>
+          <div><span>${escapeHtml(uiText('Available'))}</span><b>${Number(l.quantity||0)}</b></div>
+          <div><span>${escapeHtml(uiText('Per day'))}</span><b>€${Number(l.priceDay||0).toFixed(2)}</b></div>
+          <div><span>${escapeHtml(uiText('Per week'))}</span><b>${l.priceWeek?`€${Number(l.priceWeek).toFixed(2)}`:'—'}</b></div>
+          <div><span>${escapeHtml(uiText('Deposit'))}</span><b>${l.deposit?`€${Number(l.deposit).toFixed(2)}`:'—'}</b></div>
         </div>
 
         ${(l.accommodationDelivery==='yes'||l.accommodationDelivery===true)?`
           <div class="delivery-info-box">
-            <b>Hotel / apartment delivery</b>
+            <b>${escapeHtml(uiText('Hotel / apartment delivery'))}</b>
             <div class="delivery-info-grid">
-              <div><span>Zones</span><strong>${escapeHtml(zones.length?zones.join(', '):(l.city||''))}</strong></div>
-              <div><span>Delivery fee</span><strong>€${Number(l.hotelDeliveryFee||0).toFixed(2)}</strong></div>
-              <div><span>Minimum order</span><strong>€${Number(l.minOrder||0).toFixed(2)}</strong></div>
-              <div><span>Lead time</span><strong>${escapeHtml(l.deliveryLeadTime||'Same day')}</strong></div>
+              <div><span>${escapeHtml(uiText('Zones'))}</span><strong>${escapeHtml(zones.length?zones.join(', '):(l.city||''))}</strong></div>
+              <div><span>${escapeHtml(uiText('Delivery fee'))}</span><strong>€${Number(l.hotelDeliveryFee||0).toFixed(2)}</strong></div>
+              <div><span>${escapeHtml(uiText('Minimum order'))}</span><strong>€${Number(l.minOrder||0).toFixed(2)}</strong></div>
+              <div><span>${escapeHtml(uiText('Lead time'))}</span><strong>${escapeHtml(leadTime)}</strong></div>
             </div>
           </div>`:''}
 
         <div class="price-preview-box">
-          <div class="price-preview-row"><span>Rental estimate</span><b>€${preview.rental.toFixed(2)}</b></div>
-          <div class="price-preview-row"><span>Delivery</span><b>${ctx.mode==='trip'?(preview.eligible?`€${preview.delivery.toFixed(2)}`:'Not available'):'Calculated at checkout'}</b></div>
-          <div class="price-preview-row total"><span>Estimated total</span><b>€${preview.total.toFixed(2)}</b></div>
-          <div class="price-preview-note ${preview.eligible?'ok':'error'}">${escapeHtml(preview.note)}</div>
+          <div class="price-preview-row"><span>${escapeHtml(uiText('Rental estimate'))}</span><b>€${preview.rental.toFixed(2)}</b></div>
+          <div class="price-preview-row"><span>${escapeHtml(uiText('Delivery'))}</span><b>${escapeHtml(deliveryValue)}</b></div>
+          <div class="price-preview-row total"><span>${escapeHtml(uiText('Estimated total'))}</span><b>€${preview.total.toFixed(2)}</b></div>
+          <div class="price-preview-note ${preview.eligible?'ok':'error'}">${escapeHtml(localizePreviewNote(preview,ctx))}</div>
         </div>
 
-        <button class="secondary detail-btn" type="button" data-detail-id="${escapeHtml(l.id)}">View details</button>
-        <button class="secondary availability-btn" type="button" data-availability-id="${escapeHtml(l.id)}">View availability</button>
+        <button class="secondary detail-btn" type="button" data-detail-id="${escapeHtml(l.id)}">${escapeHtml(uiText('View details'))}</button>
+        <button class="secondary availability-btn" type="button" data-availability-id="${escapeHtml(l.id)}">${escapeHtml(uiText('View availability'))}</button>
         <div class="price-preview-note">${escapeHtml(cancellationPolicyText(l.cancellationPolicy||'moderate'))}</div>
       </div>`;
   }).join('');
@@ -4628,7 +4693,7 @@ renderUniversalListings=function(items=loadUniversalListings()){
       btn.classList.toggle('active',active);
       btn.textContent=active?'♥':'♡';
       btn.setAttribute('aria-pressed',active?'true':'false');
-      btn.setAttribute('aria-label',active?'Remove from favorites':'Save to favorites');
+      btn.setAttribute('aria-label',uiText(active?'Remove from favorites':'Save to favorites'));
     });
   });
   grid.querySelectorAll('[data-detail-id]').forEach(btn=>{
@@ -4638,7 +4703,6 @@ renderUniversalListings=function(items=loadUniversalListings()){
     btn.addEventListener('click',()=>openAvailabilityCalendar(btn.dataset.availabilityId));
   });
 };
-
 
 async function checkPlatformHealth(){
   const target=document.getElementById('platformHealthResult');
@@ -4887,7 +4951,7 @@ function setGeoFromSelectedCity(){
   const coords=CITY_COORDS[normalizeCityKey(city)];
   if(coords){
     userGeo=[...coords];
-    setGeoStatus(`Using ${city} city center`);
+    setGeoStatus(uiText('Using {city} city center',{city}));
   }
 }
 document.getElementById('citySelect')?.addEventListener('change',()=>{
@@ -5153,7 +5217,10 @@ document.getElementById('finishOnboardingBtn')?.addEventListener('click',()=>{
   localStorage.setItem('rentall_onboarding_done','1');
 
   const lang=document.getElementById('lang');
-  if(lang && prefs.language) lang.value=prefs.language;
+  if(lang && prefs.language){
+    lang.value=prefs.language;
+    window.RentAllI18n?.apply?.(prefs.language);
+  }
 
   if(prefs.intent==='trip'){
     document.querySelector('[data-search-mode="trip"]')?.click();
@@ -5225,7 +5292,7 @@ async function loadSavedSearches(){
   const target=document.getElementById('savedSearchList');
   if(!target) return;
   if(!currentServerUser){
-    target.innerHTML='<div class="saved-search-item">Sign in to sync saved searches.</div>';
+    target.innerHTML=`<div class="saved-search-item">${escapeHtml(uiText('Sign in to sync saved searches.'))}</div>`;
     return;
   }
   try{
@@ -5233,36 +5300,36 @@ async function loadSavedSearches(){
     const items=data.savedSearches||[];
     target.innerHTML=items.map(s=>`
       <div class="saved-search-item">
-        <div><b>${escapeHtml(s.name)}</b><small>${escapeHtml([s.query?.city,s.query?.category].filter(Boolean).join(' · ')||'Custom search')}</small></div>
+        <div><b>${escapeHtml(s.name)}</b><small>${escapeHtml([s.query?.city,s.query?.category].filter(Boolean).join(' · ')||uiText('Custom search'))}</small></div>
         <div class="saved-search-actions">
-          <button class="secondary load-saved-search" data-id="${escapeHtml(s.savedSearchId)}">Open</button>
-          <button class="secondary delete-saved-search" data-id="${escapeHtml(s.savedSearchId)}">Delete</button>
+          <button class="secondary load-saved-search" data-id="${escapeHtml(s.savedSearchId)}">${escapeHtml(uiText('Open'))}</button>
+          <button class="secondary delete-saved-search" data-id="${escapeHtml(s.savedSearchId)}">${escapeHtml(uiText('Delete'))}</button>
         </div>
-      </div>`).join('')||'<div class="saved-search-item">No saved searches yet.</div>';
+      </div>`).join('')||`<div class="saved-search-item">${escapeHtml(uiText('No saved searches yet.'))}</div>`;
     target.querySelectorAll('.load-saved-search').forEach(btn=>btn.addEventListener('click',()=>{
       const s=items.find(x=>x.savedSearchId===btn.dataset.id);
       if(s) applySearchSnapshot(s.query);
     }));
     target.querySelectorAll('.delete-saved-search').forEach(btn=>btn.addEventListener('click',async()=>{
       await apiJson(`/api/customer/saved-searches/${encodeURIComponent(btn.dataset.id)}`,{method:'DELETE'});
-      showToast('Saved search deleted','success',1200);
+      showToast(uiText('Saved search deleted'),'success',1200);
       loadSavedSearches();
     }));
   }catch(err){target.innerHTML=`<div class="saved-search-item">${escapeHtml(err.message)}</div>`}
 }
 document.getElementById('saveCurrentSearchBtn')?.addEventListener('click',async()=>{
   if(!currentServerUser){
-    showToast('Sign in to save searches','error',1800);
+    showToast(uiText('Sign in to save searches'),'error',1800);
     document.getElementById('supplierAuthBtn')?.click();
     return;
   }
   const q=currentSearchSnapshot();
-  const defaultName=[q.city,q.category].filter(Boolean).join(' · ')||'Saved search';
-  const name=prompt('Name this search:',defaultName);
+  const defaultName=[q.city,q.category].filter(Boolean).join(' · ')||uiText('Saved search');
+  const name=prompt(uiText('Name this search:'),defaultName);
   if(!name) return;
   try{
     await apiJson('/api/customer/saved-searches',{method:'POST',body:JSON.stringify({name,query:q})});
-    showToast('Search saved','success',1500);
+    showToast(uiText('Search saved'),'success',1500);
   }catch(err){showToast(err.message,'error')}
 });
 document.getElementById('openSavedSearchesBtn')?.addEventListener('click',()=>{
@@ -5280,7 +5347,7 @@ renderGeoAwareListings=function(items=loadUniversalListings()){
   if(count){
     count.setAttribute('role','status');
     count.setAttribute('aria-live','polite');
-    count.textContent=`${filtered.length} rental${filtered.length===1?'':'s'} found`;
+    count.textContent=`${filtered.length} ${uiText(filtered.length===1?'rental found':'rentals found')}`;
   }
 
   // Preserve the caller's narrowed dataset (for example a quick-category search).
@@ -5444,7 +5511,7 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
     const bar=document.createElement('div');
     bar.className='v56-customer-promise';
     bar.setAttribute('role','note');
-    bar.innerHTML='<span>✓ Clear total price</span><span>✓ Secure booking record</span><span>✓ Pickup or delivery details before payment</span>';
+    bar.innerHTML=`<span>✓ ${escapeHtml(uiText('Clear total price'))}</span><span>✓ ${escapeHtml(uiText('Secure booking record'))}</span><span>✓ ${escapeHtml(uiText('Pickup or delivery details before payment'))}</span>`;
     target.prepend(bar);
   }
 

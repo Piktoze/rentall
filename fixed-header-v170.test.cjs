@@ -1,8 +1,11 @@
 const fs=require('fs');
 const css=fs.readFileSync('light-premium-v161.css','utf8');
-function must(re,msg){if(!re.test(css)){console.error('FAIL:',msg);process.exit(1)}}
-must(/\.topbar\{[\s\S]*?position:fixed!important;[\s\S]*?top:0!important;[\s\S]*?z-index:1000!important;/,'primary topbar must stay fixed above content');
-must(/body\.theme-aurora\{[\s\S]*?padding-top:70px!important;/,'desktop content offset must protect fixed header');
-must(/\.v120-journey\{[\s\S]*?position:relative!important;/,'journey bar must scroll normally');
-must(/@media\(max-width:900px\)[\s\S]*?body\.theme-aurora\{padding-top:64px!important\}/,'mobile fixed-header offset required');
-console.log('PASS V170 fixed primary header');
+function must(v,msg){if(!v){console.error('FAIL:',msg);process.exit(1)}}
+const v173=css.slice(css.indexOf('/* RentAll V173 — contrast, sticky header and production-surface cleanup */'));
+must(v173.includes('position:sticky!important'),'primary topbar must stay sticky above content');
+must(v173.includes('top:0!important'),'sticky header must anchor at viewport top');
+must(v173.includes('z-index:1000!important'),'primary header z-index required');
+must(v173.includes('body.theme-aurora{padding-top:0!important}'),'sticky header must remain in normal document flow without fake top padding');
+must(v173.includes('html{scroll-padding-top:88px!important}'),'anchor scrolling must account for sticky header');
+must(v173.includes('.v120-journey{z-index:40!important}'),'journey toolbar must keep a stable layer below the primary header');
+console.log('PASS V173 sticky primary header without content overlap');

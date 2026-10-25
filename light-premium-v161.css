@@ -631,3 +631,87 @@ body.theme-aurora{
 .seo-listing-page{max-width:900px;margin:40px auto}.seo-listing-page .primary{display:inline-flex;text-decoration:none}
 footer .footer-grid>div{align-content:start}footer .footer-grid a{display:block;margin:5px 0}
 @media(max-width:720px){.messages-layout{grid-template-columns:1fr;min-height:0}.conversation-list{max-height:190px}.message-list{min-height:280px}.v172-marketplace-trust{align-items:flex-start;flex-direction:column}.agreement-status-grid{grid-template-columns:1fr}.message-form-row{align-items:stretch;flex-direction:column}.message-form-row small{max-width:none}}
+
+/* RentAll V173 — contrast, sticky header and production-surface cleanup */
+html{scroll-padding-top:88px!important}
+.topbar{
+  position:sticky!important;
+  top:0!important;
+  z-index:1000!important;
+}
+body.theme-aurora{padding-top:0!important}
+section[id],div[id]{scroll-margin-top:88px}
+.v120-journey{z-index:40!important}
+
+/* Pricing must remain legible regardless of legacy dark-theme rules. */
+body.theme-aurora .plan-price,
+body.theme-aurora .plan-price b,
+body.theme-aurora .plan-price strong{
+  color:#143f2f!important;
+  -webkit-text-fill-color:#143f2f!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+body.theme-aurora .plan-price small{
+  color:#4d6358!important;
+  -webkit-text-fill-color:#4d6358!important;
+  opacity:1!important;
+}
+body.theme-aurora .plan .commission{color:#1f694d!important;opacity:1!important}
+body.theme-aurora .plan .outline-btn{
+  color:#1d5d45!important;
+  background:#fff!important;
+  border-color:#b9cabf!important;
+  opacity:1!important;
+}
+body.theme-aurora .plan .primary-link{
+  color:#fff!important;
+  background:#255f49!important;
+  border:1px solid #255f49!important;
+  opacity:1!important;
+}
+body.theme-aurora .plan .outline-btn:hover{background:#eef5f0!important}
+body.theme-aurora .plan-label{color:#40564b!important}
+
+/* The hero card is illustrative UI, never live marketplace inventory. */
+.preview-badge{
+  display:inline-flex;align-items:center;margin-left:8px;padding:3px 7px;border-radius:999px;
+  background:#edf3ef;color:#50675c;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+}
+#productGrid[hidden]{display:none!important}
+
+@media(max-width:900px){
+  html{scroll-padding-top:76px!important}
+  section[id],div[id]{scroll-margin-top:76px}
+}
+
+
+/* RentAll V174 — stronger brand presence and clearer supplier onboarding */
+.topbar .nav{
+  min-height:84px!important;
+  height:84px!important;
+  gap:30px!important;
+}
+.topbar .brand{
+  font-size:29px!important;
+  font-weight:900!important;
+  letter-spacing:-.045em!important;
+  gap:12px!important;
+  line-height:1!important;
+  flex:0 0 auto!important;
+}
+.topbar .brand::before{
+  width:44px!important;
+  height:44px!important;
+  border-radius:14px!important;
+  font-size:19px!important;
+  font-weight:950!important;
+  box-shadow:0 10px 26px rgba(37,95,73,.16)!important;
+}
+.partner-form select{min-height:54px!important}
+.partner-form #partnerMsg{display:block;color:#6a776f!important;line-height:1.45;margin-top:2px}
+@media(max-width:900px){
+  .topbar .nav{min-height:70px!important;height:70px!important;gap:14px!important}
+  .topbar .brand{font-size:24px!important;gap:9px!important}
+  .topbar .brand::before{width:38px!important;height:38px!important;border-radius:12px!important;font-size:16px!important}
+}
