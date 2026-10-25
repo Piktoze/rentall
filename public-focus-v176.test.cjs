@@ -18,5 +18,5 @@ ok(css.includes('supplier-view-list'),'grid/list supplier view required');
 for(const key of ['supplier_panel_show','supplier_panel_hide','supplier_view_grid','supplier_view_list']){
   for(const lang of ['lt','en','es','de','ru']) ok(i18n.includes('"'+key+'"'),`missing i18n key ${key}`);
 }
-ok(h.includes('?v=176'),'index must cache-bust v176');
+ok(h.includes('?v=180'),'index must cache-bust current frontend assets');
 console.log('PASS V176 public focus, brand scale and compact supplier dashboard');

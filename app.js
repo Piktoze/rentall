@@ -2851,8 +2851,7 @@ function supplierOwnedListings(){
   const supplier=currentSupplier?.();
   const email=supplier?.email || '';
   const all=loadUniversalListings();
-  const owned=all.filter(l=>!email || !l.ownerEmail || l.ownerEmail===email);
-  return owned.length ? owned : all;
+  return all.filter(l=>email && String(l.ownerEmail||'').toLowerCase()===String(email).toLowerCase());
 }
 
 function initSupplierCalendarDates(){
@@ -2883,7 +2882,12 @@ async function renderSupplierAvailability(){
   const listingId=document.getElementById('supplierCalendarListing')?.value;
   const from=document.getElementById('supplierCalendarFrom')?.value;
   const to=document.getElementById('supplierCalendarTo')?.value;
-  if(!grid||!listingId||!from||!to) return;
+  if(!grid||!from||!to) return;
+  if(!listingId){
+    grid.innerHTML=`<div class="supplier-calendar-empty">${escapeHtml(window.RentAllI18n?.t?.('No listings yet. Add your first listing to use the calendar.')||'No listings yet. Add your first listing to use the calendar.')}</div>`;
+    if(summary) summary.textContent='';
+    return;
+  }
 
   grid.innerHTML='<div>Loading…</div>';
   try{
@@ -3972,6 +3976,36 @@ let stripeElements=null;
 let activePaymentToken=null;
 let activePaymentBookingId=null;
 
+function demoPaymentCopy(){
+  const lang=(document.documentElement.lang||'lt').slice(0,2);
+  const copy={
+    lt:{title:'DEMO mokėjimas',note:'Tai testinis mokėjimas. Jokie tikri pinigai nebus nuskaičiuoti.',scenario:'Scenarijus',ok:'Sėkmingas mokėjimas',fail:'Atmesta kortelė',pay:'Apmokėti testiniu mokėjimu',processing:'Vykdomas testinis mokėjimas…',paid:'Testinis mokėjimas sėkmingas. Tikri pinigai nenuskaičiuoti.',declined:'Testinis mokėjimas atmestas.',deposit:'Užstatas autorizuotas testiniu režimu — jis nėra nurašytas.'},
+    en:{title:'DEMO payment',note:'This is a test payment. No real money will be charged.',scenario:'Scenario',ok:'Successful payment',fail:'Declined card',pay:'Pay with demo payment',processing:'Processing demo payment…',paid:'Demo payment succeeded. No real money was charged.',declined:'Demo payment was declined.',deposit:'Security deposit authorized in demo mode — it was not charged.'},
+    es:{title:'Pago DEMO',note:'Este es un pago de prueba. No se cobrará dinero real.',scenario:'Escenario',ok:'Pago correcto',fail:'Tarjeta rechazada',pay:'Pagar en modo demo',processing:'Procesando pago demo…',paid:'Pago demo completado. No se cobró dinero real.',declined:'El pago demo fue rechazado.',deposit:'Depósito autorizado en modo demo — no se ha cobrado.'},
+    de:{title:'DEMO-Zahlung',note:'Dies ist eine Testzahlung. Es wird kein echtes Geld belastet.',scenario:'Szenario',ok:'Erfolgreiche Zahlung',fail:'Karte abgelehnt',pay:'Demo-Zahlung ausführen',processing:'Demo-Zahlung wird verarbeitet…',paid:'Demo-Zahlung erfolgreich. Es wurde kein echtes Geld belastet.',declined:'Demo-Zahlung wurde abgelehnt.',deposit:'Kaution im Demo-Modus autorisiert — nicht belastet.'},
+    ru:{title:'ДЕМО-платёж',note:'Это тестовый платёж. Реальные деньги не списываются.',scenario:'Сценарий',ok:'Успешный платёж',fail:'Карта отклонена',pay:'Оплатить в демо-режиме',processing:'Выполняется демо-платёж…',paid:'Демо-платёж успешен. Реальные деньги не списаны.',declined:'Демо-платёж отклонён.',deposit:'Залог авторизован в демо-режиме — деньги не списаны.'}
+  };
+  return copy[lang]||copy.en;
+}
+
+async function confirmDemoPayment(outcome='succeeded'){
+  const state=document.getElementById('stripePaymentState');
+  const copy=demoPaymentCopy();
+  const btn=document.getElementById('confirmDemoPaymentBtn');
+  if(btn)btn.disabled=true;
+  if(state)state.textContent=copy.processing;
+  try{
+    const result=await apiJson('/api/payments/demo/confirm',{method:'POST',body:JSON.stringify({bookingId:activePaymentBookingId,paymentToken:activePaymentToken,outcome})});
+    if(state)state.textContent=`${copy.paid}${result.deposit?.status==='authorized'?` ${copy.deposit}`:''}`;
+    document.getElementById('v103PaymentStep')?.classList.add('done');
+    loadCustomerBookings?.().catch?.(()=>{});
+    document.dispatchEvent(new CustomEvent('rentall:demo-payment-completed',{detail:result}));
+  }catch(err){
+    if(state)state.textContent=err.message||copy.declined;
+    if(btn)btn.disabled=false;
+  }
+}
+
 function loadStripeJs(){
   return new Promise((resolve,reject)=>{
     if(window.Stripe) return resolve();
@@ -4002,6 +4036,29 @@ async function prepareStripePayment(bookingId,paymentToken){
 
   try{
     const config=await apiJson('/api/config');
+    const intent=await apiJson('/api/payments/create-intent',{
+      method:'POST',
+      body:JSON.stringify({bookingId,paymentToken})
+    });
+
+    if(intent.demo || config.demoPaymentsEnabled){
+      const copy=demoPaymentCopy();
+      const container=document.getElementById('stripePaymentElement');
+      const confirmStripe=document.getElementById('confirmStripePaymentBtn');
+      if(confirmStripe)confirmStripe.hidden=true;
+      breakdown.innerHTML=`
+        <div><span>Customer total</span><b>${money(intent.amount)}</b></div>
+        <div><span>Platform fee</span><b>${money(intent.platformFee)}</b></div>
+        <div><span>Supplier share</span><b>${money(intent.supplierAmount)}</b></div>
+        ${Number(intent.securityDeposit||0)>0?`<div><span>Security deposit hold</span><b>${money(intent.securityDeposit)}</b></div>`:''}`;
+      panel.hidden=false;
+      message.innerHTML=`<strong>${copy.title}</strong><br>${copy.note}`;
+      state.textContent='';
+      container.innerHTML=`<div class="demo-payment-box"><label>${copy.scenario}<select id="demoPaymentScenario"><option value="succeeded">${copy.ok}</option><option value="failed">${copy.fail}</option></select></label><button type="button" class="primary" id="confirmDemoPaymentBtn">${copy.pay}</button></div>`;
+      container.querySelector('#confirmDemoPaymentBtn')?.addEventListener('click',()=>confirmDemoPayment(container.querySelector('#demoPaymentScenario')?.value||'succeeded'));
+      return;
+    }
+
     if(!config.stripeConfigured || !config.stripePublishableKey){
       panel.hidden=false;
       message.textContent='Booking created. Stripe payment is not configured on this server yet.';
@@ -4009,11 +4066,6 @@ async function prepareStripePayment(bookingId,paymentToken){
       document.getElementById('confirmStripePaymentBtn').hidden=true;
       return;
     }
-
-    const intent=await apiJson('/api/payments/create-intent',{
-      method:'POST',
-      body:JSON.stringify({bookingId,paymentToken})
-    });
 
     await loadStripeJs();
     stripeClient=Stripe(config.stripePublishableKey);
@@ -5253,7 +5305,7 @@ window.addEventListener('appinstalled',()=>{
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/service-worker.js?v=178').catch(err=>{
+    navigator.serviceWorker.register('/service-worker.js?v=180').catch(err=>{
       console.warn('Service worker registration failed',err);
     });
   });
@@ -5393,7 +5445,8 @@ async function loadUnifiedCustomerBookings(){
         <div><span>Rental dates</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
         <div><span>Delivery</span><b>${escapeHtml(b.accommodationName||b.deliveryCity||'—')}</b></div>
         <div><span>Total</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
-        <div><span>Payment</span><b>${escapeHtml(b.paymentStatus||'—')}</b></div>
+        <div><span>Payment</span><b>${escapeHtml(window.customerBookingPaymentCopy?.(b)||b.paymentStatus||'—')}</b></div>
+        <div><span>Security deposit</span><b>${escapeHtml(window.customerBookingDepositCopy?.(b)||b.securityDepositStatus||'—')}</b></div>
       </div>
       ${timeline.length?`<div class="booking-timeline">${timeline.map(t=>`<div class="booking-timeline-item"><b>${escapeHtml(t.title)}</b><span>${escapeHtml(t.message)} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span></div>`).join('')}</div>`:''}
       <div class="customer-booking-actions">
@@ -5714,7 +5767,7 @@ function supplierFinanceRowsV95(){
       (Number(b.platformFeeAmount)>0 || Number(b.supplierAmount)>0 || b.paymentStatus==='paid');
     const fee=hasPaymentSplit?Math.max(0,Number(b.platformFeeAmount||0)):gross*RENTALL_SUPPLIER_FEE_RATE_V95;
     const net=hasPaymentSplit?Math.max(0,Number(b.supplierAmount||0)):Math.max(0,gross-fee);
-    return {booking:b,gross,fee,net,authoritative:hasPaymentSplit};
+    return {booking:b,gross,fee,net,authoritative:hasPaymentSplit,payoutStatus:String(b.payoutStatus||'not_ready')};
   });
 }
 function renderSupplierFinanceV95(){
@@ -5731,7 +5784,7 @@ function renderSupplierFinanceV95(){
     ?'Using recorded payment splits'
     :`${authoritativeCount}/${rows.length} from payment records · remaining rows forecast at ${(RENTALL_SUPPLIER_FEE_RATE_V95*100).toFixed(0)}%`);
   set('v95LedgerSummary',`${rows.length} booking${rows.length===1?'':'s'}`);
-  body.innerHTML=rows.length?rows.slice().sort((x,y)=>String(y.booking.startDate||'').localeCompare(String(x.booking.startDate||''))).slice(0,8).map(r=>`<tr><td><b>${escapeHtml(r.booking.bookingId||'—')}</b><small>${escapeHtml(r.booking.title||'Rental item')}</small></td><td><span class="status ${escapeHtml(r.booking.status)}">${escapeHtml(r.booking.status)}</span></td><td>${escapeHtml(r.booking.startDate||'—')} → ${escapeHtml(r.booking.endDate||'—')}</td><td>${money(r.gross)}</td><td>${money(r.fee)}</td><td><b>${money(r.net)}</b><small>${r.authoritative?'Recorded split':'Forecast'}</small></td></tr>`).join(''):'<tr><td colspan="6">No earnings activity yet.</td></tr>';
+  body.innerHTML=rows.length?rows.slice().sort((x,y)=>String(y.booking.startDate||'').localeCompare(String(x.booking.startDate||''))).slice(0,8).map(r=>`<tr><td><b>${escapeHtml(r.booking.bookingId||'—')}</b><small>${escapeHtml(r.booking.title||'Rental item')}</small></td><td><span class="status ${escapeHtml(r.booking.status)}">${escapeHtml(r.booking.status)}</span></td><td>${escapeHtml(r.booking.startDate||'—')} → ${escapeHtml(r.booking.endDate||'—')}</td><td>${money(r.gross)}</td><td>${money(r.fee)}</td><td><b>${money(r.net)}</b><small>${r.authoritative?'Recorded split':'Forecast'} · Payout: ${escapeHtml(r.payoutStatus)}</small></td></tr>`).join(''):'<tr><td colspan="6">No earnings activity yet.</td></tr>';
 }
 document.getElementById('v95OpenPayouts')?.addEventListener('click',()=>document.getElementById('openPaymentsPanel')?.click());
 const v95RenderBookings=renderBookings;

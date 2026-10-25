@@ -27,21 +27,22 @@
     if(button)button.hidden=!cachedUser;
   }
 
-  function openModal(id){const m=$(id);if(!m)return;m.classList.add('open');m.setAttribute('aria-hidden','false');}
-  function closeModal(id){const m=$(id);if(!m)return;m.classList.remove('open');m.setAttribute('aria-hidden','true');}
+  function ensureBodyPortal(id){const m=$(id);if(m&&m.parentElement!==document.body)document.body.appendChild(m);return m;}
+  function openModal(id){const m=ensureBodyPortal(id);if(!m)return;m.classList.add('open');m.setAttribute('aria-hidden','false');document.body.classList.add('modal-open');}
+  function closeModal(id){const m=$(id);if(!m)return;m.classList.remove('open');m.setAttribute('aria-hidden','true');if(!document.querySelector('.availability-modal.open,.account-modal.open,.auth-modal.open'))document.body.classList.remove('modal-open');}
 
   async function loadConversations(selectId=null){
     const list=$('conversationList');if(!list)return;
     const user=await getUser(true);
-    if(!user){list.innerHTML='<p class="muted">Log in to use RentAll messages.</p>';return;}
+    if(!user){list.innerHTML=`<p class="muted">${esc(tr('Log in to use RentAll messages.'))}</p>`;return;}
     list.innerHTML='<p class="muted">Loading conversations…</p>';
     try{
       const data=await call('/api/conversations');
       const rows=data.conversations||[];
       list.innerHTML=rows.length?rows.map(c=>{
         const counterpart=String(user.email||'').toLowerCase()===String(c.customerEmail||'').toLowerCase()?c.supplierEmail:c.customerEmail;
-        return `<button type="button" class="conversation-row ${String(c.conversationId)===String(selectId||activeConversationId)?'active':''}" data-conversation-id="${esc(c.conversationId)}"><b>${esc(c.listingTitle||'Rental')}</b><span>${esc(counterpart||'RentAll user')}</span><small>${esc(c.lastMessage||'No messages yet')}</small></button>`;
-      }).join(''):'<p class="muted">No conversations yet. Open a listing and choose “Message supplier”.</p>';
+        return `<button type="button" class="conversation-row ${String(c.conversationId)===String(selectId||activeConversationId)?'active':''}" data-conversation-id="${esc(c.conversationId)}"><b>${esc(c.listingTitle||tr('Rental'))}</b><span>${esc(counterpart||'RentAll user')}</span><small>${esc(c.lastMessage||tr('No messages yet'))}</small></button>`;
+      }).join(''):`<p class="muted">${esc(tr('No conversations yet. Open a listing and choose “Message supplier”.'))}</p>`;
       list.querySelectorAll('[data-conversation-id]').forEach(btn=>btn.addEventListener('click',()=>openConversation(btn.dataset.conversationId)));
       const desired=selectId||activeConversationId;
       if(desired&&rows.some(c=>String(c.conversationId)===String(desired)))await openConversation(desired,false);
@@ -54,12 +55,12 @@
     try{
       const data=await call(`/api/conversations/${encodeURIComponent(conversationId)}/messages`);
       activeConversationId=conversationId;activeConversation=data.conversation;
-      if(title)title.textContent='Conversation';
+      if(title)title.textContent=tr('Conversation');
       const user=await getUser();
       messageList.innerHTML=(data.messages||[]).length?(data.messages||[]).map(m=>{
         const mine=String(m.senderEmail||'').toLowerCase()===String(user?.email||'').toLowerCase();
-        return `<div class="message-bubble ${mine?'mine':'theirs'}"><small>${mine?'You':esc(m.senderRole==='supplier'?'Supplier':'Renter')} · ${esc(new Date(m.createdAt).toLocaleString())}</small><p>${esc(m.body)}</p></div>`;
-      }).join(''):'<p class="muted">No messages yet. Ask about the item, pickup or booking details.</p>';
+        return `<div class="message-bubble ${mine?'mine':'theirs'}"><small>${mine?esc(tr('You')):esc(tr(m.senderRole==='supplier'?'Supplier':'Renter'))} · ${esc(new Date(m.createdAt).toLocaleString())}</small><p>${esc(m.body)}</p></div>`;
+      }).join(''):`<p class="muted">${esc(tr('No messages yet. Ask about the item, pickup or booking details.'))}</p>`;
       form.hidden=false;
       messageList.scrollTop=messageList.scrollHeight;
       if(reloadList)loadConversations(conversationId).catch(()=>{});
@@ -82,7 +83,9 @@
     }catch(err){toast(err.message,'error');}
   }
 
-  $('messagesBtn')?.addEventListener('click',async()=>{openModal('messagesModal');await loadConversations();});
+  async function openMessages(){openModal('messagesModal');await loadConversations();}
+  window.RentAllMessages={open:openMessages,close:()=>closeModal('messagesModal'),reload:loadConversations};
+  $('messagesBtn')?.addEventListener('click',openMessages);
   $('closeMessagesModal')?.addEventListener('click',()=>closeModal('messagesModal'));
   $('messageForm')?.addEventListener('submit',async e=>{
     e.preventDefault();

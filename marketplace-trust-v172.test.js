@@ -7,7 +7,7 @@ const html=fs.readFileSync('./index.html','utf8');
 const module=fs.readFileSync('./modules/marketplace-trust-v172.js','utf8');
 const pkg=JSON.parse(fs.readFileSync('./package.json','utf8'));
 
-ok(db.includes('REQUIRED_SCHEMA_VERSION=172'),'schema version 172 missing');
+ok(/REQUIRED_SCHEMA_VERSION=(?:17[2-9]|1[89]\d|[2-9]\d{2,})/.test(db),'schema version 172+ missing');
 for(const table of ['rental_agreements','rental_conversations','rental_messages','renter_reviews'])ok(db.includes(`CREATE TABLE IF NOT EXISTS ${table}`),`${table} table missing`);
 for(const fn of ['createRentalAgreement','acceptRentalAgreement','createOrGetRentalConversation','addRentalMessage','createRenterReview','getRenterReputation','getSupplierReputation'])ok(db.includes(`function ${fn}`)||db.includes(`function ${fn}(`),`${fn} missing`);
 ok(server.includes("termsAccepted!==true")&&server.includes("code:'TERMS_REQUIRED'"),'server terms acceptance gate missing');

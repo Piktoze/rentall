@@ -872,7 +872,7 @@ body:not(.supplier-authenticated) #supplier-dashboard{display:none!important}
 
 /* RentAll V178 — simplified supplier UX */
 .auth-modal,.account-modal,.availability-modal{z-index:2200!important;padding:24px!important;align-items:flex-start!important}
-.auth-modal .auth-panel,.account-modal .auth-panel,.availability-modal .auth-panel{margin:0 auto!important;max-height:calc(100vh - 48px)!important;overflow:auto!important}
+.auth-modal .auth-panel,.account-modal .auth-panel,.availability-modal .auth-panel,.listing-modal .auth-panel{margin:0 auto!important;max-height:calc(100vh - 48px)!important;overflow:auto!important}
 .close-modal{z-index:5!important;width:42px!important;height:42px!important;border-radius:50%!important;background:#f3f7f4!important;color:#173f31!important;font-size:25px!important;display:grid!important;place-items:center!important;position:absolute!important;top:14px!important;right:14px!important}
 .messages-panel{max-height:calc(100vh - 48px)!important;overflow:hidden!important;padding-top:28px!important}
 .messages-panel>.eyebrow,.messages-panel>h2{padding-right:52px}
@@ -927,3 +927,55 @@ body.supplier-authenticated #supplierAvailabilitySection.supplier-v178-external-
 @media(max-width:900px){.supplier-simple-hub{align-items:stretch;flex-direction:column}.supplier-simple-actions{min-width:0;width:100%;flex-direction:column}.supplier-menu-button{width:100%}}
 body.supplier-authenticated #messagesBtn{display:none!important}
 body.supplier-authenticated #supplierAuthBtn.supplier-account-trigger::after{content:'☰';margin-left:9px;font-size:14px;color:#557065}
+
+/* RentAll V179 — modal safety, universal account and calendar usability */
+.auth-modal,.account-modal,.availability-modal,.listing-modal{
+  position:fixed!important;
+  inset:0!important;
+  z-index:10000!important;
+  padding:18px!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  overflow:auto!important;
+}
+.auth-modal .auth-panel,.account-modal .auth-panel,.availability-modal .auth-panel,.listing-modal .auth-panel{
+  position:relative!important;
+  margin:0 auto!important;
+  max-height:calc(100dvh - 36px)!important;
+  overflow:auto!important;
+  scroll-margin-top:0!important;
+}
+#messagesModal .messages-panel{
+  width:min(1040px,96vw)!important;
+  height:min(760px,calc(100dvh - 36px))!important;
+  max-height:calc(100dvh - 36px)!important;
+  padding-top:28px!important;
+}
+#messagesModal .messages-layout{min-height:0!important;height:calc(100% - 86px)!important}
+#messagesModal .conversation-list,#messagesModal .conversation-thread{min-height:0!important}
+#messagesModal .message-list{min-height:220px!important}
+body.modal-open{overflow:hidden!important}
+.listing-modal{z-index:10000!important;padding:18px!important;align-items:flex-start!important;justify-content:center!important;overflow:auto!important}
+#supplierAvailabilitySection{scroll-margin-top:118px!important}
+.supplier-calendar-empty{padding:26px;border:1px dashed #b8cdbf;border-radius:18px;background:#f7faf7;color:#52645b;text-align:center}
+.supplier-calendar-empty p{margin:0 0 14px!important}
+.supplier-v179-calendar-open{display:block!important}
+@media(max-width:760px){
+  .auth-modal,.account-modal,.availability-modal{padding:10px!important}
+  #messagesModal .messages-panel{width:100%!important;height:calc(100dvh - 20px)!important;max-height:calc(100dvh - 20px)!important}
+  #messagesModal .messages-layout{grid-template-columns:1fr!important;height:auto!important}
+}
+
+/* V180 — full staging demo payment experience */
+.demo-payment-box{
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #cfe2d7;
+  border-radius:16px;
+  background:#f1f7f3;
+  display:grid;
+  gap:12px;
+}
+.demo-payment-box label{display:grid;gap:7px;font-weight:700;color:#173f31}
+.demo-payment-box select{background:#fff;color:#172d24;border:1px solid #cfd9d2;border-radius:12px;padding:12px 14px;font:inherit}
+.demo-payment-box .primary{width:100%}

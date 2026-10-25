@@ -1,12 +1,12 @@
-const CACHE='rentall-v178-shell';
+const CACHE='rentall-v180-shell';
 const CORE=[
   '/',
   '/index.html',
-  '/styles.css?v=177',
-  '/light-premium-v161.css?v=177',
-  '/modules/i18n-v161.js?v=177',
-  '/app.js?v=177',
-  '/manifest.webmanifest?v=177',
+  '/styles.css?v=180',
+  '/light-premium-v161.css?v=180',
+  '/modules/i18n-v161.js?v=180',
+  '/app.js?v=180',
+  '/manifest.webmanifest?v=180',
   '/icon-192.svg',
   '/icon-512.svg'
 ];

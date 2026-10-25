@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+function ok(v,m){if(!v)throw new Error(m)}
+const s=fs.readFileSync('./server.js','utf8');
+const d=fs.readFileSync('./db.js','utf8');
+const a=fs.readFileSync('./app.js','utf8');
+const f=fs.readFileSync('./modules/supplier-finance.js','utf8');
+const c=fs.readFileSync('./modules/customer-booking-hub.js','utf8');
+const sw=fs.readFileSync('./service-worker.js','utf8');
+ok(d.includes('REQUIRED_SCHEMA_VERSION=180'),'schema version');
+for(const field of ['payment_provider','payout_status','payout_amount','payout_reference','payout_completed_at'])ok(d.includes(field),`missing ${field}`);
+ok(s.includes('demoPaymentsEnabled'),'demo provider flag');
+ok(s.includes("app.post('/api/payments/demo/confirm'"),'demo confirm endpoint');
+ok(s.includes("paymentProvider:'demo'"),'demo payment persistence');
+ok(s.includes("status:'paid'"),'demo payout paid lifecycle');
+ok(s.includes('Demo deposit automatically released'),'demo deposit release');
+ok(a.includes('confirmDemoPayment'),'demo payment UI');
+ok(a.includes('No real money')||a.includes('Tikri pinigai'),'demo no-real-money copy');
+ok(f.includes("st?.demo===true"),'demo payout readiness');
+ok(c.includes('securityDepositStatus'),'customer deposit state');
+ok(sw.includes("rentall-v180-shell"),'cache version');
+console.log('PASS: V180 full demo payment lifecycle checks passed.');

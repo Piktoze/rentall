@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=178"/>
-  <link rel="stylesheet" href="light-premium-v161.css?v=178"/>
+  <link rel="stylesheet" href="styles.css?v=180"/>
+  <link rel="stylesheet" href="light-premium-v161.css?v=180"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -20,7 +20,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RentAll">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="/manifest.webmanifest?v=178">
+  <link rel="manifest" href="/manifest.webmanifest?v=180">
 </head>
 <body class="theme-aurora">
 
@@ -380,14 +380,14 @@
     <div class="auth-view" data-auth-view="register">
       <div class="eyebrow">Create an account</div>
       <h2>Create your RentAll account</h2>
-      <p class="v110-onboarding-lead">Create one account to rent items, or choose a supplier account if you also want to list items for rent.</p>
+      <p class="v110-onboarding-lead">Create one RentAll account. You can rent items now and enable renting-out tools later without creating another account.</p>
       <div class="v110-onboarding-steps" aria-label="Account setup steps"><span class="active">1 · Account</span><span>2 · Profile</span><span>3 · Start using RentAll</span></div>
       <form id="supplierRegisterForm" class="auth-form">
         <div class="form-grid two">
-          <label>What do you want to do?
+          <label>How do you want to start?
             <select id="regRole" required>
-              <option value="customer">Rent items</option>
-              <option value="supplier">Rent out items</option>
+              <option value="customer">Rent items for now</option>
+              <option value="supplier">Rent items and rent out my items</option>
             </select>
           </label>
           <label data-supplier-register-field>Account type
@@ -1546,30 +1546,30 @@
   </div>
 </footer>
 
-<script defer src="modules/i18n-v161.js?v=178"></script>
-<script defer src="app.js?v=178"></script>
-  <script defer src="modules/customer-handoff-v145.js?v=178"></script>
-  <script defer src="modules/customer-notifications.js?v=178"></script>
-  <script defer src="modules/post-booking-live-status.js?v=178"></script>
-  <script defer src="modules/post-booking-journey.js?v=178"></script>
-  <script defer src="modules/supplier-finance.js?v=178"></script>
-  <script defer src="modules/supplier-workspace.js?v=178"></script>
-  <script defer src="modules/supplier-command-v143.js?v=178"></script>
-  <script defer src="modules/supplier-pro-v144.js?v=178"></script>
-  <script defer src="modules/supplier-operations.js?v=178"></script>
-  <script defer src="modules/launch-readiness.js?v=178"></script>
-  <script defer src="modules/mobile-checkout-journey.js?v=178"></script>
-  <script defer src="modules/checkout-confidence.js?v=178"></script>
-  <script defer src="modules/integration-readiness.js?v=178"></script>
-  <script defer src="modules/booking-command-center.js?v=178"></script>
-  <script defer src="modules/customer-booking-hub.js?v=178"></script>
-  <script defer src="modules/customer-journey.js?v=178"></script>
-  <script defer src="modules/supplier-revenue.js?v=178"></script>
-  <script defer src="modules/product-polish.js?v=178"></script>
-  <script defer src="modules/supplier-onboarding.js?v=178"></script>
-  <script defer src="modules/listing-creation.js?v=178"></script>
-  <script defer src="modules/marketplace-trust-v172.js?v=178"></script>
-  <script defer src="modules/supplier-ux-v178.js?v=178"></script>
+<script defer src="modules/i18n-v161.js?v=180"></script>
+<script defer src="app.js?v=180"></script>
+  <script defer src="modules/customer-handoff-v145.js?v=180"></script>
+  <script defer src="modules/customer-notifications.js?v=180"></script>
+  <script defer src="modules/post-booking-live-status.js?v=180"></script>
+  <script defer src="modules/post-booking-journey.js?v=180"></script>
+  <script defer src="modules/supplier-finance.js?v=180"></script>
+  <script defer src="modules/supplier-workspace.js?v=180"></script>
+  <script defer src="modules/supplier-command-v143.js?v=180"></script>
+  <script defer src="modules/supplier-pro-v144.js?v=180"></script>
+  <script defer src="modules/supplier-operations.js?v=180"></script>
+  <script defer src="modules/launch-readiness.js?v=180"></script>
+  <script defer src="modules/mobile-checkout-journey.js?v=180"></script>
+  <script defer src="modules/checkout-confidence.js?v=180"></script>
+  <script defer src="modules/integration-readiness.js?v=180"></script>
+  <script defer src="modules/booking-command-center.js?v=180"></script>
+  <script defer src="modules/customer-booking-hub.js?v=180"></script>
+  <script defer src="modules/customer-journey.js?v=180"></script>
+  <script defer src="modules/supplier-revenue.js?v=180"></script>
+  <script defer src="modules/product-polish.js?v=180"></script>
+  <script defer src="modules/supplier-onboarding.js?v=180"></script>
+  <script defer src="modules/listing-creation.js?v=180"></script>
+  <script defer src="modules/marketplace-trust-v172.js?v=180"></script>
+  <script defer src="modules/supplier-ux-v178.js?v=180"></script>
 
 
 
@@ -1651,5 +1651,6 @@
 </div>
 
 <div class="v102-notification-panel" id="v102NotificationPanel" hidden aria-hidden="true"><div class="v102-notification-head"><div><div class="eyebrow">Updates</div><h3>Notifications</h3></div><button type="button" class="close-modal" id="v102CloseNotifications" aria-label="Close notifications">×</button></div><div id="v102NotificationList" class="v102-notification-list"></div></div>
+  <script defer src="modules/supplier-ux-v179.js?v=180"></script>
 </body>
 </html>

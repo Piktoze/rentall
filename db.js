@@ -13,7 +13,7 @@ assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentall.sqlite');
 fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
-export const REQUIRED_SCHEMA_VERSION=172;
+export const REQUIRED_SCHEMA_VERSION=180;
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -144,7 +144,13 @@ for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN security_deposit_resolution TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN security_deposit_resolved_at TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN security_deposit_payment_intent_id TEXT`,
-  `ALTER TABLE rental_bookings ADD COLUMN security_deposit_provider_status TEXT`
+  `ALTER TABLE rental_bookings ADD COLUMN security_deposit_provider_status TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN payment_provider TEXT DEFAULT 'stripe'`,
+  `ALTER TABLE rental_bookings ADD COLUMN payout_status TEXT DEFAULT 'not_ready'`,
+  `ALTER TABLE rental_bookings ADD COLUMN payout_amount REAL DEFAULT 0`,
+  `ALTER TABLE rental_bookings ADD COLUMN payout_reference TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN payout_ready_at TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN payout_completed_at TEXT`
 ]) {
   try { db.exec(sql); } catch (err) {
     if (!String(err.message).includes('duplicate column name')) throw err;
@@ -420,6 +426,12 @@ const rentalBookingStmt = db.prepare(`
          security_deposit_resolved_at AS securityDepositResolvedAt,
          security_deposit_payment_intent_id AS securityDepositPaymentIntentId,
          security_deposit_provider_status AS securityDepositProviderStatus,
+         payment_provider AS paymentProvider,
+         payout_status AS payoutStatus,
+         payout_amount AS payoutAmount,
+         payout_reference AS payoutReference,
+         payout_ready_at AS payoutReadyAt,
+         payout_completed_at AS payoutCompletedAt,
          expires_at AS expiresAt,
          stripe_refund_id AS stripeRefundId,
          refund_status AS refundStatus
@@ -466,6 +478,15 @@ const listRentalBookingsStmt = db.prepare(`
          rb.payment_status AS paymentStatus,
          rb.platform_fee_amount AS platformFeeAmount,
          rb.supplier_amount AS supplierAmount,
+         rb.payment_provider AS paymentProvider,
+         rb.payout_status AS payoutStatus,
+         rb.payout_amount AS payoutAmount,
+         rb.payout_reference AS payoutReference,
+         rb.payout_ready_at AS payoutReadyAt,
+         rb.payout_completed_at AS payoutCompletedAt,
+         rb.security_deposit_amount AS securityDepositAmount,
+         rb.security_deposit_status AS securityDepositStatus,
+         rb.security_deposit_provider_status AS securityDepositProviderStatus,
          rb.expires_at AS expiresAt,
          rb.stripe_refund_id AS stripeRefundId,
          rb.refund_status AS refundStatus,
@@ -1058,6 +1079,11 @@ const listCustomerBookingsStmt=db.prepare(`
          rb.payment_status AS paymentStatus,
          rb.platform_fee_amount AS platformFeeAmount,
          rb.supplier_amount AS supplierAmount,
+         rb.payment_provider AS paymentProvider,
+         rb.security_deposit_amount AS securityDepositAmount,
+         rb.security_deposit_status AS securityDepositStatus,
+         rb.security_deposit_provider_status AS securityDepositProviderStatus,
+         rb.payout_status AS payoutStatus,
          rl.title,
          rl.cancellation_policy AS cancellationPolicy
   FROM rental_bookings rb
@@ -1137,6 +1163,7 @@ const insertUserStmt=db.prepare(`
 
 const userByEmailStmt=db.prepare(`SELECT * FROM app_users WHERE email=? COLLATE NOCASE`);
 const userByIdStmt=db.prepare(`SELECT * FROM app_users WHERE user_id=?`);
+const updateUserRoleStmt=db.prepare(`UPDATE app_users SET role=?, updated_at=? WHERE user_id=?`);
 
 const insertSessionStmt=db.prepare(`
   INSERT INTO app_sessions (session_hash,user_id,created_at,expires_at)
@@ -1214,6 +1241,15 @@ export function createAppUser({
     updated_at:now
   });
   return publicUser(userByIdStmt.get(userId));
+}
+
+
+export function enableSupplierForUser(userId){
+  const row=userByIdStmt.get(String(userId||''));
+  if(!row) throw new Error('User not found');
+  if(row.role==='admin' || row.role==='supplier') return publicUser(row);
+  updateUserRoleStmt.run('supplier',new Date().toISOString(),row.user_id);
+  return publicUser(userByIdStmt.get(row.user_id));
 }
 
 export function authenticateAppUser(email,password){
@@ -1380,6 +1416,18 @@ const setBookingPaymentStmt=db.prepare(`
       payment_status=@payment_status,
       platform_fee_amount=@platform_fee_amount,
       supplier_amount=@supplier_amount,
+      payment_provider=COALESCE(@payment_provider,payment_provider),
+      updated_at=@updated_at
+  WHERE booking_id=@booking_id
+`);
+
+const setBookingPayoutStmt=db.prepare(`
+  UPDATE rental_bookings
+  SET payout_status=@payout_status,
+      payout_amount=@payout_amount,
+      payout_reference=@payout_reference,
+      payout_ready_at=CASE WHEN @payout_status='ready' THEN @updated_at ELSE payout_ready_at END,
+      payout_completed_at=CASE WHEN @payout_status='paid' THEN @updated_at ELSE payout_completed_at END,
       updated_at=@updated_at
   WHERE booking_id=@booking_id
 `);
@@ -1429,7 +1477,7 @@ export function revokeBookingGuestAccess(bookingId){
 
 export function setBookingPaymentDetails({
   bookingId,paymentIntentId,paymentStatus='requires_payment_method',
-  platformFeeAmount=0,supplierAmount=0
+  platformFeeAmount=0,supplierAmount=0,paymentProvider=null
 }){
   setBookingPaymentStmt.run({
     booking_id:bookingId,
@@ -1437,9 +1485,21 @@ export function setBookingPaymentDetails({
     payment_status:paymentStatus,
     platform_fee_amount:Number(platformFeeAmount||0),
     supplier_amount:Number(supplierAmount||0),
+    payment_provider:paymentProvider,
     updated_at:new Date().toISOString()
   });
   return rentalBookingStmt.get(bookingId)||null;
+}
+
+export function setBookingPayoutDetails(bookingId,{status='not_ready',amount=0,reference=null}={}){
+  setBookingPayoutStmt.run({
+    booking_id:String(bookingId),
+    payout_status:String(status||'not_ready'),
+    payout_amount:Math.max(0,Number(amount||0)),
+    payout_reference:reference?String(reference):null,
+    updated_at:new Date().toISOString()
+  });
+  return rentalBookingStmt.get(String(bookingId))||null;
 }
 
 export function getRentalBookingById(bookingId){
@@ -1978,4 +2038,4 @@ export function getSupplierReputation(ownerEmail){
 // This marker is written only after every idempotent schema operation and
 // prepared statement above initialized successfully. Startup readiness requires it.
 db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
-  .run(REQUIRED_SCHEMA_VERSION,'v172-marketplace-trust-foundation');
+  .run(REQUIRED_SCHEMA_VERSION,'v180-full-demo-payment-lifecycle');

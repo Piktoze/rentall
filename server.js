@@ -25,6 +25,7 @@ import {
   getAdminDashboardData,
   listCustomerRentalBookings,
   createAppUser,
+  enableSupplierForUser,
   authenticateAppUser,
   createAppSession,
   getAppUserBySessionToken,
@@ -41,6 +42,7 @@ import {
   verifyBookingPaymentToken,
   revokeBookingGuestAccess,
   setBookingPaymentDetails,
+  setBookingPayoutDetails,
   getRentalBookingById,
   getRentalListing,
   getFullRentalListing,
@@ -201,6 +203,8 @@ const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentAll',version:runtimeConfig.appVersion}}) : null;
+const demoPaymentsEnabled=String(process.env.RENTALL_DEMO_PAYMENTS ?? (process.env.RENTALL_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTALL_STAGING==='true';
+const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -257,6 +261,18 @@ function canSupplierManageBooking(user, bookingId){
 
 
 async function handleStripeCancellationForBooking(booking, refundAmount){
+  if(booking?.paymentProvider==='demo' || String(booking?.stripePaymentIntentId||'').startsWith('demo_pi_')){
+    const safeRefund=Math.min(Math.max(0,Number(refundAmount||0)),Math.max(0,Number(booking.orderValue||0)));
+    if(safeRefund>0 && ['paid','partially_refunded'].includes(String(booking.paymentStatus||''))){
+      setStripeRefundDetails(booking.bookingId,{refundId:`demo_re_${crypto.randomUUID()}`,refundStatus:'succeeded',refundAmount:safeRefund});
+    }
+    if(booking.securityDepositStatus==='authorized'){
+      setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:booking.securityDepositPaymentIntentId||`demo_dep_${crypto.randomUUID()}`,providerStatus:'canceled',depositStatus:'released'});
+      try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Demo deposit authorization released after cancellation.'})}catch{}
+    }
+    setBookingPayoutDetails(booking.bookingId,{status:'cancelled',amount:0,reference:`demo_po_${booking.bookingId}`});
+    return {id:`demo_re_${booking.bookingId}`,status:'succeeded',amount:Math.round(safeRefund*100)};
+  }
   if(!stripe || !booking?.stripePaymentIntentId) return null;
 
   const intent=await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
@@ -907,6 +923,8 @@ app.get('/api/config', (req,res)=>{
   res.json({
     stripePublishableKey:process.env.STRIPE_PUBLISHABLE_KEY || '',
     stripeConfigured:!!stripe,
+    demoPaymentsEnabled,
+    paymentProvider,
     platformFeePercent:Number(process.env.PLATFORM_FEE_PERCENT || 15)
   });
 });
@@ -945,6 +963,13 @@ app.post('/api/auth/logout', (req,res)=>{
 
 app.get('/api/auth/me', (req,res)=>{
   res.json({user:sessionUser(req)});
+});
+
+app.post('/api/auth/enable-supplier', requireRole('customer','supplier','admin'), (req,res)=>{
+  try{
+    const user=enableSupplierForUser(req.appUser.userId);
+    res.json({user});
+  }catch(err){res.status(400).json({error:err.message});}
 });
 
 
@@ -1190,7 +1215,13 @@ app.get('/api/readiness',(req,res)=>{
 });
 
 // Stripe Connect for authenticated suppliers.
-app.post('/api/stripe/connect/create-account', requireStripe, requireRole('supplier','admin'), async (req,res)=>{
+app.post('/api/stripe/connect/create-account', requireRole('supplier','admin'), async (req,res)=>{
+  if(demoPaymentsEnabled){
+    const existing=getStripeConnectionByUserId(req.appUser.userId);
+    const saved=existing||saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_recipient',transferCapabilityStatus:'active',requirements:[]});
+    return res.json({accountId:saved.stripeAccountId,state:'active',connectApi:'demo_recipient',demo:true});
+  }
+  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
   // V117: legacy v1 Express account creation is intentionally disabled.
   // New marketplace suppliers must be provisioned with Stripe Accounts v2
   // configuration.recipient + stripe_transfers capability. Until the installed
@@ -1208,21 +1239,31 @@ app.post('/api/stripe/connect/create-account', requireStripe, requireRole('suppl
   });
 });
 
-app.post('/api/stripe/connect/onboarding-link', requireStripe, requireRole('supplier','admin'), async (req,res)=>{
+app.post('/api/stripe/connect/onboarding-link', requireRole('supplier','admin'), async (req,res)=>{
+  if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
+  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
   const connection=getStripeConnectionByUserId(req.appUser.userId);
   if(!connection) return res.status(404).json({error:'No connected account'});
   return res.status(503).json({error:'Stripe Connect v2 embedded onboarding is required for this supplier.',code:'CONNECT_V2_ONBOARDING_REQUIRED'});
 });
 
-app.post('/api/stripe/connect/login-link', requireStripe, requireRole('supplier','admin'), async (req,res)=>{
+app.post('/api/stripe/connect/login-link', requireRole('supplier','admin'), async (req,res)=>{
+  if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
+  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
   const connection=getStripeConnectionByUserId(req.appUser.userId);
   if(!connection) return res.status(404).json({error:'No connected account'});
   if(!String(connection.connectApi||'').startsWith('v2')) return res.status(409).json({error:'Supplier account requires Connect v2 migration.',code:'SUPPLIER_CONNECT_V2_REQUIRED'});
   return res.status(503).json({error:'Express dashboard access will be enabled with the Accounts v2 onboarding implementation.',code:'CONNECT_V2_DASHBOARD_PENDING'});
 });
 
-app.get('/api/stripe/connect/status', requireStripe, requireRole('supplier','admin'), async (req,res)=>{
+app.get('/api/stripe/connect/status', requireRole('supplier','admin'), async (req,res)=>{
   try{
+    if(demoPaymentsEnabled){
+      let connection=getStripeConnectionByUserId(req.appUser.userId);
+      if(!connection) connection=saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_recipient',transferCapabilityStatus:'active',requirements:[]});
+      return res.json({accountId:connection.stripeAccountId,state:'active',connectApi:'demo_recipient',transferCapabilityStatus:'active',demo:true,payoutsEnabled:true});
+    }
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
     const connection=getStripeConnectionByUserId(req.appUser.userId);
     if(!connection) return res.json({state:'not_created',connectApi:'v2_recipient_target'});
     if(String(connection.connectApi||'').startsWith('v2')){
@@ -1311,7 +1352,7 @@ const RENTALL_EXPIRY_SWEEP_MS=Math.max(60000,Number(process.env.BOOKING_EXPIRY_S
 const rentallExpiryTimer=setInterval(()=>processExpiredBookings().catch(err=>console.warn('Booking expiry sweep failed',err.message)),RENTALL_EXPIRY_SWEEP_MS);
 rentallExpiryTimer.unref?.();
 
-app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,keyPrefix:'payment'}), requireStripe, async (req,res)=>{
+app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,keyPrefix:'payment'}), async (req,res)=>{
   try{
     await processExpiredBookings();
     const {bookingId,paymentToken}=req.body||{};
@@ -1325,8 +1366,6 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     }
 
     const listing=getRentalListing(booking.listingId);
-    const connection=getStripeConnectionByEmail(listing?.ownerEmail);
-    if(!connection) return res.status(409).json({error:'Supplier has not connected Stripe yet'});
 
     const amount=Math.round(Number(booking.orderValue||0)*100);
     if(amount<50) return res.status(400).json({error:'Booking amount is too small'});
@@ -1334,6 +1373,17 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const feePercent=Math.max(0,Math.min(100,Number(process.env.PLATFORM_FEE_PERCENT||15)));
     const platformFee=Math.round(amount*feePercent/100);
     const supplierAmount=amount-platformFee;
+
+    if(demoPaymentsEnabled){
+      const paymentIntentId=booking.stripePaymentIntentId?.startsWith('demo_pi_')?booking.stripePaymentIntentId:`demo_pi_${crypto.randomUUID()}`;
+      const updated=setBookingPaymentDetails({bookingId:booking.bookingId,paymentIntentId,paymentStatus:'requires_payment_method',platformFeeAmount:platformFee/100,supplierAmount:supplierAmount/100,paymentProvider:'demo'});
+      setBookingPayoutDetails(booking.bookingId,{status:'pending',amount:supplierAmount/100,reference:`demo_po_${booking.bookingId}`});
+      return res.json({provider:'demo',demo:true,paymentIntentId,status:updated.paymentStatus,amount:amount/100,platformFee:platformFee/100,supplierAmount:supplierAmount/100,securityDeposit:Number(booking.securityDepositAmount||0)});
+    }
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const connection=getStripeConnectionByEmail(listing?.ownerEmail);
+    if(!connection) return res.status(409).json({error:'Supplier has not connected Stripe yet'});
+    const capability=requireSupplierTransferCapability(connection,res); if(!capability) return;
 
     let intent;
     if(booking.stripePaymentIntentId){
@@ -1383,6 +1433,36 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     console.warn('Payment intent creation failed',err.message);
     res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to prepare payment':err.message});
   }
+});
+
+
+app.post('/api/payments/demo/confirm', simpleRateLimit({windowMs:60000,max:30,keyPrefix:'demo-payment'}), async (req,res)=>{
+  try{
+    if(!demoPaymentsEnabled) return res.status(404).json({error:'Demo payments are disabled'});
+    const {bookingId,paymentToken,outcome='succeeded'}=req.body||{};
+    const user=sessionUser(req);
+    const booking=getRentalBookingById(bookingId);
+    if(!booking) return res.status(404).json({error:'Booking not found'});
+    const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
+    const guestOwner=!!verifyBookingPaymentToken(bookingId,paymentToken);
+    if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'});
+    if(outcome==='failed'){
+      const failed=setBookingPaymentDetails({bookingId,paymentIntentId:booking.stripePaymentIntentId||`demo_pi_${crypto.randomUUID()}`,paymentStatus:'failed',platformFeeAmount:booking.platformFeeAmount||0,supplierAmount:booking.supplierAmount||0,paymentProvider:'demo'});
+      return res.status(402).json({provider:'demo',status:'failed',error:'Demo card was declined.',booking:failed});
+    }
+    const paid=setBookingPaymentDetails({bookingId,paymentIntentId:booking.stripePaymentIntentId||`demo_pi_${crypto.randomUUID()}`,paymentStatus:'paid',platformFeeAmount:booking.platformFeeAmount||0,supplierAmount:booking.supplierAmount||0,paymentProvider:'demo'});
+    let deposit={status:'not_required',amount:0};
+    const depositAmount=Math.max(0,Number(paid.securityDepositAmount||0));
+    if(depositAmount>0){
+      const depositIntentId=paid.securityDepositPaymentIntentId||`demo_dep_${crypto.randomUUID()}`;
+      setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:depositIntentId,providerStatus:'requires_capture',depositStatus:'authorized'});
+      deposit={status:'authorized',amount:depositAmount,paymentIntentId:depositIntentId};
+    }
+    if(paid.customerEmail) createRentalNotification({uniqueKey:`demo-payment:${bookingId}:customer`,audience:'customer',userEmail:paid.customerEmail,bookingId,type:'payment.succeeded',title:'Test payment completed',message:`Demo payment of €${Number(paid.orderValue||0).toFixed(2)} completed. No real money was charged.`});
+    const listing=getRentalListing(paid.listingId);
+    if(listing?.ownerEmail) createRentalNotification({uniqueKey:`demo-payment:${bookingId}:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId,type:'payment.succeeded',title:'Test payment received',message:`Booking ${bookingId} is paid in demo mode and ready for confirmation.`});
+    res.json({provider:'demo',demo:true,status:'paid',booking:getRentalBookingById(bookingId),deposit});
+  }catch(err){res.status(400).json({error:err.message});}
 });
 
 // Read persistent webhook event log from SQLite.
@@ -1500,9 +1580,6 @@ app.get('/api/rentals/availability', simpleRateLimit({windowMs:60000,max:120,key
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
     }
-    if(termsAccepted!==true){
-      return res.status(400).json({error:'Rental terms must be accepted before booking',code:'TERMS_REQUIRED'});
-    }
     validateAvailabilityWindow(startDate,endDate);
     const requestedQuantity=validateRequestedQuantity(quantity);
     const availability = getAvailability({
@@ -1546,6 +1623,9 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     } = req.body || {};
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
+    }
+    if(termsAccepted!==true){
+      return res.status(400).json({error:'Rental terms must be accepted before booking',code:'TERMS_REQUIRED'});
     }
     validateAvailabilityWindow(startDate,endDate);
     const qty=validateRequestedQuantity(quantity);
@@ -1743,6 +1823,17 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     if(requestedStatus==='confirmed'){
       try{acceptRentalAgreement(req.params.bookingId,'supplier')}catch{}
     }
+    if(requestedStatus==='returned' && booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
+      setBookingPayoutDetails(booking.bookingId,{status:'ready',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
+    }
+    if(requestedStatus==='completed' && booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
+      const latest=getRentalBookingById(booking.bookingId);
+      if(latest?.securityDepositStatus==='authorized'){
+        setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:latest.securityDepositPaymentIntentId||`demo_dep_${crypto.randomUUID()}`,providerStatus:'canceled',depositStatus:'released'});
+        try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Demo deposit released at completion.'})}catch{}
+      }
+      setBookingPayoutDetails(booking.bookingId,{status:'paid',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
+    }
 
     const availability = getAvailability({
       listingId: booking.listingId,
@@ -1830,6 +1921,10 @@ app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admi
         ?'Item returned in good condition; deposit release is pending payment-provider confirmation.'
         :`Return recorded as ${booking.returnCondition}; deposit claim requires review before any capture.`;
       deposit=resolveRentalSecurityDeposit(booking.bookingId,{status:depositStatus,resolution});
+      if(booking.paymentProvider==='demo' && depositStatus==='release_pending'){
+        setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:booking.securityDepositPaymentIntentId||`demo_dep_${crypto.randomUUID()}`,providerStatus:'canceled',depositStatus:'released'});
+        deposit=resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Demo deposit automatically released after a good return.'});
+      }
       if(booking.customerEmail) createRentalNotification({
         uniqueKey:`booking:${booking.bookingId}:deposit:${depositStatus}:customer`,
         audience:'customer',userEmail:booking.customerEmail,bookingId:booking.bookingId,
@@ -1838,6 +1933,9 @@ app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admi
           ?`Your €${depositAmount.toFixed(2)} security deposit is marked for release.`
           :`Your €${depositAmount.toFixed(2)} security deposit is under review because the return was recorded as ${booking.returnCondition}.`
       });
+    }
+    if(booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
+      setBookingPayoutDetails(booking.bookingId,{status:'ready',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
     }
     if(booking.customerEmail) createRentalNotification({uniqueKey:`booking:${booking.bookingId}:returned:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId:booking.bookingId,type:'booking.returned',title:'Item return recorded',message:`Return recorded as ${booking.returnCondition||'good'}.`});
     if(listing?.ownerEmail) createRentalNotification({uniqueKey:`booking:${booking.bookingId}:returned:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId:booking.bookingId,type:'booking.returned',title:'Item return recorded',message:`Return recorded as ${booking.returnCondition||'good'}.`});
@@ -1881,14 +1979,17 @@ app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleR
     const listingId=String(req.body?.listingId||'');
     const listing=getFullRentalListing(listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
     let customerEmail=null,supplierEmail=String(listing.ownerEmail||'').toLowerCase(),bookingId=req.body?.bookingId?String(req.body.bookingId):null;
-    if(req.appUser.role==='customer') customerEmail=req.appUser.email;
-    else if(req.appUser.role==='supplier'){
-      if(String(listing.ownerEmail||'').toLowerCase()!==String(req.appUser.email||'').toLowerCase())return res.status(403).json({error:'Forbidden'});
-      if(!bookingId)return res.status(400).json({error:'bookingId is required for supplier conversations'});
+    const actorEmail=String(req.appUser.email||'').toLowerCase();
+    const actorOwnsListing=supplierEmail===actorEmail;
+    if(req.appUser.role==='admin'){
+      customerEmail=String(req.body?.customerEmail||'').toLowerCase();
+    }else if(actorOwnsListing){
+      if(!bookingId)return res.status(400).json({error:'bookingId is required when messaging a renter about your own listing'});
       const booking=getRentalBookingById(bookingId);if(!booking)return res.status(404).json({error:'Booking not found'});
       customerEmail=booking.customerEmail;
     }else{
-      customerEmail=String(req.body?.customerEmail||'').toLowerCase();
+      // Any signed-in RentAll member, including a supplier, can rent from another supplier with the same account.
+      customerEmail=req.appUser.email;
     }
     if(!customerEmail||!supplierEmail)return res.status(400).json({error:'Conversation participants are unavailable'});
     if(bookingId){const b=getRentalBookingById(bookingId);if(!b||String(b.listingId)!==listingId)return res.status(400).json({error:'Booking does not match listing'});}
@@ -2196,7 +2297,7 @@ app.use(express.static(__dirname));
 const server=app.listen(port,runtimeConfig.host, () => {
   const database=checkDatabase();
   const config=productionConfigReport();
-  console.log(JSON.stringify({type:'startup',service:'rentall',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,email:config.email,ready:launchGate().ready}));
+  console.log(JSON.stringify({type:'startup',service:'rentall',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,paymentProvider,email:config.email,ready:launchGate().ready}));
 });
 let emailWorkerTimer=null;
 let emailWorkerPromise=null;
