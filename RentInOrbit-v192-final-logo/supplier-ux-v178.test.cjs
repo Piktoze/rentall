@@ -1,0 +1,18 @@
+const fs=require('fs');
+const assert=require('assert');
+const html=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('light-premium-v161.css','utf8');
+const js=fs.readFileSync('modules/supplier-ux-v178.js','utf8');
+assert(html.includes('modules/supplier-ux-v178.js?v=192'),'v178 supplier UX module not loaded');
+assert(css.includes('.supplier-action-drawer'),'supplier drawer CSS missing');
+assert(css.includes('z-index:2200!important'),'modal layer must sit above sticky header');
+assert(css.includes('body.supplier-authenticated #messagesBtn{display:none!important}'),'supplier top nav should be simplified');
+assert(js.includes("data-supplier-action=\"add\""),'add listing action missing');
+assert(js.includes("data-supplier-action=\"profile\""),'business profile action missing');
+assert(js.includes("data-supplier-action=\"messages\""),'messages action missing');
+assert(js.includes("e.stopImmediatePropagation();openDrawer()"),'authenticated account button must intercept legacy login listener');
+assert(js.includes("if(e.key!=='Escape')return"),'escape close behavior missing');
+assert(js.includes("form.hidden=false;body.disabled=true"),'messages empty composer state missing');
+assert(js.includes("supplier-v178-feature-mode"),'selective supplier feature mode missing');
+assert(js.includes("supplierAvailabilitySection") && js.includes("supplier-v178-external-visible"),'calendar drawer action missing');
+console.log('supplier UX v178: PASS');

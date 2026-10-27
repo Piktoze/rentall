@@ -1,0 +1,10 @@
+node_modules/
+.env
+rentinorbit.sqlite
+rentinorbit.sqlite-shm
+rentinorbit.sqlite-wal
+test-results/
+e2e/report/
+
+uploads/*
+!uploads/.gitkeep

@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import assert from 'node:assert';
+const html=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('light-premium-v161.css','utf8');
+const app=fs.readFileSync('app.js','utf8');
+const sw=fs.readFileSync('service-worker.js','utf8');
+assert(html.includes('light-premium-v161.css?v=192'),'premium CSS cache bust missing');
+assert(html.includes('app.js?v=192'),'app cache bust missing');
+assert(html.includes('modules/i18n-v161.js?v=192'),'i18n cache bust missing');
+assert(css.includes('font-size:34px!important'),'desktop RentInOrbit wordmark is not visibly enlarged');
+assert(css.includes('width:56px!important'),'desktop R mark is not visibly enlarged');
+assert(sw.includes("rentinorbit-v192-shell"),'service-worker cache version not bumped');
+assert(app.includes("serviceWorker.register('/service-worker.js?v=192')"),'service worker registration not versioned');
+assert(app.includes("rentinorbit:language-changed',updateCustomerPromise"),'customer promise does not refresh after language switch');
+console.log('v175 brand/cache regression checks passed');

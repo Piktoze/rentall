@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const dbText=fs.readFileSync(new URL('./db.js',import.meta.url),'utf8');
+const serverText=fs.readFileSync(new URL('./server.js',import.meta.url),'utf8');
+const appText=fs.readFileSync(new URL('./app.js',import.meta.url),'utf8');
+const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+for(const term of ['supplier_onboarding','lifecycle_status','availability_confirmed_at','supplier_response_due_at','createSupplierActivationInvite','confirmSupplierListings','recordSupplierMissedResponse']) assert.ok(dbText.includes(term),term);
+assert.ok(serverText.includes("paidListing?.bookingMode==='instant'"),'instant book Stripe auto-confirm');
+assert.ok(serverText.includes("listing?.bookingMode==='instant'"),'instant book demo auto-confirm');
+for(const term of ['/api/admin/suppliers','/api/supplier/activation','/api/supplier/listings/confirm-current','runSupplierReliabilityMaintenance','supplier_response_reminder']) assert.ok(serverText.includes(term),term);
+for(const term of ['adminSupplierForm','inviteAllReadySuppliersBtn','adminPrelaunchListingForm','supplierActivationModal']) assert.ok(html.includes(term),term);
+for(const term of ['initializeSupplierInvitation','confirmSupplierListingsBtn','admin-invite-supplier']) assert.ok(appText.includes(term),term);
+console.log('supplier-reliability-v182: structural checks passed');

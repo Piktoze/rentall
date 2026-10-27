@@ -1,0 +1,16 @@
+import fs from 'fs';
+import assert from 'assert';
+const h=fs.readFileSync('./index.html','utf8');
+const m=fs.readFileSync('./modules/renter-response-deadline-v189.js','utf8');
+const a=fs.readFileSync('./app.js','utf8');
+const sw=fs.readFileSync('./service-worker.js','utf8');
+assert(h.includes('modules/renter-response-deadline-v189.js?v=192'),'v189 deadline module not loaded');
+assert(m.includes("deadline:'Tiekėjas turi atsakyti iki {when}.'"),'LT concrete deadline copy missing');
+assert(m.includes("today:'šiandien {time}'") && m.includes("tomorrow:'rytoj {time}'"),'LT relative date copy missing');
+for(const lang of ['lt','en','es','de','ru']) assert(m.includes(`${lang}:{`),`missing ${lang} deadline copy`);
+assert(m.includes('addActiveMinutes'),'client active-hour deadline calculator missing');
+assert(m.includes('supplierResponseDueAt'),'authoritative deadline event handling missing');
+assert(a.includes('supplierResponseDueAt:result.booking?.supplierResponseDueAt||null'),'booking event must carry authoritative supplier deadline');
+assert(sw.includes("rentinorbit-v192-shell"),'PWA cache not bumped to v189');
+assert(a.includes("service-worker.js?v=192"),'service worker registration not bumped to v189');
+console.log('renter-response-deadline-v189.test.js PASS');
