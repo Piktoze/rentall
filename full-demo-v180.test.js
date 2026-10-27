@@ -17,5 +17,5 @@ ok(a.includes('confirmDemoPayment'),'demo payment UI');
 ok(a.includes('No real money')||a.includes('Tikri pinigai'),'demo no-real-money copy');
 ok(f.includes("st?.demo===true"),'demo payout readiness');
 ok(c.includes('securityDepositStatus'),'customer deposit state');
-ok(sw.includes("rentinorbit-v192-shell"),'cache version');
+ok(sw.includes("rentinorbit-v193-shell"),'cache version');
 console.log('PASS: V180 full demo payment lifecycle checks passed.');

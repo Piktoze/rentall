@@ -9,6 +9,6 @@ assert(ui.includes('Siųsti užsakymo prašymą toms pačioms datoms'),'Lithuani
 assert(ui.includes('Rezervacija patvirtinama tik tiekėjui ją patvirtinus.'),'supplier-confirmation disclaimer missing');
 assert(!ui.includes('Instant Book'),'alternatives UI must not promise instant booking');
 assert(html.includes('v191LiveAlternatives'),'live recovery slot missing');
-assert(html.includes('renter-alternatives-v191.js?v=192'),'v191 module loader missing');
-assert(sw.includes("rentinorbit-v192-shell"),'v191 cache missing');
+assert(html.includes('renter-alternatives-v191.js?v=193'),'v191 module loader missing');
+assert(sw.includes("rentinorbit-v193-shell"),'v191 cache missing');
 console.log('renter alternatives v191: PASS');

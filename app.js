@@ -3684,6 +3684,16 @@ async function refreshServerUser(){
   currentServerUser=serverUser;
 
   document.body.classList.toggle('is-admin',serverUser?.role==='admin');
+  const activeUser=serverUser||currentServerUser||null;
+  document.body.classList.toggle('rio-authenticated',!!activeUser);
+  document.body.classList.toggle('rio-supplier',activeUser?.role==='supplier');
+  document.body.classList.toggle('rio-customer',activeUser?.role==='customer');
+  const hasGuestBooking=Object.keys(bookingAccessMap?.()||{}).length>0;
+  document.body.classList.toggle('rio-guest-booking',hasGuestBooking);
+  const bookingsBtn=document.getElementById('myBookingsBtn');
+  if(bookingsBtn) bookingsBtn.hidden=!(activeUser||hasGuestBooking);
+  document.getElementById('moreNotificationsBtn')?.toggleAttribute('hidden',!activeUser);
+  document.dispatchEvent(new CustomEvent('rentinorbit:auth-ui-updated',{detail:{authenticated:!!activeUser,role:activeUser?.role||null,hasGuestBooking}}));
 
   if(serverUser){
     localStorage.setItem('rentinorbit_server_user',JSON.stringify(serverUser));
@@ -5219,12 +5229,12 @@ document.getElementById('installAppBtn')?.addEventListener('click',async()=>{
 });
 
 window.addEventListener('appinstalled',()=>{
-  showToast('RentInOrbit installed','success',1800);
+  showToast(uiText('RentInOrbit installed'),'success',1800);
 });
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/service-worker.js?v=192').catch(err=>{
+    navigator.serviceWorker.register('/service-worker.js?v=193').catch(err=>{
       console.warn('Service worker registration failed',err);
     });
   });
@@ -5350,7 +5360,7 @@ async function loadUnifiedCustomerBookings(){
 
   const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} of ${allRows.length}`;
   if(!rows.length){
-    list.innerHTML=`<div class="customer-booking-card"><h3>No bookings yet</h3><p class="muted">${currentServerUser?'Bookings made with this account will appear here.':'Sign in for cross-device booking history, or open a guest booking from its secure link.'}</p></div>`;
+    list.innerHTML=`<div class="customer-booking-card"><h3>${escapeHtml(uiText('No bookings yet'))}</h3><p class="muted">${escapeHtml(uiText(currentServerUser?'Bookings made with this account will appear here.':'Sign in for cross-device booking history, or open a guest booking from its secure link.'))}</p></div>`;
     return;
   }
 
@@ -5757,6 +5767,7 @@ function renderMapListingPreviewV101(listing){
   }
   function setExpanded(expanded,{persist=true}={}){
     dashboard.classList.toggle('dashboard-expanded',expanded);
+    document.body.classList.toggle('supplier-dashboard-expanded',expanded);
     toggle.setAttribute('aria-expanded',String(expanded));
     toggle.dataset.i18n=expanded?'supplier_panel_hide':'supplier_panel_show';
     toggle.textContent=expanded?tr('supplier_panel_hide','Hide dashboard'):tr('supplier_panel_show','Show dashboard');
@@ -5805,7 +5816,7 @@ async function injectSupplierFreshnessControl(){
   const section=document.getElementById('supplierDashboard')||document.getElementById('list-item');
   if(!section || document.getElementById('confirmSupplierListingsBtn')) return;
   const box=document.createElement('div'); box.className='v182-freshness-control';
-  box.innerHTML=`<div><strong>Keep your listings live</strong><span>Confirm regularly that prices, quantities and availability are still correct.</span></div><button class="primary" id="confirmSupplierListingsBtn" type="button">Confirm all listings are current</button>`;
+  box.innerHTML=`<div><strong>${escapeHtml(uiText('Keep your listings live'))}</strong><span>${escapeHtml(uiText('Confirm regularly that prices, quantities and availability are still correct.'))}</span></div><button class="primary" id="confirmSupplierListingsBtn" type="button">${escapeHtml(uiText('Confirm all listings are current'))}</button>`;
   section.prepend(box);
   box.querySelector('button').addEventListener('click',async()=>{try{const result=await apiJson('/api/supplier/listings/confirm-current',{method:'POST',body:'{}'});showToast(`${result.confirmed} listings confirmed and eligible to go live`,'success');await hydrateListingsFromServer();}catch(err){showToast(err.message,'error');}});
 }

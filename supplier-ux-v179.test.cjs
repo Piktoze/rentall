@@ -6,7 +6,7 @@ const ux=fs.readFileSync('modules/supplier-ux-v179.js','utf8');
 const trust=fs.readFileSync('modules/marketplace-trust-v172.js','utf8');
 const server=fs.readFileSync('server.js','utf8');
 const db=fs.readFileSync('db.js','utf8');
-assert(html.includes('modules/supplier-ux-v179.js?v=192'),'v179 UX patch not loaded');
+assert(html.includes('modules/supplier-ux-v179.js?v=193'),'v179 UX patch not loaded');
 assert(css.includes('z-index:10000!important'),'modals must render above sticky header');
 assert(ux.includes("document.body.appendChild(modal)"),'modals must be portaled to body');
 assert(ux.includes("window.RentInOrbitMessages?.open"),'supplier messages must open directly');

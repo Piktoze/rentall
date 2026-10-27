@@ -19,9 +19,9 @@ assert(app.includes("rentinorbitBookingStatus?.render?.(booking)"),'booking conf
 assert(db.includes('supplier_auto_declined_at AS supplierAutoDeclinedAt'),'auto-decline truth missing from customer query');
 assert(db.includes('supplier_response_due_at AS supplierResponseDueAt'),'supplier deadline missing from customer query');
 assert(page.includes('id="v190LiveBookingStatus"'),'live booking status mount missing');
-assert(page.includes('modules/renter-booking-status-v190.js?v=192'),'v190 module not loaded');
+assert(page.includes('modules/renter-booking-status-v190.js?v=193'),'v190 module not loaded');
 assert(live.includes("rentinorbitBookingStatus?.mount?.('v190LiveBookingStatus',b)"),'live polling does not update status bar');
-assert(sw.includes("rentinorbit-v192-shell"),'PWA cache not v190');
-assert(sw.includes("/modules/renter-booking-status-v190.js?v=192"),'v190 status module not in offline core');
+assert(sw.includes("rentinorbit-v193-shell"),'PWA cache not v190');
+assert(sw.includes("/modules/renter-booking-status-v190.js?v=193"),'v190 status module not in offline core');
 const legacyBrand=['Rent','All'].join('');for(const f of ['index.html','app.js','modules/renter-booking-status-v190.js'])assert(!fs.readFileSync(f,'utf8').includes(legacyBrand),`legacy brand in ${f}`);
 console.log('renter-booking-status-v190.test.js PASS');

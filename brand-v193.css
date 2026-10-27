@@ -1,0 +1,131 @@
+/* RentInOrbit v193 — blue/indigo brand system + cleaner information hierarchy */
+:root{
+  --bg:#f7f9ff!important;
+  --text:#0b1736!important;
+  --muted:#65708a!important;
+  --card:#ffffff!important;
+  --accent:#0878ef!important;
+  --accent2:#eaf4ff!important;
+  --line:#dbe4f3!important;
+  --dark:#06163f!important;
+  --surface:#f2f6ff!important;
+  --surface-warm:#f7f9ff!important;
+  --premium-gold:#10c7f4!important;
+  --premium-ink:#06163f!important;
+  --premium-cream:#f7f9ff!important;
+  --premium-sage:#edf5ff!important;
+  --premium-line:rgba(8,120,239,.14)!important;
+  --shadow-soft:0 14px 40px rgba(6,22,63,.08)!important;
+  --premium-shadow:0 22px 60px rgba(6,22,63,.09)!important;
+  --premium-shadow-card:0 16px 42px rgba(6,22,63,.075)!important;
+}
+html,body,body.theme-aurora{background:var(--bg)!important;color:var(--text)!important}
+
+/* Header: make the new brand the visual anchor. */
+.topbar{background:rgba(255,255,255,.96)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 7px 24px rgba(6,22,63,.045)!important}
+.topbar .container.nav{width:min(1480px,96%)!important;min-height:112px!important;gap:26px!important}
+.brand-logo{display:flex!important;align-items:center!important;min-width:255px!important;margin-left:-8px!important}
+.brand-logo img{display:block!important;width:248px!important;height:auto!important;max-height:82px!important;object-fit:contain!important}
+.navlinks{gap:20px!important;margin-left:auto!important;color:#263653!important}
+.navlinks a,.navlinks button,.nav-more summary{color:#263653!important;font-weight:700!important}
+.navlinks a:hover,.navlinks button:hover,.nav-more summary:hover{color:var(--accent)!important}
+#lang{border-color:#d8e2f1!important;color:#102244!important}
+.nav-auth-btn{border-color:#d7e1f0!important;color:#102244!important;background:#fff!important}
+.auth-role-badge{background:#eaf4ff!important;color:#075fbe!important}
+
+/* Main actions follow the logo palette. */
+.primary,.primary-link,.hero-intent.primary,.mock-btn{
+  background:linear-gradient(135deg,#0878ef 0%,#1745c7 72%,#5638db 100%)!important;
+  color:#fff!important;border-color:transparent!important;
+  box-shadow:0 8px 22px rgba(8,120,239,.16)!important;
+}
+.secondary,.hero-intent.secondary{background:#fff!important;color:#0b5ec5!important;border-color:#cddcf0!important}
+.secondary:hover,.hero-intent.secondary:hover{border-color:#8eb9ec!important;background:#f7fbff!important}
+.light,.eyebrow,.section-head .eyebrow{color:#075fbe!important}
+.pill,.badge,.status.confirmed,.workspace-nav-btn.active{background:#eaf4ff!important;color:#075fbe!important}
+.chip.active{background:#0878ef!important;border-color:#0878ef!important;color:#fff!important}
+
+/* Replace the old green-tinted surfaces with brand blue neutrals. */
+.hero{background:radial-gradient(circle at 84% 16%,rgba(16,199,244,.12),transparent 29%),linear-gradient(180deg,#f6f9ff 0%,#fbfcff 82%)!important}
+.hero h1,.section-head h2,.panel-head h2,.panel-head h3,h1,h2,h3{color:var(--dark)!important}
+.hero h1 span{color:#0878ef!important}
+.search-mode-tabs{background:#edf4ff!important;border-color:#dbe8f7!important}
+.search-mode-tab.active{color:#075fbe!important;box-shadow:0 4px 12px rgba(6,22,63,.07)!important}
+.search-card,.product,.listing-card,.dashboard-panel,.kpi-card,.admin-card,.customer-booking-card,.workspace-card{border-color:#dfe7f3!important;box-shadow:0 10px 30px rgba(6,22,63,.055)!important}
+.section.soft,.section.dark,.dark{background:#eef5ff!important;color:var(--text)!important}
+footer{background:#edf3ff!important;color:#53617d!important;border-color:#dce5f2!important}
+
+/* The 4-step banner duplicated information already available in checkout. */
+.v120-journey{display:none!important}
+.brand-proof-strip{display:none!important}
+
+/* Real PWA install stays available, but only as a secondary action. */
+.v193-hidden-trigger{display:none!important}
+.nav-more{position:relative;display:block}
+.nav-more>summary{list-style:none;cursor:pointer;padding:9px 3px;white-space:nowrap}
+.nav-more>summary::-webkit-details-marker{display:none}
+.nav-more>summary::after{content:'⌄';font-size:11px;margin-left:6px;color:#75819a}
+.nav-more[open]>summary::after{content:'⌃'}
+.nav-more-panel{position:absolute;right:0;top:calc(100% + 12px);z-index:90;width:235px;padding:9px;background:#fff;border:1px solid #dce5f2;border-radius:16px;box-shadow:0 20px 50px rgba(6,22,63,.13);display:grid;gap:4px}
+.nav-more-panel button,.nav-more-panel a{width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:10px;font-size:14px;cursor:pointer;color:#213353!important}
+.nav-more-panel button:hover,.nav-more-panel a:hover{background:#eef6ff;color:#075fbe!important}
+.nav-more-panel [hidden]{display:none!important}
+
+/* Do not expose account areas to anonymous visitors. */
+body:not(.rio-authenticated):not(.rio-guest-booking) #customerBookingsSection{display:none!important}
+#customerBookingsSection{display:none!important}
+body.customer-bookings-open #customerBookingsSection{display:block!important}
+body:not(.rio-supplier) #supplierNotificationSection,
+body:not(.rio-supplier) #supplierAvailabilitySection{display:none!important}
+body.rio-supplier:not(.supplier-dashboard-expanded) #supplierNotificationSection,
+body.rio-supplier:not(.supplier-dashboard-expanded) #supplierAvailabilitySection{display:none!important}
+body.rio-supplier.supplier-dashboard-expanded #supplierNotificationSection,
+body.rio-supplier.supplier-dashboard-expanded #supplierAvailabilitySection{display:block!important}
+body:not(.rio-authenticated) #moreNotificationsBtn{display:none!important}
+
+/* Guest users should see a clean public site, not a locked supplier dashboard block. */
+body:not(.rio-authenticated) #supplierLocked{display:none!important}
+
+/* Empty booking area should remain minimal. */
+#customerBookingsSection.v193-empty #v140BookingCommand,
+#customerBookingsSection.v193-empty #v132CheckoutConfidence{display:none!important}
+
+/* Supplier dashboard: one compact entry point; advanced content opens only on demand. */
+#supplier-dashboard:not(.dashboard-expanded){padding:30px 0!important}
+#supplier-dashboard .supplier-dashboard-control{border:1px solid #dfe7f3!important;background:#fff!important;box-shadow:0 12px 34px rgba(6,22,63,.055)!important}
+#supplier-dashboard.dashboard-expanded{background:#f7f9ff!important}
+.v124-supplier-nav{position:sticky!important;top:112px!important;background:rgba(247,249,255,.94)!important;backdrop-filter:blur(12px);z-index:20;border:1px solid #dfe7f3!important}
+
+/* Tone down technical clutter. */
+[data-internal-only="true"]{display:none!important}
+.v131-rc-status,.v136-launch-center,.v130-trip-tools{display:none!important}
+
+/* Keep the RentInOrbit wordmark palette wherever it appears. */
+.brand-text,.rentinorbit-wordmark{color:#06163f!important}
+.brand-text em,.rentinorbit-wordmark em{color:#0878ef!important;font-style:normal!important}
+
+@media(max-width:1050px){
+  .topbar .container.nav{min-height:92px!important;gap:14px!important}
+  .brand-logo{min-width:205px!important}.brand-logo img{width:205px!important;max-height:70px!important}
+  .navlinks{gap:12px!important}
+}
+@media(max-width:900px){
+  .brand-logo{min-width:180px!important}.brand-logo img{width:180px!important}
+  .nav-more{display:none!important}
+}
+@media(max-width:620px){
+  .topbar .container.nav{min-height:78px!important}
+  .brand-logo{min-width:155px!important;margin-left:0!important}.brand-logo img{width:155px!important}
+}
+
+/* Discovery controls belong to the renter flow and stay compact until needed. */
+.browse-tools{margin:18px 0 16px;border:1px solid #dce6f4;background:#fff;border-radius:16px;overflow:visible}
+.browse-tools>summary{cursor:pointer;list-style:none;padding:15px 18px;font-weight:800;color:#16325c;display:flex;align-items:center;justify-content:space-between}
+.browse-tools>summary::-webkit-details-marker{display:none}
+.browse-tools>summary::after{content:'＋';color:#0878ef;font-size:18px;font-weight:500}
+.browse-tools[open]>summary{border-bottom:1px solid #e4ebf5}
+.browse-tools[open]>summary::after{content:'−'}
+.browse-tools-panel{padding:16px 18px 18px;display:grid;gap:14px}
+.browse-tools .geo-search-controls,.browse-tools .saved-search-toolbar,.browse-tools .results-view-controls{margin:0!important}
+body:not(.rio-supplier) #list-item{display:none!important}
+body.rio-supplier #list-item{display:block!important}
