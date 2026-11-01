@@ -871,7 +871,7 @@ body:not(.supplier-authenticated) #supplier-dashboard{display:none!important}
 }
 
 /* RentInOrbit V178 — simplified supplier UX */
-.auth-modal,.account-modal,.availability-modal{z-index:2200!important;padding:24px!important;align-items:flex-start!important}
+.checkout-modal,.auth-modal,.account-modal,.availability-modal{z-index:2200!important;padding:24px!important;align-items:flex-start!important}
 .auth-modal .auth-panel,.account-modal .auth-panel,.availability-modal .auth-panel,.listing-modal .auth-panel{margin:0 auto!important;max-height:calc(100vh - 48px)!important;overflow:auto!important}
 .close-modal{z-index:5!important;width:42px!important;height:42px!important;border-radius:50%!important;background:#f3f7f4!important;color:#173f31!important;font-size:25px!important;display:grid!important;place-items:center!important;position:absolute!important;top:14px!important;right:14px!important}
 .messages-panel{max-height:calc(100vh - 48px)!important;overflow:hidden!important;padding-top:28px!important}

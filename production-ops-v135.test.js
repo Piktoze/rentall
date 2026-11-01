@@ -9,7 +9,7 @@ ok(r.includes('persistent volume'),'runbook database');
 ok(r.includes('STRIPE_WEBHOOK_SECRET'),'runbook webhook');
 ok(m.includes('whsec_'),'smoke secret leak check');
 ok(s.includes('stripe.webhooks.constructEvent'),'webhook');
-ok(s.includes('requireSupplierTransferCapability'),'transfer gate');
+ok(s.includes('requireSupplierDirectChargeCapability'),'transfer gate');
 ok(s.includes('verifyBookingPaymentToken'),'guest');
 ok(s.includes('amount_capturable_updated'),'deposit webhook');
 console.log('PASS V135 production ops');

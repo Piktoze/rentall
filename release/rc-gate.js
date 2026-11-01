@@ -7,7 +7,7 @@ const pkg=JSON.parse(fs.readFileSync('./package.json','utf8'));
 const checks=[
   ['version',pkg.version.startsWith('1.0.0-rc.')],
   ['webhook verification',server.includes('stripe.webhooks.constructEvent')],
-  ['supplier transfer gate',server.includes('requireSupplierTransferCapability')],
+  ['supplier direct-charge gate',server.includes('requireSupplierDirectChargeCapability')],
   ['guest token protection',server.includes('verifyBookingPaymentToken')],
   ['readiness',server.includes("app.get('/api/readiness'")],
   ['health probe',server.includes("app.get('/healthz'")],

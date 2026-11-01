@@ -19,7 +19,7 @@ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-v147-'));
 const base={NODE_ENV:'production',APP_URL:'https://rentinorbit.example',PUBLIC_BASE_URL:'https://rentinorbit.example',SESSION_SECRET:'R4nD0m!aB3cD4eF5gH6iJ7kL8mN9pQ2rS',TRUST_PROXY_HOPS:'1',RENTINORBIT_DB_PATH:path.join(temp,'rentinorbit.sqlite'),UPLOADS_DIR:path.join(temp,'uploads'),RAILWAY_VOLUME_MOUNT_PATH:temp,DATABASE_URL:'',DB_PATH:'',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'rk_test_deployment_restricted',STRIPE_PUBLISHABLE_KEY:'pk_test_deployment_public',STRIPE_WEBHOOK_SECRET:'whsec_deployment_signature',STRIPE_CONNECT_V2_PROVISIONING:'true',EMAIL_PROVIDER:'resend',EMAIL_FROM:'RentInOrbit <bookings@rentinorbit.example>',RESEND_API_KEY:'re_deployment_secret',EMAIL_WORKER_ENABLED:'true',EMAIL_WORKER_TOKEN:'V4lid-Worker-Token-2026-RentInOrbit-ghijkl!',SUPPORT_EMAIL:'support@rentinorbit.example',MAPS_PROVIDER:'stub',SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled'};
 
 try{
-  ok(pkg.version==='1.0.0-rc.45','RC45 version');
+  ok(/^1\.0\.0-rc\.(?:4[5-9]|[5-9]\d|\d{3,})$/.test(pkg.version),'RC45 or newer version');
   ok(pkg.devDependencies.railway.startsWith('^3.16.'),'current Railway IaC SDK');
   ok(pkg.scripts.start==='node ops/start.js','validated startup command');
   ok(productionConfigReport(base).ready,'valid deployment configuration');
@@ -42,11 +42,11 @@ try{
   const railwayDefinition=await railwayProgram(createRailwayContext({environment:'production',environmentName:'production'}),project);
   ok(railwayDefinition.name==='rentinorbit'&&railwayDefinition.resources.some(resource=>resource.type==='service'&&resource.name==='rentinorbit')&&railwayDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentinorbit-data'),'Railway IaC evaluates to service and volume');
   ok(start.includes('assertProductionConfig')&&start.includes('assertProductionStorage')&&start.includes("await import('../server.js')"),'fail-closed startup orchestration');
-  ok(db.includes('REQUIRED_SCHEMA_VERSION=172')&&db.includes('v172-marketplace-trust-foundation'),'migration 172');
+  ok(db.includes('REQUIRED_SCHEMA_VERSION=184')&&db.includes('v195-direct-charges-accounts-v2'),'migration 184');
   ok(server.includes('runtimeConfig.uploadsDir'),'persistent uploads');
   ok(server.includes('stripe.webhooks.constructEvent'),'signed Stripe webhooks');
   ok(server.includes('verifyBookingPaymentToken'),'guest booking token protection');
-  ok(server.includes('requireSupplierTransferCapability'),'server payout capability gate');
+  ok(server.includes('requireSupplierDirectChargeCapability'),'server payout capability gate');
   ok(server.includes('calculateAuthoritativeRentalPrice'),'server pricing authority');
   ok(server.includes('recoverInterruptedTransactionalEmails')&&server.includes('emailWorkerPromise'),'restart-safe transactional email worker');
   ok(publicSmoke.includes("await request('/')")&&publicSmoke.includes("'/api/readiness'")&&publicSmoke.includes("'/api/ops/status'")&&publicSmoke.includes("'/api/integrations/capabilities'"),'public deployment smoke surface');

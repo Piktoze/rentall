@@ -31,7 +31,7 @@ EMAIL_WORKER_TOKEN=<different 32+-character cryptographically-random value>
 SUPPORT_EMAIL=<monitored mailbox>
 ```
 
-`STRIPE_CONNECT_V2_PROVISIONING=true` is valid only after Accounts v2 recipient provisioning and the `stripe_transfers` capability gate have been verified in the corresponding Stripe sandbox/live account. Use separate Stripe sandboxes, keys, and webhook endpoints for staging and production. Register `POST /api/stripe/webhook`; signed webhooks remain mandatory and provider events remain the payment/deposit source of truth.
+`STRIPE_CONNECT_V2_PROVISIONING=true` is valid only after Accounts v2 merchant provisioning and the `card_payments` capability gate have been verified in the corresponding Stripe sandbox/live account. Use separate Stripe sandboxes, keys, and webhook endpoints for staging and production. Register `POST /api/stripe/webhook`; signed webhooks remain mandatory and provider events remain the payment/deposit source of truth.
 
 Prefer a least-privilege Stripe restricted key and store all secret values only in Railway Variables. Never place a Stripe secret or restricted key in frontend variables, source files, build arguments, or smoke-test output.
 

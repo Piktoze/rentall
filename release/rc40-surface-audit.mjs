@@ -22,7 +22,7 @@ const checks={
  ],
  security:[
   ['stripe_signature',s.includes('stripe.webhooks.constructEvent')],
-  ['supplier_transfer_gate',s.includes('requireSupplierTransferCapability')],
+  ['supplier_transfer_gate',s.includes('requireSupplierDirectChargeCapability')],
   ['guest_token',s.includes('verifyBookingPaymentToken')],
   ['deposit_provider_authority',s.includes('amount_capturable_updated')],
   ['email_worker_opt_in',s.includes("EMAIL_WORKER_ENABLED==='true'")]

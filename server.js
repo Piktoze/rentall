@@ -105,6 +105,30 @@ import {
 import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig} from './config.js';
 import {HELP_CENTER_COPY,getPolicyPage} from './modules/help-center-content-v177.js';
 import {supplierResponseSchedule} from './modules/supplier-response-clock-v187.js';
+import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
+import {
+  calculateBookingPricingForSupplier,
+  saveBookingPricingSnapshot
+} from './modules/pricing-store-v194.js';
+import {
+  createDirectMerchantAccountV2,
+  retrieveDirectMerchantAccountV2,
+  directMerchantCapabilityStatus,
+  createEmbeddedOnboardingSession,
+  createExpressLoginLink,
+  createDirectChargePaymentIntent,
+  retrieveDirectChargePaymentIntent,
+  cancelDirectChargePaymentIntent,
+  refundDirectCharge,
+  createDirectSecurityDepositIntent,
+  captureDirectSecurityDeposit
+} from './modules/stripe-connect-v195.js';
+import {
+  saveDirectMerchantMetadata,
+  getDirectMerchantConnectionByUserId,
+  getDirectMerchantConnectionByEmail,
+  directMerchantReady
+} from './modules/stripe-connect-store-v195.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -151,12 +175,12 @@ app.use((req,res,next)=>{
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' https://js.stripe.com https://unpkg.com",
+      "script-src 'self' https://js.stripe.com https://connect-js.stripe.com https://unpkg.com",
       "style-src 'self' 'unsafe-inline' https://unpkg.com",
-      "img-src 'self' data: blob: https://tile.openstreetmap.org",
+      "img-src 'self' data: blob: https://*.stripe.com https://tile.openstreetmap.org",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.stripe.com https://tile.openstreetmap.org",
-      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "connect-src 'self' https://api.stripe.com https://connect-js.stripe.com https://*.stripe.com https://tile.openstreetmap.org",
+      "frame-src https://js.stripe.com https://connect-js.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
       "worker-src 'self'",
       "manifest-src 'self'",
@@ -290,45 +314,41 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
     setBookingPayoutDetails(booking.bookingId,{status:'cancelled',amount:0,reference:`demo_po_${booking.bookingId}`});
     return {id:`demo_re_${booking.bookingId}`,status:'succeeded',amount:Math.round(safeRefund*100)};
   }
-  if(!stripe || !booking?.stripePaymentIntentId) return null;
+  if(!stripe) return null;
+  const listing=getRentalListing(booking?.listingId);
+  const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+  if(!connection?.stripeAccountId) throw new Error('Supplier Stripe account not found for booking');
+  if(String(connection.connectApi||'')!=='v2_merchant_direct') throw new Error('Supplier Stripe account is not configured for Direct Charges');
 
-  const intent=await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
-
-  if(intent.status==='succeeded'){
-    if(booking.stripeRefundId) return null;
-    const alreadyRefunded=Math.max(0,Number(booking.refundAmount||0));
-    const orderValue=Math.max(0,Number(booking.orderValue||0));
-    const remaining=Math.max(0,orderValue-alreadyRefunded);
-    const requested=Math.max(0,Number(refundAmount||0));
-    const safeRefund=Math.min(requested,remaining);
-    const cents=Math.round(safeRefund*100);
-    if(cents<=0) return null;
-
-    const refund=await stripe.refunds.create({
-      payment_intent:intent.id,
-      amount:cents,
-      reverse_transfer:true,
-      refund_application_fee:true,
-      reason:'requested_by_customer',
-      metadata:{bookingId:booking.bookingId}
-    },{idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`});
-
-    setStripeRefundDetails(booking.bookingId,{
-      refundId:refund.id,
-      refundStatus:refund.status,
-      refundAmount:cents/100
-    });
-    return refund;
+  let refund=null;
+  if(booking?.stripePaymentIntentId){
+    const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId});
+    if(intent.status==='succeeded'){
+      if(!booking.stripeRefundId){
+        const alreadyRefunded=Math.max(0,Number(booking.refundAmount||0));
+        const orderValue=Math.max(0,Number(booking.orderValue||0));
+        const remaining=Math.max(0,orderValue-alreadyRefunded);
+        const requested=Math.max(0,Number(refundAmount||0));
+        const cents=Math.round(Math.min(requested,remaining)*100);
+        if(cents>0){
+          refund=await refundDirectCharge(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,amountCents:cents,bookingId:booking.bookingId,idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`});
+          setStripeRefundDetails(booking.bookingId,{refundId:refund.id,refundStatus:refund.status,refundAmount:cents/100});
+        }
+      }
+    }else if(new Set(['requires_payment_method','requires_confirmation','requires_action','requires_capture']).has(intent.status)){
+      await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:cancel-payment`});
+    }
   }
 
-  const cancelable=new Set([
-    'requires_payment_method','requires_confirmation',
-    'requires_action','requires_capture'
-  ]);
-  if(cancelable.has(intent.status)){
-    await stripe.paymentIntents.cancel(intent.id);
+  if(booking?.securityDepositPaymentIntentId && !['released','captured'].includes(String(booking.securityDepositStatus||''))){
+    const deposit=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
+    if(deposit.status==='requires_capture'){
+      await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:deposit.id,idempotencyKey:`booking:${booking.bookingId}:cancel-deposit`});
+      setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:deposit.id,providerStatus:'canceled',depositStatus:'released'});
+      try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Security deposit authorization released after cancellation.'})}catch{}
+    }
   }
-  return null;
+  return refund;
 }
 
 async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefund=false}={}){
@@ -395,41 +415,39 @@ function statusFromLegacyAccountDuringV2Migration(account) {
   };
 }
 
-function stripeV2RecipientStatus(account){
-  const cap=account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers;
-  const status=String(cap?.status||'unknown');
-  const requirements=Array.isArray(cap?.requirements)?cap.requirements:[];
-  return {
-    accountId:account?.id||null,
-    connectApi:'v2_recipient',
-    transferCapabilityStatus:status,
-    state:status==='active'?'active':(status==='pending'?'pending':'needs_information'),
-    requirements
-  };
-}
 
-function requireSupplierTransferCapability(connection,res){
+
+function requireSupplierDirectChargeCapability(connection,res){
   if(!connection?.stripeAccountId){
-    res.status(409).json({error:'Supplier has not connected payouts',code:'SUPPLIER_PAYOUTS_NOT_CONNECTED'});
+    res.status(409).json({error:'Supplier has not connected Stripe yet.',code:'SUPPLIER_STRIPE_NOT_CONNECTED'});
     return false;
   }
-  // V118 fail-closed bridge: legacy stored IDs cannot be treated as transfer-ready
-  // from v1 charges_enabled/payouts_enabled fields. Accounts v2 capability
-  // retrieval must prove stripe_transfers === active before payments are enabled.
-  if(!String(connection.connectApi||'').startsWith('v2')){
-    res.status(409).json({error:'Supplier payout account must complete Stripe Connect v2 migration before accepting payments.',code:'SUPPLIER_CONNECT_V2_REQUIRED'});
-    return false;
-  }
-  if(String(connection.transferCapabilityStatus||'')!=='active'){
-    res.status(409).json({error:'Supplier payouts are not active yet.',code:'SUPPLIER_TRANSFERS_INACTIVE'});
+  if(!directMerchantReady(connection)){
+    res.status(409).json({error:'Supplier Stripe account is not ready to accept direct card payments yet.',code:'SUPPLIER_DIRECT_CHARGES_INACTIVE'});
     return false;
   }
   return true;
 }
 
 // Stripe webhook must receive RAW body.
-function validateRentalPaymentIntentBinding(pi,booking){
+function expectedStripeAccountForBooking(booking){
+  const listing=booking?getRentalListing(booking.listingId):null;
+  const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+  return connection?.stripeAccountId||null;
+}
+
+function validateDirectEventAccount(eventAccount,booking){
+  const expected=expectedStripeAccountForBooking(booking);
+  if(!expected) return {ok:false,reason:'supplier_stripe_account_not_found'};
+  if(!eventAccount) return {ok:false,reason:'connected_account_missing'};
+  if(String(eventAccount)!==String(expected)) return {ok:false,reason:'connected_account_mismatch'};
+  return {ok:true};
+}
+
+function validateRentalPaymentIntentBinding(pi,booking,eventAccount=null){
   if(!pi||!booking) return {ok:false,reason:'missing_payment_or_booking'};
+  const accountBinding=validateDirectEventAccount(eventAccount,booking);
+  if(!accountBinding.ok) return accountBinding;
   if(String(pi.id||'')!==String(booking.stripePaymentIntentId||'')) return {ok:false,reason:'payment_intent_id_mismatch'};
   if(String(pi.metadata?.bookingId||'')!==String(booking.bookingId||'')) return {ok:false,reason:'booking_metadata_mismatch'};
   if(String(pi.metadata?.purpose||'rental_payment')!=='rental_payment') return {ok:false,reason:'payment_purpose_mismatch'};
@@ -439,8 +457,10 @@ function validateRentalPaymentIntentBinding(pi,booking){
   return {ok:true};
 }
 
-function validateSecurityDepositIntentBinding(pi,booking){
+function validateSecurityDepositIntentBinding(pi,booking,eventAccount=null){
   if(!pi||!booking) return {ok:false,reason:'missing_payment_or_booking'};
+  const accountBinding=validateDirectEventAccount(eventAccount,booking);
+  if(!accountBinding.ok) return accountBinding;
   if(String(pi.id||'')!==String(booking.securityDepositPaymentIntentId||'')) return {ok:false,reason:'deposit_intent_id_mismatch'};
   if(String(pi.metadata?.bookingId||'')!==String(booking.bookingId||'')) return {ok:false,reason:'deposit_booking_metadata_mismatch'};
   if(String(pi.metadata?.purpose||'')!=='security_deposit') return {ok:false,reason:'deposit_purpose_mismatch'};
@@ -532,7 +552,7 @@ app.post('/api/stripe/webhook',
           const bookingId=pi.metadata?.bookingId;
           if(String(pi.metadata?.purpose||'')!=='security_deposit') break;
           const booking=bookingId?getRentalBookingById(bookingId):null;
-          const binding=booking?validateSecurityDepositIntentBinding(pi,booking):{ok:false,reason:'booking_not_found'};
+          const binding=booking?validateSecurityDepositIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
           if(!booking||!binding.ok){console.warn('Ignoring unbound security deposit authorization',pi.id,bookingId,binding.reason);break;}
           if(pi.status!=='requires_capture'){console.warn('Ignoring non-capturable deposit update',pi.id,pi.status);break;}
           setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:pi.id,providerStatus:pi.status,depositStatus:'authorized'});
@@ -544,7 +564,7 @@ app.post('/api/stripe/webhook',
           const bookingId=pi.metadata?.bookingId;
           if(String(pi.metadata?.purpose||'')!=='security_deposit') break;
           const booking=bookingId?getRentalBookingById(bookingId):null;
-          const binding=booking?validateSecurityDepositIntentBinding(pi,booking):{ok:false,reason:'booking_not_found'};
+          const binding=booking?validateSecurityDepositIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
           if(!booking||!binding.ok){console.warn('Ignoring unbound security deposit cancellation',pi.id,bookingId,binding.reason);break;}
           setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:pi.id,providerStatus:'canceled',depositStatus:'released'});
           break;
@@ -556,7 +576,7 @@ app.post('/api/stripe/webhook',
           if(bookingId){
             const booking=getRentalBookingById(bookingId);
             if(booking){
-              const binding=validateRentalPaymentIntentBinding(pi,booking);
+              const binding=validateRentalPaymentIntentBinding(pi,booking,event.account);
               if(!binding.ok){
                 console.warn('Ignoring unbound payment_intent.succeeded',pi.id,bookingId,binding.reason);
                 break;
@@ -573,13 +593,14 @@ app.post('/api/stripe/webhook',
 
               const terminalNonPayable=new Set(['expired','cancelled','declined']);
               if(terminalNonPayable.has(booking.status) && !booking.stripeRefundId){
-                const refund=await stripe.refunds.create({
-                  payment_intent:pi.id,
-                  reverse_transfer:true,
-                  refund_application_fee:true,
-                  reason:'requested_by_customer',
-                  metadata:{bookingId,reason:`late_payment_after_${booking.status}`}
-                },{idempotencyKey:`booking:${bookingId}:late-terminal-refund`});
+                const refund=await refundDirectCharge(stripe,{
+                  accountId:String(event.account),
+                  paymentIntentId:pi.id,
+                  amountCents:Math.round(Math.max(0,Number(booking.orderValue||0))*100),
+                  bookingId,
+                  metadataReason:`late_payment_after_${booking.status}`,
+                  idempotencyKey:`booking:${bookingId}:late-terminal-refund`
+                });
                 setStripeRefundDetails(bookingId,{
                   refundId:refund.id,
                   refundStatus:refund.status,
@@ -631,7 +652,7 @@ app.post('/api/stripe/webhook',
           const bookingId=pi.metadata?.bookingId;
           if(bookingId){
             const booking=getRentalBookingById(bookingId);
-            const binding=booking?validateRentalPaymentIntentBinding(pi,booking):{ok:false,reason:'booking_not_found'};
+            const binding=booking?validateRentalPaymentIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
             if(booking && binding.ok && booking.paymentStatus!=='paid' && !booking.stripeRefundId){
               setBookingPaymentDetails({
                 bookingId,
@@ -650,6 +671,18 @@ app.post('/api/stripe/webhook',
               }
             }
           }
+          break;
+        }
+        case 'charge.dispute.created':
+        case 'charge.dispute.updated':
+        case 'charge.dispute.closed': {
+          const dispute=event.data.object;
+          if(!event.account){
+            console.warn('Ignoring dispute without connected account context',event.id);
+            break;
+          }
+          console.warn('Connected-account dispute event',event.type,dispute.id,'account',event.account);
+          // Direct charges belong to the supplier account. Do not reverse any destination transfer here.
           break;
         }
         default:
@@ -953,7 +986,7 @@ app.get('/api/config', (req,res)=>{
     stripeConfigured:!!stripe,
     demoPaymentsEnabled,
     paymentProvider,
-    platformFeePercent:Number(process.env.PLATFORM_FEE_PERCENT || 15)
+    platformFeePercent:DEFAULT_COMMISSION_BPS/100
   });
 });
 
@@ -1269,87 +1302,124 @@ app.get('/api/readiness',(req,res)=>{
   res.status(gate.ready?200:503).json({ready:gate.ready,environment:runtimeConfig.nodeEnv,checks:gate.checks,blocking:gate.blocking,database:gate.database,stripe:gate.stripe,email:gate.email,version:APP_VERSION});
 });
 
-// Stripe Connect for authenticated suppliers.
+// Stripe Connect for authenticated suppliers — V195 direct-charge merchant model.
+function directStatusResponse(status,{demo=false}={}){
+  const reqs=Array.isArray(status?.requirements)?status.requirements:[];
+  const currentlyDue=reqs.map(entry=>{
+    if(typeof entry==='string') return entry;
+    return entry?.reference || entry?.type || entry?.reason || null;
+  }).filter(Boolean);
+  const active=String(status?.merchantCapabilityStatus||'')==='active';
+  return {
+    ...status,
+    detailsSubmitted:active || currentlyDue.length===0,
+    payoutsEnabled:active,
+    currentlyDue,
+    demo
+  };
+}
+
 app.post('/api/stripe/connect/create-account', requireRole('supplier','admin'), async (req,res)=>{
-  if(demoPaymentsEnabled){
-    const existing=getStripeConnectionByUserId(req.appUser.userId);
-    const saved=existing||saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_recipient',transferCapabilityStatus:'active',requirements:[]});
-    return res.json({accountId:saved.stripeAccountId,state:'active',connectApi:'demo_recipient',demo:true});
+  try{
+    if(demoPaymentsEnabled){
+      const existing=getStripeConnectionByUserId(req.appUser.userId);
+      const saved=existing||saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_merchant_direct',transferCapabilityStatus:'not_applicable',requirements:[]});
+      return res.json({accountId:saved.stripeAccountId,state:'active',connectApi:'demo_merchant_direct',merchantCapabilityStatus:'active',detailsSubmitted:true,payoutsEnabled:true,demo:true});
+    }
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const country=String(req.body?.country||req.appUser.country||'').trim().toUpperCase();
+    const legalEntityType=String(req.body?.legalEntityType||'').trim().toLowerCase();
+    if(!/^[A-Z]{2}$/.test(country)) return res.status(400).json({error:'A 2-letter supplier country code is required'});
+    if(!['individual','company'].includes(legalEntityType)) return res.status(400).json({error:'Choose whether the supplier is an individual or company'});
+
+    let existing=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+    if(existing){
+      if(String(existing.connectApi||'')!=='v2_merchant_direct'){
+        return res.status(409).json({error:'This supplier has a legacy Stripe connection. The new Direct Charges preview is available only to newly onboarded accounts.',code:'LEGACY_CONNECT_ACCOUNT_NOT_ELIGIBLE'});
+      }
+      const account=await retrieveDirectMerchantAccountV2(stripe,existing.stripeAccountId);
+      const parsed=directMerchantCapabilityStatus(account);
+      saveDirectMerchantMetadata(db,{userId:req.appUser.userId,accountId:existing.stripeAccountId,merchantCapabilityStatus:parsed.merchantCapabilityStatus,dashboard:parsed.dashboard,feesCollector:parsed.feesCollector,lossesCollector:parsed.lossesCollector,onboardingStatus:parsed.state==='active'?'complete':'pending',requirements:parsed.requirements});
+      return res.json(directStatusResponse(parsed));
+    }
+
+    // A row from an older Connect implementation must not be silently repurposed;
+    // Express + Stripe-owned losses is a new-accounts-only public preview path.
+    const legacy=getStripeConnectionByUserId(req.appUser.userId);
+    if(legacy){
+      return res.status(409).json({error:'This supplier already has a legacy Stripe account. Create a fresh supplier test account for the Direct Charges preview.',code:'LEGACY_CONNECT_ACCOUNT_NOT_ELIGIBLE'});
+    }
+
+    const account=await createDirectMerchantAccountV2(stripe,{
+      email:req.appUser.email,
+      displayName:req.appUser.businessName || req.appUser.displayName || req.appUser.email,
+      country,
+      legalEntityType
+    });
+    saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:account.id,connectApi:'v2_merchant_direct',transferCapabilityStatus:'not_applicable',requirements:[]});
+    const parsed=directMerchantCapabilityStatus(account);
+    saveDirectMerchantMetadata(db,{userId:req.appUser.userId,accountId:account.id,merchantCapabilityStatus:parsed.merchantCapabilityStatus,dashboard:'express',feesCollector:'stripe',lossesCollector:'stripe',onboardingStatus:parsed.state==='active'?'complete':'pending',country,entityType:legalEntityType,requirements:parsed.requirements});
+    res.json(directStatusResponse(parsed));
+  }catch(err){
+    console.warn('Stripe connected account creation failed',err.message);
+    res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to create Stripe connected account':err.message});
   }
-  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
-  // V117: legacy v1 Express account creation is intentionally disabled.
-  // New marketplace suppliers must be provisioned with Stripe Accounts v2
-  // configuration.recipient + stripe_transfers capability. Until the installed
-  // Stripe SDK/API path is migrated and sandbox-validated, fail closed instead
-  // of creating a deprecated or incorrectly-liable connected account.
-  const existing=getStripeConnectionByUserId(req.appUser.userId);
-  if(existing){
-    return res.json({accountId:existing.stripeAccountId,state:'migration_required',connectApi:'v2_recipient'});
-  }
-  return res.status(503).json({
-    error:'Supplier payout onboarding is temporarily unavailable while RentInOrbit migrates to Stripe Connect Accounts v2.',
-    code:'CONNECT_V2_MIGRATION_REQUIRED',
-    requiredConfiguration:'configuration.recipient.stripe_balance.stripe_transfers',
-    dashboard:'express'
-  });
 });
 
 app.post('/api/stripe/connect/onboarding-link', requireRole('supplier','admin'), async (req,res)=>{
-  if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
-  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
-  const connection=getStripeConnectionByUserId(req.appUser.userId);
-  if(!connection) return res.status(404).json({error:'No connected account'});
-  return res.status(503).json({error:'Stripe Connect v2 embedded onboarding is required for this supplier.',code:'CONNECT_V2_ONBOARDING_REQUIRED'});
+  try{
+    if(demoPaymentsEnabled) return res.json({demo:true,state:'active',clientSecret:null,mode:'demo'});
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const connection=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+    if(!connection) return res.status(404).json({error:'No connected account'});
+    if(String(connection.connectApi||'')!=='v2_merchant_direct') return res.status(409).json({error:'Supplier account requires a new Direct Charges Connect account.',code:'SUPPLIER_CONNECT_V2_DIRECT_REQUIRED'});
+    const session=await createEmbeddedOnboardingSession(stripe,connection.stripeAccountId);
+    res.json({accountId:connection.stripeAccountId,clientSecret:session.client_secret,mode:'embedded'});
+  }catch(err){res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to start Stripe onboarding':err.message});}
 });
 
 app.post('/api/stripe/connect/login-link', requireRole('supplier','admin'), async (req,res)=>{
-  if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
-  if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
-  const connection=getStripeConnectionByUserId(req.appUser.userId);
-  if(!connection) return res.status(404).json({error:'No connected account'});
-  if(!String(connection.connectApi||'').startsWith('v2')) return res.status(409).json({error:'Supplier account requires Connect v2 migration.',code:'SUPPLIER_CONNECT_V2_REQUIRED'});
-  return res.status(503).json({error:'Express dashboard access will be enabled with the Accounts v2 onboarding implementation.',code:'CONNECT_V2_DASHBOARD_PENDING'});
+  try{
+    if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const connection=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+    if(!connection) return res.status(404).json({error:'No connected account'});
+    if(String(connection.connectApi||'')!=='v2_merchant_direct') return res.status(409).json({error:'Supplier account requires Direct Charges migration.',code:'SUPPLIER_CONNECT_V2_DIRECT_REQUIRED'});
+    const link=await createExpressLoginLink(stripe,connection.stripeAccountId);
+    res.json({url:link.url});
+  }catch(err){res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to open Stripe Dashboard':err.message});}
 });
 
 app.get('/api/stripe/connect/status', requireRole('supplier','admin'), async (req,res)=>{
   try{
     if(demoPaymentsEnabled){
       let connection=getStripeConnectionByUserId(req.appUser.userId);
-      if(!connection) connection=saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_recipient',transferCapabilityStatus:'active',requirements:[]});
-      return res.json({accountId:connection.stripeAccountId,state:'active',connectApi:'demo_recipient',transferCapabilityStatus:'active',demo:true,payoutsEnabled:true});
+      if(!connection) connection=saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_merchant_direct',transferCapabilityStatus:'not_applicable',requirements:[]});
+      return res.json({accountId:connection.stripeAccountId,state:'active',connectApi:'demo_merchant_direct',merchantCapabilityStatus:'active',detailsSubmitted:true,payoutsEnabled:true,demo:true});
     }
     if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
-    const connection=getStripeConnectionByUserId(req.appUser.userId);
-    if(!connection) return res.json({state:'not_created',connectApi:'v2_recipient_target'});
-    if(String(connection.connectApi||'').startsWith('v2')){
-      return res.json({
-        accountId:connection.stripeAccountId,
-        state:String(connection.transferCapabilityStatus||'')==='active'?'active':'needs_information',
-        connectApi:connection.connectApi,
-        transferCapabilityStatus:connection.transferCapabilityStatus||'unknown'
-      });
-    }
-    const account=await stripe.accounts.retrieve(connection.stripeAccountId);
-    res.json(statusFromLegacyAccountDuringV2Migration(account));
-  }catch(err){res.status(500).json({error:err.message});}
+    const connection=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+    if(!connection) return res.json({state:'not_created',connectApi:'v2_merchant_direct_target',detailsSubmitted:false,payoutsEnabled:false});
+    if(String(connection.connectApi||'')!=='v2_merchant_direct') return res.json({accountId:connection.stripeAccountId,state:'migration_required',connectApi:connection.connectApi,detailsSubmitted:false,payoutsEnabled:false});
+    const account=await retrieveDirectMerchantAccountV2(stripe,connection.stripeAccountId);
+    const status=directMerchantCapabilityStatus(account);
+    saveDirectMerchantMetadata(db,{userId:req.appUser.userId,accountId:connection.stripeAccountId,merchantCapabilityStatus:status.merchantCapabilityStatus,dashboard:status.dashboard,feesCollector:status.feesCollector,lossesCollector:status.lossesCollector,onboardingStatus:status.state==='active'?'complete':'pending',requirements:status.requirements});
+    res.json(directStatusResponse(status));
+  }catch(err){res.status(500).json({error:process.env.NODE_ENV==='production'?'Unable to retrieve Stripe account status':err.message});}
 });
 
-// V119 provider-state ingestion bridge. Production Stripe account webhooks should
-// pass their verified Accounts v2 object through this parser before persistence.
+// Admin-only provider-state bridge for test fixtures and recovery tooling.
 app.post('/api/admin/stripe/connect/v2-capability-sync', requireRole('admin'), (req,res)=>{
-  const {userId,account}=req.body||{};
-  if(!userId||!account?.id) return res.status(400).json({error:'userId and Accounts v2 account object are required'});
-  const existing=getStripeConnectionByUserId(String(userId));
-  if(!existing) return res.status(404).json({error:'Stripe connection not found'});
-  if(String(existing.stripeAccountId)!==String(account.id)) return res.status(409).json({error:'Stripe account does not match supplier'});
-  const status=stripeV2RecipientStatus(account);
-  const saved=updateStripeConnectionCapability({
-    userId:String(userId),
-    connectApi:status.connectApi,
-    transferCapabilityStatus:status.transferCapabilityStatus,
-    requirements:status.requirements
-  });
-  res.json({ok:true,status,saved:{userId:saved?.userId,accountId:saved?.stripeAccountId,connectApi:saved?.connectApi,transferCapabilityStatus:saved?.transferCapabilityStatus}});
+  try{
+    const {userId,account}=req.body||{};
+    if(!userId||!account?.id) return res.status(400).json({error:'userId and Accounts v2 account object are required'});
+    const existing=getDirectMerchantConnectionByUserId(db,String(userId));
+    if(!existing) return res.status(404).json({error:'Stripe connection not found'});
+    if(String(existing.stripeAccountId)!==String(account.id)) return res.status(409).json({error:'Stripe account does not match supplier'});
+    const status=directMerchantCapabilityStatus(account);
+    const saved=saveDirectMerchantMetadata(db,{userId:String(userId),accountId:existing.stripeAccountId,merchantCapabilityStatus:status.merchantCapabilityStatus,dashboard:status.dashboard,feesCollector:status.feesCollector,lossesCollector:status.lossesCollector,onboardingStatus:status.state==='active'?'complete':'pending',requirements:status.requirements});
+    res.json({ok:true,status,saved:{userId:saved?.userId,accountId:saved?.stripeAccountId,connectApi:saved?.connectApi,merchantCapabilityStatus:saved?.merchantCapabilityStatus}});
+  }catch(err){res.status(400).json({error:err.message});}
 });
 
 app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,keyPrefix:'deposit-payment'}), requireStripe, async (req,res)=>{
@@ -1363,17 +1433,20 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
     if(!['pending','confirmed'].includes(booking.status))return res.status(409).json({error:`Deposit cannot be authorized in status ${booking.status}`});
     const amount=Math.round(Math.max(0,Number(booking.securityDepositAmount||0))*100);
     if(amount<=0)return res.status(409).json({error:'This booking does not require a security deposit'});
+    const listing=getRentalListing(booking.listingId);
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+    if(!connection || !requireSupplierDirectChargeCapability(connection,res)) return;
     let intent;
     if(booking.securityDepositPaymentIntentId){
-      intent=await stripe.paymentIntents.retrieve(booking.securityDepositPaymentIntentId);
+      intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
       if(String(intent.metadata?.bookingId||'')!==String(bookingId)||String(intent.metadata?.purpose||'')!=='security_deposit'||Number(intent.amount)!==amount||String(intent.currency||'').toLowerCase()!=='eur')
         return res.status(409).json({error:'Stored deposit authorization does not match this booking'});
     }else{
-      intent=await stripe.paymentIntents.create({amount,currency:'eur',capture_method:'manual',automatic_payment_methods:{enabled:true},metadata:{bookingId:String(bookingId),listingId:String(booking.listingId),purpose:'security_deposit'}},{idempotencyKey:`booking:${bookingId}:security-deposit`});
+      intent=await createDirectSecurityDepositIntent(stripe,{accountId:connection.stripeAccountId,amountCents:amount,bookingId,listingId:booking.listingId,idempotencyKey:`booking:${bookingId}:security-deposit`});
     }
     const depositStatus=intent.status==='requires_capture'?'authorized':'authorization_pending';
     setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:intent.id,providerStatus:intent.status,depositStatus});
-    res.json({clientSecret:intent.client_secret,paymentIntentId:intent.id,status:intent.status,depositStatus,amount:amount/100,currency:'eur'});
+    res.json({clientSecret:intent.client_secret,paymentIntentId:intent.id,stripeAccountId:connection.stripeAccountId,status:intent.status,depositStatus,amount:amount/100,currency:'eur'});
   }catch(err){console.warn('Deposit authorization failed',err.message);res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to prepare security deposit':err.message});}
 });
 
@@ -1382,22 +1455,21 @@ async function processExpiredBookings(){
   for(const bookingId of expiredIds){
     try{
       const booking=getRentalBookingById(bookingId); if(!booking)continue;
-      // Cancel an uncaptured rental payment authorization if one exists.
-      if(stripe && booking.stripePaymentIntentId && booking.paymentStatus!=='paid'){
-        const pi=await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+      const listing=getRentalListing(booking.listingId);
+      const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+      if(stripe && connection?.stripeAccountId && booking.stripePaymentIntentId && booking.paymentStatus!=='paid'){
+        const pi=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId});
         if(new Set(['requires_payment_method','requires_confirmation','requires_action','requires_capture']).has(pi.status)){
-          await stripe.paymentIntents.cancel(pi.id);
+          await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:pi.id,idempotencyKey:`booking:${bookingId}:expiry-payment-cancel`});
         }
       }
-      // Release a deposit authorization that is no longer attached to a payable booking.
-      if(stripe && booking.securityDepositPaymentIntentId && !['released','captured'].includes(booking.securityDepositStatus)){
-        const dpi=await stripe.paymentIntents.retrieve(booking.securityDepositPaymentIntentId);
-        if(dpi.status==='requires_capture') await stripe.paymentIntents.cancel(dpi.id);
+      if(stripe && connection?.stripeAccountId && booking.securityDepositPaymentIntentId && !['released','captured'].includes(booking.securityDepositStatus)){
+        const dpi=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
+        if(dpi.status==='requires_capture') await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:dpi.id,idempotencyKey:`booking:${bookingId}:expiry-deposit-cancel`});
         setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:dpi.id,providerStatus:dpi.status==='requires_capture'?'canceled':dpi.status,depositStatus:'released'});
         resolveRentalSecurityDeposit(bookingId,{status:'released',resolution:'Booking expired before completion; deposit authorization released.'});
       }
       if(booking.customerEmail)createRentalNotification({uniqueKey:`booking:${bookingId}:expired:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId,type:'booking.expired',title:'Booking request expired',message:'This booking request expired before payment/confirmation was completed. No active reservation remains.'});
-      const listing=getRentalListing(booking.listingId);
       if(listing?.ownerEmail)createRentalNotification({uniqueKey:`booking:${bookingId}:expired:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId,type:'booking.expired',title:'Booking request expired',message:`The pending request for ${listing.title} expired and its availability has been released.`});
     }catch(err){console.warn('Expired booking cleanup failed',bookingId,err.message)}
   }
@@ -1421,13 +1493,13 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     }
 
     const listing=getRentalListing(booking.listingId);
-
     const amount=Math.round(Number(booking.orderValue||0)*100);
     if(amount<50) return res.status(400).json({error:'Booking amount is too small'});
 
-    const feePercent=Math.max(0,Math.min(100,Number(process.env.PLATFORM_FEE_PERCENT||15)));
-    const platformFee=Math.round(amount*feePercent/100);
-    const supplierAmount=amount-platformFee;
+    const pricing=calculateBookingPricingForSupplier(db,{supplierEmail:listing?.ownerEmail,bookingAmountCents:amount});
+    const platformFee=pricing.commissionAmountCents;
+    const supplierAmount=pricing.supplierAmountCents;
+    saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing});
 
     if(demoPaymentsEnabled){
       const paymentIntentId=booking.stripePaymentIntentId?.startsWith('demo_pi_')?booking.stripePaymentIntentId:`demo_pi_${crypto.randomUUID()}`;
@@ -1436,49 +1508,35 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
       return res.json({provider:'demo',demo:true,paymentIntentId,status:updated.paymentStatus,amount:amount/100,platformFee:platformFee/100,supplierAmount:supplierAmount/100,securityDeposit:Number(booking.securityDepositAmount||0)});
     }
     if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
-    const connection=getStripeConnectionByEmail(listing?.ownerEmail);
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
     if(!connection) return res.status(409).json({error:'Supplier has not connected Stripe yet'});
-    const capability=requireSupplierTransferCapability(connection,res); if(!capability) return;
+    if(!requireSupplierDirectChargeCapability(connection,res)) return;
 
     let intent;
     if(booking.stripePaymentIntentId){
-      intent=await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+      intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId});
       const intentBookingId=String(intent.metadata?.bookingId||'');
       const intentPurpose=String(intent.metadata?.purpose||'');
-      const intentDestination=String(intent.transfer_data?.destination||'');
-      if(intentBookingId!==String(booking.bookingId) || Number(intent.amount)!==amount || String(intent.currency||'').toLowerCase()!=='eur' || intentPurpose!=='rental_payment' || intentDestination!==String(connection.stripeAccountId)){
+      if(intentBookingId!==String(booking.bookingId) || Number(intent.amount)!==amount || String(intent.currency||'').toLowerCase()!=='eur' || intentPurpose!=='rental_payment'){
         return res.status(409).json({error:'Stored payment intent does not match this booking'});
       }
-      if(intent.status==='canceled'){
-        return res.status(409).json({error:'Payment intent was cancelled; create a new booking payment attempt'});
-      }
+      if(intent.status==='canceled') return res.status(409).json({error:'Payment intent was cancelled; create a new booking payment attempt'});
     }else{
-      intent=await stripe.paymentIntents.create({
-        amount,
+      intent=await createDirectChargePaymentIntent(stripe,{
+        accountId:connection.stripeAccountId,
+        amountCents:amount,
+        applicationFeeCents:platformFee,
         currency:'eur',
-        automatic_payment_methods:{enabled:true},
-        application_fee_amount:platformFee,
-        transfer_data:{destination:connection.stripeAccountId},
-        metadata:{
-          bookingId:booking.bookingId,
-          listingId:booking.listingId,
-          purpose:'rental_payment',
-          supplierEmail:listing?.ownerEmail||''
-        }
-      },{idempotencyKey:`booking:${booking.bookingId}:payment-intent`});
-
-      setBookingPaymentDetails({
-        bookingId:booking.bookingId,
-        paymentIntentId:intent.id,
-        paymentStatus:intent.status,
-        platformFeeAmount:platformFee/100,
-        supplierAmount:supplierAmount/100
+        idempotencyKey:`booking:${booking.bookingId}:rental-payment`,
+        metadata:{bookingId:booking.bookingId,listingId:booking.listingId,purpose:'rental_payment',supplierEmail:String(listing?.ownerEmail||'')}
       });
+      setBookingPaymentDetails({bookingId:booking.bookingId,paymentIntentId:intent.id,paymentStatus:intent.status,platformFeeAmount:platformFee/100,supplierAmount:supplierAmount/100,paymentProvider:'stripe'});
     }
 
     res.json({
       clientSecret:intent.client_secret,
       paymentIntentId:intent.id,
+      stripeAccountId:connection.stripeAccountId,
       status:intent.status,
       amount:amount/100,
       platformFee:platformFee/100,
@@ -1489,7 +1547,6 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to prepare payment':err.message});
   }
 });
-
 
 app.post('/api/payments/demo/confirm', simpleRateLimit({windowMs:60000,max:30,keyPrefix:'demo-payment'}), async (req,res)=>{
   try{
@@ -2280,9 +2337,12 @@ app.post('/api/admin/bookings/:bookingId/deposit/release', requireRole('admin'),
     if(!booking)return res.status(404).json({error:'Booking not found'});
     if(booking.securityDepositStatus!=='release_pending')return res.status(409).json({error:'Deposit is not pending release'});
     if(!booking.securityDepositPaymentIntentId)return res.status(409).json({error:'No deposit authorization exists'});
-    const intent=await stripe.paymentIntents.retrieve(booking.securityDepositPaymentIntentId);
+    const listing=getRentalListing(booking.listingId);
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+    if(!connection?.stripeAccountId)return res.status(409).json({error:'Supplier Stripe account not found'});
+    const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
     if(String(intent.metadata?.bookingId||'')!==String(booking.bookingId)||String(intent.metadata?.purpose||'')!=='security_deposit')return res.status(409).json({error:'Deposit authorization identity mismatch'});
-    if(intent.status==='requires_capture') await stripe.paymentIntents.cancel(intent.id);
+    if(intent.status==='requires_capture') await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:deposit-release`});
     else if(intent.status!=='canceled') return res.status(409).json({error:`Deposit cannot be released from provider status ${intent.status}`});
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:'canceled',depositStatus:'released'});
     const updated=resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:String(req.body?.resolution||'Deposit authorization released after satisfactory return.').slice(0,3000)});
@@ -2303,9 +2363,12 @@ app.post('/api/admin/bookings/:bookingId/deposit/capture', requireRole('admin'),
     const requested=Number(req.body?.amount);
     const captureCents=Number.isFinite(requested)?Math.round(requested*100):maxAmount;
     if(captureCents<=0||captureCents>maxAmount)return res.status(400).json({error:'Capture amount exceeds the authorized security deposit'});
-    const intent=await stripe.paymentIntents.retrieve(booking.securityDepositPaymentIntentId);
+    const listing=getRentalListing(booking.listingId);
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+    if(!connection?.stripeAccountId)return res.status(409).json({error:'Supplier Stripe account not found'});
+    const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
     if(String(intent.metadata?.bookingId||'')!==String(booking.bookingId)||String(intent.metadata?.purpose||'')!=='security_deposit'||intent.status!=='requires_capture')return res.status(409).json({error:'Deposit authorization is not capture-ready'});
-    const captured=await stripe.paymentIntents.capture(intent.id,{amount_to_capture:captureCents},{idempotencyKey:`booking:${booking.bookingId}:deposit-capture:${captureCents}`});
+    const captured=await captureDirectSecurityDeposit(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,amountCents:captureCents,idempotencyKey:`booking:${booking.bookingId}:deposit-capture:${captureCents}`});
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:captured.status,depositStatus:'captured'});
     const updated=resolveRentalSecurityDeposit(booking.bookingId,{status:'captured',resolution:reason});
     if(updated.customerEmail)createRentalNotification({uniqueKey:`booking:${booking.bookingId}:deposit:captured:${captureCents}:customer`,audience:'customer',userEmail:updated.customerEmail,bookingId:booking.bookingId,type:'deposit.captured',title:'Security deposit claim resolved',message:`€${(captureCents/100).toFixed(2)} of the security deposit was captured after claim review. Resolution: ${reason}`});

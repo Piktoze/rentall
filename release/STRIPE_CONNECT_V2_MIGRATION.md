@@ -5,7 +5,7 @@ RentInOrbit is a marketplace: buyers checkout through RentInOrbit, RentInOrbit r
 ## Target
 - Accounts API: v2 `/v2/core/accounts`
 - Connected account role: recipient, not merchant
-- Capability: `configuration.recipient.capabilities.stripe_balance.stripe_transfers`
+- Capability: `configuration.merchant.capabilities.card_payments`
 - Dashboard: Express
 - Fees collector: application
 - Losses collector: application
@@ -27,5 +27,5 @@ Existing stored connected-account IDs are not deleted or mutated.
 3. Implement embedded onboarding / account session.
 4. Persist v2 account identifier and capability state.
 5. Consume account requirement/capability webhooks.
-6. Gate destination PaymentIntent creation on active `stripe_transfers`.
+6. Gate direct PaymentIntent creation on active `card_payments`.
 7. Run sandbox E2E evidence before public launch.

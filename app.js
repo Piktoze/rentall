@@ -752,7 +752,8 @@ async function ensureStripeAccount(){
     body:JSON.stringify({
       supplierId,
       email:s.email,
-      country:'ES',
+      country:s.country||'LT',
+      legalEntityType:document.getElementById('stripeLegalEntityType')?.value||'individual',
       businessName:s.businessName
     })
   });
@@ -762,12 +763,56 @@ async function refreshLiveStripeStatus(){
   const supplierId=supplierStableId();
   if(!supplierId) return;
   try{
-    const st=await apiJson(`/api/stripe/connect/status/${supplierId}`);
+    const st=await apiJson('/api/stripe/connect/status');
     applyStripeLiveStatus(st);
   }catch(err){
     document.getElementById('stripeLiveMessage').textContent=
       `Live Stripe unavailable: ${err.message}`;
   }
+}
+
+let stripeConnectInstance=null;
+let stripeConnectAccountId=null;
+
+async function waitForStripeConnectJs(){
+  if(window.StripeConnect?.init) return window.StripeConnect;
+  await new Promise((resolve,reject)=>{
+    const deadline=Date.now()+10000;
+    const poll=()=>{
+      if(window.StripeConnect?.init) return resolve();
+      if(Date.now()>deadline) return reject(new Error('Stripe Connect.js did not load'));
+      setTimeout(poll,50);
+    };
+    poll();
+  });
+  return window.StripeConnect;
+}
+
+async function mountStripeEmbeddedOnboarding(accountId){
+  const config=await apiJson('/api/config');
+  if(!config.stripePublishableKey) throw new Error('Stripe publishable key is not configured');
+  const StripeConnectGlobal=await waitForStripeConnectJs();
+  if(!stripeConnectInstance || stripeConnectAccountId!==accountId){
+    const fetchClientSecret=async()=>{
+      const session=await apiJson('/api/stripe/connect/onboarding-link',{method:'POST',body:JSON.stringify({})});
+      if(!session.clientSecret) throw new Error('Stripe onboarding session was not created');
+      return session.clientSecret;
+    };
+    stripeConnectInstance=StripeConnectGlobal.init({
+      publishableKey:config.stripePublishableKey,
+      fetchClientSecret,
+      locale:document.documentElement.lang||'en'
+    });
+    stripeConnectAccountId=accountId;
+  }
+  const onboardingHost=document.getElementById('stripeEmbeddedOnboarding');
+  const bannerHost=document.getElementById('stripeNotificationBanner');
+  const managementHost=document.getElementById('stripeAccountManagement');
+  onboardingHost.innerHTML=''; bannerHost.innerHTML=''; managementHost.innerHTML='';
+  bannerHost.appendChild(stripeConnectInstance.create('notification-banner'));
+  onboardingHost.appendChild(stripeConnectInstance.create('account-onboarding'));
+  managementHost.appendChild(stripeConnectInstance.create('account-management'));
+  onboardingHost.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 // Override old simulated connect button.
@@ -779,14 +824,13 @@ document.getElementById('connectStripeBtn').addEventListener('click',async(e)=>{
   try{
     const status=await ensureStripeAccount();
     applyStripeLiveStatus(status);
-
-    const supplierId=supplierStableId();
-    const link=await apiJson('/api/stripe/connect/onboarding-link',{
-      method:'POST',
-      body:JSON.stringify({supplierId})
-    });
-    msg.textContent='Opening Stripe-hosted onboarding…';
-    window.location.href=link.url;
+    if(status.demo){
+      msg.textContent='Demo Stripe account is active. No real onboarding is required in demo mode.';
+      return;
+    }
+    msg.textContent='Loading secure Stripe onboarding…';
+    await mountStripeEmbeddedOnboarding(status.accountId);
+    msg.textContent='Complete the Stripe verification form below, then refresh Stripe status.';
   }catch(err){
     msg.textContent=`Could not start Stripe onboarding: ${err.message}`;
   }
@@ -3997,7 +4041,8 @@ async function prepareStripePayment(bookingId,paymentToken){
     }
 
     await loadStripeJs();
-    stripeClient=Stripe(config.stripePublishableKey);
+    if(!intent.stripeAccountId) throw new Error('Supplier Stripe account context is missing');
+    stripeClient=Stripe(config.stripePublishableKey,{stripeAccount:intent.stripeAccountId});
     stripeElements=stripeClient.elements({clientSecret:intent.clientSecret});
 
     const container=document.getElementById('stripePaymentElement');

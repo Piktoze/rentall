@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'url';
 import {assertProductionConfig,assertProductionStorage,runtimeConfig} from './config.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
+import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
+import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +16,7 @@ assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentinorbit.sqlite');
 fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
-export const REQUIRED_SCHEMA_VERSION=182;
+export const REQUIRED_SCHEMA_VERSION=184;
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -1438,6 +1440,8 @@ for (const sql of [
   }
 }
 
+installStripeDirectChargeSchema(db);
+
 for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN payment_token_hash TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN stripe_payment_intent_id TEXT`,
@@ -1516,7 +1520,7 @@ export function saveStripeConnection({userId,userEmail,stripeAccountId,connectAp
   return stripeConnectionByUserStmt.get(userId)||null;
 }
 
-export function updateStripeConnectionCapability({userId,connectApi='v2_recipient',transferCapabilityStatus='unknown',requirements=[]}){
+export function updateStripeConnectionCapability({userId,connectApi='v2_merchant_direct',transferCapabilityStatus='unknown',requirements=[]}){
   const existing=stripeConnectionByUserStmt.get(userId);
   if(!existing) return null;
   return saveStripeConnection({
@@ -2257,7 +2261,9 @@ export function resetSupplierMissedResponses(email){
   db.prepare(`UPDATE supplier_onboarding SET missed_response_count=0,updated_at=? WHERE email=? COLLATE NOCASE`).run(new Date().toISOString(),e);
 }
 
+installSupplierPricingSchema(db);
+
 // This marker is written only after every idempotent schema operation and
 // prepared statement above initialized successfully. Startup readiness requires it.
 db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
-  .run(REQUIRED_SCHEMA_VERSION,'v182-supplier-prelaunch-reliability');
+  .run(REQUIRED_SCHEMA_VERSION,'v195-direct-charges-accounts-v2');

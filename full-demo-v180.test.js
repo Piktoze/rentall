@@ -6,7 +6,7 @@ const a=fs.readFileSync('./app.js','utf8');
 const f=fs.readFileSync('./modules/supplier-finance.js','utf8');
 const c=fs.readFileSync('./modules/customer-booking-hub.js','utf8');
 const sw=fs.readFileSync('./service-worker.js','utf8');
-ok(d.includes('REQUIRED_SCHEMA_VERSION=182'),'schema version');
+ok(d.includes('REQUIRED_SCHEMA_VERSION=184'),'schema version');
 for(const field of ['payment_provider','payout_status','payout_amount','payout_reference','payout_completed_at'])ok(d.includes(field),`missing ${field}`);
 ok(s.includes('demoPaymentsEnabled'),'demo provider flag');
 ok(s.includes("app.post('/api/payments/demo/confirm'"),'demo confirm endpoint');

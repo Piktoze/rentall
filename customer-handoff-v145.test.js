@@ -26,5 +26,5 @@ ok(e2e.includes("PORT=3000 node ../server.js"),'Playwright server port contract'
 ok(c.includes('V145 — live listing-to-checkout handoff'),'responsive handoff styling');
 ok(s.includes('stripe.webhooks.constructEvent'),'Stripe webhook signature verification');
 ok(s.includes('verifyBookingPaymentToken'),'guest token protection');
-ok(s.includes('requireSupplierTransferCapability'),'supplier payout gate');
+ok(s.includes('requireSupplierDirectChargeCapability'),'supplier payout gate');
 console.log('PASS V145 customer handoff');

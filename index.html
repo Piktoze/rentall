@@ -21,6 +21,7 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://connect-js.stripe.com/v1.0/connect.js" async></script>
 
   <meta name="theme-color" content="#f7f7f2">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -797,13 +798,22 @@
             <div class="setup-step" id="stripeStepPayout"><span>4</span><div><b>Payouts enabled</b><small id="stripePayoutText">Pending</small></div></div>
           </div>
 
+          <label class="field">Supplier type
+            <select id="stripeLegalEntityType">
+              <option value="individual">Individual</option>
+              <option value="company">Company</option>
+            </select>
+          </label>
           <div class="stripe-action-stack">
             <button class="primary" id="connectStripeBtn">Connect with Stripe</button>
             <button class="secondary" id="openStripeDashboardBtn" disabled>Open Stripe Dashboard</button>
             <button class="secondary" id="refreshStripeStatusBtn">Refresh Stripe status</button>
           </div>
-          <small class="section-note">Payout setup is completed securely through Stripe and is available only to the authenticated account owner.</small>
+          <small class="section-note">Identity and bank details are collected securely by Stripe. RentInOrbit does not store those KYC details.</small>
           <div class="stripe-live-message" id="stripeLiveMessage"></div>
+          <div id="stripeNotificationBanner"></div>
+          <div id="stripeEmbeddedOnboarding"></div>
+          <div id="stripeAccountManagement"></div>
         </div>
 
         <div class="payment-card">

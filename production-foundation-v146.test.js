@@ -20,7 +20,7 @@ ok(db.includes("wal_checkpoint(TRUNCATE)")&&db.includes('closeDatabase'),'restar
 ok(server.includes("apiVersion:'2026-08-26.dahlia'"),'Stripe API version');
 ok(server.includes('stripe.webhooks.constructEvent'),'webhook verification');
 ok(server.includes('verifyBookingPaymentToken'),'guest token protection');
-ok(server.includes('requireSupplierTransferCapability'),'payout capability gate');
+ok(server.includes('requireSupplierDirectChargeCapability'),'payout capability gate');
 ok(server.includes('server.closeIdleConnections?.()'),'graceful HTTP drain');
 ok(!server.includes("version:'1.0.0-rc.24'")&&!server.includes("version:'1.0.0-rc.33'"),'no stale readiness versions');
 ok(runbook.includes('RENTINORBIT_DB_PATH=/data/rentinorbit.sqlite'),'volume instructions');
