@@ -281,6 +281,8 @@ footer{padding:34px 0;background:#0d1914;color:#c9d4ce}.footer-grid{display:grid
 .supplier-order-grid b{display:block;color:var(--text);word-break:break-word}
 .supplier-order-instructions{grid-column:1/-1}
 .supplier-order-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.return-booking-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.form-error{min-height:20px;color:#9c3434;font-size:13px}
 .view-order-btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
 @media(max-width:620px){.supplier-order-grid{grid-template-columns:1fr}.supplier-order-instructions{grid-column:auto}}
 
@@ -1814,3 +1816,11 @@ body{color:var(--v56-ink)}
 .renter-alt-note,.renter-alt-empty{margin:12px 0 10px;font-size:.78rem;color:var(--muted);line-height:1.45}.renter-alt-more{margin-top:2px}
 .renter-alt-loading{padding:14px;color:var(--muted)}
 @media(max-width:720px){.renter-alternatives{padding:14px}.renter-alt-grid{grid-template-columns:1fr}.renter-alt-card>img{height:160px}}
+
+/* V197: no homepage flash on booking/payment/supplier deep links. */
+html.rentinorbit-route-loading body{visibility:hidden;}
+html.rentinorbit-route-loading::after{
+  content:'Opening RentInOrbit…';position:fixed;inset:0;display:flex;
+  align-items:center;justify-content:center;background:#f7f7f2;color:#263a3b;
+  font:600 16px/1.4 system-ui,sans-serif;z-index:2147483647;
+}

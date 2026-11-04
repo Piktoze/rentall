@@ -1,19 +1,8 @@
 import {test,expect} from '@playwright/test';
 
-const e2eListing={
- id:'e2e-cordless-drill',title:'Cordless Drill',description:'E2E rental fixture',
- ownerEmail:'supplier@rentinorbit.test',ownerType:'business',country:'LT',city:'Vilnius',
- category:'Tools & equipment',quantity:3,priceDay:15,priceWeek:75,deposit:50,
- delivery:'Pickup',accommodationDelivery:'no',cancellationPolicy:'moderate',
- lifecycleStatus:'active',availabilityConfirmedAt:'2026-01-01T00:00:00.000Z'
-};
-
 test.describe('RentInOrbit customer journey',()=>{
  test.beforeEach(async({page})=>{
    await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
-   await page.route(url=>new URL(url).pathname==='/api/listings',route=>route.fulfill({
-     status:200,contentType:'application/json',body:JSON.stringify({listings:[e2eListing]})
-   }));
    page.on('pageerror',error=>console.error(`BROWSER_ERROR: ${error.stack||error.message}`));
  });
  test('home → discovery → listing detail is navigable',async({page})=>{
@@ -44,7 +33,6 @@ test.describe('RentInOrbit customer journey',()=>{
    await expect(page.locator('#v145AvailabilityResult')).toHaveAttribute('aria-live','polite');
  });
  test('discovery, checkout navigation and My Bookings respond',async({page})=>{
-   await page.addInitScript(()=>localStorage.setItem('rentinorbit_booking_access',JSON.stringify({'e2e-booking':'e2e-guest-token'})));
    await page.route('**/api/rentals/availability?**',route=>route.fulfill({
      status:200,
      contentType:'application/json',
@@ -90,11 +78,8 @@ test.describe('RentInOrbit customer journey',()=>{
    await page.locator('#loginPassword').fill(password);
    await page.locator('#supplierLoginForm button[type="submit"]').click();
    await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
-   await expect(page.locator('#supplierSimpleHub')).toBeVisible();
-   await page.locator('[data-v178-hub="menu"]').click();
-   await expect(page.locator('#supplierActionDrawer')).toHaveClass(/open/);
-   await page.locator('[data-supplier-action="calendar"]').click();
-   await expect(page.locator('#supplierAvailabilitySection')).toHaveClass(/supplier-v178-external-visible/);
+   await page.locator('[data-v129-tab="calendar"]').click();
+   await expect(page.locator('#v129CalendarPanel')).toHaveClass(/active/);
  });
 });
 

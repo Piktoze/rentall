@@ -13,7 +13,10 @@ const {
 function assert(v,msg){if(!v) throw new Error(msg);}
 
 try{
-  upsertRentalListing({listingId:'hold-1',title:'Hold test',totalQuantity:1});
+  // Only instant bookings expire before supplier confirmation. Request bookings
+  // receive their payment expiry after the supplier confirms them.
+  upsertRentalListing({listingId:'hold-1',title:'Hold test',totalQuantity:1,bookingMode:'instant'});
+  db.prepare('UPDATE rental_listings SET booking_mode=? WHERE listing_id=?').run('instant','hold-1');
   const r=createRentalBookingAtomic({
     bookingId:'hold-booking',
     listingId:'hold-1',

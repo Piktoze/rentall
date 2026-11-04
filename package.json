@@ -1,6 +1,6 @@
 {
   "name": "rentinorbit-marketplace-mvp",
-  "version": "1.0.0-rc.54",
+  "version": "1.0.0-rc.55",
   "private": true,
   "type": "module",
   "scripts": {
@@ -116,6 +116,7 @@
     "test:deployment-runtime-v147": "node deployment-runtime-v147.test.js",
     "test:staging-mode": "node staging-mode.test.js",
     "backup:auto": "node ops/backup-and-verify.js",
+    "backup:restore-test": "node ops/test-backup-restore.js",
     "test:marketplace-trust-v172": "node marketplace-trust-v172.test.js",
     "test:backup-launch-gate-v172": "node backup-launch-gate-v172.test.js",
     "test:help-center-v177": "node help-center-v177.test.js",
@@ -123,7 +124,9 @@
     "test:supplier-reliability-v182": "node supplier-reliability-v182.test.js",
     "test:hormozi-v187": "node hormozi-offer-v187.test.js",
     "test:supplier-response-clock-v187": "node supplier-response-clock-v187.test.js",
-    "test:renter-booking-status-v190": "node renter-booking-status-v190.test.js"
+    "test:renter-booking-status-v190": "node renter-booking-status-v190.test.js",
+    "test:cancellation-v197": "node cancellation-v197.test.js",
+    "test:stabilization-v203": "node v203-stabilization.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

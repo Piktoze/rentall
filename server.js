@@ -1,5 +1,6 @@
 import express from 'express';
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import {
   beginWebhookEvent,
   markWebhookProcessed,
@@ -104,7 +105,8 @@ import {
 } from './db.js';
 import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig} from './config.js';
 import {HELP_CENTER_COPY,getPolicyPage} from './modules/help-center-content-v177.js';
-import {supplierResponseSchedule} from './modules/supplier-response-clock-v187.js';
+import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
+import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
 import {
   calculateBookingPricingForSupplier,
@@ -314,6 +316,11 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
     setBookingPayoutDetails(booking.bookingId,{status:'cancelled',amount:0,reference:`demo_po_${booking.bookingId}`});
     return {id:`demo_re_${booking.bookingId}`,status:'succeeded',amount:Math.round(safeRefund*100)};
   }
+  // An unpaid booking without provider objects has nothing to cancel or refund.
+  // Do not require Stripe Connect merely to release its inventory.
+  const hasStripePayment=!!booking?.stripePaymentIntentId;
+  const hasStripeDeposit=!!booking?.securityDepositPaymentIntentId;
+  if(!hasStripePayment && !hasStripeDeposit) return null;
   if(!stripe) return null;
   const listing=getRentalListing(booking?.listingId);
   const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
@@ -354,20 +361,37 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
 async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefund=false}={}){
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
+  // Check before calling Stripe: a terminal or handed-over rental must
+  // never trigger an automatic cancellation/refund, even through other routes.
+  if(!['pending','confirmed'].includes(String(booking.status||''))){
+    const err=new Error('Cancellation unavailable after handover or completion. Open a dispute instead.');
+    err.code='INVALID_TRANSITION';
+    throw err;
+  }
+  const startDate=String(booking.startDate||'');
+  const startInstant=new Date(booking.rentalStartAt || startDate+'T00:00:00Z');
+  // Legacy bookings record a date but not a time; conservatively prevent
+  // cancellation after that calendar date starts in UTC.
+  if(!Number.isNaN(startInstant.getTime()) && Date.now()>=startInstant.getTime()){
+    const err=new Error('Rental start date has passed; automatic cancellation is unavailable. Open a dispute instead.');
+    err.code='INVALID_TRANSITION';
+    throw err;
+  }
   const listing=getRentalListing(booking.listingId);
-  const refundAmount=forceFullRefund
-    ? Number(booking.orderValue||0)
-    : calculateRefundAmount(booking,listing?.cancellationPolicy||'moderate');
+  const collectedPayment=new Set(['paid','partially_refunded','refunded'])
+    .has(String(booking.paymentStatus||'unpaid').toLowerCase());
+  const refundAmount=collectedPayment
+    ? (forceFullRefund
+      ? Number(booking.orderValue||0)
+      : calculateRefundAmount(booking,booking.cancellationPolicySnapshot||listing?.cancellationPolicy||'moderate'))
+    : 0;
 
   await handleStripeCancellationForBooking(booking,refundAmount);
 
-  const result=cancelRentalBookingWithRefund(bookingId,reason);
-  // Supplier decline always gets a full refund, overriding customer cancellation policy.
-  if(forceFullRefund && result?.booking){
-    const row=result.booking;
-    // cancelRentalBookingWithRefund calculates by policy; report the actual full refund.
-    row.refundAmount=refundAmount;
-  }
+  const result=cancelRentalBookingWithRefund(bookingId,reason,new Date(),{
+    forceFullRefund,
+    refundAmountOverride:refundAmount
+  });
   return {...result,refundAmount};
 }
 
@@ -598,7 +622,6 @@ app.post('/api/stripe/webhook',
                   paymentIntentId:pi.id,
                   amountCents:Math.round(Math.max(0,Number(booking.orderValue||0))*100),
                   bookingId,
-                  metadataReason:`late_payment_after_${booking.status}`,
                   idempotencyKey:`booking:${bookingId}:late-terminal-refund`
                 });
                 setStripeRefundDetails(bookingId,{
@@ -632,6 +655,24 @@ app.post('/api/stripe/webhook',
                   : `Payment for booking ${bookingId} was received.`
               });
             }
+            /* STAGING_POSTPAYMENT_EMAIL_V1 */
+            if(!lateTerminalRefunded && paidBooking?.customerEmail && isEmail(paidBooking.customerEmail)){
+              enqueueTransactionalEmail({
+                recipient:paidBooking.customerEmail,
+                templateKey:'booking_paid',
+                subject:`RentInOrbit · Payment received · ${bookingId}`,
+                dedupeKey:`booking:${bookingId}:payment:${pi.id}:customer-email`,
+                payload:{
+                  templateVersion:1,
+                  bookingId,
+                  listingTitle:paidListing?.title||'Rental item',
+                  status:'paid',
+                  message:'Your payment was received successfully. The booking remains confirmed until the rental is handed over.',
+                  bookingUrl:null,
+                  accountBookingPath:`/?view=my-bookings&booking=${encodeURIComponent(bookingId)}`
+                }
+              });
+            }
             if(paidListing?.ownerEmail){
               createRentalNotification({
                 uniqueKey:`payment:${pi.id}:supplier`,
@@ -641,6 +682,23 @@ app.post('/api/stripe/webhook',
                 message:lateTerminalRefunded
                   ? `A late payment for ${paidListing.title} booking ${bookingId} was automatically refunded.`
                   : `Payment for ${paidListing.title} booking ${bookingId} was received.`
+              });
+            }
+            if(!lateTerminalRefunded && paidListing?.ownerEmail && isEmail(paidListing.ownerEmail)){
+              enqueueTransactionalEmail({
+                recipient:paidListing.ownerEmail,
+                templateKey:'booking_paid_supplier',
+                subject:`RentInOrbit · Booking payment received · ${bookingId}`,
+                dedupeKey:`booking:${bookingId}:payment:${pi.id}:supplier-email`,
+                payload:{
+                  templateVersion:1,
+                  bookingId,
+                  listingTitle:paidListing.title||'Rental item',
+                  status:'paid',
+                  message:`The customer payment was received. Supplier share: €${Number(paidBooking?.supplierAmount||0).toFixed(2)} before Stripe processing fees.`,
+                  bookingUrl:null,
+                  accountBookingPath:`/?view=supplier-bookings&booking=${encodeURIComponent(bookingId)}`
+                }
               });
             }
           }
@@ -1085,9 +1143,9 @@ function escapeEmailHtml(value){
   return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 function renderSupplierBookingReceivedEmail(payload={}){
-  const e=v=>escapeHtml(String(v??''));
+  const e=v=>escapeEmailHtml(String(v??''));
   const total=Number(payload.total||0).toFixed(2);
-  const dashboardUrl=String(payload.supplierDashboardUrl||`${PUBLIC_BASE_URL}/?view=supplier-bookings`);
+  const dashboardUrl=String(payload.supplierDashboardUrl||`${PUBLIC_BASE_URL}/?view=supplier-bookings${payload.bookingId?`&booking=${encodeURIComponent(payload.bookingId)}`:''}`);
   return `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#17221b">
     <h2>New booking request</h2>
     <p><strong>${e(payload.listingTitle||'Rental item')}</strong></p>
@@ -1128,8 +1186,8 @@ function renderBookingReceivedEmail(payload={}){
 function renderBookingStatusEmail(payload={}){
   const url=payload.bookingUrl||(payload.accountBookingPath?`${PUBLIC_BASE_URL}${payload.accountBookingPath}`:PUBLIC_BASE_URL);
   const status=String(payload.status||'updated');
-  const heading=status==='confirmed'?'Booking confirmed':status==='declined'?'Booking declined':status==='cancelled'?'Booking cancelled':'Booking updated';
-  return `<!doctype html><html><body style="margin:0;background:#f4f7f4;font-family:Arial,sans-serif;color:#172019"><table role="presentation" width="100%"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:620px;background:#fff;border-radius:18px;padding:28px"><tr><td><div style="font-size:22px;font-weight:800">RentInOrbit</div><h1>${escapeEmailHtml(heading)}</h1><p>Reference <strong>${escapeEmailHtml(payload.bookingId)}</strong></p><p>Your booking for <strong>${escapeEmailHtml(payload.listingTitle||'rental item')}</strong> is now <strong>${escapeEmailHtml(status)}</strong>.</p><p>${escapeEmailHtml(payload.message||'Open your booking for the latest details.')}</p><p><a href="${escapeEmailHtml(url)}" style="display:inline-block;padding:13px 18px;border-radius:10px;background:#173f2a;color:#fff;text-decoration:none;font-weight:700">Open RentInOrbit</a></p><p style="font-size:12px;color:#66706a">If you booked as a guest, use the secure View booking link in your original booking receipt.</p></td></tr></table></td></tr></table></body></html>`;
+  const heading=status==='confirmed'?'Booking confirmed':status==='paid'?'Payment received':status==='declined'?'Booking declined':status==='cancelled'?'Booking cancelled':'Booking updated';
+  return `<!doctype html><html><body style="margin:0;background:#f4f7f4;font-family:Arial,sans-serif;color:#172019"><table role="presentation" width="100%"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:620px;background:#fff;border-radius:18px;padding:28px"><tr><td><div style="font-size:22px;font-weight:800">RentInOrbit</div><h1>${escapeEmailHtml(heading)}</h1><p>Reference <strong>${escapeEmailHtml(payload.bookingId)}</strong></p><p>Your booking for <strong>${escapeEmailHtml(payload.listingTitle||'rental item')}</strong> is now <strong>${escapeEmailHtml(status)}</strong>.</p><p>${escapeEmailHtml(payload.message||'Open your booking for the latest details.')}</p><p><a href="${escapeEmailHtml(url)}" style="display:inline-block;padding:13px 18px;border-radius:10px;background:#173f2a;color:#fff;text-decoration:none;font-weight:700">${escapeEmailHtml(payload.ctaText||'Open RentInOrbit')}</a></p>${payload.paymentDueAt?`<p><strong>Payment deadline:</strong> ${escapeEmailHtml(payload.paymentDueAt)}</p>`:''}<p style="font-size:12px;color:#66706a">If you booked as a guest, use the secure View booking link in your original booking receipt.</p></td></tr></table></td></tr></table></body></html>`;
 }
 function queueBookingStatusEmail(booking,status,{message=''}={}){
   if(!booking?.customerEmail || !isEmail(booking.customerEmail)) return false;
@@ -1137,9 +1195,9 @@ function queueBookingStatusEmail(booking,status,{message=''}={}){
   enqueueTransactionalEmail({
     recipient:booking.customerEmail,
     templateKey:`booking_${status}`,
-    subject:`RentInOrbit · ${status==='confirmed'?'Booking confirmed':status==='declined'?'Booking declined':status==='cancelled'?'Booking cancelled':'Booking updated'} · ${booking.bookingId}`,
+    subject:`RentInOrbit · ${status==='confirmed'?'Booking confirmed — complete payment':status==='declined'?'Booking declined':status==='cancelled'?'Booking cancelled':'Booking updated'} · ${booking.bookingId}`,
     dedupeKey:`booking:${booking.bookingId}:status:${status}`,
-    payload:{templateVersion:1,bookingId:booking.bookingId,listingTitle:listing?.title||'Rental item',status,message,bookingUrl:null,accountBookingPath:'/?view=my-bookings'}
+    payload:{templateVersion:2,bookingId:booking.bookingId,listingTitle:listing?.title||'Rental item',status,message:status==='confirmed'?(message||'The supplier confirmed your rental. Complete payment before the payment window expires.'):message,bookingUrl:null,accountBookingPath:status==='confirmed'?`/?view=my-bookings&booking=${encodeURIComponent(booking.bookingId)}&pay=1`:'/?view=my-bookings',ctaText:status==='confirmed'?'Pay now':'Open RentInOrbit',paymentDueAt:status==='confirmed'?(booking.expiresAt||booking.expires_at||null):null} /* STAGING_CONFIRMED_EMAIL_CTA_V2 */
   });
   return true;
 }
@@ -1197,7 +1255,10 @@ function calculateAuthoritativeRentalPrice(listing,startDate,endDate,quantity){
 }
 function calculateAuthoritativeBookingTotal(listing,input){
   const price=calculateAuthoritativeRentalPrice(listing,input.startDate,input.endDate,input.quantity);
-  const deliveryRequested=Boolean(String(input.deliveryCity||input.deliveryAddress||input.accommodationName||'').trim());
+  const pickupOnly=listing?.delivery==='Pickup only' || !(listing?.accommodationDelivery==='yes' || listing?.accommodationDelivery===true);
+  const deliveryRequested=pickupOnly
+    ? Boolean(String(input.deliveryAddress||input.accommodationName||'').trim())
+    : Boolean(String(input.deliveryCity||input.deliveryAddress||input.accommodationName||'').trim());
   let delivery=0;
   if(deliveryRequested){
     if(listing?.delivery==='Pickup only' || !(listing?.accommodationDelivery==='yes' || listing?.accommodationDelivery===true))
@@ -1246,8 +1307,8 @@ app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
 app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
   try{
     const safeListing=validateSupplierListingInput(req.body?.listing||{});
-    const payoutConnection=getStripeConnectionByEmail(req.appUser.email);
-    const payoutVerified=String(payoutConnection?.transferCapabilityStatus||'')==='active';
+    const payoutConnection=getDirectMerchantConnectionByEmail(db,req.appUser.email);
+    const payoutVerified=directMerchantReady(payoutConnection);
     if(safeListing.bookingMode==='instant' && req.appUser.role!=='admin' && !payoutVerified){
       return res.status(409).json({error:'Instant Book is available after payout identity/account verification is complete.',code:'INSTANT_BOOK_REQUIRES_VERIFICATION'});
     }
@@ -1483,16 +1544,25 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
   try{
     await processExpiredBookings();
     const {bookingId,paymentToken}=req.body||{};
-    const paymentBooking=verifyBookingPaymentToken(bookingId,paymentToken);
-    if(!paymentBooking) return res.status(403).json({error:'Invalid or expired payment token'});
-
     const booking=getRentalBookingById(bookingId);
     if(!booking) return res.status(404).json({error:'Booking not found'});
+    const paymentUser=sessionUser(req);
+    const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
+    const guestOwner=!!verifyBookingPaymentToken(bookingId,paymentToken);
+    if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'}); /* STAGING_PAYMENT_OWNER_ACCESS_V2 */
     if(!['pending','confirmed'].includes(booking.status)){
       return res.status(409).json({error:`Booking cannot be paid in status ${booking.status}`});
     }
+    // A successfully paid booking must never re-enter checkout, even if its
+    // lifecycle status is still 'confirmed'. Reject before touching Stripe.
+    if(['paid','succeeded','refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase()) || booking.stripeRefundId){
+      return res.status(409).json({error:'This booking has already been paid or refunded',code:'BOOKING_PAYMENT_FINAL'});
+    }
 
     const listing=getRentalListing(booking.listingId);
+    if(listing?.bookingMode==='request' && booking.status!=='confirmed'){
+      return res.status(409).json({error:'Supplier confirmation is required before payment.',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
+    }
     const amount=Math.round(Number(booking.orderValue||0)*100);
     if(amount<50) return res.status(400).json({error:'Booking amount is too small'});
 
@@ -1731,13 +1801,14 @@ app.get('/api/rentals/calendar', simpleRateLimit({windowMs:60000,max:60,keyPrefi
 });
 
 app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPrefix:'booking-create'}), bookingIdempotency, (req, res) => {
+  console.log('STAGING_BOOKING_DIAG_V1',JSON.stringify({contentType:req.headers['content-type']||null,listingId:req.body?.listingId||null,startDate:req.body?.startDate||null,endDate:req.body?.endDate||null,quantity:req.body?.quantity??null,termsAccepted:req.body?.termsAccepted??null,deliveryCity:req.body?.deliveryCity||null,deliveryAddress:req.body?.deliveryAddress||null,accommodationName:req.body?.accommodationName||null}));
   try {
     const {
       listingId, startDate, endDate, quantity = 1, status = 'pending',
       customerName = null, customerEmail = null, customerPhone = null,
       accommodationName = null, deliveryCity = null, deliveryAddress = null,
       roomNumber = null, contactPerson = null, deliveryInstructions = null,
-      orderValue = null, termsAccepted = false
+      orderValue = null, termsAccepted = false, rentalStartTime = null
     } = req.body || {};
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
@@ -1766,6 +1837,11 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     const authenticatedUser=sessionUser(req);
     const effectiveCustomerEmail=authenticatedUser?.email || customerEmail || null;
     const effectiveCustomerName=authenticatedUser?.displayName || authenticatedUser?.name || customerName || null;
+    const supplierTimezone=supplierTimezoneForListing(listingForBooking);
+    // Legacy API clients without a time may still book, but receive a
+    // conservative midnight cutoff, never an invented local pickup time.
+    const rentalStartAt=rentalStartTime ? resolveRentalStart({startDate,startTime:rentalStartTime,timeZone:supplierTimezone}) : null;
+    if(rentalStartAt && new Date(rentalStartAt).getTime()<=Date.now()) return res.status(400).json({error:'Rental start must be in the future'});
     const authoritativePrice=calculateAuthoritativeBookingTotal(listingForBooking,{
       startDate,endDate,quantity:qty,deliveryCity,deliveryAddress,accommodationName
     });
@@ -1775,6 +1851,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       listingId,
       startDate,
       endDate,
+      rentalStartAt,rentalStartTime:rentalStartTime||null,rentalTimeZone:supplierTimezone,
       quantity: qty,
       status: 'pending',
       customerName:effectiveCustomerName,
@@ -1797,9 +1874,10 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       snapshot:{
         platform:'RentInOrbit',bookingId,listingId,listingTitle:listingForBooking.title,
         supplierEmail:listingForBooking.ownerEmail||null,customerName:effectiveCustomerName||null,customerEmail:effectiveCustomerEmail||null,
-        startDate,endDate,quantity:qty,currency:'EUR',rentalAmount:authoritativePrice.rental,deliveryFee:authoritativePrice.delivery,
+        startDate,endDate,rentalStartAt,rentalStartTime:rentalStartTime||null,rentalTimeZone:supplierTimezone,quantity:qty,currency:'EUR',rentalAmount:authoritativePrice.rental,deliveryFee:authoritativePrice.delivery,
         total:authoritativePrice.total,securityDeposit:authoritativePrice.securityDeposit,
-        cancellationPolicy:listingForBooking.cancellationPolicy||'moderate',
+        cancellationPolicy:result.booking.cancellationPolicySnapshot||listingForBooking.cancellationPolicy||'moderate',
+        cancellationPolicyVersion:result.booking.cancellationPolicyVersion,
         terms:['Use the item only for its intended purpose.','Return the item on time in the condition received, allowing for normal wear.','Damage, loss, cancellation and deposit handling follow the listing and RentInOrbit terms.']
       }
     });
@@ -1946,6 +2024,12 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       const responseListing=getRentalListing(booking.listingId);
       if(responseListing?.ownerEmail) resetSupplierMissedResponses(responseListing.ownerEmail);
       try{acceptRentalAgreement(req.params.bookingId,'supplier')}catch{}
+      if(responseListing?.bookingMode==='request' && String(booking.paymentStatus||'unpaid')!=='paid'){
+        const minutes=Math.max(10,Math.min(240,Number(process.env.POST_CONFIRM_PAYMENT_MINUTES||60)));
+        const nowIso=new Date().toISOString();
+        const dueIso=new Date(Date.now()+minutes*60000).toISOString();
+        db.prepare('UPDATE rental_bookings SET expires_at=?, updated_at=? WHERE booking_id=?').run(dueIso,nowIso,req.params.bookingId);
+      }
     }
     if(requestedStatus==='returned' && booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
       setBookingPayoutDetails(booking.bookingId,{status:'ready',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
@@ -1996,6 +2080,12 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
     }
     const actor=sessionUser(req);
     const supplierInitiated=canSupplierManageBooking(actor,req.params.bookingId);
+    const bookingBeforeCancellation=getRentalBookingById(req.params.bookingId);
+    // Server-side guard: do not refund after handover, return or completion.
+    // Disputes use a separate flow, with evidence and appropriate authorization.
+    if(bookingBeforeCancellation && ['active','returned','completed'].includes(String(bookingBeforeCancellation.status||'').toLowerCase())){
+      return res.status(409).json({error:'Cannot cancel after handover, return or completion. Open a dispute instead.',code:'CANCELLATION_LOCKED_AFTER_HANDOVER'});
+    }
     const result=await cancelBookingWithPaymentHandling(
       req.params.bookingId,
       req.body?.reason || null,
@@ -2021,6 +2111,41 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
         message:`Your booking was cancelled. Refund: €${Number(result.refundAmount||0).toFixed(2)}.`
       });
     }
+    try{
+      const refundText='€'+Number(result.refundAmount||0).toFixed(2);
+      if(booking?.customerEmail && isEmail(booking.customerEmail)){
+        enqueueTransactionalEmail({
+          recipient:booking.customerEmail,
+          templateKey:'booking_cancelled',
+          subject:`RentInOrbit · Booking cancelled · ${booking.bookingId}`,
+          dedupeKey:`booking:${booking.bookingId}:cancelled:email:customer`,
+          payload:{
+            templateVersion:1,
+            bookingId:booking.bookingId,
+            listingTitle:getFullRentalListing(booking.listingId)?.title||listing?.title||'Rental item',
+            status:'cancelled',
+            message:`Your booking was cancelled. Refund: ${refundText}.`,
+            accountBookingPath:`/?view=my-bookings&booking=${encodeURIComponent(booking.bookingId)}`
+          }
+        });
+      }
+      if(listing?.ownerEmail && isEmail(listing.ownerEmail)){
+        enqueueTransactionalEmail({
+          recipient:listing.ownerEmail,
+          templateKey:'booking_cancelled_supplier',
+          subject:`RentInOrbit · Booking cancelled · ${booking.bookingId}`,
+          dedupeKey:`booking:${booking.bookingId}:cancelled:email:supplier`,
+          payload:{
+            templateVersion:1,
+            bookingId:booking.bookingId,
+            listingTitle:getFullRentalListing(booking.listingId)?.title||listing?.title||'Rental item',
+            status:'cancelled',
+            message:`Booking ${booking.bookingId} was cancelled. Customer refund: ${refundText}.`,
+            bookingUrl:`${PUBLIC_BASE_URL}/?view=supplier-bookings&booking=${encodeURIComponent(booking.bookingId)}`
+          }
+        });
+      }
+    }catch(err){ console.warn('Could not queue cancellation emails',err.message); }
     res.json(result);
   }catch(err){
     res.status(err.code==='INVALID_TRANSITION'?409:400)
@@ -2148,8 +2273,8 @@ app.post('/api/conversations/:conversationId/messages',requireRole('customer','s
 
 app.get('/api/listings/:listingId/reputation',(req,res)=>{
   const listing=getFullRentalListing(req.params.listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
-  const payoutConnection=getStripeConnectionByEmail(listing.ownerEmail);
-  const verifiedSupplier=String(payoutConnection?.transferCapabilityStatus||'')==='active';
+  const payoutConnection=getDirectMerchantConnectionByEmail(db,listing.ownerEmail);
+  const verifiedSupplier=directMerchantReady(payoutConnection);
   res.json({supplier:getSupplierReputation(listing.ownerEmail),verifiedSupplier});
 });
 app.get('/api/supplier/bookings/:bookingId/customer-reputation',requireRole('supplier','admin'),(req,res)=>{
@@ -2590,11 +2715,11 @@ async function runSupplierReliabilityMaintenance(){
       const schedule=supplierResponseSchedule(item.createdAt,item.supplierResponseHours||4,item.supplierTimezone||'UTC');
       const reminder1=new Date(schedule.reminder1At).getTime(), reminder2=new Date(schedule.reminder2At).getTime(), due=new Date(item.supplierResponseDueAt||schedule.dueAt).getTime();
       if(now>=reminder1 && Number(item.supplierReminderStage||0)<1){
-        enqueueTransactionalEmail({recipient:item.supplierEmail,templateKey:'supplier_response_reminder',subject:`RentInOrbit booking is waiting · ${item.title}`,dedupeKey:`supplier-response:${item.bookingId}:1`,payload:{bookingId:item.bookingId,listingTitle:item.title,dueAt:item.supplierResponseDueAt,dashboardUrl:`${PUBLIC_BASE_URL}/?view=supplier-bookings`}});
+        enqueueTransactionalEmail({recipient:item.supplierEmail,templateKey:'supplier_response_reminder',subject:`RentInOrbit booking is waiting · ${item.title}`,dedupeKey:`supplier-response:${item.bookingId}:1`,payload:{bookingId:item.bookingId,listingTitle:item.title,dueAt:item.supplierResponseDueAt,dashboardUrl:`${PUBLIC_BASE_URL}/?view=supplier-bookings&booking=${encodeURIComponent(item.bookingId)}`}});
         setSupplierReminderStage(item.bookingId,1);
       }
       if(now>=reminder2 && Number(item.supplierReminderStage||0)<2){
-        enqueueTransactionalEmail({recipient:item.supplierEmail,templateKey:'supplier_response_reminder',subject:`Urgent: respond to RentInOrbit booking · ${item.title}`,dedupeKey:`supplier-response:${item.bookingId}:2`,payload:{bookingId:item.bookingId,listingTitle:item.title,dueAt:item.supplierResponseDueAt,dashboardUrl:`${PUBLIC_BASE_URL}/?view=supplier-bookings`}});
+        enqueueTransactionalEmail({recipient:item.supplierEmail,templateKey:'supplier_response_reminder',subject:`Urgent: respond to RentInOrbit booking · ${item.title}`,dedupeKey:`supplier-response:${item.bookingId}:2`,payload:{bookingId:item.bookingId,listingTitle:item.title,dueAt:item.supplierResponseDueAt,dashboardUrl:`${PUBLIC_BASE_URL}/?view=supplier-bookings&booking=${encodeURIComponent(item.bookingId)}`}});
         setSupplierReminderStage(item.bookingId,2);
       }
       if(Number.isFinite(due) && due>0 && now>=due){
@@ -2662,3 +2787,5 @@ server.on('error',error=>{
 });
 process.on('unhandledRejection',err=>console.error(JSON.stringify({type:'unhandled_rejection',error:safeOperationalError(err)})));
 process.on('uncaughtException',err=>{console.error(JSON.stringify({type:'uncaught_exception',error:safeOperationalError(err)}));gracefulShutdown('uncaughtException')});
+
+/* STAGING_CANCEL_EMAIL_V1 */

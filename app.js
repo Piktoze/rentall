@@ -158,6 +158,7 @@ function renderReview(){
   const html = `
     <h3>${names}</h3>
     <div class="review-row"><span>Rental period</span><b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b></div>
+    <div class="review-row"><span>Rental start time (supplier local)</span><b>${escapeHtml(document.getElementById('rentalStartTime')?.value||'—')}</b></div>
     <div class="review-row"><span>Delivery</span><b>${document.getElementById('hotelName').value || '—'}, ${document.getElementById('deliveryArea').value || '—'}</b></div>
     <div class="review-row"><span>Delivery window</span><b>${document.getElementById('deliveryWindow').value || '—'}</b></div>
     <div class="review-row"><span>Customer</span><b>${document.getElementById('firstName').value || ''} ${document.getElementById('lastName').value || ''}</b></div>
@@ -594,8 +595,8 @@ else bindBookingAttemptIdentity();
 
 async function apiJson(url, options={}){
   const res=await fetch(url,{
-    headers:{'Content-Type':'application/json',...(options.headers||{})},
-    ...options
+    ...options,
+    headers:{'Content-Type':'application/json',...(options.headers||{})}
   });
   const data=await res.json().catch(()=>({}));
   if(!res.ok){
@@ -1799,11 +1800,13 @@ renderReview = function(){
   const html = `
     <h3>${names}</h3>
     <div class="review-row"><span>Rental period</span><b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b></div>
+    <div class="review-row"><span>Rental start time (supplier local)</span><b>${escapeHtml(document.getElementById('rentalStartTime')?.value||'—')}</b></div>
     <div class="review-row"><span>Delivery</span><b>${document.getElementById('hotelName').value || '—'}, ${document.getElementById('deliveryArea').value || '—'}</b></div>
     <div class="review-row"><span>Delivery window</span><b>${activeCheckoutListing?.deliveryWindow || document.getElementById('deliveryWindow').value || '—'}</b></div>
     <div class="review-row"><span>Rental</span><b>${money(price.rental)}</b></div>
     <div class="review-row"><span>Delivery</span><b>${price.deliveryRule.eligible ? money(price.delivery) : 'Not available'}</b></div>
-    <div class="review-row total"><span>Total</span><b>${money(price.total)}</b></div>`;
+    <div class="review-row total"><span>Total</span><b>${money(price.total)}</b></div>
+    <div class="review-row"><span>Cancellation policy</span><b>${escapeHtml(cancellationPolicyText((activeCheckoutListing || inferCheckoutListing())?.cancellationPolicy || 'moderate'))}</b></div>`;
   document.getElementById('reviewCard').innerHTML=html;
 };
 
@@ -2637,10 +2640,12 @@ async function fetchAvailability(listingId,startDate,endDate,quantity=1){
   return apiJson(`/api/rentals/availability?listingId=${encodeURIComponent(listingId)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&quantity=${encodeURIComponent(quantity)}`);
 }
 
-async function createRealBooking(listingId,startDate,endDate,quantity=1){
-  return apiJson('/api/rentals/bookings',bookingRequestOptions(
-    {listingId,startDate,endDate,quantity,status:'confirmed'}
-  ));
+async function createRealBooking(listingId,startDate,endDate,quantity=1,details={}){
+  const payload={...details,listingId,startDate,endDate,quantity,status:'pending'};
+  if(/pickup|atsiim|atsiėm/i.test(document.getElementById('accommodationType')?.value||'')){
+    Object.assign(payload,{deliveryCity:'',deliveryAddress:'',accommodationName:'',roomNumber:'',deliveryInstructions:''});
+  }
+  return apiJson('/api/rentals/bookings',bookingRequestOptions(payload));
 }
 
 function availabilityClass(day){
@@ -2844,11 +2849,16 @@ function initSupplierAvailability(){
 });
 document.getElementById('refreshSupplierAvailabilityBtn')?.addEventListener('click',renderSupplierAvailability);
 
+const backendBookingStatusRequests=new Map();
 async function updateBackendBookingStatus(bookingId,status,reason=null){
-  return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/status`,{
+  const key=`${bookingId}:${status}`;
+  if(backendBookingStatusRequests.has(key)) return backendBookingStatusRequests.get(key);
+  const request=apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/status`,{
     method:'POST',
     body:JSON.stringify({status,reason})
-  });
+  }).finally(()=>backendBookingStatusRequests.delete(key));
+  backendBookingStatusRequests.set(key,request);
+  return request;
 }
 
 function lifecycleButtonsFor(booking){
@@ -3200,10 +3210,11 @@ setTimeout(()=>renderBookings(),150);
 
 // --- V27: cancellation policies, returns, listing details and reviews ---
 
-function cancellationPolicyText(policy){
+function cancellationPolicyText(policy,version){
+  if(policy==='moderate' && version==='moderate-legacy-v1') return 'Moderate (original terms): full refund ≥72h; 50% 24–72h; otherwise non-refundable.';
   if(policy==='flexible') return 'Flexible: full refund ≥24h before start; 50% within 24h.';
   if(policy==='strict') return 'Strict: 50% refund ≥7 days before start; otherwise non-refundable.';
-  return 'Moderate: full refund ≥72h; 50% refund 24–72h; otherwise non-refundable.';
+  return 'Moderate: 100% refund ≥48h; 75% 24–48h; 50% 12–24h; 0% <12h. No automatic cancellation after item handover.';
 }
 
 // Capture cancellation policy in newly created/edited listings.
@@ -3291,12 +3302,49 @@ async function cancelLiveBooking(bookingId){
   });
 }
 
+let pendingReturnDialog=null;
+
+function closeReturnBookingDialog(details=null){
+  const modal=document.getElementById('returnBookingModal');
+  modal?.classList.remove('open');
+  modal?.setAttribute('aria-hidden','true');
+  const resolve=pendingReturnDialog;
+  pendingReturnDialog=null;
+  resolve?.(details);
+}
+
+function collectReturnBookingDetails(bookingId){
+  if(pendingReturnDialog) closeReturnBookingDialog(null);
+  const modal=document.getElementById('returnBookingModal');
+  const form=document.getElementById('returnBookingForm');
+  form?.reset();
+  document.getElementById('returnBookingId').value=bookingId;
+  document.getElementById('returnBookingError').textContent='';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  setTimeout(()=>document.getElementById('returnBookingCondition')?.focus(),0);
+  return new Promise(resolve=>{ pendingReturnDialog=resolve; });
+}
+
+document.getElementById('returnBookingForm')?.addEventListener('submit',event=>{
+  event.preventDefault();
+  const condition=document.getElementById('returnBookingCondition').value;
+  const notes=document.getElementById('returnBookingNotes').value.trim()||null;
+  if(!['good','damaged','missing'].includes(condition)){
+    document.getElementById('returnBookingError').textContent='Choose a valid return condition.';
+    return;
+  }
+  closeReturnBookingDialog({condition,notes});
+});
+document.getElementById('closeReturnBookingModal')?.addEventListener('click',()=>closeReturnBookingDialog(null));
+document.getElementById('cancelReturnBookingBtn')?.addEventListener('click',()=>closeReturnBookingDialog(null));
+
 async function returnLiveBooking(bookingId){
-  const condition=window.prompt('Return condition: good / damaged / missing parts','good')||'good';
-  const notes=window.prompt('Return notes (optional):','')||null;
+  const details=await collectReturnBookingDetails(bookingId);
+  if(!details) return null;
   return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/return`,{
     method:'POST',
-    body:JSON.stringify({condition,notes})
+    body:JSON.stringify(details)
   });
 }
 
@@ -3343,7 +3391,8 @@ document.addEventListener('click',async e=>{
   if(returnBtn){
     returnBtn.disabled=true;
     try{
-      await returnLiveBooking(returnBtn.dataset.bookingId);
+      const result=await returnLiveBooking(returnBtn.dataset.bookingId);
+      if(!result) return;
       await refreshLiveSupplierBookings();
       await renderBookings();
       await renderSupplierAvailability();
@@ -4007,6 +4056,32 @@ async function prepareStripePayment(bookingId,paymentToken){
   activePaymentBookingId=bookingId;
   activePaymentToken=paymentToken;
 
+  /* STAGING_TERMINAL_PAYMENT_GUARD_V1 */
+  try{
+    const truthUrl='/api/customer/bookings/'+encodeURIComponent(bookingId)+(paymentToken?('?accessToken='+encodeURIComponent(paymentToken)):'');
+    const truth=await apiJson(truthUrl,{cache:'no-store'});
+    const truthBooking=truth?.booking||truth||{};
+    const truthStatus=String(truthBooking?.status||'').toLowerCase();
+    const truthPayment=String(truthBooking?.paymentStatus||truthBooking?.payment_status||'').toLowerCase();
+    if(['cancelled','declined','expired'].includes(truthStatus) || truthPayment==='refunded'){
+      if(panel){
+        panel.hidden=true;
+        panel.style.display='none';
+        panel.setAttribute('aria-hidden','true');
+      }
+      if(message) message.textContent='';
+      if(state) state.textContent='';
+      try{
+        const cleanUrl=new URL(window.location.href);
+        cleanUrl.searchParams.delete('pay');
+        window.history.replaceState({},'',cleanUrl.pathname+cleanUrl.search+cleanUrl.hash);
+      }catch{}
+      return;
+    }
+  }catch(err){
+    console.warn('terminal payment guard truth check failed',err?.message||err);
+  }
+
   try{
     const config=await apiJson('/api/config');
     const intent=await apiJson('/api/payments/create-intent',{
@@ -4085,9 +4160,35 @@ document.getElementById('confirmStripePaymentBtn')?.addEventListener('click',asy
 });
 
 // Attach payment initialization to the latest booking success.
+const rentinorbitPaymentWatchers=new Map();
+async function waitForSupplierApprovalThenPay(bookingId,paymentToken){
+  if(!bookingId||!paymentToken||rentinorbitPaymentWatchers.has(bookingId))return;
+  let attempts=0;
+  const tick=async()=>{
+    attempts++;
+    try{
+      const truth=await apiJson(`/api/customer/bookings/${encodeURIComponent(bookingId)}?accessToken=${encodeURIComponent(paymentToken)}`,{cache:'no-store'});
+      const status=String(truth?.booking?.status||'pending').toLowerCase();
+      if(status==='confirmed'){
+        rentinorbitPaymentWatchers.delete(bookingId);
+        await prepareStripePayment(bookingId,paymentToken);
+        return;
+      }
+      if(['declined','cancelled','expired'].includes(status)){rentinorbitPaymentWatchers.delete(bookingId);return;}
+    }catch(_){}
+    if(attempts<720){
+      const t=setTimeout(tick,5000);
+      rentinorbitPaymentWatchers.set(bookingId,t);
+    }else rentinorbitPaymentWatchers.delete(bookingId);
+  };
+  rentinorbitPaymentWatchers.set(bookingId,true);
+  tick();
+}
 document.addEventListener('rentinorbit:booking-created',e=>{
-  const {bookingId,paymentToken}=e.detail||{};
-  if(bookingId&&paymentToken) prepareStripePayment(bookingId,paymentToken);
+  const {bookingId,paymentToken,supplierResponseDueAt}=e.detail||{};
+  if(!bookingId||!paymentToken)return;
+  if(supplierResponseDueAt) waitForSupplierApprovalThenPay(bookingId,paymentToken);
+  else prepareStripePayment(bookingId,paymentToken);
 });
 
 // Patch the booking confirmation flow by observing the booking code/data from API.
@@ -4221,6 +4322,7 @@ function wireAuthoritativeCheckout(){
       const result=await createBookingWithSafeRetry({
           listingId:listing.id,
           startDate,endDate,quantity,
+          rentalStartTime:document.getElementById('rentalStartTime')?.value||null,
           status:'pending',
           customerName:customer.name,
           customerEmail:customer.email,
@@ -4327,6 +4429,14 @@ function wireAuthoritativeAuth(){
 }
 
 
+function renterMayCancelBookingV197(booking){
+  if(!['pending','confirmed'].includes(String(booking?.status||'')))return false;
+  const start=booking?.rentalStartAt
+    ? new Date(booking.rentalStartAt)
+    : new Date(String(booking?.startDate||'')+'T00:00:00Z');
+  return Number.isFinite(start.getTime()) && start.getTime()>Date.now();
+}
+
 async function loadCustomerBookingsSecure(){
   const list=document.getElementById('customerBookingsList');
   if(!list) return;
@@ -4351,7 +4461,7 @@ async function loadCustomerBookingsSecure(){
   bookings.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 
   list.innerHTML=bookings.map(b=>{
-    const canCancel=['pending','confirmed'].includes(b.status);
+    const canCancel=renterMayCancelBookingV197(b);
     const canReview=['returned','completed'].includes(b.status);
     return `
       <div class="customer-booking-card">
@@ -4368,7 +4478,7 @@ async function loadCustomerBookingsSecure(){
           <div><span>Total</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
           <div><span>Refund</span><b>${b.refundAmount!=null?money(b.refundAmount):'—'}</b></div>
         </div>
-        <p class="muted">${cancellationPolicyText(b.cancellationPolicy||'moderate')}</p>
+        <p class="muted">${cancellationPolicyText(b.cancellationPolicySnapshot||b.cancellationPolicy||'moderate',b.cancellationPolicyVersion)}</p>
         <div class="customer-booking-actions">
           ${canCancel?`<button class="secondary secure-customer-cancel" data-id="${b.bookingId}">Cancel booking</button>`:''}
           ${canReview?`<button class="primary secure-customer-review" data-id="${b.bookingId}">Leave review</button>`:''}
@@ -4387,8 +4497,12 @@ async function loadCustomerBookingsSecure(){
           body:JSON.stringify({reason,accessToken:token})
         });
         alert(`Booking cancelled. Refund: ${money(result.refundAmount||0)}.`);
+        const clean=new URL(window.location.href);
+        clean.searchParams.delete('pay');
+        window.history.replaceState({},'',clean.toString());
         await loadCustomerBookingsSecure();
         await refreshCardAvailability();
+        setTimeout(()=>window.location.reload(),250);
       }catch(err){alert(err.message);}
     });
   });
@@ -4576,7 +4690,7 @@ loadCustomerBookingsSecure=async function(){
   records.sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));
 
   list.innerHTML=records.map(({booking:b,timeline})=>{
-    const canCancel=['pending','confirmed'].includes(b.status);
+    const canCancel=renterMayCancelBookingV197(b);
     const canReview=['returned','completed'].includes(b.status);
     return `
       <div class="customer-booking-card">
@@ -4679,8 +4793,8 @@ renderUniversalListings=function(items=loadUniversalListings()){
         ${cover?`<img class="listing-card-cover" src="${cover}" alt="${escapeHtml(l.title)}">`:''}
         <button class="favorite-btn ${favorite?'active':''}" type="button" data-favorite-id="${escapeHtml(l.id)}" aria-pressed="${favorite?'true':'false'}" aria-label="${escapeHtml(uiText(favorite?'Remove from favorites':'Save to favorites'))}">${favorite?'♥':'♡'}</button>
         <small>${escapeHtml(ownerLabel)} · ${escapeHtml(l.city||'')}</small>
-        <h4>${escapeHtml(l.title)}</h4>
-        <p>${escapeHtml(l.description||uiText('Local rental listing'))}</p>
+        <h4 data-i18n-skip>${escapeHtml(l.title)}</h4>
+        <p ${l.description?'data-i18n-skip':''}>${escapeHtml(l.description||uiText('Local rental listing'))}</p>
 
         <div class="listing-meta">
           <div><span>${escapeHtml(uiText('Available'))}</span><b>${Number(l.quantity||0)}</b></div>
@@ -5279,7 +5393,7 @@ window.addEventListener('appinstalled',()=>{
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/service-worker.js?v=193').catch(err=>{
+    navigator.serviceWorker.register('/service-worker.js?v=203').catch(err=>{
       console.warn('Service worker registration failed',err);
     });
   });
@@ -5410,7 +5524,7 @@ async function loadUnifiedCustomerBookings(){
   }
 
   list.innerHTML=rows.map(({booking:b,timeline,guestAccess})=>{
-    const canCancel=['pending','confirmed'].includes(b.status);
+    const canCancel=renterMayCancelBookingV197(b);
     const canReview=['returned','completed'].includes(b.status);
     const canDispute=['active','returned','completed','cancelled','declined'].includes(b.status);
     return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">
@@ -5441,10 +5555,14 @@ async function loadUnifiedCustomerBookings(){
     const id=btn.dataset.id;
     const reason=prompt('Cancellation reason (optional):','')||null;
     try{
-      await apiJson(`/api/rentals/bookings/${encodeURIComponent(id)}/cancel`,{method:'POST',body:JSON.stringify({reason,accessToken:bookingAccessToken(id)})});
-      showToast('Booking cancelled','success',1600);
+      const result=await apiJson(`/api/rentals/bookings/${encodeURIComponent(id)}/cancel`,{method:'POST',body:JSON.stringify({reason,accessToken:bookingAccessToken(id)})});
+      showToast(`Booking cancelled. Refund: ${money(result.refundAmount||0)}.`,'success',2200);
+      const clean=new URL(window.location.href);
+      clean.searchParams.delete('pay');
+      window.history.replaceState({},'',clean.toString());
       await loadUnifiedCustomerBookings();
       await refreshCardAvailability();
+      setTimeout(()=>window.location.reload(),250);
     }catch(err){showToast(err.message,'error',2200)}
   }));
   list.querySelectorAll('.v89-open-dispute').forEach(btn=>btn.addEventListener('click',async()=>{
@@ -5595,6 +5713,7 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
 
 // --- V81: canonical startup deep-link router ---
 async function handleCustomerDeepLinkV81(){
+  try {
   const qs=new URLSearchParams(window.location.search);
   const bookingId=String(qs.get('booking')||'').trim();
   const access=String(qs.get('access')||'').trim();
@@ -5635,13 +5754,15 @@ async function handleCustomerDeepLinkV81(){
   }
 
   if(view==='my-bookings'){
+    const targetBooking=params.get('booking')||'',payNow=params.get('pay')==='1';
     await loadUnifiedCustomerBookings();
     document.getElementById('myBookingsBtn')?.click();
-    const clean=new URL(window.location.href);
-    clean.searchParams.delete('view');
-    history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);
-    return;
-  }
+    if(targetBooking){
+      document.querySelector(`.customer-booking-card[data-booking-id="${CSS.escape(targetBooking)}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});
+      if(payNow&&typeof prepareStripePayment==='function'){try{await prepareStripePayment(targetBooking,bookingAccessToken(targetBooking)||'');document.getElementById('securePaymentPanel')?.scrollIntoView({behavior:'smooth',block:'center'});}catch(err){showToast(err.message||'Unable to open payment.','error',2600);}}
+    }
+    const clean=new URL(window.location.href);['view','booking','pay'].forEach(k=>clean.searchParams.delete(k));history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);return;
+  } /* STAGING_BOOKING_PAYMENT_DEEPLINK_V2 */
 
   if(view==='supplier-bookings'){
     await refreshServerUser();
@@ -5649,7 +5770,34 @@ async function handleCustomerDeepLinkV81(){
       showToast('Sign in as the supplier to open booking management.','error',2600);
       return;
     }
+    if(typeof refreshLiveSupplierBookings==='function'){
+      await refreshLiveSupplierBookings();
+    }
     await renderBookings();
+
+    if(bookingId && typeof openLiveSupplierOrder==='function'){
+      let opened=false;
+      for(let attempt=0;attempt<8;attempt++){
+        const found=Array.isArray(liveSupplierBookings)
+          && liveSupplierBookings.some(b=>String(b.bookingId)===String(bookingId));
+        if(found){
+          openLiveSupplierOrder(bookingId);
+          opened=true;
+          break;
+        }
+        if(typeof refreshLiveSupplierBookings==='function') await refreshLiveSupplierBookings();
+        await new Promise(resolve=>setTimeout(resolve,120));
+      }
+      if(opened){
+        const clean=new URL(window.location.href);
+        clean.searchParams.delete('view');
+        clean.searchParams.delete('booking');
+        history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);
+        return;
+      }
+      showToast('Booking could not be opened automatically. It is still available in supplier bookings.','error',2600);
+    }
+
     const bookingSection=document.getElementById('supplierBookingsSection')
       || document.getElementById('bookingFilter')?.closest('section')
       || document.getElementById('bookingFilter')?.parentElement;
@@ -5659,6 +5807,7 @@ async function handleCustomerDeepLinkV81(){
     clean.searchParams.delete('view');
     history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);
   }
+  } finally { document.documentElement.classList.remove('rentinorbit-route-loading'); }
 }
 
 if(document.readyState==='loading'){
@@ -5877,3 +6026,107 @@ async function syncPublicPilotFee(){
   }catch{}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncPublicPilotFee,{once:true});else syncPublicPilotFee();
+
+
+/* STAGING_CUSTOMER_PAY_DEEPLINK_V1 */
+(function(){
+  async function wait(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
+
+  async function openCustomerPaymentDeepLink(){
+    try{
+      const qs=new URLSearchParams(window.location.search);
+      const bookingId=String(qs.get('booking')||'').trim();
+      const pay=String(qs.get('pay')||'')==='1';
+      if(!bookingId || !pay) return;
+
+      for(let i=0;i<30;i++){
+        if(typeof loadUnifiedCustomerBookings==='function' && typeof prepareStripePayment==='function') break;
+        await wait(100);
+      }
+      if(typeof loadUnifiedCustomerBookings!=='function' || typeof prepareStripePayment!=='function') return;
+
+      window.customerBookingFilter='all';
+      await loadUnifiedCustomerBookings();
+
+      const myBookingsButton=document.getElementById('myBookingsBtn');
+      if(myBookingsButton) myBookingsButton.click();
+      await wait(250);
+
+      let card=null;
+      try{
+        const escaped=(window.CSS&&typeof CSS.escape==='function')?CSS.escape(bookingId):bookingId.replace(/["\\\\]/g,'\\\\$&');
+        card=document.querySelector('.customer-booking-card[data-booking-id="'+escaped+'"]');
+      }catch(_){}
+
+      if(!card){
+        await loadUnifiedCustomerBookings();
+        await wait(150);
+        try{
+          const escaped=(window.CSS&&typeof CSS.escape==='function')?CSS.escape(bookingId):bookingId.replace(/["\\\\]/g,'\\\\$&');
+          card=document.querySelector('.customer-booking-card[data-booking-id="'+escaped+'"]');
+        }catch(_){}
+      }
+
+      if(card){
+        card.classList.add('deep-linked-booking');
+        card.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+
+      const token=(typeof bookingAccessToken==='function' ? String(bookingAccessToken(bookingId)||'') : '');
+      await prepareStripePayment(bookingId,token);
+      await wait(150);
+
+      const panel=document.getElementById('securePaymentPanel');
+      if(panel){
+        panel.hidden=false;
+        panel.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+    }catch(err){
+      console.warn('customer payment deep-link failed',err?.message||err);
+    }
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(openCustomerPaymentDeepLink,700),{once:true});
+  }else{
+    setTimeout(openCustomerPaymentDeepLink,700);
+  }
+})();
+
+
+// STAGING_CUSTOMER_PAY_INLINE_V2
+(function(){
+  if(typeof prepareStripePayment!=='function') return;
+  const previousPrepareStripePayment=prepareStripePayment;
+  prepareStripePayment=async function(bookingId,paymentToken){
+    const qs=new URLSearchParams(window.location.search);
+    const deepPay=qs.get('pay')==='1' && String(qs.get('booking')||'')===String(bookingId||'');
+    const panel=document.getElementById('securePaymentPanel');
+
+    if(deepPay && panel){
+      const raw=String(bookingId||'');
+      const escaped=(window.CSS&&typeof window.CSS.escape==='function')
+        ? window.CSS.escape(raw)
+        : raw.replace(/["\\]/g,'\\$&');
+      const card=document.querySelector('.customer-booking-card[data-booking-id="'+escaped+'"]');
+      if(card && panel.parentElement!==card){
+        panel.classList.add('staging-deeplink-payment-inline');
+        card.appendChild(panel);
+      }
+    }
+
+    const result=await previousPrepareStripePayment.apply(this,arguments);
+
+    if(deepPay && panel && !panel.hidden){
+      panel.style.marginTop='18px';
+      panel.scrollIntoView({behavior:'smooth',block:'center'});
+      try{
+        panel.setAttribute('tabindex','-1');
+        panel.focus({preventScroll:true});
+      }catch{}
+    }
+    return result;
+  };
+})();
+
+/* STAGING_CANCEL_UI_REFRESH_V1 */

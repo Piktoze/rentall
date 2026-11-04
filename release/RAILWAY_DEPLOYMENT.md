@@ -1,6 +1,6 @@
-# RentInOrbit RC45 Railway production deployment
+# RentInOrbit RC55 Railway deployment
 
-RC45 uses Railway Infrastructure as Code in `.railway/railway.ts`. It declares the GitHub `Piktoze/rentinorbit` `main` source, one European web replica, one 1 GB persistent volume mounted at `/data`, `npm start`, and `/api/readiness` as the deployment health check. `railway.toml` remains only as a compatibility fallback for an already-existing legacy service; Railway has deprecated that format for new services.
+RC55 uses Railway Infrastructure as Code in `.railway/railway.ts`. Production remains pinned to GitHub `main`; staging is pinned to `staging/v203`. Both use one European web replica and the persistent `/data` volume. Staging additionally mounts a separate `/backups` volume. The deprecated `railway.toml` and `railway.json` formats are intentionally absent.
 
 ## Storage and startup contract
 
@@ -46,8 +46,8 @@ Prefer a least-privilege Stripe restricted key and store all secret values only 
 1. Install Railway CLI 5.63 or newer and authenticate with `railway login`.
 2. Link or create the intended Railway project and production environment.
 3. Add the preserved variables above, enable public networking, and choose the generated/custom HTTPS domain for both URL variables.
-4. Run `railway config plan` and verify it adds one `rentinorbit` service and one `rentinorbit-data` volume without deleting unrelated resources.
-5. Run `railway config apply`. The service builds from GitHub `main`; startup initializes the mounted database and migration 172 before listening.
+4. Run `railway config plan --environment <target>` and verify it updates the existing `rentall` service and `rentall-volume` without deleting or replacing either resource. A staging plan may add only the separate `rentinorbit-backups` volume.
+5. Apply only the reviewed, non-destructive plan. Production builds from `main`; staging builds from `staging/v203`. Startup initializes the mounted database and migration 184 before listening.
 6. Confirm `/healthz` and `/api/readiness` return 200, then run `npm run smoke:production -- https://<domain>` from this repository.
 
 ## Operations, backup, and rollback
@@ -68,7 +68,7 @@ Staging is exempt from the backup launch gate. Before switching to public produc
 
 - Set `DB_BACKUP_ENABLED=true`.
 - Schedule `npm run backup:auto` at least daily in an environment that can access the mounted `/data` volume.
-- Keep backups under `/data/backups` or set `BACKUP_DIR` explicitly.
-- The command uses SQLite online backup and runs `PRAGMA integrity_check`; success writes `/data/backups/last-verified-backup.json`.
+- Keep staging backups on the separately mounted `/backups` volume. Never use a directory inside `/data` as the automated backup destination.
+- The command uses SQLite online backup and runs `PRAGMA integrity_check`; success writes `/backups/last-verified-backup.json` in staging.
 - `/api/launch-readiness` blocks public production when no verified backup evidence exists or it is older than `DB_BACKUP_MAX_AGE_HOURS` (default 30 hours).
-- An on-volume backup protects against application/schema mistakes but not total volume loss; copy verified backups to encrypted off-site storage as part of the production operations plan.
+- The separate backup volume protects against application/schema mistakes affecting the primary volume; encrypted off-site copies remain required for production disaster recovery.

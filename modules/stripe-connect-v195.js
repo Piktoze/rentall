@@ -156,8 +156,7 @@ export async function refundDirectCharge(stripe,{
   amountCents,
   bookingId,
   idempotencyKey,
-  reason='requested_by_customer',
-  metadataReason=null
+  reason='requested_by_customer'
 }={}){
   const amount=Number(amountCents);
   if(!Number.isInteger(amount)||amount<=0) throw new Error('amountCents must be a positive integer');
@@ -166,10 +165,7 @@ export async function refundDirectCharge(stripe,{
     amount,
     refund_application_fee:true,
     reason,
-    metadata:{
-      bookingId:String(bookingId||''),
-      ...(metadataReason?{reason:String(metadataReason)}:{})
-    }
+    metadata:{bookingId:String(bookingId||'')}
   },connectedRequestOptions(accountId,{idempotencyKey}));
 }
 

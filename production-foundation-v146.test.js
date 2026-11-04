@@ -8,13 +8,13 @@ const ok=(value,message)=>{if(!value)throw new Error(message)};
 const pkg=JSON.parse(fs.readFileSync('./package.json','utf8'));
 const server=fs.readFileSync('./server.js','utf8');
 const db=fs.readFileSync('./db.js','utf8');
-const railway=fs.readFileSync('./railway.toml','utf8');
+const railway=fs.readFileSync('./.railway/railway.ts','utf8');
 const runbook=fs.readFileSync('./release/RAILWAY_DEPLOYMENT.md','utf8');
 
 ok(Number(pkg.version.split('.').at(-1))>=44,'RC44 or newer version');
 ok(pkg.dependencies.stripe.startsWith('^22.6.'),'current Stripe SDK');
-ok(/healthcheckPath = "\/(healthz|api\/readiness)"/.test(railway),'Railway health check');
-ok(railway.includes('restartPolicyType = "ON_FAILURE"'),'Railway restart policy');
+ok(railway.includes("healthcheck:'/api/readiness'"),'Railway health check');
+ok(railway.includes("start:'npm start'"),'Railway start command');
 ok(db.includes('schema_migrations')&&db.includes("146,'rc44-production-foundation'"),'migration 146');
 ok(db.includes("wal_checkpoint(TRUNCATE)")&&db.includes('closeDatabase'),'restart-safe database close');
 ok(server.includes("apiVersion:'2026-08-26.dahlia'"),'Stripe API version');

@@ -1,2 +1,13 @@
-import fs from 'fs';const s=fs.readFileSync('./server.js','utf8'),p=JSON.parse(fs.readFileSync('./package.json','utf8'));function ok(v,m){if(!v)throw new Error(m)}
-ok(p.version.startsWith('1.0.0-rc.')||p.version.startsWith('0.'),'version');ok(s.includes("idempotencyKey:`booking:${booking.bookingId}:rental-payment`"),'payment intent idempotency missing');ok(s.includes('if(!booking.stripeRefundId)'),'persisted refund guard missing');ok(s.includes("idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`"),'cancellation refund idempotency missing');ok(s.includes("new Set(['expired','cancelled','declined'])"),'terminal late-payment states missing');ok(s.includes("metadataReason:`late_payment_after_${booking.status}`"),'late payment refund reason missing');ok(s.includes("idempotencyKey:`booking:${bookingId}:late-terminal-refund`"),'late refund idempotency missing');console.log('PASS: V84 payment race checks passed.');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const server=fs.readFileSync('./server.js','utf8');
+const direct=fs.readFileSync('./modules/stripe-connect-v195.js','utf8');
+// v195 direct-charge architecture: booking-bound and idempotent requests.
+assert.match(server,/idempotencyKey:`booking:\$\{booking\.bookingId\}:rental-payment`/,'rental payment intent idempotency');
+assert.match(server,/BOOKING_PAYMENT_FINAL/,'reject already paid/refunded checkout');
+assert.match(server,/if\(!booking\.stripeRefundId\)/,'persisted refund guard');
+assert.match(server,/idempotencyKey:`booking:\$\{booking\.bookingId\}:cancellation-refund:\$\{cents\}`/,'cancellation refund idempotency');
+assert.match(server,/idempotencyKey:`booking:\$\{bookingId\}:late-terminal-refund`/,'late terminal refund idempotency');
+assert.match(server,/new Set\(\['expired','cancelled','declined'\]\)/,'late payment terminal states');
+assert.match(direct,/connectedRequestOptions\(accountId,\{idempotencyKey\}\)/,'Stripe connected-account binding and idempotency');
+console.log('PASS: payment race static gate aligned to V195 Direct Charges');

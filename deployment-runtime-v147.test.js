@@ -12,14 +12,13 @@ const server=fs.readFileSync('./server.js','utf8');
 const db=fs.readFileSync('./db.js','utf8');
 const start=fs.readFileSync('./ops/start.js','utf8');
 const publicSmoke=fs.readFileSync('./release/smoke-production.mjs','utf8');
-const railway=fs.readFileSync('./railway.toml','utf8');
 const railwayIac=fs.readFileSync('./.railway/railway.ts','utf8');
 const runbook=fs.readFileSync('./release/RAILWAY_DEPLOYMENT.md','utf8');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-v147-'));
 const base={NODE_ENV:'production',APP_URL:'https://rentinorbit.example',PUBLIC_BASE_URL:'https://rentinorbit.example',SESSION_SECRET:'R4nD0m!aB3cD4eF5gH6iJ7kL8mN9pQ2rS',TRUST_PROXY_HOPS:'1',RENTINORBIT_DB_PATH:path.join(temp,'rentinorbit.sqlite'),UPLOADS_DIR:path.join(temp,'uploads'),RAILWAY_VOLUME_MOUNT_PATH:temp,DATABASE_URL:'',DB_PATH:'',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'rk_test_deployment_restricted',STRIPE_PUBLISHABLE_KEY:'pk_test_deployment_public',STRIPE_WEBHOOK_SECRET:'whsec_deployment_signature',STRIPE_CONNECT_V2_PROVISIONING:'true',EMAIL_PROVIDER:'resend',EMAIL_FROM:'RentInOrbit <bookings@rentinorbit.example>',RESEND_API_KEY:'re_deployment_secret',EMAIL_WORKER_ENABLED:'true',EMAIL_WORKER_TOKEN:'V4lid-Worker-Token-2026-RentInOrbit-ghijkl!',SUPPORT_EMAIL:'support@rentinorbit.example',MAPS_PROVIDER:'stub',SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled'};
 
 try{
-  ok(/^1\.0\.0-rc\.(?:4[5-9]|[5-9]\d|\d{3,})$/.test(pkg.version),'RC45 or newer version');
+  ok(pkg.version==='1.0.0-rc.55','v203 release-candidate version');
   ok(pkg.devDependencies.railway.startsWith('^3.16.'),'current Railway IaC SDK');
   ok(pkg.scripts.start==='node ops/start.js','validated startup command');
   ok(productionConfigReport(base).ready,'valid deployment configuration');
@@ -34,15 +33,22 @@ try{
   ok(!resolveDatabaseConfig({...base,DATABASE_URL:'sqlite:///data/other.sqlite'}).ok,'ambiguous database settings blocked');
   ok(!productionStorageReport({...base,RAILWAY_VOLUME_MOUNT_PATH:'/missing-rentinorbit-volume',RENTINORBIT_DB_PATH:'/missing-rentinorbit-volume/rentinorbit.sqlite',UPLOADS_DIR:'/missing-rentinorbit-volume/uploads'}).ready,'missing volume blocked');
 
-  ok(railway.includes('builder = "RAILPACK"'),'Railpack builder');
-  ok(railway.includes('healthcheckPath = "/api/readiness"'),'Railway readiness healthcheck');
-  ok(railwayIac.includes("github('Piktoze/rentinorbit',{branch:'main'})"),'GitHub main deployment source');
-  ok(railwayIac.includes("volumeMounts:{'/data':data}")&&railwayIac.includes("replicas:{'europe-west4':1}"),'single-replica persistent volume');
+  ok(!fs.existsSync('./railway.toml')&&!fs.existsSync('./railway.json'),'deprecated Railway manifests removed');
+  ok(railwayIac.includes("build:'node --check server.js")&&railwayIac.includes("healthcheck:'/api/readiness'"),'Railway build and readiness healthcheck');
+  ok(railwayIac.includes("staging?'staging/v203':'main'"),'environment-specific GitHub source');
+  ok(railwayIac.includes("'/data':data")&&railwayIac.includes('replicas:{iad:1}'),'single-replica persistent volume');
   ok(railwayIac.includes("RENTINORBIT_DB_PATH:'/data/rentinorbit.sqlite'")&&railwayIac.includes("UPLOADS_DIR:'/data/uploads'"),'persistent runtime paths');
   const railwayDefinition=await railwayProgram(createRailwayContext({environment:'production',environmentName:'production'}),project);
-  ok(railwayDefinition.name==='rentinorbit'&&railwayDefinition.resources.some(resource=>resource.type==='service'&&resource.name==='rentinorbit')&&railwayDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentinorbit-data'),'Railway IaC evaluates to service and volume');
+  const stagingDefinition=await railwayProgram(createRailwayContext({environment:'staging',environmentName:'staging'}),project);
+  const productionService=railwayDefinition.resources.find(resource=>resource.type==='service'&&resource.name==='rentall');
+  const stagingService=stagingDefinition.resources.find(resource=>resource.type==='service'&&resource.name==='rentall');
+  ok(railwayDefinition.name==='nurturing-strength'&&productionService&&railwayDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentall-volume'),'Railway IaC evaluates to existing production service and volume');
+  ok(productionService.source.branch==='main','production remains pinned to main');
+  ok(stagingService?.source?.branch==='staging/v203','staging is pinned to staging/v203');
+  ok(stagingDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentinorbit-backups'),'staging has a separate backup volume');
+  ok(stagingService?.volumeAttachments?.['rentinorbit-backups']?.mountPath==='/backups','backup volume mount');
   ok(start.includes('assertProductionConfig')&&start.includes('assertProductionStorage')&&start.includes("await import('../server.js')"),'fail-closed startup orchestration');
-  ok(db.includes('REQUIRED_SCHEMA_VERSION=184')&&db.includes('v195-direct-charges-accounts-v2'),'migration 184');
+  ok(db.includes('REQUIRED_SCHEMA_VERSION=184')&&db.includes('v195-direct-charges-accounts-v2'),'current schema and migration marker');
   ok(server.includes('runtimeConfig.uploadsDir'),'persistent uploads');
   ok(server.includes('stripe.webhooks.constructEvent'),'signed Stripe webhooks');
   ok(server.includes('verifyBookingPaymentToken'),'guest booking token protection');

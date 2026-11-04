@@ -1,0 +1,13 @@
+{
+  "version": "v202-staging-deployment-candidate",
+  "base": "RentInOrbit_v201_merged_staging_hotfixes_2026-11-03.zip",
+  "files_changed": [
+    "server.js",
+    "railway.toml",
+    "staging-predeploy-v202.test.cjs"
+  ],
+  "staging_only": true,
+  "production_touched": false,
+  "npm_ci_tested": false,
+  "source_sha256": "70d02b2b10e3b3c66376e6e4526315b759162501230ca7c6fc33eda36b9f31e1"
+}

@@ -7,7 +7,7 @@ const sourceChecks=[
   {id:'source_server',required:true,ready:fs.existsSync('server.js')},
   {id:'source_frontend',required:true,ready:fs.existsSync('index.html')&&fs.existsSync('app.js')},
   {id:'env_template',required:true,ready:fs.existsSync('.env.example')},
-  {id:'railway_config',required:true,ready:fs.existsSync('railway.toml')},
+  {id:'deprecated_railway_config_removed',required:true,ready:!fs.existsSync('railway.toml')&&!fs.existsSync('railway.json')},
   {id:'railway_iac',required:true,ready:fs.existsSync('.railway/railway.ts')},
   {id:'validated_startup',required:true,ready:fs.existsSync('ops/start.js')},
   {id:'public_smoke',required:true,ready:fs.existsSync('release/smoke-production.mjs')},

@@ -18,6 +18,10 @@ try{
     notifications:config.notifications
   }));
   await import('../server.js');
+  if(String(process.env.BACKUP_SCHEDULER_ENABLED||'').toLowerCase()==='true'){
+    const {startBackupScheduler}=await import('./backup-scheduler.js');
+    startBackupScheduler();
+  }
 }catch(error){
   const report=productionConfigReport();
   console.error(JSON.stringify({

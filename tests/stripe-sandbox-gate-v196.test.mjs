@@ -106,11 +106,10 @@ await check('10/15 €40 partial refund leaves €60 net, €9 fee, €51 suppli
 });
 
 await check('11/15 Partial refund request is executed on supplier account and refunds application fee',async()=>{
-  await refundDirectCharge(fakeStripe,{accountId:'acct_supplier_123',paymentIntentId:'pi_pay_123',amountCents:4000,bookingId:booking.bookingId,metadataReason:'late_payment_after_expired',idempotencyKey:'booking:100:refund:4000'});
+  await refundDirectCharge(fakeStripe,{accountId:'acct_supplier_123',paymentIntentId:'pi_pay_123',amountCents:4000,bookingId:booking.bookingId,idempotencyKey:'booking:100:refund:4000'});
   const call=calls.filter(x=>x.op==='refunds.create').at(-1);
   assert.equal(call.payload.amount,4000);
   assert.equal(call.payload.refund_application_fee,true);
-  assert.equal(call.payload.metadata.reason,'late_payment_after_expired');
   assert.equal(call.opts.stripeAccount,'acct_supplier_123');
   assert.equal('reverse_transfer' in call.payload,false);
 });

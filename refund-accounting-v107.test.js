@@ -1,1 +1,15 @@
-import fs from'fs';const d=fs.readFileSync('./db.js','utf8'),s=fs.readFileSync('./server.js','utf8'),p=JSON.parse(fs.readFileSync('./package.json','utf8'));function ok(v,m){if(!v)throw new Error(m)}ok(p.version.startsWith('1.0.0-rc.'),'version');ok(d.includes("payment_status=CASE"),'payment refund state');ok(d.includes("'partially_refunded'"),'partial refund state');ok(d.includes("refund_amount=CASE"),'refund amount persistence');ok(s.includes('remaining=Math.max(0,orderValue-alreadyRefunded)'),'remaining balance');ok(s.includes('Math.min(requested,remaining)'),'refund cap');ok(s.includes('refundAmount:cents/100'),'actual cancellation refund');ok(s.includes('refundAmount:Number(booking.orderValue||0)'),'late full refund amount');console.log('PASS: V107 refund accounting checks passed.');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const db=fs.readFileSync('./db.js','utf8');
+const server=fs.readFileSync('./server.js','utf8');
+const direct=fs.readFileSync('./modules/stripe-connect-v195.js','utf8');
+assert.match(db,/payment_status=CASE/,'payment refund state');
+assert.match(db,/'partially_refunded'/,'partial refund status');
+assert.match(db,/refund_amount=CASE/,'refund amount persistence');
+assert.match(server,/remaining=Math\.max\(0,orderValue-alreadyRefunded\)/,'remaining balance calculation');
+assert.match(server,/Math\.round\(Math\.min\(requested,remaining\)\*100\)/,'refund amount capped to unpaid amount in cents');
+assert.match(server,/refundAmount:cents\/100/,'persisted actual refund');
+assert.match(server,/forceFullRefund,\s*refundAmountOverride:refundAmount/,'supplier refund decision passed to database');
+assert.match(direct,/refund_application_fee:true/,'application fee reversal flag');
+assert.match(direct,/amountCents must be a positive integer/,'reject invalid refund amount');
+console.log('PASS: refund accounting static gate aligned to V195 Direct Charges');

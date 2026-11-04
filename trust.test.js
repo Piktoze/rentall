@@ -9,7 +9,7 @@ const {
   db, upsertRentalListing, createRentalBookingAtomic,
   cancelRentalBookingWithRefund, getAvailability,
   markRentalReturned, updateRentalBookingStatus,
-  createRentalReview
+  createRentalReview, setBookingPaymentDetails
 }=await import('./db.js');
 
 function assert(v,msg){ if(!v) throw new Error(msg); }
@@ -54,6 +54,10 @@ try{
     status:'confirmed',
     customerName:'Reviewer',
     orderValue:50
+  });
+  setBookingPaymentDetails({
+    bookingId:'return-me',paymentIntentId:'pi_test_return',paymentStatus:'paid',
+    platformFeeAmount:7.5,supplierAmount:42.5,paymentProvider:'stripe'
   });
   updateRentalBookingStatus('return-me','active');
   const returned=markRentalReturned('return-me','good','All fine');

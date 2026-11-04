@@ -7,6 +7,7 @@ import {assertProductionConfig,assertProductionStorage,runtimeConfig} from './co
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
 import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
+import {policyVersion,refundFromBooking} from './modules/cancellation-policy-v197.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -161,7 +162,12 @@ for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN supplier_response_due_at TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN supplier_reminder_stage INTEGER DEFAULT 0`,
   `ALTER TABLE rental_bookings ADD COLUMN supplier_responded_at TEXT`,
-  `ALTER TABLE rental_bookings ADD COLUMN supplier_auto_declined_at TEXT`
+  `ALTER TABLE rental_bookings ADD COLUMN supplier_auto_declined_at TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN rental_start_at TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN rental_start_time TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN rental_time_zone TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN cancellation_policy_snapshot TEXT`,
+  `ALTER TABLE rental_bookings ADD COLUMN cancellation_policy_version TEXT`
 ]) {
   try { db.exec(sql); } catch (err) {
     if (!String(err.message).includes('duplicate column name')) throw err;
@@ -422,8 +428,12 @@ const insertRentalBookingStmt = db.prepare(`
   )
 `);
 
+const saveBookingTermsStmt=db.prepare(`UPDATE rental_bookings SET rental_start_at=?, rental_start_time=?, rental_time_zone=?, cancellation_policy_snapshot=?, cancellation_policy_version=? WHERE booking_id=?`);
+
 const rentalBookingStmt = db.prepare(`
   SELECT booking_id AS bookingId, listing_id AS listingId, start_date AS startDate,
+         rental_start_at AS rentalStartAt, rental_start_time AS rentalStartTime, rental_time_zone AS rentalTimeZone,
+         cancellation_policy_snapshot AS cancellationPolicySnapshot, cancellation_policy_version AS cancellationPolicyVersion,
          end_date AS endDate, quantity, status, created_at AS createdAt,
          updated_at AS updatedAt, cancelled_at AS cancelledAt,
          returned_at AS returnedAt, cancellation_reason AS cancellationReason,
@@ -476,6 +486,8 @@ const listRentalBookingsStmt = db.prepare(`
   SELECT rb.booking_id AS bookingId,
          rb.listing_id AS listingId,
          rb.start_date AS startDate,
+         rb.rental_start_at AS rentalStartAt, rb.rental_start_time AS rentalStartTime, rb.rental_time_zone AS rentalTimeZone,
+         rb.cancellation_policy_snapshot AS cancellationPolicySnapshot, rb.cancellation_policy_version AS cancellationPolicyVersion,
          rb.end_date AS endDate,
          rb.quantity,
          rb.status,
@@ -581,7 +593,8 @@ export function createRentalBookingAtomic({
   contactPerson=null,
   deliveryInstructions=null,
   orderValue=null,
-  holdMinutes=30
+  holdMinutes=30,
+  rentalStartAt=null, rentalStartTime=null, rentalTimeZone=null
 }) {
   const paymentToken=crypto.randomBytes(24).toString('hex');
   const paymentTokenHash=crypto.createHash('sha256').update(paymentToken).digest('hex');
@@ -632,9 +645,10 @@ export function createRentalBookingAtomic({
       delivery_instructions: deliveryInstructions,
       order_value: orderValue == null ? null : Number(orderValue),
       payment_token_hash: paymentTokenHash,
-      expires_at: expiresAt,
+      expires_at: listing.bookingMode==='instant'?expiresAt:null,
       supplier_response_due_at: supplierResponseDueAt
     });
+    saveBookingTermsStmt.run(rentalStartAt,rentalStartTime,rentalTimeZone,listing.cancellationPolicy||'moderate',rentalStartAt?policyVersion(listing.cancellationPolicy||'moderate'):'moderate-legacy-v1',bookingId);
 
     return {
       booking: rentalBookingStmt.get(bookingId),
@@ -669,6 +683,12 @@ const ALLOWED_TRANSITIONS = {
 export function updateRentalBookingStatus(bookingId, status, reason = null) {
   const booking = rentalBookingStmt.get(bookingId);
   if (!booking) return null;
+
+  if (status === 'active' && String(booking.paymentStatus || '').toLowerCase() !== 'paid') {
+    const err = new Error('Payment must be completed before the rental can be handed over');
+    err.code = 'PAYMENT_REQUIRED_BEFORE_ACTIVE';
+    throw err;
+  }
 
   if (!ALLOWED_BOOKING_STATUSES.has(status)) {
     const err = new Error('Invalid booking status');
@@ -799,31 +819,11 @@ const ratingSummaryStmt = db.prepare(`
   WHERE listing_id=?
 `);
 
-export function calculateRefundAmount(booking, policy, now = new Date()) {
-  const value = Number(booking?.orderValue || 0);
-  if (!value) return 0;
-
-  const start = new Date(booking.startDate + 'T00:00:00Z');
-  const hoursUntil = (start - now) / 3600000;
-
-  if (policy === 'flexible') {
-    if (hoursUntil >= 24) return value;
-    if (hoursUntil > 0) return value * 0.5;
-    return 0;
-  }
-
-  if (policy === 'strict') {
-    if (hoursUntil >= 168) return value * 0.5;
-    return 0;
-  }
-
-  // moderate
-  if (hoursUntil >= 72) return value;
-  if (hoursUntil >= 24) return value * 0.5;
-  return 0;
+export function calculateRefundAmount(booking,policy,now=new Date()) {
+  return refundFromBooking(booking,booking?.cancellationPolicySnapshot||policy,now);
 }
 
-export function cancelRentalBookingWithRefund(bookingId, reason = null, now = new Date()) {
+export function cancelRentalBookingWithRefund(bookingId, reason = null, now = new Date(), {forceFullRefund=false,refundAmountOverride=null}={}) {
   const booking = rentalBookingStmt.get(bookingId);
   if (!booking) return null;
   if (!['pending','confirmed'].includes(booking.status)) {
@@ -832,8 +832,13 @@ export function cancelRentalBookingWithRefund(bookingId, reason = null, now = ne
     throw err;
   }
   const listing=getRentalListing(booking.listingId);
-  const policy=listing?.cancellationPolicy || 'moderate';
-  const refund=calculateRefundAmount(booking, policy, now);
+  const policy=booking.cancellationPolicySnapshot || listing?.cancellationPolicy || 'moderate';
+  const calculatedRefund=forceFullRefund
+    ? Math.max(0,Number(booking.orderValue||0))
+    : calculateRefundAmount(booking, policy, now);
+  const refund=Number.isFinite(refundAmountOverride)
+    ? Math.min(Math.max(0,Number(refundAmountOverride)),Math.max(0,Number(booking.orderValue||0)))
+    : calculatedRefund;
 
   setRefundStmt.run({
     booking_id: bookingId,
@@ -1092,6 +1097,8 @@ const listCustomerBookingsStmt=db.prepare(`
   SELECT rb.booking_id AS bookingId,
          rb.listing_id AS listingId,
          rb.start_date AS startDate,
+         rb.rental_start_at AS rentalStartAt, rb.rental_start_time AS rentalStartTime, rb.rental_time_zone AS rentalTimeZone,
+         rb.cancellation_policy_snapshot AS cancellationPolicySnapshot, rb.cancellation_policy_version AS cancellationPolicyVersion,
          rb.end_date AS endDate,
          rb.quantity,
          rb.status,

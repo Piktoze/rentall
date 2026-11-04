@@ -1,0 +1,712 @@
+[
+  {
+    "name": "account-dispute-auth.test.js",
+    "ok": true,
+    "out": "PASS: V90 account dispute authorization checks passed.\n"
+  },
+  {
+    "name": "architecture-v112.test.js",
+    "ok": false,
+    "out": "                                                                                                                    ^\n\nError: core app reduced\n    at ok (file:///mnt/data/work_rentinorbit/architecture-v112.test.js:1:344)\n    at file:///mnt/data/work_rentinorbit/architecture-v112.test.js:1:405\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "audit.test.js",
+    "ok": true,
+    "out": "PASS: V33 static audit checks passed.\n"
+  },
+  {
+    "name": "auth-accessibility.test.js",
+    "ok": true,
+    "out": "PASS: V52 auth-abuse and mobile accessibility checks passed.\n"
+  },
+  {
+    "name": "auth.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "authoritative-finance-v96.test.js",
+    "ok": true,
+    "out": "PASS: V96 authoritative finance checks passed.\n"
+  },
+  {
+    "name": "availability-api.test.js",
+    "ok": true,
+    "out": "PASS: V62 live availability validation/cache safety checks passed.\n"
+  },
+  {
+    "name": "availability.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "backup-launch-gate-v172.test.js",
+    "ok": true,
+    "out": "PASS V172 DB backup launch blocker and verified backup workflow\n"
+  },
+  {
+    "name": "booking-access.test.js",
+    "ok": true,
+    "out": "PASS: V91 shared booking access checks passed.\n"
+  },
+  {
+    "name": "booking-command-v140.test.js",
+    "ok": true,
+    "out": "PASS V140\n"
+  },
+  {
+    "name": "booking-confirmation.test.js",
+    "ok": true,
+    "out": "PASS: V68 booking confirmation UX checks passed.\n"
+  },
+  {
+    "name": "booking-date-safety.test.js",
+    "ok": true,
+    "out": "PASS: V66 booking date safety checks passed.\n"
+  },
+  {
+    "name": "booking-email.test.js",
+    "ok": true,
+    "out": "PASS: V70 booking email confirmation checks passed.\n"
+  },
+  {
+    "name": "booking-idempotency.test.js",
+    "ok": true,
+    "out": "PASS: V57 booking idempotency checks passed.\n"
+  },
+  {
+    "name": "booking-integrity.test.js",
+    "ok": true,
+    "out": "PASS: V58 booking route integrity and duplicate-submit protection checks passed.\n"
+  },
+  {
+    "name": "booking-portal.test.js",
+    "ok": true,
+    "out": "PASS: V46 unified booking portal/access checks passed.\n"
+  },
+  {
+    "name": "booking-retry.test.js",
+    "ok": true,
+    "out": "PASS: V59 booking retry resilience checks passed.\n"
+  },
+  {
+    "name": "booking-safe-retry.test.js",
+    "ok": true,
+    "out": "PASS: V61 safe idempotent booking retry checks passed.\n"
+  },
+  {
+    "name": "booking-status-email.test.js",
+    "ok": true,
+    "out": "PASS: V71 booking status email checks passed.\n"
+  },
+  {
+    "name": "brand-integrity-v186.test.js",
+    "ok": true,
+    "out": "PASS: V186 public brand integrity\n"
+  },
+  {
+    "name": "browser-e2e-v113.test.js",
+    "ok": true,
+    "out": "PASS: V113 browser E2E harness checks passed.\n"
+  },
+  {
+    "name": "cancellation-v197.test.js",
+    "ok": true,
+    "out": "PASS cancellation V197: policy boundaries, legacy version, timezone, DST, guard contracts\n"
+  },
+  {
+    "name": "checkout-confidence-v132.test.js",
+    "ok": true,
+    "out": "PASS V132\n"
+  },
+  {
+    "name": "checkout-lock.test.js",
+    "ok": true,
+    "out": "PASS: V60 live checkout lock lifecycle checks passed.\n"
+  },
+  {
+    "name": "checkout-price-ux.test.js",
+    "ok": true,
+    "out": "PASS: V67 checkout price transparency checks passed.\n"
+  },
+  {
+    "name": "confirmation-actions.test.js",
+    "ok": true,
+    "out": "PASS: V69 booking confirmation action checks passed.\n"
+  },
+  {
+    "name": "customer-booking-hub-v127.test.js",
+    "ok": true,
+    "out": "PASS V127\n"
+  },
+  {
+    "name": "customer-bookings.test.js",
+    "ok": true,
+    "out": "PASS: V45 booking-history privacy/account checks passed.\n"
+  },
+  {
+    "name": "customer-detail-v92.test.js",
+    "ok": true,
+    "out": "PASS: V92 customer detail experience checks passed.\n"
+  },
+  {
+    "name": "customer-dispute-ux.test.js",
+    "ok": true,
+    "out": "PASS: V89 customer dispute UX checks passed.\n"
+  },
+  {
+    "name": "customer-handoff-v145.test.js",
+    "ok": true,
+    "out": "PASS V145 customer handoff\n"
+  },
+  {
+    "name": "customer-journey-v103.test.js",
+    "ok": true,
+    "out": "PASS: V103 customer journey checks passed.\n"
+  },
+  {
+    "name": "customer-journey-v120.test.js",
+    "ok": true,
+    "out": "PASS: V120 customer journey shell checks passed.\n"
+  },
+  {
+    "name": "customer-ux.test.js",
+    "ok": true,
+    "out": "PASS: V56 customer discovery/mobile UX checks passed.\n"
+  },
+  {
+    "name": "deep-audit.test.js",
+    "ok": true,
+    "out": "PASS: V74 deep audit guards passed.\n"
+  },
+  {
+    "name": "deep-link-routing.test.js",
+    "ok": true,
+    "out": "PASS: V81 deep-link routing checks passed.\n"
+  },
+  {
+    "name": "demo-data-v104.test.js",
+    "ok": true,
+    "out": "PASS: V104 demo-data removal checks passed.\n"
+  },
+  {
+    "name": "deployment-runtime-v147.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "deposit-finalization-v100.test.js",
+    "ok": false,
+    "out": "                                                                                               ^\n\nError: authorization release\n    at ok (file:///mnt/data/work_rentinorbit/deposit-finalization-v100.test.js:1:187)\n    at file:///mnt/data/work_rentinorbit/deposit-finalization-v100.test.js:1:361\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "deposit-lifecycle-v98.test.js",
+    "ok": true,
+    "out": "PASS: V98 deposit lifecycle checks passed.\n"
+  },
+  {
+    "name": "deposit-stripe-v99.test.js",
+    "ok": false,
+    "out": "                                                                                                                    ^\n\nError: manual capture\n    at ok (file:///mnt/data/work_rentinorbit/deposit-stripe-v99.test.js:1:187)\n    at file:///mnt/data/work_rentinorbit/deposit-stripe-v99.test.js:1:460\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "deposit-v97.test.js",
+    "ok": true,
+    "out": "PASS: V97 security deposit foundation checks passed.\n"
+  },
+  {
+    "name": "deposit-webhook-v134.test.js",
+    "ok": true,
+    "out": "PASS V134 deposit webhook lifecycle\n"
+  },
+  {
+    "name": "discovery-integrity.test.js",
+    "ok": true,
+    "out": "PASS: V50 discovery-filter integrity and motion accessibility checks passed.\n"
+  },
+  {
+    "name": "dispute-lifecycle.test.js",
+    "ok": true,
+    "out": "PASS: V79 dispute lifecycle checks passed.\n"
+  },
+  {
+    "name": "dom-safety.test.js",
+    "ok": true,
+    "out": "PASS: V51 residual DOM-XSS and live-result accessibility checks passed.\n"
+  },
+  {
+    "name": "email-dedupe.test.js",
+    "ok": true,
+    "out": "PASS: V72 email deduplication checks passed.\n"
+  },
+  {
+    "name": "email-readiness.test.js",
+    "ok": true,
+    "out": "PASS: V54 transactional-email outbox and production-readiness checks passed.\n"
+  },
+  {
+    "name": "email-worker-v139.test.js",
+    "ok": true,
+    "out": "PASS V139\n"
+  },
+  {
+    "name": "email-worker.test.js",
+    "ok": true,
+    "out": "PASS: V55 transactional email worker/retry security checks passed.\n"
+  },
+  {
+    "name": "expiration.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "expiry-lifecycle-v108.test.js",
+    "ok": true,
+    "out": "PASS: V108 expiry lifecycle checks passed.\n"
+  },
+  {
+    "name": "fixed-header-v170.test.cjs",
+    "ok": true,
+    "out": "PASS V173 sticky primary header without content overlap\n"
+  },
+  {
+    "name": "full-demo-v180.test.js",
+    "ok": false,
+    "out": ":///mnt/data/work_rentinorbit/full-demo-v180.test.js:2\nfunction ok(v,m){if(!v)throw new Error(m)}\n                             ^\n\nError: schema version\n    at ok (file:///mnt/data/work_rentinorbit/full-demo-v180.test.js:2:30)\n    at file:///mnt/data/work_rentinorbit/full-demo-v180.test.js:9:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "geo.test.js",
+    "ok": true,
+    "out": "PASS: V37 geo search and map static checks passed.\n"
+  },
+  {
+    "name": "guest-access.test.js",
+    "ok": true,
+    "out": "PASS: V76 guest access lifecycle checks passed.\n"
+  },
+  {
+    "name": "guest-email-link.test.js",
+    "ok": true,
+    "out": "PASS: V73 guest email link integrity checks passed.\n"
+  },
+  {
+    "name": "guest-revoke-ux.test.js",
+    "ok": true,
+    "out": "PASS: V88 guest revocation UX checks passed.\n"
+  },
+  {
+    "name": "help-center-v177.test.js",
+    "ok": true,
+    "out": "help-center-v177.test.js PASS\n"
+  },
+  {
+    "name": "hormozi-offer-v187.test.js",
+    "ok": true,
+    "out": "PASS V187 Hormozi offer integrity\n"
+  },
+  {
+    "name": "i18n-switch-v198.test.cjs",
+    "ok": true,
+    "out": "PASS: LT/EN/ES/DE/RU round trips, dynamic text, component edits and legal links\n"
+  },
+  {
+    "name": "i18n-v161.test.js",
+    "ok": true,
+    "out": "PASS: complete i18n parity — 62 keyed strings and 769 UI phrases aligned across LT/ES/DE/RU; EN is source locale.\n"
+  },
+  {
+    "name": "idempotency-lifecycle.test.js",
+    "ok": true,
+    "out": "PASS: V63 idempotency lifecycle and booking validation consistency checks passed.\n"
+  },
+  {
+    "name": "integrations-v130.test.js",
+    "ok": true,
+    "out": "PASS V130\n"
+  },
+  {
+    "name": "inventory-auth.test.js",
+    "ok": true,
+    "out": "PASS: V44 inventory authorization and booking abuse checks passed.\n"
+  },
+  {
+    "name": "language-audit-v198.test.cjs",
+    "ok": true,
+    "out": "PASS: 5 locales, 62 keyed labels, 769 phrases; HTML/data-i18n/app uiText parity\n"
+  },
+  {
+    "name": "launch-gate-v114.test.js",
+    "ok": true,
+    "out": "PASS: V114 launch gate checks passed.\n"
+  },
+  {
+    "name": "launch-readiness-v136.test.js",
+    "ok": true,
+    "out": "PASS V136\n"
+  },
+  {
+    "name": "launch-readiness.test.js",
+    "ok": true,
+    "out": "PASS: V53 launch-readiness, health privacy and duplicate-middleware checks passed.\n"
+  },
+  {
+    "name": "legacy-cleanup-v105.test.js",
+    "ok": true,
+    "out": "PASS: V105 legacy runtime quarantine checks passed.\n"
+  },
+  {
+    "name": "listing-pipeline.test.js",
+    "ok": true,
+    "out": "PASS: V43 listing pipeline regression/security checks passed.\n"
+  },
+  {
+    "name": "listing-polish-v111.test.js",
+    "ok": true,
+    "out": "PASS: V111 listing polish checks passed.\n"
+  },
+  {
+    "name": "map-discovery-v101.test.js",
+    "ok": true,
+    "out": "PASS: V101 map discovery checks passed.\n"
+  },
+  {
+    "name": "marketplace-trust-v172.test.js",
+    "ok": true,
+    "out": "PASS V172 marketplace trust foundation: agreements, messages, two-sided reputation, SEO and legal/help surfaces\n"
+  },
+  {
+    "name": "media-security.test.js",
+    "ok": true,
+    "out": "PASS: V48 upload/gallery security and performance checks passed.\n"
+  },
+  {
+    "name": "mobile-checkout-v137.test.js",
+    "ok": true,
+    "out": "PASS V137 mobile checkout\n"
+  },
+  {
+    "name": "moderation-booking.test.js",
+    "ok": true,
+    "out": "PASS: V80 moderation booking integrity checks passed.\n"
+  },
+  {
+    "name": "notifications-v102.test.js",
+    "ok": true,
+    "out": "PASS: V102 notification center checks passed.\n"
+  },
+  {
+    "name": "ops-v115.test.js",
+    "ok": true,
+    "out": "PASS: V115 operations checks passed.\n"
+  },
+  {
+    "name": "payment-final-state-v197.test.js",
+    "ok": true,
+    "out": "PASS: paid and refunded bookings cannot request another payment intent\n"
+  },
+  {
+    "name": "payment-integrity-v75.test.js",
+    "ok": true,
+    "out": "PASS: V75 payment integrity checks passed.\n"
+  },
+  {
+    "name": "payment-notification.test.js",
+    "ok": true,
+    "out": "PASS: V85 payment notification integrity checks passed.\n"
+  },
+  {
+    "name": "payment-ops-security.test.js",
+    "ok": true,
+    "out": "PASS: V47 payment operations privacy/security checks passed.\n"
+  },
+  {
+    "name": "payment-race.test.js",
+    "ok": true,
+    "out": "PASS: payment race static gate aligned to V195 Direct Charges\n"
+  },
+  {
+    "name": "performance-v181.test.js",
+    "ok": true,
+    "out": "performance v181: PASS\n"
+  },
+  {
+    "name": "post-booking-live-v138.test.js",
+    "ok": true,
+    "out": "PASS V138\n"
+  },
+  {
+    "name": "price-integrity.test.js",
+    "ok": true,
+    "out": "PASS: V64 price/payment integrity checks passed.\n"
+  },
+  {
+    "name": "pricing-source.test.js",
+    "ok": true,
+    "out": "PASS: V65 authoritative pricing source checks passed.\n"
+  },
+  {
+    "name": "product-polish-v109.test.js",
+    "ok": true,
+    "out": "PASS: V109 product polish checks passed.\n"
+  },
+  {
+    "name": "production-foundation-v146.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "production-ops-v135.test.js",
+    "ok": true,
+    "out": "PASS V135 production ops\n"
+  },
+  {
+    "name": "production-preflight-v141.test.js",
+    "ok": true,
+    "out": "PASS V141\n"
+  },
+  {
+    "name": "production-readiness-v125.test.js",
+    "ok": true,
+    "out": "PASS V125\n"
+  },
+  {
+    "name": "production-surface-v173.test.js",
+    "ok": true,
+    "out": "PASS V173 production surface: language coverage, contrast, sticky header and no fake public inventory\n"
+  },
+  {
+    "name": "public-focus-v176.test.cjs",
+    "ok": true,
+    "out": "PASS V176 public focus, brand scale and compact supplier dashboard\n"
+  },
+  {
+    "name": "public-surface-v169.test.js",
+    "ok": true,
+    "out": "PASS V169 public surface cleanup\n"
+  },
+  {
+    "name": "pwa.test.js",
+    "ok": true,
+    "out": "PASS: V41 PWA/onboarding static checks passed.\n"
+  },
+  {
+    "name": "rc40-surface-audit-v142.test.js",
+    "ok": true,
+    "out": "PASS V142\n"
+  },
+  {
+    "name": "refund-accounting-v107.test.js",
+    "ok": true,
+    "out": "PASS: refund accounting static gate aligned to V195 Direct Charges\n"
+  },
+  {
+    "name": "release-candidate-v126.test.js",
+    "ok": true,
+    "out": "PASS V126 RC\n"
+  },
+  {
+    "name": "release-candidate-v131.test.js",
+    "ok": true,
+    "out": "PASS V131\n"
+  },
+  {
+    "name": "release-gate-v116.test.js",
+    "ok": true,
+    "out": "PASS: V116 release gate checks passed.\n"
+  },
+  {
+    "name": "renter-alternatives-v191.test.js",
+    "ok": true,
+    "out": "renter alternatives v191: PASS\n"
+  },
+  {
+    "name": "renter-booking-status-v190.test.js",
+    "ok": true,
+    "out": "renter-booking-status-v190.test.js PASS\n"
+  },
+  {
+    "name": "renter-response-deadline-v189.test.js",
+    "ok": true,
+    "out": "renter-response-deadline-v189.test.js PASS\n"
+  },
+  {
+    "name": "return-lifecycle.test.js",
+    "ok": true,
+    "out": "PASS: V77 return lifecycle checks passed.\n"
+  },
+  {
+    "name": "review-integrity.test.js",
+    "ok": true,
+    "out": "PASS: V78 review integrity checks passed.\n"
+  },
+  {
+    "name": "review-ux.test.js",
+    "ok": true,
+    "out": "PASS: V87 review UX checks passed.\n"
+  },
+  {
+    "name": "runtime-regression.test.js",
+    "ok": true,
+    "out": "PASS: V49 critical runtime-symbol and favorite accessibility checks passed.\n"
+  },
+  {
+    "name": "saved-search.test.js",
+    "ok": true,
+    "out": "PASS: V42 saved-search and PWA privacy checks passed.\n"
+  },
+  {
+    "name": "security.test.js",
+    "ok": true,
+    "out": "PASS: V36 security hardening static checks passed.\n"
+  },
+  {
+    "name": "staging-mode.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "stripe-connect-v117.test.js",
+    "ok": true,
+    "out": "PASS: V117 compatibility test now validates V195 Direct Charges migration.\n"
+  },
+  {
+    "name": "stripe-connect-v118.test.js",
+    "ok": true,
+    "out": "PASS: V118 compatibility test validates Direct Charges capability gate.\n"
+  },
+  {
+    "name": "stripe-connect-v119.test.js",
+    "ok": true,
+    "out": "PASS: V119 compatibility test validates V195 Accounts v2 state model.\n"
+  },
+  {
+    "name": "stripe-direct-refund-v199.test.js",
+    "ok": true,
+    "out": "PASS: V199 Stripe mocked direct refunds: full/partial amount, fee reversal flag, connected account, idempotency, invalid amount\n"
+  },
+  {
+    "name": "supplier-command-v143.test.js",
+    "ok": true,
+    "out": "supplier command v143 regression: ok\n"
+  },
+  {
+    "name": "supplier-command-v93.test.js",
+    "ok": true,
+    "out": "PASS: V93 supplier command center checks passed.\n"
+  },
+  {
+    "name": "supplier-dashboard-v124.test.js",
+    "ok": true,
+    "out": "PASS: V124 supplier dashboard package checks passed.\n"
+  },
+  {
+    "name": "supplier-deep-link.test.js",
+    "ok": true,
+    "out": "PASS: V83 supplier deep-link checks passed.\n"
+  },
+  {
+    "name": "supplier-email.test.js",
+    "ok": true,
+    "out": "PASS: V82 supplier booking email checks passed.\n"
+  },
+  {
+    "name": "supplier-entry-v174.test.js",
+    "ok": true,
+    "out": "supplier-entry-v174 PASS (25 categories)\n"
+  },
+  {
+    "name": "supplier-finance-v133.test.js",
+    "ok": true,
+    "out": "PASS V133\n"
+  },
+  {
+    "name": "supplier-finance-v95.test.js",
+    "ok": true,
+    "out": "PASS: V95 supplier finance workspace checks passed.\n"
+  },
+  {
+    "name": "supplier-inventory-v94.test.js",
+    "ok": true,
+    "out": "PASS: V94 supplier inventory workspace checks passed.\n"
+  },
+  {
+    "name": "supplier-onboarding-v110.test.js",
+    "ok": true,
+    "out": "PASS: V110 account onboarding remains supplier-capable with customer registration added.\n"
+  },
+  {
+    "name": "supplier-operations-v128.test.js",
+    "ok": true,
+    "out": "PASS V128\n"
+  },
+  {
+    "name": "supplier-pro-v144.test.js",
+    "ok": true,
+    "out": "supplier pro v144 regression: ok\n"
+  },
+  {
+    "name": "supplier-reliability-v182.test.js",
+    "ok": true,
+    "out": "supplier-reliability-v182: structural checks passed\n"
+  },
+  {
+    "name": "supplier-response-clock-v187.test.js",
+    "ok": true,
+    "out": "PASS V187 supplier active-hour clock\n"
+  },
+  {
+    "name": "supplier-ux-v178.test.cjs",
+    "ok": true,
+    "out": "supplier UX v178: PASS\n"
+  },
+  {
+    "name": "supplier-ux-v179.test.cjs",
+    "ok": true,
+    "out": "supplier UX v179: PASS\n"
+  },
+  {
+    "name": "supplier-workspace-v129.test.js",
+    "ok": true,
+    "out": "PASS V129\n"
+  },
+  {
+    "name": "sustainability-v171.test.js",
+    "ok": true,
+    "out": "PASS: sustainability value block is localized, factual and styled.\n"
+  },
+  {
+    "name": "trust.test.js",
+    "ok": false,
+    "out": " at moduleResolve (node:internal/modules/esm/resolve:854:18)\n    at defaultResolve (node:internal/modules/esm/resolve:984:11)\n    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\n    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\n    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\n    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\n    at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {\n  code: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.16.0\n"
+  },
+  {
+    "name": "ux-cleanup-v193.test.js",
+    "ok": true,
+    "out": "ux-cleanup-v193.test.js PASS\n"
+  },
+  {
+    "name": "webhook-binding-v106.test.js",
+    "ok": true,
+    "out": "PASS: V106 webhook binding checks passed.\n"
+  },
+  {
+    "name": "webhook-ordering.test.js",
+    "ok": true,
+    "out": "PASS: V86 webhook ordering checks passed.\n"
+  },
+  {
+    "name": "yc-launch-audit-v186.test.js",
+    "ok": true,
+    "out": "PASS: V186 YC launch-focus audit\n"
+  },
+  {
+    "name": "brand-cache-v175.test.js",
+    "ok": true,
+    "out": "v175 brand/cache regression checks passed\n"
+  },
+  {
+    "name": "cache-consistency-v200.test.cjs",
+    "ok": true,
+    "out": "PASS: v200 HTML, JS, SW asset cache versions match\n"
+  }
+]

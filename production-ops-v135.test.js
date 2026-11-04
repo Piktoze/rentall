@@ -5,7 +5,7 @@ ok(p.version.startsWith('1.0.0-rc.'),'version');
 ok(s.includes("'/api/ops/status'"),'ops endpoint');
 ok(s.includes('productionReady=gate.ready&&checks.runtime.ok&&checks.stripe.ok&&checks.database.ok'),'critical readiness');
 ok(!s.includes('secretValue:'),'no secret field');
-ok(r.includes('persistent volume'),'runbook database');
+ok(/persistent[\s\S]{0,40}volume/i.test(r),'runbook database');
 ok(r.includes('STRIPE_WEBHOOK_SECRET'),'runbook webhook');
 ok(m.includes('whsec_'),'smoke secret leak check');
 ok(s.includes('stripe.webhooks.constructEvent'),'webhook');

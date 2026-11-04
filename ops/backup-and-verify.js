@@ -11,4 +11,10 @@ const verify=new Database(output,{readonly:true,fileMustExist:true});let integri
 if(String(integrity).toLowerCase()!=='ok')throw new Error(`SQLite integrity_check failed: ${integrity}`);
 const stat=fs.statSync(output),evidence={ok:true,verifiedAt:new Date().toISOString(),backupFile:path.basename(output),bytes:stat.size,integrity:'ok'};
 fs.writeFileSync(path.join(backupDir,'last-verified-backup.json'),JSON.stringify(evidence,null,2));
-console.log(JSON.stringify({ok:true,backup:output,bytes:stat.size,integrity:'ok'}));
+const retention=Math.max(2,Math.min(365,Number(process.env.BACKUP_RETENTION_COUNT)||28));
+const backups=fs.readdirSync(backupDir)
+  .filter(name=>/^rentinorbit-.*\.db$/.test(name))
+  .map(name=>({name,mtime:fs.statSync(path.join(backupDir,name)).mtimeMs}))
+  .sort((a,b)=>b.mtime-a.mtime);
+for(const stale of backups.slice(retention)) fs.unlinkSync(path.join(backupDir,stale.name));
+console.log(JSON.stringify({ok:true,backup:output,bytes:stat.size,integrity:'ok',retention,retained:Math.min(backups.length,retention)}));
