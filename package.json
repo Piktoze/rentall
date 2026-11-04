@@ -129,6 +129,7 @@
     "test:stabilization-v203": "node v203-stabilization.test.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",

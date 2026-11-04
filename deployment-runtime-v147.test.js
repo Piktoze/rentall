@@ -45,8 +45,8 @@ try{
   ok(railwayDefinition.name==='nurturing-strength'&&productionService&&railwayDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentall-volume'),'Railway IaC evaluates to existing production service and volume');
   ok(productionService.source.branch==='main','production remains pinned to main');
   ok(stagingService?.source?.branch==='staging/v203','staging is pinned to staging/v203');
-  ok(stagingDefinition.resources.some(resource=>resource.type==='volume'&&resource.name==='rentinorbit-backups'),'staging has a separate backup volume');
-  ok(stagingService?.volumeAttachments?.['rentinorbit-backups']?.mountPath==='/backups','backup volume mount');
+  ok(stagingDefinition.resources.some(resource=>resource.type==='bucket'&&resource.name==='rentinorbit-staging-backups'),'staging has separate backup object storage');
+  ok(stagingService?.variables?.BACKUP_S3_BUCKET?.type==='reference','backup bucket is wired by a sealed reference');
   ok(start.includes('assertProductionConfig')&&start.includes('assertProductionStorage')&&start.includes("await import('../server.js')"),'fail-closed startup orchestration');
   ok(db.includes('REQUIRED_SCHEMA_VERSION=184')&&db.includes('v195-direct-charges-accounts-v2'),'current schema and migration marker');
   ok(server.includes('runtimeConfig.uploadsDir'),'persistent uploads');

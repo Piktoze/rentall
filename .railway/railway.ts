@@ -1,4 +1,4 @@
-import {defineRailway,github,preserve,project,service,volume} from 'railway/iac';
+import {bucket,defineRailway,github,preserve,project,ref,service,volume} from 'railway/iac';
 
 export default defineRailway((ctx)=>{
   const staging=ctx.isEnvironment('staging');
@@ -6,9 +6,8 @@ export default defineRailway((ctx)=>{
     region:'iad',
     sizeMB:500
   });
-  const backups=staging?volume('rentinorbit-backups',{
+  const backups=staging?bucket('rentinorbit-staging-backups',{
     region:'iad',
-    sizeMB:1024
   }):null;
 
   const web=service('rentall',{
@@ -18,7 +17,7 @@ export default defineRailway((ctx)=>{
     healthcheck:'/api/readiness',
     healthcheckTimeout:120,
     replicas:{iad:1},
-    volumeMounts:backups?{'/data':data,'/backups':backups}:{'/data':data},
+    volumeMounts:{'/data':data},
     env:{
       NODE_ENV:'production',
       DB_PATH:preserve(),
@@ -77,11 +76,18 @@ export default defineRailway((ctx)=>{
         APP_VERSION:'v203-staging',
         DB_BACKUP_ENABLED:'true',
         DB_BACKUP_MAX_AGE_HOURS:'12',
-        DB_BACKUP_EVIDENCE_PATH:'/backups/last-verified-backup.json',
-        BACKUP_DIR:'/backups',
+        DB_BACKUP_EVIDENCE_PATH:'/tmp/rentinorbit-backups/last-verified-backup.json',
+        BACKUP_DIR:'/tmp/rentinorbit-backups',
         BACKUP_SCHEDULER_ENABLED:'true',
         BACKUP_INTERVAL_HOURS:'6',
-        BACKUP_RETENTION_COUNT:'28'
+        BACKUP_RETENTION_COUNT:'28',
+        BACKUP_S3_ENABLED:'true',
+        BACKUP_S3_ACCESS_KEY_ID:ref(backups,'accessKeyId'),
+        BACKUP_S3_SECRET_ACCESS_KEY:ref(backups,'secretAccessKey'),
+        BACKUP_S3_BUCKET:ref(backups,'bucketName'),
+        BACKUP_S3_ENDPOINT:ref(backups,'endpoint'),
+        BACKUP_S3_REGION:ref(backups,'region'),
+        BACKUP_S3_URL_STYLE:ref(backups,'urlStyle')
       }:{})
     }
   });

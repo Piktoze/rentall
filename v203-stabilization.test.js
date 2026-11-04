@@ -71,7 +71,8 @@ try{
   assert.match(html,/id="returnBookingModal"/);
   assert.match(html,/option value="missing"/);
   assert.match(railwayIac,/staging\?'staging\/v203':'main'/);
-  assert.match(railwayIac,/rentinorbit-backups/);
+  assert.match(railwayIac,/bucket\('rentinorbit-staging-backups'/);
+  assert.match(railwayIac,/BACKUP_S3_SECRET_ACCESS_KEY:ref\(backups,'secretAccessKey'\)/);
   assert.match(scheduler,/BACKUP_STORAGE_NOT_SEPARATE/);
 
   console.log('PASS V203: unpaid cancellation, controlled return dialog and terminal cancellation guards');

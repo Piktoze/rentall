@@ -18,6 +18,11 @@ function assertSeparateBackupPath(){
     error.code='BACKUP_STORAGE_NOT_SEPARATE';
     throw error;
   }
+  if(process.env.RAILWAY_ENVIRONMENT_ID && String(process.env.BACKUP_S3_ENABLED||'').toLowerCase()!=='true'){
+    const error=new Error('Railway backups require separate S3-compatible storage');
+    error.code='BACKUP_REMOTE_STORAGE_REQUIRED';
+    throw error;
+  }
   return {dbPath,backupDir};
 }
 
