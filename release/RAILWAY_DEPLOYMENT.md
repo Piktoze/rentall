@@ -1,18 +1,18 @@
 # RentInOrbit RC55 Railway deployment
 
-RC55 uses Railway Infrastructure as Code in `.railway/railway.ts`. Production remains pinned to GitHub `main`; staging is pinned to `staging/v203`. Both use one European web replica and the persistent `/data` volume. Staging additionally mounts a separate `/backups` volume. The deprecated `railway.toml` and `railway.json` formats are intentionally absent.
+RC55 uses Railway Infrastructure as Code in `.railway/railway.ts`. Production remains pinned to GitHub `main`; staging is pinned to `staging/v203`. Both use one application replica and the persistent `/data` volume. Staging additionally writes verified backups to the separate `rentinorbit-staging-backups` S3-compatible Bucket because Railway permits only one attached Volume per service. The deprecated `railway.toml` and `railway.json` formats are intentionally absent.
 
 ## Storage and startup contract
 
 - Keep exactly one application replica while RentInOrbit uses SQLite. Multiple replicas cannot safely share a SQLite volume.
 - The volume mount is exactly `/data`. Railway supplies `RAILWAY_VOLUME_MOUNT_PATH=/data` automatically when the declared volume is attached; do not create or override that variable manually.
-- Set `RENTINORBIT_DB_PATH=/data/rentinorbit.sqlite` and `UPLOADS_DIR=/data/uploads`. Leave `DATABASE_URL` and `DB_PATH` unset. As an alternative outside the supplied IaC, `DATABASE_URL=sqlite:///data/rentinorbit.sqlite` is accepted only when the other DB-path variables are unset.
+- Preserve the already verified database selector during upgrades. This staging project uses `DB_PATH=/data/rentall.sqlite`; do not introduce a competing `RENTINORBIT_DB_PATH` or `DATABASE_URL`. New projects may instead use one explicit `RENTINORBIT_DB_PATH=/data/rentinorbit.sqlite`. `UPLOADS_DIR=/data/uploads` remains fixed.
 - Migrations run idempotently inside `npm start`, after Railway mounts the volume. Do not move SQLite migrations to Railway's pre-deploy command: Railway does not mount volumes in pre-deploy containers.
 - Startup fails before listening if the volume is absent, not a directory, not writable, or the selected database/uploads directory is outside the mounted volume. Readiness stays closed until migration 172 and a live database query succeed. Listing uploads are therefore durable on the same Railway volume.
 
 ## Required Railway service variables
 
-The IaC file supplies safe literals such as `NODE_ENV`, `RENTINORBIT_DB_PATH`, provider modes, and worker enablement. Add the following preserved values in Railway Variables before the first deploy:
+The IaC file supplies safe literals such as `NODE_ENV`, provider modes, and worker enablement while preserving the existing database selector. Add the following preserved values in Railway Variables before the first deploy:
 
 ```text
 APP_URL=https://rentinorbit.com
@@ -46,7 +46,7 @@ Prefer a least-privilege Stripe restricted key and store all secret values only 
 1. Install Railway CLI 5.63 or newer and authenticate with `railway login`.
 2. Link or create the intended Railway project and production environment.
 3. Add the preserved variables above, enable public networking, and choose the generated/custom HTTPS domain for both URL variables.
-4. Run `railway config plan --environment <target>` and verify it updates the existing `rentall` service and `rentall-volume` without deleting or replacing either resource. A staging plan may add only the separate `rentinorbit-backups` volume.
+4. Run `railway config plan --environment <target>` and verify it updates the existing `rentall` service and `rentall-volume` without deleting or replacing either resource. A staging plan may reference only the separate `rentinorbit-staging-backups` Bucket.
 5. Apply only the reviewed, non-destructive plan. Production builds from `main`; staging builds from `staging/v203`. Startup initializes the mounted database and migration 184 before listening.
 6. Confirm `/healthz` and `/api/readiness` return 200, then run `npm run smoke:production -- https://<domain>` from this repository.
 
@@ -68,7 +68,7 @@ Staging is exempt from the backup launch gate. Before switching to public produc
 
 - Set `DB_BACKUP_ENABLED=true`.
 - Schedule `npm run backup:auto` at least daily in an environment that can access the mounted `/data` volume.
-- Keep staging backups on the separately mounted `/backups` volume. Never use a directory inside `/data` as the automated backup destination.
-- The command uses SQLite online backup and runs `PRAGMA integrity_check`; success writes `/backups/last-verified-backup.json` in staging.
+- Keep staging backups in the separately provisioned `rentinorbit-staging-backups` Bucket. The temporary local directory must be outside `/data` and is not the durable copy.
+- The command uses SQLite online backup, runs `PRAGMA integrity_check`, uploads the database and verification evidence to the Bucket, and prunes older objects according to `BACKUP_RETENTION_COUNT`.
 - `/api/launch-readiness` blocks public production when no verified backup evidence exists or it is older than `DB_BACKUP_MAX_AGE_HOURS` (default 30 hours).
 - The separate backup volume protects against application/schema mistakes affecting the primary volume; encrypted off-site copies remain required for production disaster recovery.

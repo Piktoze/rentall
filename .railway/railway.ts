@@ -21,7 +21,6 @@ export default defineRailway((ctx)=>{
     env:{
       NODE_ENV:'production',
       DB_PATH:preserve(),
-      RENTINORBIT_DB_PATH:'/data/rentinorbit.sqlite',
       UPLOADS_DIR:'/data/uploads',
       TRUST_PROXY_HOPS:'1',
       APP_URL:preserve(),

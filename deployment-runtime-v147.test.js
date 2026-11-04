@@ -37,7 +37,7 @@ try{
   ok(railwayIac.includes("build:'node --check server.js")&&railwayIac.includes("healthcheck:'/api/readiness'"),'Railway build and readiness healthcheck');
   ok(railwayIac.includes("staging?'staging/v203':'main'"),'environment-specific GitHub source');
   ok(railwayIac.includes("'/data':data")&&railwayIac.includes('replicas:{iad:1}'),'single-replica persistent volume');
-  ok(railwayIac.includes("RENTINORBIT_DB_PATH:'/data/rentinorbit.sqlite'")&&railwayIac.includes("UPLOADS_DIR:'/data/uploads'"),'persistent runtime paths');
+  ok(railwayIac.includes('DB_PATH:preserve()')&&railwayIac.includes("UPLOADS_DIR:'/data/uploads'"),'existing persistent database path and uploads are preserved');
   const railwayDefinition=await railwayProgram(createRailwayContext({environment:'production',environmentName:'production'}),project);
   const stagingDefinition=await railwayProgram(createRailwayContext({environment:'staging',environmentName:'staging'}),project);
   const productionService=railwayDefinition.resources.find(resource=>resource.type==='service'&&resource.name==='rentall');
