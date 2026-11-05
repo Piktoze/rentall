@@ -1,0 +1,6033 @@
+{
+  "generatedAt": "2026-11-05T06:03:05.930Z",
+  "methodology": "Static source trace. Observed means a handler/reference exists; browser/API outcome is recorded by linked tests and release evidence, not inferred from element presence.",
+  "counts": {
+    "staticButtons": 149,
+    "staticFormFields": 141,
+    "dynamicButtons": 88,
+    "dynamicFormFields": 1,
+    "uniqueApiRoutes": 83
+  },
+  "discrepancy": "149/141/83 are the exact index.html button/form-field and unique Express route counts. JavaScript templates add controls that the original static count omitted.",
+  "staticControls": [
+    {
+      "kind": "button",
+      "source": "index.html:51",
+      "id": "myBookingsBtn",
+      "name": null,
+      "actionKey": "myBookingsBtn",
+      "label": "My bookings",
+      "expected": "Run My bookings",
+      "observed": "Source binding/reference found (12)",
+      "tests": [
+        "confirmation-actions.test.js",
+        "customer-journey-v120.test.js",
+        "deep-link-routing.test.js",
+        "ux-cleanup-v193.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:52",
+      "id": "messagesBtn",
+      "name": null,
+      "actionKey": "messagesBtn",
+      "label": "Messages",
+      "expected": "Run Messages",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "supplier-ux-v178.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:56",
+      "id": "installAppBtn",
+      "name": null,
+      "actionKey": "installAppBtn",
+      "label": "Install app",
+      "expected": "Run Install app",
+      "observed": "Source binding/reference found (5)",
+      "tests": [
+        "pwa.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:57",
+      "id": "moreNotificationsBtn",
+      "name": null,
+      "actionKey": "moreNotificationsBtn",
+      "label": "Notifications",
+      "expected": "Run Notifications",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:58",
+      "id": "moreSavedSearchesBtn",
+      "name": null,
+      "actionKey": "moreSavedSearchesBtn",
+      "label": "Saved searches",
+      "expected": "Run Saved searches",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:62",
+      "id": "supplierAuthBtn",
+      "name": null,
+      "actionKey": "supplierAuthBtn",
+      "label": "Log in",
+      "expected": "Run Log in",
+      "observed": "Source binding/reference found (16)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:64",
+      "id": "lang",
+      "name": null,
+      "actionKey": "lang",
+      "label": "LT EN ES DE RU",
+      "expected": "Capture lang input",
+      "observed": "Source binding/reference found (157)",
+      "tests": [
+        "brand-cache-v175.test.js",
+        "customer-journey-v103.test.js",
+        "help-center-v177.test.js",
+        "i18n-switch-v198.test.cjs",
+        "i18n-v161.test.js",
+        "language-audit-v198.test.cjs",
+        "product-polish-v109.test.js",
+        "production-surface-v173.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:72",
+      "id": "v102NotificationBtn",
+      "name": null,
+      "actionKey": "v102NotificationBtn",
+      "label": "🔔 0",
+      "expected": "Run 🔔 0",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:76",
+      "id": null,
+      "name": null,
+      "actionKey": "discover",
+      "label": "1 Discover Location & dates",
+      "expected": "Run 1 Discover Location & dates",
+      "observed": "Source binding/reference found (9)",
+      "tests": [
+        "browser-e2e-v113.test.js",
+        "customer-ux.test.js",
+        "discovery-integrity.test.js",
+        "map-discovery-v101.test.js",
+        "rc40-surface-audit-v142.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:77",
+      "id": null,
+      "name": null,
+      "actionKey": "choose",
+      "label": "2 Choose Compare & availability",
+      "expected": "Run 2 Choose Compare & availability",
+      "observed": "Source binding/reference found (27)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:78",
+      "id": null,
+      "name": null,
+      "actionKey": "book",
+      "label": "3 Book Details & payment",
+      "expected": "Run 3 Book Details & payment",
+      "observed": "Source binding/reference found (1117)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "availability.test.js",
+        "booking-access.test.js",
+        "booking-command-v140.test.js",
+        "booking-confirmation.test.js",
+        "booking-date-safety.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:79",
+      "id": null,
+      "name": null,
+      "actionKey": "track",
+      "label": "4 Track My bookings",
+      "expected": "Run 4 Track My bookings",
+      "observed": "Source binding/reference found (14)",
+      "tests": [
+        "post-booking-live-v138.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:97",
+      "id": null,
+      "name": null,
+      "actionKey": "local",
+      "label": "Near me",
+      "expected": "Run Near me",
+      "observed": "Source binding/reference found (153)",
+      "tests": [
+        "availability.test.js",
+        "brand-integrity-v186.test.js",
+        "help-center-v177.test.js",
+        "i18n-switch-v198.test.cjs",
+        "i18n-v161.test.js",
+        "inventory-auth.test.js",
+        "language-audit-v198.test.cjs",
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:98",
+      "id": null,
+      "name": null,
+      "actionKey": "trip",
+      "label": "For my trip",
+      "expected": "Run For my trip",
+      "observed": "Source binding/reference found (471)",
+      "tests": [
+        "audit.test.js",
+        "booking-command-v140.test.js",
+        "cancellation-v197.test.js",
+        "checkout-confidence-v132.test.js",
+        "customer-booking-hub-v127.test.js",
+        "customer-handoff-v145.test.js",
+        "deployment-runtime-v147.test.js",
+        "deposit-finalization-v100.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:104",
+      "id": "countrySelect",
+      "name": null,
+      "actionKey": "countrySelect",
+      "label": "Lithuania Spain Portugal Greece Cyprus Italy France",
+      "expected": "Capture countrySelect input",
+      "observed": "Source binding/reference found (10)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:116",
+      "id": "citySelect",
+      "name": null,
+      "actionKey": "citySelect",
+      "label": "",
+      "expected": "Capture citySelect input",
+      "observed": "Source binding/reference found (14)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:120",
+      "id": "keywordSearch",
+      "name": null,
+      "actionKey": "keywordSearch",
+      "label": "e.g. dress, chairs, drill, projector",
+      "expected": "Capture keywordSearch input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:124",
+      "id": "categorySelect",
+      "name": null,
+      "actionKey": "categorySelect",
+      "label": "All categories Furniture Tools & equipment Events & parties Fashion & occasion wear Electronics Photo & video Garden & outdoor Trailers & transport gear Baby & family Sports & leisure Other",
+      "expected": "Capture categorySelect input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:141",
+      "id": "quantitySearch",
+      "name": null,
+      "actionKey": "quantitySearch",
+      "label": "1",
+      "expected": "Capture quantitySearch input",
+      "observed": "Source binding/reference found (12)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:145",
+      "id": "fromDate",
+      "name": null,
+      "actionKey": "fromDate",
+      "label": "",
+      "expected": "Capture fromDate input",
+      "observed": "Source binding/reference found (9)",
+      "tests": [
+        "availability-api.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:149",
+      "id": "toDate",
+      "name": null,
+      "actionKey": "toDate",
+      "label": "",
+      "expected": "Capture toDate input",
+      "observed": "Source binding/reference found (9)",
+      "tests": [
+        "availability-api.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:151",
+      "id": null,
+      "name": null,
+      "actionKey": "Search rentals",
+      "label": "Search rentals",
+      "expected": "Submit Search rentals",
+      "observed": "Source binding/reference found (7)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:157",
+      "id": "tripCountrySelect",
+      "name": null,
+      "actionKey": "tripCountrySelect",
+      "label": "Spain Portugal Greece Cyprus Italy France Lithuania",
+      "expected": "Capture tripCountrySelect input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:169",
+      "id": "tripCitySelect",
+      "name": null,
+      "actionKey": "tripCitySelect",
+      "label": "",
+      "expected": "Capture tripCitySelect input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:173",
+      "id": "tripAccommodation",
+      "name": null,
+      "actionKey": "tripAccommodation",
+      "label": "e.g. Hotel name, apartment or address",
+      "expected": "Capture tripAccommodation input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:177",
+      "id": "tripFromDate",
+      "name": null,
+      "actionKey": "tripFromDate",
+      "label": "",
+      "expected": "Capture tripFromDate input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:181",
+      "id": "tripToDate",
+      "name": null,
+      "actionKey": "tripToDate",
+      "label": "",
+      "expected": "Capture tripToDate input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:185",
+      "id": "tripQuantity",
+      "name": null,
+      "actionKey": "tripQuantity",
+      "label": "1",
+      "expected": "Capture tripQuantity input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:189",
+      "id": "tripKeywordSearch",
+      "name": null,
+      "actionKey": "tripKeywordSearch",
+      "label": "e.g. dress, camera, stroller, scooter",
+      "expected": "Capture tripKeywordSearch input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:193",
+      "id": "tripCategorySelect",
+      "name": null,
+      "actionKey": "tripCategorySelect",
+      "label": "All categories Furniture Tools & equipment Events & parties Fashion & occasion wear Electronics Photo & video Garden & outdoor Vehicles & transport Baby & family Sports & leisure Other",
+      "expected": "Capture tripCategorySelect input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:212",
+      "id": null,
+      "name": null,
+      "actionKey": "Find deliverable rentals",
+      "label": "Find deliverable rentals",
+      "expected": "Submit Find deliverable rentals",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:227",
+      "id": null,
+      "name": null,
+      "actionKey": "furniture",
+      "label": "◫ Furniture",
+      "expected": "Run ◫ Furniture",
+      "observed": "No source binding found; manual verification required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:230",
+      "id": null,
+      "name": null,
+      "actionKey": "tools",
+      "label": "⌁ Tools",
+      "expected": "Run ⌁ Tools",
+      "observed": "Source binding/reference found (23)",
+      "tests": [
+        "integrations-v130.test.js",
+        "ux-cleanup-v193.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:233",
+      "id": null,
+      "name": null,
+      "actionKey": "events",
+      "label": "✦ Events",
+      "expected": "Run ✦ Events",
+      "observed": "Source binding/reference found (32)",
+      "tests": [
+        "audit.test.js",
+        "payment-ops-security.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:236",
+      "id": null,
+      "name": null,
+      "actionKey": "fashion",
+      "label": "◇ Fashion",
+      "expected": "Run ◇ Fashion",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:239",
+      "id": null,
+      "name": null,
+      "actionKey": "electronics",
+      "label": "▣ Tech",
+      "expected": "Run ▣ Tech",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:242",
+      "id": null,
+      "name": null,
+      "actionKey": "sports",
+      "label": "◒ Sports",
+      "expected": "Run ◒ Sports",
+      "observed": "Source binding/reference found (12)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:274",
+      "id": null,
+      "name": null,
+      "actionKey": "all",
+      "label": "All",
+      "expected": "Run All",
+      "observed": "Source binding/reference found (345)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability.test.js",
+        "booking-access.test.js",
+        "brand-integrity-v186.test.js",
+        "cancellation-v197.test.js",
+        "customer-bookings.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:275",
+      "id": null,
+      "name": null,
+      "actionKey": "furniture",
+      "label": "Furniture",
+      "expected": "Run Furniture",
+      "observed": "No source binding found; manual verification required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:276",
+      "id": null,
+      "name": null,
+      "actionKey": "tools",
+      "label": "Tools",
+      "expected": "Run Tools",
+      "observed": "Source binding/reference found (23)",
+      "tests": [
+        "integrations-v130.test.js",
+        "ux-cleanup-v193.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:277",
+      "id": null,
+      "name": null,
+      "actionKey": "events",
+      "label": "Events",
+      "expected": "Run Events",
+      "observed": "Source binding/reference found (32)",
+      "tests": [
+        "audit.test.js",
+        "payment-ops-security.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:278",
+      "id": null,
+      "name": null,
+      "actionKey": "fashion",
+      "label": "Fashion",
+      "expected": "Run Fashion",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:279",
+      "id": null,
+      "name": null,
+      "actionKey": "electronics",
+      "label": "Electronics",
+      "expected": "Run Electronics",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:280",
+      "id": null,
+      "name": null,
+      "actionKey": "garden",
+      "label": "Garden",
+      "expected": "Run Garden",
+      "observed": "No source binding found; manual verification required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:281",
+      "id": null,
+      "name": null,
+      "actionKey": "sports",
+      "label": "Sports",
+      "expected": "Run Sports",
+      "observed": "Source binding/reference found (12)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:287",
+      "id": "v120EditSearch",
+      "name": null,
+      "actionKey": "v120EditSearch",
+      "label": "Edit search",
+      "expected": "Run Edit search",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:293",
+      "id": "useMyLocationBtn",
+      "name": null,
+      "actionKey": "useMyLocationBtn",
+      "label": "Use my location",
+      "expected": "Run Use my location",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:295",
+      "id": "radiusFilter",
+      "name": null,
+      "actionKey": "radiusFilter",
+      "label": "5 km 10 km 25 km 50 km 100 km Any distance",
+      "expected": "Capture radiusFilter input",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "geo.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:305",
+      "id": "listingSort",
+      "name": null,
+      "actionKey": "listingSort",
+      "label": "Recommended Distance Price: low to high Price: high to low",
+      "expected": "Capture listingSort input",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:317",
+      "id": "saveCurrentSearchBtn",
+      "name": null,
+      "actionKey": "saveCurrentSearchBtn",
+      "label": "Save search",
+      "expected": "Run Save search",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:318",
+      "id": "openSavedSearchesBtn",
+      "name": null,
+      "actionKey": "openSavedSearchesBtn",
+      "label": "Saved searches",
+      "expected": "Run Saved searches",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:324",
+      "id": "closeSavedSearchesBtn",
+      "name": null,
+      "actionKey": "closeSavedSearchesBtn",
+      "label": "Close",
+      "expected": "Run Close",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:330",
+      "id": null,
+      "name": null,
+      "actionKey": "list",
+      "label": "List",
+      "expected": "Run List",
+      "observed": "Source binding/reference found (728)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability.test.js",
+        "booking-access.test.js",
+        "browser-e2e-v113.test.js",
+        "customer-handoff-v145.test.js",
+        "customer-ux.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:331",
+      "id": null,
+      "name": null,
+      "actionKey": "map",
+      "label": "Map",
+      "expected": "Run Map",
+      "observed": "Source binding/reference found (136)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:427",
+      "id": "supplierActivationPassword",
+      "name": null,
+      "actionKey": "supplierActivationPassword",
+      "label": "At least 8 characters",
+      "expected": "Capture supplierActivationPassword input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:428",
+      "id": null,
+      "name": null,
+      "actionKey": "Activate my account",
+      "label": "Activate my account",
+      "expected": "Submit Activate my account",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:436",
+      "id": "closeAuth",
+      "name": null,
+      "actionKey": "closeAuth",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:441",
+      "id": null,
+      "name": null,
+      "actionKey": "login",
+      "label": "Log in",
+      "expected": "Run Log in",
+      "observed": "Source binding/reference found (25)",
+      "tests": [
+        "auth-accessibility.test.js",
+        "launch-readiness.test.js",
+        "product-polish-v109.test.js",
+        "supplier-ux-v178.test.cjs"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:442",
+      "id": null,
+      "name": null,
+      "actionKey": "register",
+      "label": "Register",
+      "expected": "Run Register",
+      "observed": "Source binding/reference found (16)",
+      "tests": [
+        "auth-accessibility.test.js",
+        "brand-cache-v175.test.js",
+        "cache-consistency-v200.test.cjs",
+        "launch-readiness.test.js",
+        "pwa.test.js",
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:449",
+      "id": "loginEmail",
+      "name": null,
+      "actionKey": "loginEmail",
+      "label": "name@example.com",
+      "expected": "Capture loginEmail input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:450",
+      "id": "loginPassword",
+      "name": null,
+      "actionKey": "loginPassword",
+      "label": "••••••••",
+      "expected": "Capture loginPassword input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:451",
+      "id": null,
+      "name": null,
+      "actionKey": "Log in",
+      "label": "Log in",
+      "expected": "Submit Log in",
+      "observed": "Source binding/reference found (33)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:465",
+      "id": "regRole",
+      "name": null,
+      "actionKey": "regRole",
+      "label": "Rent items for now Rent items and rent out my items",
+      "expected": "Capture regRole input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [
+        "marketplace-trust-v172.test.js",
+        "supplier-entry-v174.test.js",
+        "supplier-onboarding-v110.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:471",
+      "id": "regAccountType",
+      "name": null,
+      "actionKey": "regAccountType",
+      "label": "Individual Business",
+      "expected": "Capture regAccountType input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:476",
+      "id": "regBusinessName",
+      "name": null,
+      "actionKey": "regBusinessName",
+      "label": "e.g. Jonas or Klaipėda Rentals",
+      "expected": "Capture regBusinessName input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:477",
+      "id": "regContactName",
+      "name": null,
+      "actionKey": "regContactName",
+      "label": "Anna Smith",
+      "expected": "Capture regContactName input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:478",
+      "id": "regEmail",
+      "name": null,
+      "actionKey": "regEmail",
+      "label": "",
+      "expected": "Capture regEmail input",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:479",
+      "id": "regPhone",
+      "name": null,
+      "actionKey": "regPhone",
+      "label": "+370...",
+      "expected": "Capture regPhone input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:482",
+      "id": "regCountry",
+      "name": null,
+      "actionKey": "regCountry",
+      "label": "Lithuania Spain Portugal Greece Cyprus Italy France",
+      "expected": "Capture regCountry input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:492",
+      "id": "regArea",
+      "name": null,
+      "actionKey": "regArea",
+      "label": "e.g. Klaipėda",
+      "expected": "Capture regArea input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:494",
+      "id": "regPassword",
+      "name": null,
+      "actionKey": "regPassword",
+      "label": "",
+      "expected": "Capture regPassword input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:498",
+      "id": "regTerms",
+      "name": null,
+      "actionKey": "regTerms",
+      "label": "",
+      "expected": "Capture regTerms input",
+      "observed": "Native form behavior",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:499",
+      "id": null,
+      "name": null,
+      "actionKey": "Create account",
+      "label": "Create account",
+      "expected": "Submit Create account",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "supplier-onboarding-v110.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:515",
+      "id": "openListingFormBtn",
+      "name": null,
+      "actionKey": "openListingFormBtn",
+      "label": "+ Create listing",
+      "expected": "Run + Create listing",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:523",
+      "id": "closeListingModal",
+      "name": null,
+      "actionKey": "closeListingModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:530",
+      "id": "listingTitle",
+      "name": null,
+      "actionKey": "listingTitle",
+      "label": "Evening dress or 10 folding chairs",
+      "expected": "Capture listingTitle input",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:532",
+      "id": "listingCategory",
+      "name": null,
+      "actionKey": "listingCategory",
+      "label": "Furniture Tools & equipment Events & parties Fashion & occasion wear Electronics Photo & video Garden & outdoor Trailers & transport gear Baby & family Sports & leisure Other",
+      "expected": "Capture listingCategory input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:546",
+      "id": "listingQuantity",
+      "name": null,
+      "actionKey": "listingQuantity",
+      "label": "1",
+      "expected": "Capture listingQuantity input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:548",
+      "id": "listingCountry",
+      "name": null,
+      "actionKey": "listingCountry",
+      "label": "Lithuania Spain Portugal Greece Cyprus Italy France",
+      "expected": "Capture listingCountry input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:558",
+      "id": "listingCity",
+      "name": null,
+      "actionKey": "listingCity",
+      "label": "Klaipėda",
+      "expected": "Capture listingCity input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:561",
+      "id": "listingLatitude",
+      "name": null,
+      "actionKey": "listingLatitude",
+      "label": "55.7033",
+      "expected": "Capture listingLatitude input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [
+        "geo.test.js",
+        "listing-pipeline.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:564",
+      "id": "listingLongitude",
+      "name": null,
+      "actionKey": "listingLongitude",
+      "label": "21.1443",
+      "expected": "Capture listingLongitude input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:567",
+      "id": "useListingLocationBtn",
+      "name": null,
+      "actionKey": "useListingLocationBtn",
+      "label": "Use my current location for this listing",
+      "expected": "Run Use my current location for this listing",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:573",
+      "id": "listingPriceDay",
+      "name": null,
+      "actionKey": "listingPriceDay",
+      "label": "",
+      "expected": "Capture listingPriceDay input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:574",
+      "id": "listingPriceWeek",
+      "name": null,
+      "actionKey": "listingPriceWeek",
+      "label": "",
+      "expected": "Capture listingPriceWeek input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:577",
+      "id": "listingCancellationPolicy",
+      "name": null,
+      "actionKey": "listingCancellationPolicy",
+      "label": "Flexible Moderate Strict",
+      "expected": "Capture listingCancellationPolicy input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [
+        "listing-pipeline.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:584",
+      "id": "listingDeposit",
+      "name": null,
+      "actionKey": "listingDeposit",
+      "label": "",
+      "expected": "Capture listingDeposit input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:588",
+      "id": "listingDelivery",
+      "name": null,
+      "actionKey": "listingDelivery",
+      "label": "Pickup only Delivery available Pickup or delivery",
+      "expected": "Capture listingDelivery input",
+      "observed": "Source binding/reference found (9)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:595",
+      "id": "listingAccommodationDelivery",
+      "name": null,
+      "actionKey": "listingAccommodationDelivery",
+      "label": "Yes No",
+      "expected": "Capture listingAccommodationDelivery input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:602",
+      "id": "listingDeliveryZones",
+      "name": null,
+      "actionKey": "listingDeliveryZones",
+      "label": "e.g. Klaipėda, Vilnius, Barcelona",
+      "expected": "Capture listingDeliveryZones input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:606",
+      "id": "listingHotelDeliveryFee",
+      "name": null,
+      "actionKey": "listingHotelDeliveryFee",
+      "label": "10",
+      "expected": "Capture listingHotelDeliveryFee input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:610",
+      "id": "listingMinOrder",
+      "name": null,
+      "actionKey": "listingMinOrder",
+      "label": "25",
+      "expected": "Capture listingMinOrder input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:614",
+      "id": "listingDeliveryLeadTime",
+      "name": null,
+      "actionKey": "listingDeliveryLeadTime",
+      "label": "Within 2 hours Same day Next day 24 hours notice 48 hours notice",
+      "expected": "Capture listingDeliveryLeadTime input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:624",
+      "id": "listingDeliveryWindow",
+      "name": null,
+      "actionKey": "listingDeliveryWindow",
+      "label": "08:00–12:00 12:00–16:00 16:00–20:00 Any time 08:00–20:00",
+      "expected": "Capture listingDeliveryWindow input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:632",
+      "id": "listingBookingMode",
+      "name": null,
+      "actionKey": "listingBookingMode",
+      "label": "Request to book Instant Book — verified payout accounts only",
+      "expected": "Capture listingBookingMode input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:638",
+      "id": "listingResponseHours",
+      "name": null,
+      "actionKey": "listingResponseHours",
+      "label": "2 active hours 4 active hours 8 active hours 24 active hours",
+      "expected": "Capture listingResponseHours input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:650",
+      "id": "listingPhotos",
+      "name": null,
+      "actionKey": "listingPhotos",
+      "label": "",
+      "expected": "Capture listingPhotos input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:655",
+      "id": "listingDescription",
+      "name": null,
+      "actionKey": "listingDescription",
+      "label": "",
+      "expected": "Capture listingDescription input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:658",
+      "id": null,
+      "name": null,
+      "actionKey": "Publish rental listing",
+      "label": "Publish rental listing",
+      "expected": "Submit Publish rental listing",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "listing-polish-v111.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:673",
+      "id": "lockedLoginBtn",
+      "name": null,
+      "actionKey": "lockedLoginBtn",
+      "label": "Log in",
+      "expected": "Run Log in",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:687",
+      "id": "supplierDashboardToggle",
+      "name": null,
+      "actionKey": "supplierDashboardToggle",
+      "label": "Rodyti valdymo skydą",
+      "expected": "Run Rodyti valdymo skydą",
+      "observed": "Source binding/reference found (11)",
+      "tests": [
+        "public-focus-v176.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:689",
+      "id": null,
+      "name": null,
+      "actionKey": "grid",
+      "label": "Tinklelis",
+      "expected": "Run Tinklelis",
+      "observed": "Source binding/reference found (68)",
+      "tests": [
+        "booking-confirmation.test.js",
+        "map-discovery-v101.test.js",
+        "public-focus-v176.test.cjs",
+        "supplier-command-v93.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:690",
+      "id": null,
+      "name": null,
+      "actionKey": "list",
+      "label": "Sąrašas",
+      "expected": "Run Sąrašas",
+      "observed": "Source binding/reference found (728)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability.test.js",
+        "booking-access.test.js",
+        "browser-e2e-v113.test.js",
+        "customer-handoff-v145.test.js",
+        "customer-ux.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:695",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierOverview",
+      "label": "Overview",
+      "expected": "Run Overview",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:696",
+      "id": null,
+      "name": null,
+      "actionKey": "v94InventoryBody",
+      "label": "Inventory & pricing",
+      "expected": "Run Inventory & pricing",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:697",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierAvailabilitySection",
+      "label": "Calendar",
+      "expected": "Run Calendar",
+      "observed": "Source binding/reference found (11)",
+      "tests": [
+        "supplier-ux-v178.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:698",
+      "id": null,
+      "name": null,
+      "actionKey": "bookingTableBody",
+      "label": "Bookings",
+      "expected": "Run Bookings",
+      "observed": "Source binding/reference found (11)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:699",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierFinanceOverview",
+      "label": "Earnings",
+      "expected": "Run Earnings",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:700",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierPaymentsPanel",
+      "label": "Payouts",
+      "expected": "Run Payouts",
+      "observed": "Source binding/reference found (10)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:703",
+      "id": "v128RefreshSupplier",
+      "name": null,
+      "actionKey": "v128RefreshSupplier",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:705",
+      "id": null,
+      "name": null,
+      "actionKey": "bookingTableBody",
+      "label": "Open bookings",
+      "expected": "Run Open bookings",
+      "observed": "Source binding/reference found (9)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:705",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierPaymentsPanel",
+      "label": "Open payouts",
+      "expected": "Run Open payouts",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": "v143RefreshCommand",
+      "name": null,
+      "actionKey": "v143RefreshCommand",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "bookingTableBody",
+      "label": "All bookings →",
+      "expected": "Run All bookings →",
+      "observed": "Source binding/reference found (9)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "v94InventoryBody",
+      "label": "Manage inventory",
+      "expected": "Run Manage inventory",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "supplierAvailabilitySection",
+      "label": "Open calendar",
+      "expected": "Run Open calendar",
+      "observed": "Source binding/reference found (9)",
+      "tests": [
+        "supplier-ux-v178.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "v133FinanceWorkspace",
+      "label": "Earnings & payouts",
+      "expected": "Run Earnings & payouts",
+      "observed": "Source binding/reference found (1)",
+      "tests": [
+        "supplier-finance-v133.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "inventory",
+      "label": "Inventory",
+      "expected": "Run Inventory",
+      "observed": "Source binding/reference found (39)",
+      "tests": [
+        "availability.test.js",
+        "demo-data-v104.test.js",
+        "expiration.test.js",
+        "inventory-auth.test.js",
+        "pricing-source.test.js",
+        "production-surface-v173.test.js",
+        "rc40-surface-audit-v142.test.js",
+        "supplier-command-v143.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "calendar",
+      "label": "Calendar",
+      "expected": "Run Calendar",
+      "observed": "Source binding/reference found (53)",
+      "tests": [
+        "availability-api.test.js",
+        "rc40-surface-audit-v142.test.js",
+        "supplier-inventory-v94.test.js",
+        "supplier-pro-v144.test.js",
+        "supplier-ux-v178.test.cjs",
+        "supplier-ux-v179.test.cjs",
+        "supplier-workspace-v129.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "pricing",
+      "label": "Pricing",
+      "expected": "Run Pricing",
+      "observed": "Source binding/reference found (92)",
+      "tests": [
+        "checkout-lock.test.js",
+        "deployment-runtime-v147.test.js",
+        "help-center-v177.test.js",
+        "price-integrity.test.js",
+        "pricing-source.test.js",
+        "product-polish-v109.test.js",
+        "rc40-surface-audit-v142.test.js",
+        "supplier-dashboard-v124.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "earnings",
+      "label": "Earnings",
+      "expected": "Run Earnings",
+      "observed": "Source binding/reference found (42)",
+      "tests": [
+        "rc40-surface-audit-v142.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:706",
+      "id": null,
+      "name": null,
+      "actionKey": "payouts",
+      "label": "Payouts",
+      "expected": "Run Payouts",
+      "observed": "Source binding/reference found (69)",
+      "tests": [
+        "rc40-surface-audit-v142.test.js",
+        "stripe-connect-v118.test.js",
+        "supplier-finance-v133.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:719",
+      "id": "supplierPaymentsBtn",
+      "name": null,
+      "actionKey": "supplierPaymentsBtn",
+      "label": "Payments",
+      "expected": "Run Payments",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:720",
+      "id": "supplierAccountBtn",
+      "name": null,
+      "actionKey": "supplierAccountBtn",
+      "label": "Account",
+      "expected": "Run Account",
+      "observed": "Source binding/reference found (7)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:721",
+      "id": "supplierLogoutBtn",
+      "name": null,
+      "actionKey": "supplierLogoutBtn",
+      "label": "Log out",
+      "expected": "Run Log out",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:752",
+      "id": "v93RefreshOps",
+      "name": null,
+      "actionKey": "v93RefreshOps",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:754",
+      "id": null,
+      "name": null,
+      "actionKey": "pending",
+      "label": "⏱ 0 Pending requests Review →",
+      "expected": "Run ⏱ 0 Pending requests Review →",
+      "observed": "Source binding/reference found (77)",
+      "tests": [
+        "availability.test.js",
+        "deposit-lifecycle-v98.test.js",
+        "email-worker.test.js",
+        "expiration.test.js",
+        "inventory-auth.test.js",
+        "renter-booking-status-v190.test.js",
+        "supplier-command-v93.test.js",
+        "v203-stabilization.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:755",
+      "id": null,
+      "name": null,
+      "actionKey": "confirmed",
+      "label": "📦 0 Upcoming handovers Open →",
+      "expected": "Run 📦 0 Upcoming handovers Open →",
+      "observed": "Source binding/reference found (91)",
+      "tests": [
+        "booking-status-email.test.js",
+        "customer-journey-v103.test.js",
+        "public-surface-v169.test.js",
+        "renter-booking-status-v190.test.js",
+        "supplier-finance-v95.test.js",
+        "supplier-reliability-v182.test.js",
+        "trust.test.js",
+        "v203-stabilization.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:756",
+      "id": null,
+      "name": null,
+      "actionKey": "active",
+      "label": "↔ 0 Active rentals Track →",
+      "expected": "Run ↔ 0 Active rentals Track →",
+      "observed": "Source binding/reference found (260)",
+      "tests": [
+        "booking-retry.test.js",
+        "brand-integrity-v186.test.js",
+        "customer-dispute-ux.test.js",
+        "hormozi-offer-v187.test.js",
+        "moderation-booking.test.js",
+        "renter-booking-status-v190.test.js",
+        "renter-response-deadline-v189.test.js",
+        "runtime-regression.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:757",
+      "id": null,
+      "name": null,
+      "actionKey": "returned",
+      "label": "✓ 0 Recently returned View →",
+      "expected": "Run ✓ 0 Recently returned View →",
+      "observed": "Source binding/reference found (30)",
+      "tests": [
+        "customer-dispute-ux.test.js",
+        "return-lifecycle.test.js",
+        "supplier-finance-v95.test.js",
+        "trust.test.js",
+        "v203-stabilization.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:762",
+      "id": "v95OpenPayouts",
+      "name": null,
+      "actionKey": "v95OpenPayouts",
+      "label": "Payout settings",
+      "expected": "Run Payout settings",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:781",
+      "id": "closePaymentsPanel",
+      "name": null,
+      "actionKey": "closePaymentsPanel",
+      "label": "Close",
+      "expected": "Run Close",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:803",
+      "id": "stripeLegalEntityType",
+      "name": null,
+      "actionKey": "stripeLegalEntityType",
+      "label": "Individual Company",
+      "expected": "Capture stripeLegalEntityType input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:809",
+      "id": "connectStripeBtn",
+      "name": null,
+      "actionKey": "connectStripeBtn",
+      "label": "Connect with Stripe",
+      "expected": "Run Connect with Stripe",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:810",
+      "id": "openStripeDashboardBtn",
+      "name": null,
+      "actionKey": "openStripeDashboardBtn",
+      "label": "Open Stripe Dashboard",
+      "expected": "Run Open Stripe Dashboard",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:811",
+      "id": "refreshStripeStatusBtn",
+      "name": null,
+      "actionKey": "refreshStripeStatusBtn",
+      "label": "Refresh Stripe status",
+      "expected": "Run Refresh Stripe status",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:832",
+      "id": "editBankFromPayments",
+      "name": null,
+      "actionKey": "editBankFromPayments",
+      "label": "Edit payout details",
+      "expected": "Run Edit payout details",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:842",
+      "id": "paymentsScheduleSelect",
+      "name": null,
+      "actionKey": "paymentsScheduleSelect",
+      "label": "Weekly Every 2 weeks Monthly",
+      "expected": "Capture paymentsScheduleSelect input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:864",
+      "id": "refreshWebhookLogBtn",
+      "name": null,
+      "actionKey": "refreshWebhookLogBtn",
+      "label": "Refresh log",
+      "expected": "Run Refresh log",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:869",
+      "id": "webhookTypeFilter",
+      "name": null,
+      "actionKey": "webhookTypeFilter",
+      "label": "All event types",
+      "expected": "Capture webhookTypeFilter input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:875",
+      "id": "webhookStatusFilter",
+      "name": null,
+      "actionKey": "webhookStatusFilter",
+      "label": "All statuses Processed Processing Failed Received",
+      "expected": "Capture webhookStatusFilter input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:885",
+      "id": "webhookFromDate",
+      "name": null,
+      "actionKey": "webhookFromDate",
+      "label": "",
+      "expected": "Capture webhookFromDate input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:889",
+      "id": "webhookToDate",
+      "name": null,
+      "actionKey": "webhookToDate",
+      "label": "",
+      "expected": "Capture webhookToDate input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:892",
+      "id": "clearWebhookFiltersBtn",
+      "name": null,
+      "actionKey": "clearWebhookFiltersBtn",
+      "label": "Clear filters",
+      "expected": "Run Clear filters",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:920",
+      "id": "paymentHistoryFilter",
+      "name": null,
+      "actionKey": "paymentHistoryFilter",
+      "label": "All activity Bookings Platform fees Payouts",
+      "expected": "Capture paymentHistoryFilter input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:934",
+      "id": "webhookEventType",
+      "name": null,
+      "actionKey": "webhookEventType",
+      "label": "account.updated account.external_account.updated payout.paid payout.failed payment_intent.succeeded",
+      "expected": "Capture webhookEventType input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:941",
+      "id": "simulateWebhookBtn",
+      "name": null,
+      "actionKey": "simulateWebhookBtn",
+      "label": "Simulate event",
+      "expected": "Run Simulate event",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:975",
+      "id": "bookingFilter",
+      "name": null,
+      "actionKey": "bookingFilter",
+      "label": "All statuses Pending Confirmed Declined",
+      "expected": "Capture bookingFilter input",
+      "observed": "Source binding/reference found (21)",
+      "tests": [
+        "supplier-deep-link.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:984",
+      "id": "bookingCityFilter",
+      "name": null,
+      "actionKey": "bookingCityFilter",
+      "label": "All cities",
+      "expected": "Capture bookingCityFilter input",
+      "observed": "Source binding/reference found (15)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:990",
+      "id": "bookingDateFilter",
+      "name": null,
+      "actionKey": "bookingDateFilter",
+      "label": "",
+      "expected": "Capture bookingDateFilter input",
+      "observed": "Source binding/reference found (13)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:993",
+      "id": "clearBookingFiltersBtn",
+      "name": null,
+      "actionKey": "clearBookingFiltersBtn",
+      "label": "Clear filters",
+      "expected": "Run Clear filters",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1029",
+      "id": "v94RefreshInventory",
+      "name": null,
+      "actionKey": "v94RefreshInventory",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1061",
+      "id": "partnerBusinessName",
+      "name": null,
+      "actionKey": "partnerBusinessName",
+      "label": "Business name",
+      "expected": "Capture partnerBusinessName input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1062",
+      "id": "partnerEmail",
+      "name": null,
+      "actionKey": "partnerEmail",
+      "label": "Email",
+      "expected": "Capture partnerEmail input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1063",
+      "id": "partnerPhone",
+      "name": null,
+      "actionKey": "partnerPhone",
+      "label": "Phone / WhatsApp",
+      "expected": "Capture partnerPhone input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1064",
+      "id": "partnerCategory",
+      "name": null,
+      "actionKey": "partnerCategory",
+      "label": "What do you rent? Tools & equipment Construction equipment Cleaning equipment Garden & outdoor Furniture Events & parties Electronics Computers & IT Photo & video Audio & music equipment Sports & fitness Bicycles & scooters Travel equipment Camping & outdoor adventure Baby & family Home & kitchen DIY & renovation Office & business equipment Moving & storage equipment Medical & mobility equipment Watersports equipment Winter sports equipment Fashion, costumes & accessories Games & entertainment Other",
+      "expected": "Capture partnerCategory input",
+      "observed": "Native form behavior",
+      "tests": [
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1092",
+      "id": null,
+      "name": null,
+      "actionKey": "Continue supplier registration",
+      "label": "Continue supplier registration",
+      "expected": "Submit Continue supplier registration",
+      "observed": "Source binding/reference found (6)",
+      "tests": [
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1101",
+      "id": "checkoutBtn",
+      "name": null,
+      "actionKey": "checkoutBtn",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1107",
+      "id": "closeCheckout",
+      "name": null,
+      "actionKey": "closeCheckout",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1124",
+      "id": "rentalStart",
+      "name": null,
+      "actionKey": "rentalStart",
+      "label": "",
+      "expected": "Capture rentalStart input",
+      "observed": "Source binding/reference found (25)",
+      "tests": [
+        "cancellation-v197.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1125",
+      "id": "rentalStartTime",
+      "name": null,
+      "actionKey": "rentalStartTime",
+      "label": "",
+      "expected": "Capture rentalStartTime input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [
+        "cancellation-v197.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1126",
+      "id": "rentalEnd",
+      "name": null,
+      "actionKey": "rentalEnd",
+      "label": "",
+      "expected": "Capture rentalEnd input",
+      "observed": "Source binding/reference found (17)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1138",
+      "id": null,
+      "name": null,
+      "actionKey": "2",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (797)",
+      "tests": [
+        "architecture-v112.test.js",
+        "auth-accessibility.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-retry.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1147",
+      "id": "accommodationType",
+      "name": null,
+      "actionKey": "accommodationType",
+      "label": "Select Pickup from owner Delivery to my address Meet at agreed location",
+      "expected": "Capture accommodationType input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1155",
+      "id": "deliveryArea",
+      "name": null,
+      "actionKey": "deliveryArea",
+      "label": "e.g. Klaipėda",
+      "expected": "Capture deliveryArea input",
+      "observed": "Source binding/reference found (13)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1158",
+      "id": "hotelName",
+      "name": null,
+      "actionKey": "hotelName",
+      "label": "e.g. Hotel name or apartment name",
+      "expected": "Capture hotelName input",
+      "observed": "Source binding/reference found (15)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1161",
+      "id": "deliveryAddress",
+      "name": null,
+      "actionKey": "deliveryAddress",
+      "label": "Street, number, postcode, city",
+      "expected": "Capture deliveryAddress input",
+      "observed": "Source binding/reference found (18)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1164",
+      "id": "hotelBookingName",
+      "name": null,
+      "actionKey": "hotelBookingName",
+      "label": "e.g. Anna Smith",
+      "expected": "Capture hotelBookingName input",
+      "observed": "Source binding/reference found (8)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1167",
+      "id": "roomNumber",
+      "name": null,
+      "actionKey": "roomNumber",
+      "label": "Optional",
+      "expected": "Capture roomNumber input",
+      "observed": "Source binding/reference found (19)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1170",
+      "id": "deliveryInstructions",
+      "name": null,
+      "actionKey": "deliveryInstructions",
+      "label": "",
+      "expected": "Capture deliveryInstructions input",
+      "observed": "Source binding/reference found (12)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1173",
+      "id": "deliveryWindow",
+      "name": null,
+      "actionKey": "deliveryWindow",
+      "label": "08:00–12:00 12:00–16:00 16:00–20:00",
+      "expected": "Capture deliveryWindow input",
+      "observed": "Source binding/reference found (14)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1179",
+      "id": "flightNumber",
+      "name": null,
+      "actionKey": "flightNumber",
+      "label": "Optional",
+      "expected": "Capture flightNumber input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1183",
+      "id": null,
+      "name": null,
+      "actionKey": "1",
+      "label": "Back",
+      "expected": "Run Back",
+      "observed": "Source binding/reference found (1030)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "architecture-v112.test.js",
+        "auth.test.js",
+        "authoritative-finance-v96.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-access.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1184",
+      "id": null,
+      "name": null,
+      "actionKey": "3",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (1003)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "booking-date-safety.test.js",
+        "booking-idempotency.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1193",
+      "id": "firstName",
+      "name": null,
+      "actionKey": "firstName",
+      "label": "",
+      "expected": "Capture firstName input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1194",
+      "id": "lastName",
+      "name": null,
+      "actionKey": "lastName",
+      "label": "",
+      "expected": "Capture lastName input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1195",
+      "id": "email",
+      "name": null,
+      "actionKey": "email",
+      "label": "",
+      "expected": "Capture email input",
+      "observed": "Source binding/reference found (144)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "auth.test.js",
+        "booking-access.test.js",
+        "booking-command-v140.test.js",
+        "booking-email.test.js",
+        "booking-portal.test.js",
+        "booking-status-email.test.js",
+        "customer-bookings.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1196",
+      "id": "phone",
+      "name": null,
+      "actionKey": "phone",
+      "label": "+34...",
+      "expected": "Capture phone input",
+      "observed": "Source binding/reference found (16)",
+      "tests": [
+        "booking-integrity.test.js",
+        "mobile-checkout-v137.test.js",
+        "supplier-entry-v174.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1197",
+      "id": "whatsapp",
+      "name": null,
+      "actionKey": "whatsapp",
+      "label": "Optional",
+      "expected": "Capture whatsapp input",
+      "observed": "Native form behavior",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1199",
+      "id": "preferredLanguage",
+      "name": null,
+      "actionKey": "preferredLanguage",
+      "label": "English Lietuvių Español Deutsch Русский",
+      "expected": "Capture preferredLanguage input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1207",
+      "id": "supplierNotes",
+      "name": null,
+      "actionKey": "supplierNotes",
+      "label": "",
+      "expected": "Capture supplierNotes input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1211",
+      "id": null,
+      "name": null,
+      "actionKey": "2",
+      "label": "Back",
+      "expected": "Run Back",
+      "observed": "Source binding/reference found (796)",
+      "tests": [
+        "architecture-v112.test.js",
+        "auth-accessibility.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-retry.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1212",
+      "id": null,
+      "name": null,
+      "actionKey": "4",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (1459)",
+      "tests": [
+        "auth-accessibility.test.js",
+        "availability.test.js",
+        "booking-command-v140.test.js",
+        "booking-date-safety.test.js",
+        "booking-portal.test.js",
+        "booking-safe-retry.test.js",
+        "brand-cache-v175.test.js",
+        "cancellation-v197.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1224",
+      "id": "termsCheck",
+      "name": null,
+      "actionKey": "termsCheck",
+      "label": "",
+      "expected": "Capture termsCheck input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1225",
+      "id": "shareCheck",
+      "name": null,
+      "actionKey": "shareCheck",
+      "label": "",
+      "expected": "Capture shareCheck input",
+      "observed": "Native form behavior",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1226",
+      "id": null,
+      "name": null,
+      "actionKey": null,
+      "label": "",
+      "expected": "Capture checkbox input",
+      "observed": "Native form behavior",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1229",
+      "id": null,
+      "name": null,
+      "actionKey": "3",
+      "label": "Back",
+      "expected": "Run Back",
+      "observed": "Source binding/reference found (1002)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "booking-date-safety.test.js",
+        "booking-idempotency.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1230",
+      "id": null,
+      "name": null,
+      "actionKey": "5",
+      "label": "Continue to payment",
+      "expected": "Run Continue to payment",
+      "observed": "Source binding/reference found (280)",
+      "tests": [
+        "architecture-v112.test.js",
+        "auth-accessibility.test.js",
+        "availability.test.js",
+        "booking-idempotency.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1251",
+      "id": null,
+      "name": null,
+      "actionKey": "4",
+      "label": "Back",
+      "expected": "Run Back",
+      "observed": "Source binding/reference found (1458)",
+      "tests": [
+        "auth-accessibility.test.js",
+        "availability.test.js",
+        "booking-command-v140.test.js",
+        "booking-date-safety.test.js",
+        "booking-portal.test.js",
+        "booking-safe-retry.test.js",
+        "brand-cache-v175.test.js",
+        "cancellation-v197.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1252",
+      "id": "payBtn",
+      "name": null,
+      "actionKey": "payBtn",
+      "label": "Reserve & continue",
+      "expected": "Submit Reserve & continue",
+      "observed": "Source binding/reference found (28)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1277",
+      "id": "confirmStripePaymentBtn",
+      "name": null,
+      "actionKey": "confirmStripePaymentBtn",
+      "label": "Pay securely",
+      "expected": "Run Pay securely",
+      "observed": "Source binding/reference found (9)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1281",
+      "id": "v103ViewBookings",
+      "name": null,
+      "actionKey": "v103ViewBookings",
+      "label": "View My Bookings",
+      "expected": "Run View My Bookings",
+      "observed": "Source binding/reference found (4)",
+      "tests": [
+        "customer-journey-v120.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1281",
+      "id": "closeSuccess",
+      "name": null,
+      "actionKey": "closeSuccess",
+      "label": "Close",
+      "expected": "Run Close",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1289",
+      "id": "closeAccount",
+      "name": null,
+      "actionKey": "closeAccount",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1298",
+      "id": "accBusinessName",
+      "name": null,
+      "actionKey": "accBusinessName",
+      "label": "",
+      "expected": "Capture accBusinessName input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1299",
+      "id": "accContactName",
+      "name": null,
+      "actionKey": "accContactName",
+      "label": "",
+      "expected": "Capture accContactName input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1300",
+      "id": "accPhone",
+      "name": null,
+      "actionKey": "accPhone",
+      "label": "",
+      "expected": "Capture accPhone input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1301",
+      "id": "accEmail",
+      "name": null,
+      "actionKey": "accEmail",
+      "label": "",
+      "expected": "Capture accEmail input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1302",
+      "id": "accAddress",
+      "name": null,
+      "actionKey": "accAddress",
+      "label": "Street, city, postcode",
+      "expected": "Capture accAddress input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1303",
+      "id": "accBusinessType",
+      "name": null,
+      "actionKey": "accBusinessType",
+      "label": "",
+      "expected": "Capture accBusinessType input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1304",
+      "id": "accWebsite",
+      "name": null,
+      "actionKey": "accWebsite",
+      "label": "",
+      "expected": "Capture accWebsite input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1312",
+      "id": "accDeliveryZones",
+      "name": null,
+      "actionKey": "accDeliveryZones",
+      "label": "e.g. Klaipėda, Vilnius, Barcelona",
+      "expected": "Capture accDeliveryZones input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [
+        "yc-launch-audit-v186.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1316",
+      "id": "accDeliveryFee",
+      "name": null,
+      "actionKey": "accDeliveryFee",
+      "label": "10",
+      "expected": "Capture accDeliveryFee input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1317",
+      "id": "accFreeDeliveryAbove",
+      "name": null,
+      "actionKey": "accFreeDeliveryAbove",
+      "label": "100",
+      "expected": "Capture accFreeDeliveryAbove input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1325",
+      "id": "accPayoutName",
+      "name": null,
+      "actionKey": "accPayoutName",
+      "label": "Your profile S.L.",
+      "expected": "Capture accPayoutName input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1327",
+      "id": "accPayoutCountry",
+      "name": null,
+      "actionKey": "accPayoutCountry",
+      "label": "Select country Lithuania Spain Portugal France Germany Italy Other",
+      "expected": "Capture accPayoutCountry input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1338",
+      "id": "accIban",
+      "name": null,
+      "actionKey": "accIban",
+      "label": "IBAN",
+      "expected": "Capture accIban input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1339",
+      "id": "accTaxId",
+      "name": null,
+      "actionKey": "accTaxId",
+      "label": "B12345678",
+      "expected": "Capture accTaxId input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1341",
+      "id": "accPayoutSchedule",
+      "name": null,
+      "actionKey": "accPayoutSchedule",
+      "label": "Weekly Every 2 weeks Monthly",
+      "expected": "Capture accPayoutSchedule input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1348",
+      "id": "accPlan",
+      "name": null,
+      "actionKey": "accPlan",
+      "label": "Pilot — Free",
+      "expected": "Capture accPlan input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1355",
+      "id": null,
+      "name": null,
+      "actionKey": "Save profile",
+      "label": "Save profile",
+      "expected": "Submit Save profile",
+      "observed": "Source binding/reference found (10)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1364",
+      "id": "closeSupplierOrderModal",
+      "name": null,
+      "actionKey": "closeSupplierOrderModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1374",
+      "id": "closeReturnBookingModal",
+      "name": null,
+      "actionKey": "closeReturnBookingModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1379",
+      "id": "returnBookingId",
+      "name": null,
+      "actionKey": "returnBookingId",
+      "label": "",
+      "expected": "Capture returnBookingId input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1381",
+      "id": "returnBookingCondition",
+      "name": null,
+      "actionKey": "returnBookingCondition",
+      "label": "Good Damaged Missing or missing parts",
+      "expected": "Capture returnBookingCondition input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1388",
+      "id": "returnBookingNotes",
+      "name": null,
+      "actionKey": "returnBookingNotes",
+      "label": "",
+      "expected": "Capture returnBookingNotes input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1392",
+      "id": "cancelReturnBookingBtn",
+      "name": null,
+      "actionKey": "cancelReturnBookingBtn",
+      "label": "Cancel",
+      "expected": "Run Cancel",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1393",
+      "id": "submitReturnBookingBtn",
+      "name": null,
+      "actionKey": "submitReturnBookingBtn",
+      "label": "Mark returned",
+      "expected": "Submit Mark returned",
+      "observed": "Native form behavior",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1402",
+      "id": "closeAvailabilityModal",
+      "name": null,
+      "actionKey": "closeAvailabilityModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1406",
+      "id": "availabilityFrom",
+      "name": null,
+      "actionKey": "availabilityFrom",
+      "label": "",
+      "expected": "Capture availabilityFrom input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1407",
+      "id": "availabilityTo",
+      "name": null,
+      "actionKey": "availabilityTo",
+      "label": "",
+      "expected": "Capture availabilityTo input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1408",
+      "id": "availabilityQuantity",
+      "name": null,
+      "actionKey": "availabilityQuantity",
+      "label": "1",
+      "expected": "Capture availabilityQuantity input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [
+        "customer-handoff-v145.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1409",
+      "id": "refreshAvailabilityBtn",
+      "name": null,
+      "actionKey": "refreshAvailabilityBtn",
+      "label": "Check dates",
+      "expected": "Run Check dates",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1418",
+      "id": "v145AvailabilityContinue",
+      "name": null,
+      "actionKey": "v145AvailabilityContinue",
+      "label": "Continue to checkout",
+      "expected": "Run Continue to checkout",
+      "observed": "Source binding/reference found (7)",
+      "tests": [
+        "customer-handoff-v145.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1432",
+      "id": "refreshNotificationsBtn",
+      "name": null,
+      "actionKey": "refreshNotificationsBtn",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1444",
+      "id": "refreshSupplierAvailabilityBtn",
+      "name": null,
+      "actionKey": "refreshSupplierAvailabilityBtn",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1449",
+      "id": "supplierCalendarListing",
+      "name": null,
+      "actionKey": "supplierCalendarListing",
+      "label": "",
+      "expected": "Capture supplierCalendarListing input",
+      "observed": "Source binding/reference found (5)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1452",
+      "id": "supplierCalendarFrom",
+      "name": null,
+      "actionKey": "supplierCalendarFrom",
+      "label": "",
+      "expected": "Capture supplierCalendarFrom input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1455",
+      "id": "supplierCalendarTo",
+      "name": null,
+      "actionKey": "supplierCalendarTo",
+      "label": "",
+      "expected": "Capture supplierCalendarTo input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1466",
+      "id": "closeListingDetailModal",
+      "name": null,
+      "actionKey": "closeListingDetailModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1473",
+      "id": "closeReviewModal",
+      "name": null,
+      "actionKey": "closeReviewModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1477",
+      "id": "reviewBookingId",
+      "name": null,
+      "actionKey": "reviewBookingId",
+      "label": "",
+      "expected": "Capture reviewBookingId input",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1479",
+      "id": "reviewRating",
+      "name": null,
+      "actionKey": "reviewRating",
+      "label": "5 — Excellent 4 — Very good 3 — Good 2 — Fair 1 — Poor",
+      "expected": "Capture reviewRating input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [
+        "review-ux.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1488",
+      "id": "reviewComment",
+      "name": null,
+      "actionKey": "reviewComment",
+      "label": "",
+      "expected": "Capture reviewComment input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1490",
+      "id": null,
+      "name": null,
+      "actionKey": "Submit review",
+      "label": "Submit review",
+      "expected": "Submit Submit review",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1503",
+      "id": "refreshAdminBtn",
+      "name": null,
+      "actionKey": "refreshAdminBtn",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1519",
+      "id": "checkPlatformHealthBtn",
+      "name": null,
+      "actionKey": "checkPlatformHealthBtn",
+      "label": "Check",
+      "expected": "Run Check",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1526",
+      "id": "inviteAllReadySuppliersBtn",
+      "name": null,
+      "actionKey": "inviteAllReadySuppliersBtn",
+      "label": "Invite all ready",
+      "expected": "Run Invite all ready",
+      "observed": "Source binding/reference found (3)",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1529",
+      "id": "adminSupplierEmail",
+      "name": null,
+      "actionKey": "adminSupplierEmail",
+      "label": "supplier@example.com",
+      "expected": "Capture adminSupplierEmail input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1530",
+      "id": "adminSupplierBusiness",
+      "name": null,
+      "actionKey": "adminSupplierBusiness",
+      "label": "Klaipėda Rentals",
+      "expected": "Capture adminSupplierBusiness input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1531",
+      "id": "adminSupplierName",
+      "name": null,
+      "actionKey": "adminSupplierName",
+      "label": "Name",
+      "expected": "Capture adminSupplierName input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1532",
+      "id": "adminSupplierPhone",
+      "name": null,
+      "actionKey": "adminSupplierPhone",
+      "label": "+370...",
+      "expected": "Capture adminSupplierPhone input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1533",
+      "id": "adminSupplierCountry",
+      "name": null,
+      "actionKey": "adminSupplierCountry",
+      "label": "LT",
+      "expected": "Capture adminSupplierCountry input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1534",
+      "id": "adminSupplierCity",
+      "name": null,
+      "actionKey": "adminSupplierCity",
+      "label": "Klaipėda",
+      "expected": "Capture adminSupplierCity input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1536",
+      "id": null,
+      "name": null,
+      "actionKey": "Save pre-launch supplier",
+      "label": "Save pre-launch supplier",
+      "expected": "Submit Save pre-launch supplier",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1546",
+      "id": "adminListingSupplierEmail",
+      "name": null,
+      "actionKey": "adminListingSupplierEmail",
+      "label": "",
+      "expected": "Capture adminListingSupplierEmail input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1547",
+      "id": "adminListingTitle",
+      "name": null,
+      "actionKey": "adminListingTitle",
+      "label": "Folding chairs",
+      "expected": "Capture adminListingTitle input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1548",
+      "id": "adminListingCategory",
+      "name": null,
+      "actionKey": "adminListingCategory",
+      "label": "Tools & equipment Events & parties Furniture Electronics Photo & video Garden & outdoor Trailers & transport gear Sports & leisure Other",
+      "expected": "Capture adminListingCategory input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1549",
+      "id": "adminListingCity",
+      "name": null,
+      "actionKey": "adminListingCity",
+      "label": "Klaipėda",
+      "expected": "Capture adminListingCity input",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1550",
+      "id": "adminListingQuantity",
+      "name": null,
+      "actionKey": "adminListingQuantity",
+      "label": "1",
+      "expected": "Capture adminListingQuantity input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1551",
+      "id": "adminListingPriceDay",
+      "name": null,
+      "actionKey": "adminListingPriceDay",
+      "label": "",
+      "expected": "Capture adminListingPriceDay input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1552",
+      "id": "adminListingPriceWeek",
+      "name": null,
+      "actionKey": "adminListingPriceWeek",
+      "label": "",
+      "expected": "Capture adminListingPriceWeek input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1553",
+      "id": "adminListingDeposit",
+      "name": null,
+      "actionKey": "adminListingDeposit",
+      "label": "",
+      "expected": "Capture adminListingDeposit input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1554",
+      "id": "adminListingBookingMode",
+      "name": null,
+      "actionKey": "adminListingBookingMode",
+      "label": "Request to book Instant Book",
+      "expected": "Capture adminListingBookingMode input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1555",
+      "id": "adminListingResponseHours",
+      "name": null,
+      "actionKey": "adminListingResponseHours",
+      "label": "2 active hours 4 active hours 8 active hours 24 active hours",
+      "expected": "Capture adminListingResponseHours input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1556",
+      "id": "adminListingDescription",
+      "name": null,
+      "actionKey": "adminListingDescription",
+      "label": "",
+      "expected": "Capture adminListingDescription input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1558",
+      "id": null,
+      "name": null,
+      "actionKey": "Save hidden listing",
+      "label": "Save hidden listing",
+      "expected": "Submit Save hidden listing",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1592",
+      "id": "refreshCustomerBookingsBtn",
+      "name": null,
+      "actionKey": "refreshCustomerBookingsBtn",
+      "label": "Refresh",
+      "expected": "Run Refresh",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1597",
+      "id": "loadCustomerBookingsBtn",
+      "name": null,
+      "actionKey": "loadCustomerBookingsBtn",
+      "label": "Load my bookings",
+      "expected": "Run Load my bookings",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": null,
+      "name": null,
+      "actionKey": "upcoming",
+      "label": "Upcoming",
+      "expected": "Run Upcoming",
+      "observed": "Source binding/reference found (19)",
+      "tests": [
+        "customer-booking-hub-v127.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": null,
+      "name": null,
+      "actionKey": "active",
+      "label": "Active",
+      "expected": "Run Active",
+      "observed": "Source binding/reference found (261)",
+      "tests": [
+        "booking-retry.test.js",
+        "brand-integrity-v186.test.js",
+        "customer-dispute-ux.test.js",
+        "hormozi-offer-v187.test.js",
+        "moderation-booking.test.js",
+        "renter-booking-status-v190.test.js",
+        "renter-response-deadline-v189.test.js",
+        "runtime-regression.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": null,
+      "name": null,
+      "actionKey": "past",
+      "label": "Past",
+      "expected": "Run Past",
+      "observed": "Source binding/reference found (7)",
+      "tests": [
+        "booking-date-safety.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": null,
+      "name": null,
+      "actionKey": "all",
+      "label": "All",
+      "expected": "Run All",
+      "observed": "Source binding/reference found (347)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability.test.js",
+        "booking-access.test.js",
+        "brand-integrity-v186.test.js",
+        "cancellation-v197.test.js",
+        "customer-bookings.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": "v140RefreshBooking",
+      "name": null,
+      "actionKey": "v140RefreshBooking",
+      "label": "Refresh status",
+      "expected": "Run Refresh status",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": "v140CopyBooking",
+      "name": null,
+      "actionKey": "v140CopyBooking",
+      "label": "Copy booking ID",
+      "expected": "Run Copy booking ID",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1600",
+      "id": "v136RefreshLaunch",
+      "name": null,
+      "actionKey": "v136RefreshLaunch",
+      "label": "Recheck",
+      "expected": "Run Recheck",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1604",
+      "id": null,
+      "name": null,
+      "actionKey": "discover",
+      "label": "⌕ Explore",
+      "expected": "Run ⌕ Explore",
+      "observed": "Source binding/reference found (9)",
+      "tests": [
+        "browser-e2e-v113.test.js",
+        "customer-ux.test.js",
+        "discovery-integrity.test.js",
+        "map-discovery-v101.test.js",
+        "rc40-surface-audit-v142.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1605",
+      "id": null,
+      "name": null,
+      "actionKey": "browse",
+      "label": "▦ Browse",
+      "expected": "Run ▦ Browse",
+      "observed": "Source binding/reference found (74)",
+      "tests": [
+        "browser-e2e-v113.test.js",
+        "i18n-switch-v198.test.cjs",
+        "production-surface-v173.test.js",
+        "release-candidate-v126.test.js",
+        "release-candidate-v131.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1606",
+      "id": null,
+      "name": null,
+      "actionKey": "bookings",
+      "label": "✓ Bookings",
+      "expected": "Run ✓ Bookings",
+      "observed": "Source binding/reference found (215)",
+      "tests": [
+        "audit.test.js",
+        "booking-safe-retry.test.js",
+        "confirmation-actions.test.js",
+        "customer-bookings.test.js",
+        "customer-journey-v120.test.js",
+        "deep-link-routing.test.js",
+        "deployment-runtime-v147.test.js",
+        "expiration.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1607",
+      "id": null,
+      "name": null,
+      "actionKey": "account",
+      "label": "○ Account",
+      "expected": "Run ○ Account",
+      "observed": "Source binding/reference found (302)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "booking-access.test.js",
+        "customer-bookings.test.js",
+        "deep-link-routing.test.js",
+        "deployment-runtime-v147.test.js",
+        "deposit-stripe-v99.test.js",
+        "fixed-header-v170.test.cjs",
+        "guest-email-link.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1613",
+      "id": "closeMessagesModal",
+      "name": null,
+      "actionKey": "closeMessagesModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1622",
+      "id": "messageBody",
+      "name": null,
+      "actionKey": "messageBody",
+      "label": "",
+      "expected": "Capture messageBody input",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1623",
+      "id": null,
+      "name": null,
+      "actionKey": "Send",
+      "label": "Send",
+      "expected": "Submit Send",
+      "observed": "Source binding/reference found (19)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1632",
+      "id": "closeAgreementModal",
+      "name": null,
+      "actionKey": "closeAgreementModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1641",
+      "id": "closeRenterReviewModal",
+      "name": null,
+      "actionKey": "closeRenterReviewModal",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (2)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "input",
+      "source": "index.html:1645",
+      "id": "renterReviewBookingId",
+      "name": null,
+      "actionKey": "renterReviewBookingId",
+      "label": "",
+      "expected": "Capture renterReviewBookingId input",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1646",
+      "id": "renterReviewRating",
+      "name": null,
+      "actionKey": "renterReviewRating",
+      "label": "5 — Excellent 4 — Very good 3 — Good 2 — Fair 1 — Poor",
+      "expected": "Capture renterReviewRating input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "textarea",
+      "source": "index.html:1647",
+      "id": "renterReviewComment",
+      "name": null,
+      "actionKey": "renterReviewComment",
+      "label": "",
+      "expected": "Capture renterReviewComment input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1648",
+      "id": null,
+      "name": null,
+      "actionKey": "Publish renter review",
+      "label": "Publish renter review",
+      "expected": "Submit Publish renter review",
+      "observed": "Source binding/reference found (6)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1703",
+      "id": "resetSearchFromEmpty",
+      "name": null,
+      "actionKey": "resetSearchFromEmpty",
+      "label": "Reset filters",
+      "expected": "Run Reset filters",
+      "observed": "Source binding/reference found (4)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1710",
+      "id": "skipOnboardingBtn",
+      "name": null,
+      "actionKey": "skipOnboardingBtn",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1724",
+      "id": null,
+      "name": null,
+      "actionKey": "nearby",
+      "label": "Near me Browse rentals around your current city.",
+      "expected": "Run Near me Browse rentals around your current city.",
+      "observed": "Source binding/reference found (17)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1727",
+      "id": null,
+      "name": null,
+      "actionKey": "trip",
+      "label": "For my trip Choose a destination and get items delivered there.",
+      "expected": "Run For my trip Choose a destination and get items delivered there.",
+      "observed": "Source binding/reference found (470)",
+      "tests": [
+        "audit.test.js",
+        "booking-command-v140.test.js",
+        "cancellation-v197.test.js",
+        "checkout-confidence-v132.test.js",
+        "customer-booking-hub-v127.test.js",
+        "customer-handoff-v145.test.js",
+        "deployment-runtime-v147.test.js",
+        "deposit-finalization-v100.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1731",
+      "id": null,
+      "name": null,
+      "actionKey": "2",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (797)",
+      "tests": [
+        "architecture-v112.test.js",
+        "auth-accessibility.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-retry.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1739",
+      "id": "onboardingLanguage",
+      "name": null,
+      "actionKey": "onboardingLanguage",
+      "label": "Lietuvių English Español Deutsch Русский",
+      "expected": "Capture onboardingLanguage input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "index.html:1748",
+      "id": "onboardingCurrency",
+      "name": null,
+      "actionKey": "onboardingCurrency",
+      "label": "EUR €",
+      "expected": "Capture onboardingCurrency input",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1754",
+      "id": null,
+      "name": null,
+      "actionKey": "1",
+      "label": "Back",
+      "expected": "Run Back",
+      "observed": "Source binding/reference found (1031)",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "architecture-v112.test.js",
+        "auth.test.js",
+        "authoritative-finance-v96.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-access.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1755",
+      "id": null,
+      "name": null,
+      "actionKey": "3",
+      "label": "Continue",
+      "expected": "Run Continue",
+      "observed": "Source binding/reference found (1003)",
+      "tests": [
+        "architecture-v112.test.js",
+        "audit.test.js",
+        "auth.test.js",
+        "availability-api.test.js",
+        "availability.test.js",
+        "booking-date-safety.test.js",
+        "booking-idempotency.test.js",
+        "brand-cache-v175.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1765",
+      "id": "finishOnboardingBtn",
+      "name": null,
+      "actionKey": "finishOnboardingBtn",
+      "label": "Start exploring",
+      "expected": "Run Start exploring",
+      "observed": "Source binding/reference found (3)",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "index.html:1770",
+      "id": "v102CloseNotifications",
+      "name": null,
+      "actionKey": "v102CloseNotifications",
+      "label": "×",
+      "expected": "Run ×",
+      "observed": "Source binding/reference found (1)",
+      "tests": [],
+      "severity": "P2"
+    }
+  ],
+  "dynamicControls": [
+    {
+      "kind": "button",
+      "source": "app.js:649",
+      "id": "confirmationMyBookings",
+      "name": null,
+      "actionKey": "confirmationMyBookings",
+      "label": "",
+      "expected": "Run confirmationMyBookings",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "confirmation-actions.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:650",
+      "id": "confirmationCopyLink",
+      "name": null,
+      "actionKey": "confirmationCopyLink",
+      "label": "",
+      "expected": "Run confirmationCopyLink",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2199",
+      "id": null,
+      "name": null,
+      "actionKey": "declined",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-status-email.test.js",
+        "customer-dispute-ux.test.js",
+        "payment-race.test.js",
+        "renter-booking-status-v190.test.js",
+        "supplier-pro-v144.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2200",
+      "id": null,
+      "name": null,
+      "actionKey": "confirmed",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-status-email.test.js",
+        "customer-journey-v103.test.js",
+        "public-surface-v169.test.js",
+        "renter-booking-status-v190.test.js",
+        "supplier-finance-v95.test.js",
+        "supplier-reliability-v182.test.js",
+        "trust.test.js",
+        "v203-stabilization.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2202",
+      "id": "closeOrderActionBtn",
+      "name": null,
+      "actionKey": "closeOrderActionBtn",
+      "label": "",
+      "expected": "Run closeOrderActionBtn",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2231",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2232",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2233",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2236",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2237",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2289",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2290",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2291",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2294",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2295",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2384",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2385",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2386",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2389",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2390",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2869",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2870",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2873",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2874",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2877",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2878",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:2881",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3101",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.bookingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3262",
+      "id": "detailAvailabilityBtn",
+      "name": null,
+      "actionKey": "detailAvailabilityBtn",
+      "label": "",
+      "expected": "Run detailAvailabilityBtn",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3265",
+      "id": "detailRentBtn",
+      "name": null,
+      "actionKey": "detailRentBtn",
+      "label": "",
+      "expected": "Run detailRentBtn",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3357",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3358",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3359",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3362",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3363",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3366",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3367",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3370",
+      "id": null,
+      "name": null,
+      "actionKey": "${id}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-confirmation.test.js",
+        "staging-mode.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3468",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(s.email)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3478",
+      "id": null,
+      "name": null,
+      "actionKey": "${l.listingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3479",
+      "id": null,
+      "name": null,
+      "actionKey": "${l.listingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3480",
+      "id": null,
+      "name": null,
+      "actionKey": "${l.listingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:3491",
+      "id": null,
+      "name": null,
+      "actionKey": "${d.disputeId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "select",
+      "source": "app.js:4105",
+      "id": "demoPaymentScenario",
+      "name": null,
+      "actionKey": "demoPaymentScenario",
+      "label": "",
+      "expected": "Capture demoPaymentScenario input",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4105",
+      "id": "confirmDemoPaymentBtn",
+      "name": null,
+      "actionKey": "confirmDemoPaymentBtn",
+      "label": "",
+      "expected": "Run confirmDemoPaymentBtn",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4483",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.bookingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4484",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.bookingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4646",
+      "id": null,
+      "name": null,
+      "actionKey": "${n.notificationId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4715",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.bookingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4716",
+      "id": null,
+      "name": null,
+      "actionKey": "${b.bookingId}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4794",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(l.id)}",
+      "label": "${escapeHtml(uiText(favorite?'Remove from favorites':'Save to favorites'))}",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "dom-safety.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4824",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(l.id)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "dom-safety.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:4825",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(l.id)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "dom-safety.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5445",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(s.savedSearchId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5446",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(s.savedSearchId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5542",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5543",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5544",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5545",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5546",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5547",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(b.bookingId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5873",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(l.id)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "dom-safety.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:5922",
+      "id": "v101MapOpenListing",
+      "name": null,
+      "actionKey": "v101MapOpenListing",
+      "label": "",
+      "expected": "Run v101MapOpenListing",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "app.js:6013",
+      "id": "confirmSupplierListingsBtn",
+      "name": null,
+      "actionKey": "confirmSupplierListingsBtn",
+      "label": "",
+      "expected": "Run confirmSupplierListingsBtn",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/customer-notifications.js:9",
+      "id": null,
+      "name": null,
+      "actionKey": "${escapeHtml(n.notificationId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/marketplace-trust-v172.js:44",
+      "id": null,
+      "name": null,
+      "actionKey": "${esc(c.conversationId)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/marketplace-trust-v172.js:147",
+      "id": "v172MessageSupplier",
+      "name": null,
+      "actionKey": "v172MessageSupplier",
+      "label": "",
+      "expected": "Run v172MessageSupplier",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/marketplace-trust-v172.js:168",
+      "id": null,
+      "name": null,
+      "actionKey": "true",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-idempotency.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/marketplace-trust-v172.js:168",
+      "id": null,
+      "name": null,
+      "actionKey": "true",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-idempotency.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/marketplace-trust-v172.js:168",
+      "id": null,
+      "name": null,
+      "actionKey": "'+esc(bookingId)+'",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "modules/renter-alternatives-v191.js:57",
+      "id": null,
+      "name": null,
+      "actionKey": "${esc(l.id)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/renter-alternatives-v191.js:57",
+      "id": null,
+      "name": null,
+      "actionKey": "${esc(l.id)}",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/renter-alternatives-v191.js:62",
+      "id": null,
+      "name": null,
+      "actionKey": null,
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/renter-alternatives-v191.js:62",
+      "id": null,
+      "name": null,
+      "actionKey": null,
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Rendered template; browser outcome required",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "true",
+      "label": "Close",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-idempotency.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "add",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js",
+        "booking-safe-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "listings",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "auth.test.js",
+        "discovery-integrity.test.js",
+        "expiration.test.js",
+        "inventory-auth.test.js",
+        "listing-pipeline.test.js",
+        "marketplace-trust-v172.test.js",
+        "pricing-source.test.js",
+        "production-surface-v173.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "orders",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "calendar",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "availability-api.test.js",
+        "rc40-surface-audit-v142.test.js",
+        "supplier-inventory-v94.test.js",
+        "supplier-pro-v144.test.js",
+        "supplier-ux-v178.test.cjs",
+        "supplier-ux-v179.test.cjs",
+        "supplier-workspace-v129.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "messages",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "marketplace-trust-v172.test.js",
+        "performance-v181.test.js",
+        "supplier-ux-v178.test.cjs",
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "earnings",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "rc40-surface-audit-v142.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "payouts",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "rc40-surface-audit-v142.test.js",
+        "stripe-connect-v118.test.js",
+        "supplier-finance-v133.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "profile",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "supplier-ux-v178.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "help",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "booking-safe-retry.test.js",
+        "booking-status-email.test.js",
+        "brand-integrity-v186.test.js",
+        "deposit-finalization-v100.test.js",
+        "deposit-stripe-v99.test.js",
+        "email-readiness.test.js",
+        "email-worker.test.js",
+        "help-center-v177.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:26",
+      "id": null,
+      "name": null,
+      "actionKey": "logout",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "runtime-regression.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:54",
+      "id": null,
+      "name": null,
+      "actionKey": "add",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "audit.test.js",
+        "auth-accessibility.test.js",
+        "authoritative-finance-v96.test.js",
+        "booking-confirmation.test.js",
+        "booking-integrity.test.js",
+        "booking-portal.test.js",
+        "booking-retry.test.js",
+        "booking-safe-retry.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:54",
+      "id": null,
+      "name": null,
+      "actionKey": "menu",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "ux-cleanup-v193.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v178.js:54",
+      "id": null,
+      "name": null,
+      "actionKey": "back",
+      "label": "",
+      "expected": "Run UI action",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [
+        "account-dispute-auth.test.js",
+        "auth.test.js",
+        "backup-launch-gate-v172.test.js",
+        "booking-access.test.js",
+        "confirmation-actions.test.js",
+        "customer-bookings.test.js",
+        "deployment-runtime-v147.test.js",
+        "guest-revoke-ux.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "kind": "button",
+      "source": "modules/supplier-ux-v179.js:89",
+      "id": "v179AddFromCalendar",
+      "name": null,
+      "actionKey": "v179AddFromCalendar",
+      "label": "",
+      "expected": "Run v179AddFromCalendar",
+      "observed": "Template action token has a source handler/reference",
+      "tests": [],
+      "severity": "P2"
+    }
+  ],
+  "apiRoutes": [
+    {
+      "method": "POST",
+      "path": "/api/stripe/webhook",
+      "source": "server.js:498",
+      "expected": "POST /api/stripe/webhook enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "payment-ops-security.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/robots.txt",
+      "source": "server.js:780",
+      "expected": "GET /robots.txt enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "launch-readiness.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/sitemap.xml",
+      "source": "server.js:791",
+      "expected": "GET /sitemap.xml enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "launch-readiness.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/listing/:listingId/:slug?",
+      "source": "server.js:830",
+      "expected": "GET /listing/:listingId/:slug? enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/help",
+      "source": "server.js:865",
+      "expected": "GET /help enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "brand-integrity-v186.test.js",
+        "help-center-v177.test.js",
+        "i18n-switch-v198.test.cjs",
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/launch-readiness",
+      "source": "server.js:954",
+      "expected": "GET /api/launch-readiness enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "launch-gate-v114.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime-config",
+      "source": "server.js:960",
+      "expected": "GET /api/runtime-config enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "email-readiness.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "source": "server.js:970",
+      "expected": "GET /api/health enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "security.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/internal/email-outbox/claim",
+      "source": "server.js:994",
+      "expected": "POST /api/internal/email-outbox/claim enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "email-worker.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/internal/email-outbox/:id/sent",
+      "source": "server.js:1000",
+      "expected": "POST /api/internal/email-outbox/:id/sent enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "email-worker.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/internal/email-outbox/:id/failed",
+      "source": "server.js:1005",
+      "expected": "POST /api/internal/email-outbox/:id/failed enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "email-worker.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/email-preview/:id",
+      "source": "server.js:1012",
+      "expected": "GET /api/admin/email-preview/:id enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "booking-email.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/email-outbox",
+      "source": "server.js:1030",
+      "expected": "GET /api/admin/email-outbox enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "email-readiness.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/diagnostics",
+      "source": "server.js:1036",
+      "expected": "GET /api/admin/diagnostics enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "launch-readiness.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/config",
+      "source": "server.js:1041",
+      "expected": "GET /api/config enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "brand-integrity-v186.test.js",
+        "browser-e2e-v113.test.js",
+        "customer-handoff-v145.test.js",
+        "deployment-runtime-v147.test.js",
+        "email-readiness.test.js",
+        "email-worker.test.js",
+        "hormozi-offer-v187.test.js",
+        "launch-gate-v114.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "source": "server.js:1051",
+      "expected": "POST /api/auth/register enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "source": "server.js:1068",
+      "expected": "POST /api/auth/login enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "source": "server.js:1077",
+      "expected": "POST /api/auth/logout enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "source": "server.js:1088",
+      "expected": "GET /api/auth/me enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/enable-supplier",
+      "source": "server.js:1092",
+      "expected": "POST /api/auth/enable-supplier enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/saved-searches",
+      "source": "server.js:1101",
+      "expected": "GET /api/customer/saved-searches enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "saved-search.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/saved-searches",
+      "source": "server.js:1104",
+      "expected": "POST /api/customer/saved-searches enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "saved-search.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/customer/saved-searches/:savedSearchId",
+      "source": "server.js:1114",
+      "expected": "DELETE /api/customer/saved-searches/:savedSearchId enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/notifications",
+      "source": "server.js:1119",
+      "expected": "GET /api/customer/notifications enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "notifications-v102.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/notifications/:notificationId/read",
+      "source": "server.js:1120",
+      "expected": "POST /api/customer/notifications/:notificationId/read enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier/notifications",
+      "source": "server.js:1122",
+      "expected": "GET /api/supplier/notifications enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier/notifications/:notificationId/read",
+      "source": "server.js:1132",
+      "expected": "POST /api/supplier/notifications/:notificationId/read enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings",
+      "source": "server.js:1299",
+      "expected": "GET /api/listings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier/listings",
+      "source": "server.js:1303",
+      "expected": "GET /api/supplier/listings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-inventory-v94.test.js",
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier/listings",
+      "source": "server.js:1307",
+      "expected": "POST /api/supplier/listings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-inventory-v94.test.js",
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/supplier/listings/:listingId",
+      "source": "server.js:1329",
+      "expected": "DELETE /api/supplier/listings/:listingId enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ops/status",
+      "source": "server.js:1336",
+      "expected": "GET /api/ops/status enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "deployment-runtime-v147.test.js",
+        "launch-readiness-v136.test.js",
+        "production-ops-v135.test.js",
+        "production-preflight-v141.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/integrations/capabilities",
+      "source": "server.js:1352",
+      "expected": "GET /api/integrations/capabilities enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "deployment-runtime-v147.test.js",
+        "integrations-v130.test.js",
+        "launch-readiness-v136.test.js",
+        "production-preflight-v141.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "source": "server.js:1358",
+      "expected": "GET /healthz enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "production-preflight-v141.test.js",
+        "release-candidate-v126.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/readiness",
+      "source": "server.js:1360",
+      "expected": "GET /api/readiness enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "deployment-runtime-v147.test.js",
+        "production-foundation-v146.test.js",
+        "production-preflight-v141.test.js",
+        "production-readiness-v125.test.js",
+        "release-candidate-v126.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stripe/connect/create-account",
+      "source": "server.js:1383",
+      "expected": "POST /api/stripe/connect/create-account enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stripe/connect/onboarding-link",
+      "source": "server.js:1430",
+      "expected": "POST /api/stripe/connect/onboarding-link enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stripe/connect/login-link",
+      "source": "server.js:1442",
+      "expected": "POST /api/stripe/connect/login-link enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stripe/connect/status",
+      "source": "server.js:1454",
+      "expected": "GET /api/stripe/connect/status enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/stripe/connect/v2-capability-sync",
+      "source": "server.js:1473",
+      "expected": "POST /api/admin/stripe/connect/v2-capability-sync enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "stripe-connect-v119.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/deposit-intent",
+      "source": "server.js:1486",
+      "expected": "POST /api/payments/deposit-intent enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "deposit-stripe-v99.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/create-intent",
+      "source": "server.js:1543",
+      "expected": "POST /api/payments/create-intent enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "payment-final-state-v197.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/demo/confirm",
+      "source": "server.js:1621",
+      "expected": "POST /api/payments/demo/confirm enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "full-demo-v180.test.js",
+        "payment-final-state-v197.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stripe/webhook-events",
+      "source": "server.js:1657",
+      "expected": "GET /api/stripe/webhook-events enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "payment-ops-security.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stripe/connect/simulate-event",
+      "source": "server.js:1666",
+      "expected": "POST /api/stripe/connect/simulate-event enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "payment-ops-security.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/listings/sync",
+      "source": "server.js:1738",
+      "expected": "POST /api/rentals/listings/sync enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "inventory-auth.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/availability",
+      "source": "server.js:1765",
+      "expected": "GET /api/rentals/availability enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/calendar",
+      "source": "server.js:1787",
+      "expected": "GET /api/rentals/calendar enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/bookings",
+      "source": "server.js:1803",
+      "expected": "POST /api/rentals/bookings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "audit.test.js",
+        "booking-safe-retry.test.js",
+        "legacy-cleanup-v105.test.js",
+        "marketplace-trust-v172.test.js",
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/bookings",
+      "source": "server.js:1969",
+      "expected": "GET /api/rentals/bookings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "audit.test.js",
+        "booking-safe-retry.test.js",
+        "legacy-cleanup-v105.test.js",
+        "marketplace-trust-v172.test.js",
+        "supplier-ux-v179.test.cjs"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/bookings/:bookingId/status",
+      "source": "server.js:1980",
+      "expected": "POST /api/rentals/bookings/:bookingId/status enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/bookings/:bookingId/cancel",
+      "source": "server.js:2076",
+      "expected": "POST /api/rentals/bookings/:bookingId/cancel enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/bookings/:bookingId/return",
+      "source": "server.js:2156",
+      "expected": "POST /api/rentals/bookings/:bookingId/return enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "audit.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/bookings/:bookingId/agreement",
+      "source": "server.js:2202",
+      "expected": "GET /api/rentals/bookings/:bookingId/agreement enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/conversations",
+      "source": "server.js:2226",
+      "expected": "GET /api/conversations enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/conversations",
+      "source": "server.js:2229",
+      "expected": "POST /api/conversations enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/conversations/:conversationId/messages",
+      "source": "server.js:2251",
+      "expected": "GET /api/conversations/:conversationId/messages enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/conversations/:conversationId/messages",
+      "source": "server.js:2258",
+      "expected": "POST /api/conversations/:conversationId/messages enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings/:listingId/reputation",
+      "source": "server.js:2274",
+      "expected": "GET /api/listings/:listingId/reputation enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier/bookings/:bookingId/customer-reputation",
+      "source": "server.js:2280",
+      "expected": "GET /api/supplier/bookings/:bookingId/customer-reputation enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier/bookings/:bookingId/customer-review",
+      "source": "server.js:2285",
+      "expected": "POST /api/supplier/bookings/:bookingId/customer-review enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "marketplace-trust-v172.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/reviews",
+      "source": "server.js:2294",
+      "expected": "GET /api/rentals/reviews enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/reviews",
+      "source": "server.js:2304",
+      "expected": "POST /api/rentals/reviews enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/suppliers",
+      "source": "server.js:2335",
+      "expected": "GET /api/admin/suppliers enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/suppliers",
+      "source": "server.js:2338",
+      "expected": "POST /api/admin/suppliers enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/suppliers/:email/invite",
+      "source": "server.js:2341",
+      "expected": "POST /api/admin/suppliers/:email/invite enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/suppliers/invite-ready",
+      "source": "server.js:2350",
+      "expected": "POST /api/admin/suppliers/invite-ready enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/suppliers/:email/listings",
+      "source": "server.js:2362",
+      "expected": "POST /api/admin/suppliers/:email/listings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/supplier/activation/:token",
+      "source": "server.js:2372",
+      "expected": "GET /api/supplier/activation/:token enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier/activation",
+      "source": "server.js:2381",
+      "expected": "POST /api/supplier/activation enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/supplier/listings/confirm-current",
+      "source": "server.js:2388",
+      "expected": "POST /api/supplier/listings/confirm-current enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "supplier-reliability-v182.test.js"
+      ],
+      "severity": "P2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/dashboard",
+      "source": "server.js:2392",
+      "expected": "GET /api/admin/dashboard enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/listings/:listingId/moderation",
+      "source": "server.js:2397",
+      "expected": "POST /api/admin/listings/:listingId/moderation enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/disputes",
+      "source": "server.js:2409",
+      "expected": "POST /api/rentals/disputes enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/bookings/:bookingId/deposit/release",
+      "source": "server.js:2459",
+      "expected": "POST /api/admin/bookings/:bookingId/deposit/release enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/bookings/:bookingId/deposit/capture",
+      "source": "server.js:2479",
+      "expected": "POST /api/admin/bookings/:bookingId/deposit/capture enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/disputes",
+      "source": "server.js:2504",
+      "expected": "GET /api/admin/disputes enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/disputes/:disputeId/resolve",
+      "source": "server.js:2509",
+      "expected": "POST /api/admin/disputes/:disputeId/resolve enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/bookings",
+      "source": "server.js:2522",
+      "expected": "GET /api/customer/bookings enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "customer-bookings.test.js",
+        "post-booking-live-v138.test.js",
+        "renter-alternatives-v191.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/bookings/:bookingId",
+      "source": "server.js:2528",
+      "expected": "GET /api/customer/bookings/:bookingId enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "renter-alternatives-v191.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/bookings/:bookingId/alternatives",
+      "source": "server.js:2550",
+      "expected": "GET /api/customer/bookings/:bookingId/alternatives enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [
+        "renter-alternatives-v191.test.js"
+      ],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customer/bookings/:bookingId/revoke-guest-link",
+      "source": "server.js:2634",
+      "expected": "POST /api/customer/bookings/:bookingId/revoke-guest-link enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/uploads/image",
+      "source": "server.js:2671",
+      "expected": "POST /api/uploads/image enforces authorization, validation and documented state transition",
+      "observed": "Express handler present",
+      "tests": [],
+      "severity": "P2"
+    }
+  ]
+}

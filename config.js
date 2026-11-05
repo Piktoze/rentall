@@ -64,6 +64,7 @@ export function resolveDatabaseConfig(env=process.env){
   const explicit=String(env.RENTINORBIT_DB_PATH||env.DB_PATH||'').trim();
   const volumeRoot=String(env.RAILWAY_VOLUME_MOUNT_PATH||env.PERSISTENT_DATA_DIR||'').trim();
   if(databaseUrl&&explicit)return {ok:false,driver:'unsupported',source:'conflict',error:'Configure DATABASE_URL or RENTINORBIT_DB_PATH, not both.'};
+  if(explicit===':memory:'&&String(env.NODE_ENV||'')==='test')return {ok:true,driver:'sqlite',source:'DB_PATH',path:':memory:',volumeRoot:null};
   if(databaseUrl){
     const filePath=sqlitePathFromUrl(databaseUrl);
     if(!filePath)return {ok:false,driver:'unsupported',source:'DATABASE_URL',error:'Only absolute file: or sqlite:/// DATABASE_URL values are supported in RC45.'};

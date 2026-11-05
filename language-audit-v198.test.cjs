@@ -21,8 +21,12 @@ for(const phrase of ['Cancel booking','Refund','Refunded','Payment received','Pa
 const html=fs.readFileSync('index.html','utf8');
 const keyed=[...html.matchAll(/\bdata-i18n="([^"]+)"/g)].map(m=>m[1]);
 for(const k of keyed)assert.ok(keys.includes(k),`untranslated html data-i18n: ${k}`);
-assert.ok(html.includes('modules/i18n-v161.js?v=203'),'cache-bust locale asset');
+const explicit=[...html.matchAll(/\bdata-i18n-(?:text|placeholder|aria-label|title)="([^"]+)"/g)].map(m=>m[1].replaceAll('&amp;','&').replaceAll('&quot;','"'));
+for(const phrase of explicit)assert.ok(sourcePhrases.includes(phrase),`untranslated explicit UI phrase: ${phrase}`);
+assert.ok(explicit.length>=560,`expected broad explicit UI coverage, got ${explicit.length}`);
+assert.doesNotMatch(html,/(?:listing-user-description|listing-title|listing-description|message-body|chat-message)[^>]*data-i18n-/i,'user/listing/message content must not be translated');
+assert.ok(html.includes('modules/i18n-v161.js?v=203.1'),'cache-bust locale asset');
 const app=fs.readFileSync('app.js','utf8');
 const appUiKeys=[...app.matchAll(/\buiText\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
 for(const k of appUiKeys)assert.ok(sourcePhrases.includes(k),`untranslated app uiText: ${k}`);
-console.log(`PASS: 5 locales, ${keys.length} keyed labels, ${sourcePhrases.length} phrases; HTML/data-i18n/app uiText parity`);
+console.log(`PASS: 5 locales, ${keys.length} keyed labels, ${explicit.length} explicit UI markers, ${sourcePhrases.length} phrases; HTML/app parity and user-content isolation`);

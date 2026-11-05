@@ -10,6 +10,9 @@ ok(js.includes("currentKey='rentinorbit_language'")&&js.includes('localStorage.g
 ok(js.includes('document.documentElement.lang=lang'),'html lang update');
 ok(js.includes('new MutationObserver'),'dynamic translation observer');
 ok(js.includes('translateI18nElements'),'nested data-i18n translation support');
+ok(js.includes('translateExplicitElements'),'explicit dynamic translation support');
+ok(!js.includes('createTreeWalker'),'global text-node translation must stay disabled');
+ok(!js.includes("characterData:true"),'observer must not watch user/API text mutations');
 
 function parseConst(name,nextName){
   const re=new RegExp(`const ${name}=(\\{.*?\\});\\n  const ${nextName}=`, 's');

@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 assertProductionConfig();
 assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentinorbit.sqlite');
-fs.mkdirSync(path.dirname(dbPath),{recursive:true});
+if(dbPath!==':memory:')fs.mkdirSync(path.dirname(dbPath),{recursive:true});
 export const db = new Database(dbPath);
 export const REQUIRED_SCHEMA_VERSION=184;
 

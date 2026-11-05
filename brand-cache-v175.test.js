@@ -6,7 +6,7 @@ const app=fs.readFileSync('app.js','utf8');
 const sw=fs.readFileSync('service-worker.js','utf8');
 assert(html.includes('light-premium-v161.css?v=203'),'premium CSS cache bust missing');
 assert(html.includes('app.js?v=203'),'app cache bust missing');
-assert(html.includes('modules/i18n-v161.js?v=203'),'i18n cache bust missing');
+assert(html.includes('modules/i18n-v161.js?v=203.1'),'i18n cache bust missing');
 assert(css.includes('font-size:34px!important'),'desktop RentInOrbit wordmark is not visibly enlarged');
 assert(css.includes('width:56px!important'),'desktop R mark is not visibly enlarged');
 assert(sw.includes("rentinorbit-v203-shell"),'service-worker cache version not bumped');

@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const dbFile=path.resolve('./rentinorbit-v203-stabilization-test.sqlite');
+const dbFile=':memory:';
 process.env.DB_PATH=dbFile;
-for(const suffix of ['', '-shm', '-wal']){try{fs.unlinkSync(dbFile+suffix)}catch{}}
+process.env.NODE_ENV='test';
 
 const {
   closeDatabase,
@@ -78,5 +78,4 @@ try{
   console.log('PASS V203: unpaid cancellation, controlled return dialog and terminal cancellation guards');
 }finally{
   closeDatabase();
-  for(const suffix of ['', '-shm', '-wal']){try{fs.unlinkSync(dbFile+suffix)}catch{}}
 }

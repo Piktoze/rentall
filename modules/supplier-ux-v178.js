@@ -2,7 +2,6 @@
 (function supplierUxV178(){
   const $=id=>document.getElementById(id);
   const safeJson=value=>{try{return JSON.parse(value||'null')}catch{return null}};
-  const sourceText=new WeakMap();
   const lang=()=>window.RentInOrbitI18n?.getLanguage?.()||document.documentElement.lang||'lt';
   const copy={
     lt:{center:'Tiekėjo centras',intro:'Valdyk nuomą paprastai. Pradėk nuo skelbimo, o kitus įrankius atverk tik tada, kai jų reikia.',add:'+ Įkelti skelbimą',menu:'Atidaryti tiekėjo meniu',drawer:'Tiekėjo meniu',listings:'Mano skelbimai',orders:'Užsakymai',calendar:'Kalendorius',messages:'Žinutės',earnings:'Pajamos',payouts:'Išmokos',profile:'Verslo profilis',help:'Pagalba ir DUK',logout:'Atsijungti',close:'Uždaryti',chooseConversation:'Pasirink pokalbį, kad galėtum rašyti.',send:'Siųsti',noConversation:'Pokalbių dar nėra. Atidaryk skelbimą ir pasirink „Parašyti tiekėjui“.',back:'Grįžti į tiekėjo centrą',featureListings:'Mano skelbimai',featureOrders:'Užsakymai',featureCalendar:'Kalendorius',featureEarnings:'Pajamos',featurePayouts:'Išmokos'},
@@ -116,11 +115,15 @@
       if(modal.dataset.v178Modal)return;modal.dataset.v178Modal='1';
       modal.addEventListener('click',e=>{if(e.target===modal){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}});
     });
+    if(document.documentElement.dataset.v178EscapeBound)return;
+    document.documentElement.dataset.v178EscapeBound='1';
     document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;closeDrawer();document.querySelectorAll('.availability-modal.open,.account-modal.open,.auth-modal.open').forEach(m=>{m.classList.remove('open');m.setAttribute('aria-hidden','true');});});
   }
 
   function improveMessages(){
     const modal=$('messagesModal'),form=$('messageForm'),body=$('messageBody');if(!modal||!form||!body)return;
+    if(modal.dataset.v178MessagesBound)return;
+    modal.dataset.v178MessagesBound='1';
     const send=form.querySelector('button[type="submit"]');
     const setWaiting=()=>{if(!modal.classList.contains('open'))return;if(!modal.querySelector('.conversation-row.active')){form.hidden=false;body.disabled=true;if(send)send.disabled=true;body.placeholder=t('chooseConversation');}};
     $('messagesBtn')?.addEventListener('click',()=>setTimeout(setWaiting,80));
@@ -147,17 +150,12 @@
     const roots=['supplier-dashboard','accountModal','messagesModal','listingModal','supplierAvailabilitySection'].map($).filter(Boolean);
     const language=lang();
     roots.forEach(root=>{
-      const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-      let node;while((node=walker.nextNode())){
-        const current=node.nodeValue.trim();if(!current)continue;
-        if(!sourceText.has(node))sourceText.set(node,current);
-        const original=sourceText.get(node);
-        let translated=window.RentInOrbitI18n?.t?.(original)||original;
-        if(extra[language]?.[original])translated=extra[language][original];
-        const prefix=node.nodeValue.match(/^\s*/)?.[0]||'';
-        const suffix=node.nodeValue.match(/\s*$/)?.[0]||'';
-        node.nodeValue=prefix+translated+suffix;
-      }
+      root.querySelectorAll('[data-supplier-i18n]').forEach(el=>{
+        const key=el.dataset.supplierI18n;
+        const translated=extra[language]?.[key]||window.RentInOrbitI18n?.t?.(key)||key;
+        if(el.textContent!==translated)el.textContent=translated;
+      });
+      window.RentInOrbitI18n?.translateOwned?.(root,language);
     });
   }
 

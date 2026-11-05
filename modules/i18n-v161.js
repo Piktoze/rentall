@@ -60,10 +60,7 @@
     }
     return null;
   }
-  const originalText=new WeakMap();
-  const originalAttrs=new WeakMap();
   const originalI18nHtml=new WeakMap();
-  const skipTags=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA']);
   let applying=false;
 
   function browserLocale(){
@@ -98,65 +95,37 @@
       if(desired!=null && el.innerHTML!==desired) el.innerHTML=desired;
     });
   }
-  function withinKeyElement(node){
-    const p=node.parentElement;
-    return !!(p && p.closest('[data-i18n], [data-i18n-skip], [contenteditable="true"], .booking-message-text, .message-body, .listing-user-description, .chat-message-text'));
+  // Only application-owned nodes carrying an explicit source key are translated.
+  // API/user/listing/message/editable content is therefore never inferred from text.
+  const explicitAttributes={
+    'data-i18n-placeholder':'placeholder',
+    'data-i18n-aria-label':'aria-label',
+    'data-i18n-title':'title'
+  };
+  function explicitElements(root,selector){
+    const els=[];
+    if(root?.nodeType===1 && root.matches?.(selector)) els.push(root);
+    if(root?.querySelectorAll) els.push(...root.querySelectorAll(selector));
+    return els;
   }
-  // Resolve a translated label to its canonical English source when it was
-  // inserted dynamically by a component in whichever language was active.
-  // Ambiguous reverse translations are excluded to avoid replacing unrelated text.
-  const reverseTranslations=new Map();
-  const ambiguousTranslations=new Set();
-  for(const translations of Object.values(dictionaries)){
-    for(const [source,value] of Object.entries(translations)){
-      const translated=String(value||'').trim();
-      if(!translated || translated===source) continue;
-      if(reverseTranslations.has(translated) && reverseTranslations.get(translated)!==source){
-        ambiguousTranslations.add(translated);
-      }else reverseTranslations.set(translated,source);
+  function translateExplicitElements(lang,root=document){
+    for(const el of explicitElements(root,'[data-i18n-text]')){
+      const source=el.getAttribute('data-i18n-text');
+      const desired=lang==='en'?source:lookup(source,lang);
+      if(desired!=null && el.textContent!==desired) el.textContent=desired;
+    }
+    for(const [marker,target] of Object.entries(explicitAttributes)){
+      for(const el of explicitElements(root,`[${marker}]`)){
+        const source=el.getAttribute(marker);
+        const desired=lang==='en'?source:lookup(source,lang);
+        if(desired!=null && el.getAttribute(target)!==desired) el.setAttribute(target,desired);
+      }
     }
   }
-  for(const phrase of ambiguousTranslations) reverseTranslations.delete(phrase);
-  const lastAppliedText=new WeakMap();
-  function canonicalPhrase(value){
-    const text=String(value||''); const trimmed=text.trim();
-    const source=reverseTranslations.get(trimmed);
-    if(!source) return text;
-    return (text.match(/^\s*/)?.[0]||'')+source+(text.match(/\s*$/)?.[0]||'');
-  }
-  function translateTextNode(node,lang){
-    if(!node||!node.parentElement||skipTags.has(node.parentElement.tagName)||withinKeyElement(node)) return;
-    const last=lastAppliedText.get(node);
-    if(!originalText.has(node) || (last!==undefined && node.nodeValue!==last)) originalText.set(node,canonicalPhrase(node.nodeValue));
-    const original=originalText.get(node);
-    const trimmed=String(original||'').trim();
-    if(!trimmed) return;
-    const translated=lookup(trimmed,lang);
-    const lead=original.match(/^\s*/)?.[0]||'';
-    const trail=original.match(/\s*$/)?.[0]||'';
-    const desired=lang==='en'?original:(translated?lead+translated+trail:null);
-    if(desired!=null && node.nodeValue!==desired) node.nodeValue=desired;
-    lastAppliedText.set(node,node.nodeValue);
-  }
-  function translateAttrs(el,lang){
-    const attrs=['placeholder','aria-label','title'];
-    if(!originalAttrs.has(el)) originalAttrs.set(el,{});
-    const bag=originalAttrs.get(el);
-    for(const attr of attrs){
-      if(el.hasAttribute(attr)&&bag[attr]===undefined) bag[attr]=canonicalPhrase(el.getAttribute(attr));
-      const original=bag[attr]; if(!original) continue;
-      const translated=lookup(original,lang);
-      const desired=lang==='en'?original:(translated||null);
-      if(desired!=null && el.getAttribute(attr)!==desired) el.setAttribute(attr,desired);
-    }
-  }
-  function translateTree(root,lang){
-    if(!root) return;
-    if(root.nodeType===3){translateTextNode(root,lang);return;}
-    if(root.nodeType!==1&&root.nodeType!==9&&root.nodeType!==11) return;
-    if(root.nodeType===1) translateAttrs(root,lang);
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);
-    let n; while((n=walker.nextNode())){ if(n.nodeType===3) translateTextNode(n,lang); else translateAttrs(n,lang); }
+  function translateOwned(root,lang=current()){
+    translateI18nElements(lang,root);
+    translateExplicitElements(lang,root);
+    updateLegalLinks(lang,root);
   }
   // Legal/help routes are server-rendered. Always pass the selected interface
   // language so opening Terms from a non-English checkout cannot change locale.
@@ -187,9 +156,7 @@
     applying=true;
     try{localStorage.setItem('rentinorbit_language',lang)}catch{}
     updateMeta(lang);
-    translateI18nElements(lang);
-    translateTree(document.body,lang);
-    updateLegalLinks(lang);
+    translateOwned(document,lang);
     const sel=document.getElementById('lang'); if(sel&&sel.value!==lang) sel.value=lang;
     applying=false;
     document.dispatchEvent(new CustomEvent('rentinorbit:language-changed',{detail:{lang}}));
@@ -204,7 +171,7 @@
     sel.innerHTML='<option value="lt">LT</option><option value="en">EN</option><option value="es">ES</option><option value="de">DE</option><option value="ru">RU</option>';
     sel.value=current();
   }
-  window.RentInOrbitI18n={t,apply,getLanguage:current,supported:SUPPORTED,dictionaries,keyTranslations};
+  window.RentInOrbitI18n={t,apply,translateOwned,getLanguage:current,supported:SUPPORTED,dictionaries,keyTranslations};
   function init(){
     populateSelector();
     const old=document.getElementById('lang');
@@ -222,15 +189,11 @@
         const lang=current();
         applying=true;
         try{
-          for(const r of batch){
-            if(r.type==='childList') r.addedNodes.forEach(n=>{translateI18nElements(lang,n);translateTree(n,lang);updateLegalLinks(lang,n);});
-            if(r.type==='characterData') translateTextNode(r.target,lang);
-            if(r.type==='attributes') translateAttrs(r.target,lang);
-          }
+          for(const r of batch) if(r.type==='childList') r.addedNodes.forEach(n=>translateOwned(n,lang));
         }finally{applying=false;}
       });
     });
-    observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});
+    observer.observe(document.body,{subtree:true,childList:true});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
