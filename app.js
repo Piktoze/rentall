@@ -5511,10 +5511,21 @@ renderGeoAwareListings=function(items=loadUniversalListings()){
 };
 
 // --- V46: unified account + guest booking portal ---
+function localizeBookingTimelineMessage(message){
+  const source=String(message||'');
+  if(!source)return '';
+  const exact=uiText(source);
+  if(exact!==source)return exact;
+  // Variable booking details are kept unchanged; only fixed English phrases are translated.
+  return source
+    .replace(/^Your reservation is pending\. Inventory is held until payment expiry\.?$/i,uiText('Your reservation is pending. Inventory is held until payment expiry.'))
+    .replace(/^Test Supplier request (\d+) × (.+) for (\d{4}-\d{2}-\d{2} → \d{4}-\d{2}-\d{2})\.?$/i,(_,quantity,item,dates)=>
+      `${uiText('Booking request:')} ${quantity} × ${item} · ${dates}`);
+}
 async function loadUnifiedCustomerBookings(){
   const list=document.getElementById('customerBookingsList');
   if(!list) return;
-  list.innerHTML='<div class="customer-booking-card">Loading…</div>';
+  list.innerHTML=`<div class="customer-booking-card">${escapeHtml(uiText('Loading…'))}</div>`;
 
   const records=new Map();
   if(currentServerUser){
@@ -5531,7 +5542,7 @@ async function loadUnifiedCustomerBookings(){
     }catch{}
   }
 
-  const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} of ${allRows.length}`;
+  const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} ${uiText('of')} ${allRows.length}`;
   if(!rows.length){
     list.innerHTML=`<div class="customer-booking-card"><h3>${escapeHtml(uiText('No bookings yet'))}</h3><p class="muted">${escapeHtml(uiText(currentServerUser?'Bookings made with this account will appear here.':'Sign in for cross-device booking history, or open a guest booking from its secure link.'))}</p></div>`;
     return;
@@ -5542,24 +5553,24 @@ async function loadUnifiedCustomerBookings(){
     const canReview=['returned','completed'].includes(b.status);
     const canDispute=['active','returned','completed','cancelled','declined'].includes(b.status);
     return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">
-      <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(b.status||'pending')}</span></div>
+      <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(uiText(b.status||'pending'))}</span></div>
       <div class="customer-booking-grid">
-        <div><span>Rental dates</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
-        <div><span>Delivery</span><b>${escapeHtml(b.accommodationName||b.deliveryCity||'—')}</b></div>
-        <div><span>Total</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
-        <div><span>Payment</span><b>${escapeHtml(window.customerBookingPaymentCopy?.(b)||b.paymentStatus||'—')}</b></div>
-        <div><span>Security deposit</span><b>${escapeHtml(window.customerBookingDepositCopy?.(b)||b.securityDepositStatus||'—')}</b></div>
+        <div><span>${escapeHtml(uiText('Rental dates'))}</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
+        <div><span>${escapeHtml(uiText('Delivery'))}</span><b>${escapeHtml(b.accommodationName||b.deliveryCity||'—')}</b></div>
+        <div><span>${escapeHtml(uiText('Total'))}</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Payment'))}</span><b>${escapeHtml(window.customerBookingPaymentCopy?.(b)||b.paymentStatus||'—')}</b></div>
+        <div><span>${escapeHtml(uiText('Security deposit'))}</span><b>${escapeHtml(window.customerBookingDepositCopy?.(b)||b.securityDepositStatus||'—')}</b></div>
       </div>
-      ${timeline.length?`<div class="booking-timeline">${timeline.map(t=>`<div class="booking-timeline-item"><b>${escapeHtml(t.title)}</b><span>${escapeHtml(t.message)} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span></div>`).join('')}</div>`:''}
+      ${timeline.length?`<div class="booking-timeline">${timeline.map(t=>`<div class="booking-timeline-item"><b>${escapeHtml(uiText(t.title))}</b><span>${escapeHtml(localizeBookingTimelineMessage(t.message))} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span></div>`).join('')}</div>`:''}
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
-        ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">Cancel booking</button>`:''}
-        ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">Leave review</button>`:''}
-        <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">View agreement</button>
-        ${currentServerUser?`<button class="secondary v172-booking-message" data-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">Messages</button>`:''}
-        ${canDispute?`<button class="secondary v89-open-dispute" data-id="${escapeHtml(b.bookingId)}">Report a problem</button>`:''}
-        ${currentServerUser && !guestAccess?.revoked?`<button class="secondary v88-revoke-guest" data-id="${escapeHtml(b.bookingId)}">Revoke guest link</button>`:''}
-        ${currentServerUser && guestAccess?.revoked?`<span class="muted">Guest link revoked</span>`:''}
+        ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
+        ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
+        <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View agreement'))}</button>
+        ${currentServerUser?`<button class="secondary v172-booking-message" data-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">${escapeHtml(uiText('Messages'))}</button>`:''}
+        ${canDispute?`<button class="secondary v89-open-dispute" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Report a problem'))}</button>`:''}
+        ${currentServerUser && !guestAccess?.revoked?`<button class="secondary v88-revoke-guest" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Revoke guest link'))}</button>`:''}
+        ${currentServerUser && guestAccess?.revoked?`<span class="muted">${escapeHtml(uiText('Guest link revoked'))}</span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -5567,10 +5578,10 @@ async function loadUnifiedCustomerBookings(){
 
   list.querySelectorAll('.v46-cancel-booking').forEach(btn=>btn.addEventListener('click',async()=>{
     const id=btn.dataset.id;
-    const reason=prompt('Cancellation reason (optional):','')||null;
+    const reason=prompt(uiText('Cancellation reason (optional):'),'')||null;
     try{
       const result=await apiJson(`/api/rentals/bookings/${encodeURIComponent(id)}/cancel`,{method:'POST',body:JSON.stringify({reason,accessToken:bookingAccessToken(id)})});
-      showToast(`Booking cancelled. Refund: ${money(result.refundAmount||0)}.`,'success',2200);
+      showToast(`${uiText('Booking cancelled. Refund:')} ${money(result.refundAmount||0)}.`,'success',2200);
       const clean=new URL(window.location.href);
       clean.searchParams.delete('pay');
       window.history.replaceState({},'',clean.toString());
@@ -5581,7 +5592,7 @@ async function loadUnifiedCustomerBookings(){
   }));
   list.querySelectorAll('.v89-open-dispute').forEach(btn=>btn.addEventListener('click',async()=>{
     const bookingId=btn.dataset.id;
-    const reason=prompt('What went wrong?','Item damaged / missing / payment / service issue');
+    const reason=prompt(uiText('What went wrong?'),uiText('Item damaged / missing / payment / service issue'));
     if(!reason?.trim()) return;
     const details=prompt('Add details (optional):','')||null;
     btn.disabled=true;
