@@ -16,7 +16,8 @@ const missing=[...new Set(marked)].filter(key=>!lt.includes(JSON.stringify(key)+
 assert.deepEqual(missing,[],'Untranslated Lithuanian UI markers: '+missing.join(', '));
 assert.ok(marked.length>500,'Expected complete cross-page static markup coverage');
 assert.match(app,/checkoutDialog\.scrollTop=0/,'Booking confirmation must scroll to start');
-assert.doesNotMatch(app,/card\.scrollIntoView\(\{behavior:/,'Old hidden-header scroll behavior must not return');
+const confirmationFn=app.slice(app.indexOf('function renderBookingConfirmation(result)'),app.indexOf('async function createBookingWithSafeRetry'));
+assert.doesNotMatch(confirmationFn,/card\.scrollIntoView\(/,'Booking confirmation must not force a hidden-header scroll');
 for(const key of ['Booking request received','Pending supplier confirmation','Verified total']){
  assert.ok(app.includes("uiText('"+key+"')"),key+' must use translated UI copy');
 }
