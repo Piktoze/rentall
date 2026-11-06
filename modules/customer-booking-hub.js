@@ -24,3 +24,15 @@ window.customerBookingNextAction=b=>{const s=String(b?.status||'pending'),p=Stri
 window.customerBookingPaymentCopy=b=>{const s=String(b?.paymentStatus||b?.payment_status||'unpaid');return s==='paid'?'Paid':s==='processing'?'Processing — do not pay again':s==='partially_refunded'?'Partially refunded':s==='refunded'?'Refunded':'Not confirmed'};
 window.customerBookingDepositCopy=b=>{const s=String(b?.securityDepositStatus||b?.depositStatus||b?.deposit_status||'not_required');return s==='authorized'?'Authorized, not charged':s==='captured'?'Captured':(s==='released'||s==='canceled')?'Released':'No active deposit'};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-customer-booking-filter]');if(!b)return;window.customerBookingFilter=b.dataset.customerBookingFilter||'upcoming';document.querySelectorAll('[data-customer-booking-filter]').forEach(x=>x.classList.toggle('active',x===b));window.loadUnifiedCustomerBookings?.()});
+
+/* Localize every user-visible state returned to the customer bookings dashboard.
+   Payment/state identifiers remain unchanged; only presentation copy is translated. */
+const customerBookingsTranslate=key=>window.RentInOrbitI18n?.t?.(key)||key;
+const customerPaymentStateCopyRaw=customerPaymentStateCopy;
+customerPaymentStateCopy=function(booking){return customerPaymentStateCopyRaw(booking).map(customerBookingsTranslate)};
+const customerDepositStateCopyRaw=customerDepositStateCopy;
+customerDepositStateCopy=function(booking){return customerBookingsTranslate(customerDepositStateCopyRaw(booking))};
+for(const name of ['customerBookingNextAction','customerBookingPaymentCopy','customerBookingDepositCopy']){
+  const original=window[name];
+  if(typeof original==='function') window[name]=function(booking){return customerBookingsTranslate(original(booking))};
+}
