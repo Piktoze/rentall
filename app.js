@@ -3066,7 +3066,7 @@ function populateBookingCityFilter(){
   if(!select) return;
   const current=select.value||'all';
   const cities=[...new Set(liveSupplierBookings.map(b=>b.deliveryCity).filter(Boolean))].sort();
-  select.innerHTML='<option value="all">All cities</option>'+
+  select.innerHTML=`<option value="all">${escapeHtml(uiText('All cities'))}</option>`+
     cities.map(c=>`<option value="${c}">${c}</option>`).join('');
   if(cities.includes(current)) select.value=current;
 };
@@ -3091,8 +3091,8 @@ renderBookings=async function(){
   const filtered=liveFilteredBookings();
   const rows=filtered.map(b=>`
     <tr>
-      <td><b>${b.customerName||b.contactPerson||'Customer'}</b></td>
-      <td>${b.title||'Rental item'} × ${b.quantity}</td>
+      <td><b>${escapeHtml(b.customerName||b.contactPerson||uiText('Customer'))}</b></td>
+      <td>${escapeHtml(b.title||uiText('Rental item'))} × ${b.quantity}</td>
       <td class="hotel-cell">
         <b>${b.accommodationName||'—'}</b>
         <small>${b.deliveryAddress||''}</small>
@@ -3100,15 +3100,15 @@ renderBookings=async function(){
       <td>${b.deliveryCity||'—'}</td>
       <td class="date-cell">${b.startDate||'—'}</td>
       <td class="contact-cell">${b.contactPerson||b.customerName||'—'}</td>
-      <td><span class="status ${b.status}">${b.status}</span></td>
-      <td><button class="view-order-btn" data-live-view-order="${b.bookingId}">View</button></td>
+      <td><span class="status ${escapeHtml(b.status)}">${escapeHtml(uiText(b.status))}</span></td>
+      <td><button class="view-order-btn" data-live-view-order="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View'))}</button></td>
     </tr>`).join('');
 
   document.getElementById('bookingTableBody').innerHTML=
-    rows || `<tr><td colspan="8">No live bookings match the selected filters.</td></tr>`;
+    rows || `<tr><td colspan="8">${escapeHtml(uiText('No live bookings match the selected filters.'))}</td></tr>`;
 
   const summary=document.getElementById('bookingFilterSummary');
-  if(summary) summary.textContent=`Showing ${filtered.length} of ${liveSupplierBookings.length} live bookings`;
+  if(summary) summary.textContent=`${uiText('Showing')} ${filtered.length} ${uiText('of')} ${liveSupplierBookings.length} ${uiText('live bookings')}`;
 
   document.querySelectorAll('[data-live-view-order]').forEach(btn=>{
     btn.addEventListener('click',()=>openLiveSupplierOrder(btn.dataset.liveViewOrder));
@@ -3123,29 +3123,29 @@ function openLiveSupplierOrder(bookingId){
   const b=liveSupplierBookings.find(x=>String(x.bookingId)===String(bookingId));
   if(!b) return;
 
-  document.getElementById('supplierOrderTitle').textContent=`${b.title||'Rental item'} · ${b.customerName||'Customer'}`;
+  document.getElementById('supplierOrderTitle').textContent=`${b.title||uiText('Rental item')} · ${b.customerName||uiText('Customer')}`;
   document.getElementById('supplierOrderSummary').innerHTML=`
     <div class="supplier-order-card">
-      <h3>Booking</h3>
+      <h3>${escapeHtml(uiText('Booking'))}</h3>
       <div class="supplier-order-grid">
-        <div><span>Booking ID</span><b>${b.bookingId}</b></div>
-        <div><span>Status</span><b>${b.status}</b></div>
-        <div><span>Rental dates</span><b>${b.startDate} → ${b.endDate}</b></div>
-        <div><span>Quantity</span><b>${b.quantity}</b></div>
-        <div><span>Order value</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
-        <div><span>Customer</span><b>${b.customerName||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Booking ID'))}</span><b>${escapeHtml(b.bookingId)}</b></div>
+        <div><span>${escapeHtml(uiText('Status'))}</span><b>${escapeHtml(uiText(b.status))}</b></div>
+        <div><span>${escapeHtml(uiText('Rental dates'))}</span><b>${b.startDate} → ${b.endDate}</b></div>
+        <div><span>${escapeHtml(uiText('Quantity'))}</span><b>${b.quantity}</b></div>
+        <div><span>${escapeHtml(uiText('Order value'))}</span><b>${b.orderValue!=null?money(b.orderValue):'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Customer'))}</span><b>${b.customerName||'—'}</b></div>
       </div>
     </div>
     <div class="supplier-order-card">
-      <h3>Delivery details</h3>
+      <h3>${escapeHtml(uiText('Handover details'))}</h3>
       <div class="supplier-order-grid">
-        <div><span>Hotel / apartment</span><b>${b.accommodationName||'—'}</b></div>
-        <div><span>City</span><b>${b.deliveryCity||'—'}</b></div>
-        <div><span>Address</span><b>${b.deliveryAddress||'—'}</b></div>
-        <div><span>Room / apartment</span><b>${b.roomNumber||'Not provided'}</b></div>
-        <div><span>Contact person</span><b>${b.contactPerson||b.customerName||'—'}</b></div>
-        <div><span>Phone</span><b>${b.customerPhone||'—'}</b></div>
-        <div class="supplier-order-instructions"><span>Delivery instructions</span><b>${b.deliveryInstructions||'No special instructions'}</b></div>
+        <div><span>${escapeHtml(uiText('Hotel / apartment'))}</span><b>${b.accommodationName||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('City'))}</span><b>${b.deliveryCity||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Address'))}</span><b>${b.deliveryAddress||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Room / apartment'))}</span><b>${b.roomNumber||uiText('Not provided')}</b></div>
+        <div><span>${escapeHtml(uiText('Contact person'))}</span><b>${b.contactPerson||b.customerName||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Phone'))}</span><b>${b.customerPhone||'—'}</b></div>
+        <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Delivery instructions'))}</span><b>${b.deliveryInstructions||uiText('No special instructions')}</b></div>
       </div>
     </div>`;
 
@@ -3153,7 +3153,7 @@ function openLiveSupplierOrder(bookingId){
   actions.innerHTML=`
     <div>
       <div class="lifecycle-actions">${liveOrderActions(b)}</div>
-      <div class="lifecycle-note">Only valid next statuses are shown. Cancelled/declined/returned/completed bookings release inventory.</div>
+      <div class="lifecycle-note">${escapeHtml(uiText('Only valid next statuses are shown. Cancelled/declined/returned/completed bookings release inventory.'))}</div>
     </div>`;
 
   document.querySelectorAll('.backend-status-action').forEach(btn=>{
@@ -3161,7 +3161,7 @@ function openLiveSupplierOrder(bookingId){
       btn.disabled=true;
       const status=btn.dataset.status;
       let reason=null;
-      if(status==='cancelled') reason=window.prompt('Cancellation reason (optional):','')||null;
+      if(status==='cancelled') reason=window.prompt(uiText('Cancellation reason (optional):'),'')||null;
       try{
         await updateBackendBookingStatus(btn.dataset.bookingId,status,reason);
         await refreshLiveSupplierBookings();
