@@ -3217,10 +3217,10 @@ setTimeout(()=>renderBookings(),150);
 // --- V27: cancellation policies, returns, listing details and reviews ---
 
 function cancellationPolicyText(policy,version){
-  if(policy==='moderate' && version==='moderate-legacy-v1') return 'Moderate (original terms): full refund ≥72h; 50% 24–72h; otherwise non-refundable.';
-  if(policy==='flexible') return 'Flexible: full refund ≥24h before start; 50% within 24h.';
-  if(policy==='strict') return 'Strict: 50% refund ≥7 days before start; otherwise non-refundable.';
-  return 'Moderate: 100% refund ≥48h; 75% 24–48h; 50% 12–24h; 0% <12h. No automatic cancellation after item handover.';
+  if(policy==='moderate' && version==='moderate-legacy-v1') return uiText('Moderate (original terms): full refund ≥72h; 50% 24–72h; otherwise non-refundable.');
+  if(policy==='flexible') return uiText('Flexible: full refund ≥24h before start; 50% within 24h.');
+  if(policy==='strict') return uiText('Strict: 50% refund ≥7 days before start; otherwise non-refundable.');
+  return uiText('Moderate: 100% refund ≥48h; 75% 24–48h; 50% 12–24h; 0% <12h. No automatic cancellation after item handover.');
 }
 
 // Capture cancellation policy in newly created/edited listings.
@@ -5055,7 +5055,7 @@ function renderGeoAwareListings(items=loadUniversalListings()){
     if(!listing || listing._distanceKm==null) return;
     const pill=document.createElement('div');
     pill.className='distance-pill';
-    pill.textContent=`${listing._distanceKm.toFixed(1)} km away`;
+    pill.textContent=`${listing._distanceKm.toFixed(1)} ${uiText('km away')}`;
     const title=card.querySelector('h4');
     title?.insertAdjacentElement('afterend',pill);
   });
