@@ -3179,6 +3179,9 @@ function openLiveSupplierOrder(bookingId){
   const modal=document.getElementById('supplierOrderModal');
   modal.classList.add('open');
   modal.setAttribute('aria-hidden','false');
+  // Long supplier booking details must always open at the beginning.
+  modal.scrollTop=0;
+  requestAnimationFrame(()=>{ if(modal.classList.contains('open')) modal.scrollTop=0; });
 }
 
 ['bookingFilter','bookingCityFilter','bookingDateFilter'].forEach(id=>{
