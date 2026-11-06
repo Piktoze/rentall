@@ -137,8 +137,8 @@
       if(!source || !dictionaries.lt?.[source]) continue;
       const translated=lang==='en'?source:lookup(source,lang);
       if(translated==null) continue;
-      const prefix=shown.match(/^\\s*/)?.[0]||'';
-      const suffix=shown.match(/\\s*$/)?.[0]||'';
+      const prefix=shown.match(/^\s*/)?.[0]||'';
+      const suffix=shown.match(/\s*$/)?.[0]||'';
       const rendered=prefix+translated+suffix;
       if(el.textContent!==rendered) el.textContent=rendered;
       ownedControlSource.set(el,{source,rendered});
