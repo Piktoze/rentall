@@ -647,7 +647,7 @@ function renderBookingConfirmation(result){
       <p>${escapeHtml(uiText('Your supplier has been notified. You can follow the booking status in'))} <strong>${escapeHtml(uiText('My bookings'))}</strong>.</p>
       <div class="booking-confirmation-actions">
         <button type="button" class="btn primary" id="confirmationMyBookings">${escapeHtml(uiText('View my bookings'))}</button>
-        ${result.paymentToken?'<button type="button" class="btn secondary" id="confirmationCopyLink">${escapeHtml(uiText('Copy secure booking link'))}</button>':''}
+        ${result.paymentToken?`<button type="button" class="btn secondary" id="confirmationCopyLink">${escapeHtml(uiText('Copy secure booking link'))}</button>`:''}
       </div>
       <p id="confirmationActionStatus" class="booking-confirmation-action-status" role="status" aria-live="polite"></p>
     </div>`;
