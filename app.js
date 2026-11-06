@@ -668,7 +668,8 @@ function renderBookingConfirmation(result){
     }
   });
   card.hidden=false;
-  card.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  // Do not scroll to a card before the confirmation pane is displayed:
+  // it can leave the dialog above the visible viewport.
 }
 
 async function createBookingWithSafeRetry(payload){
@@ -4358,6 +4359,15 @@ function wireAuthoritativeCheckout(){
 
       liveBookingForm.style.display='none';
       document.getElementById('bookingSuccess')?.classList.add('show');
+      // The confirmation is taller than the viewport. Always reveal its beginning.
+      const checkoutDialog=document.getElementById('checkoutModal');
+      const checkoutPanel=checkoutDialog?.querySelector('.checkout-panel');
+      if(checkoutDialog) checkoutDialog.scrollTop=0;
+      if(checkoutPanel) checkoutPanel.scrollTop=0;
+      requestAnimationFrame(()=>{
+        if(checkoutDialog) checkoutDialog.scrollTop=0;
+        if(checkoutPanel) checkoutPanel.scrollTop=0;
+      });
       cart=[];
       renderCart();
       await refreshCardAvailability();
