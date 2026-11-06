@@ -424,7 +424,7 @@
     <h2 data-i18n-text="Your RentInOrbit profile is ready">Your RentInOrbit profile is ready</h2>
     <p id="supplierActivationSummary" data-i18n-text="Review the prepared account and activate access.">Review the prepared account and activate access.</p>
     <form id="supplierActivationForm" class="auth-form">
-      <label>Create password<input type="password" id="supplierActivationPassword" minlength="8" required placeholder="At least 8 characters"></label>
+      <label><span data-i18n-text="Create password">Create password</span><input type="password" id="supplierActivationPassword" minlength="8" required placeholder="At least 8 characters"></label>
       <button class="primary" type="submit" data-i18n-text="Activate my account">Activate my account</button>
       <small id="supplierActivationMsg"></small>
     </form>
@@ -473,10 +473,10 @@
               <option value="business" data-i18n-text="Business">Business</option>
             </select>
           </label>
-          <label>Profile name<input id="regBusinessName" required placeholder="e.g. Jonas or Klaipėda Rentals"></label>
-          <label>Contact person<input id="regContactName" required placeholder="Anna Smith"></label>
+          <label><span data-i18n-text="Profile name">Profile name</span><input id="regBusinessName" required placeholder="e.g. Jonas or Klaipėda Rentals"></label>
+          <label><span data-i18n-text="Contact person">Contact person</span><input id="regContactName" required placeholder="Anna Smith"></label>
           <label>Email<input type="email" id="regEmail" required></label>
-          <label data-supplier-register-field>Phone / WhatsApp<input id="regPhone" placeholder="+370..."></label>
+          <label data-supplier-register-field><span data-i18n-text="Phone / WhatsApp">Phone / WhatsApp</span><input id="regPhone" placeholder="+370..."></label>
           
           <label><span data-i18n-text="Country">Country</span>
             <select id="regCountry" required>
@@ -527,7 +527,7 @@
     <div class="v111-listing-progress" aria-label="Listing creation"><span class="active" data-i18n-text="1 · Item">1 · Item</span><span data-i18n-text="2 · Price">2 · Price</span><span data-i18n-text="3 · Fulfilment">3 · Fulfilment</span><span data-i18n-text="4 · Photos">4 · Photos</span></div>
     <form id="listingForm" class="auth-form">
       <div class="v111-form-section"><h3 data-i18n-text="Item basics">Item basics</h3><p data-i18n-text="What are you renting and where is it available?">What are you renting and where is it available?</p><div class="form-grid two">
-        <label class="full">Listing title<input id="listingTitle" required placeholder="Evening dress or 10 folding chairs"></label>
+        <label class="full"><span data-i18n-text="Listing title">Listing title</span><input id="listingTitle" required placeholder="Evening dress or 10 folding chairs"></label>
         <label><span data-i18n-text="Category">Category</span>
           <select id="listingCategory" required>
             <option value="furniture" data-i18n-text="Furniture">Furniture</option>
@@ -543,7 +543,7 @@
             <option value="other" data-i18n-text="Other">Other</option>
           </select>
         </label>
-        <label>Quantity available<input type="number" id="listingQuantity" min="1" value="1" required></label>
+        <label><span data-i18n-text="Quantity available">Quantity available</span><input type="number" id="listingQuantity" min="1" value="1" required></label>
         <label><span data-i18n-text="Country">Country</span>
           <select id="listingCountry">
             <option value="LT" data-i18n-text="Lithuania">Lithuania</option>
@@ -570,8 +570,8 @@
 
       </div></div>
       <div class="v111-form-section"><h3 data-i18n-text="Pricing &amp; protection">Pricing & protection</h3><p data-i18n-text="Set the rental price and your cancellation/deposit rules.">Set the rental price and your cancellation/deposit rules.</p><div class="form-grid two">
-        <label>Price per day (€)<input type="number" id="listingPriceDay" min="0" step="0.5" required></label>
-        <label>Price per week (€)<input type="number" id="listingPriceWeek" min="0" step="0.5"></label>
+        <label><span data-i18n-text="Price per day (€)">Price per day (€)</span><input type="number" id="listingPriceDay" min="0" step="0.5" required></label>
+        <label><span data-i18n-text="Price per week (€)">Price per week (€)</span><input type="number" id="listingPriceWeek" min="0" step="0.5"></label>
         
 <label><span data-i18n-text="Cancellation policy">Cancellation policy</span>
   <select id="listingCancellationPolicy">
@@ -581,7 +581,7 @@
   </select>
 </label>
 
-          <label>Security deposit (€)<input type="number" id="listingDeposit" min="0" step="1"></label>
+          <label><span data-i18n-text="Security deposit (€)">Security deposit (€)</span><input type="number" id="listingDeposit" min="0" step="1"></label>
       </div></div>
       <div class="v111-form-section"><h3 data-i18n-text="Pickup &amp; delivery">Pickup & delivery</h3><p data-i18n-text="Choose how customers can receive the item. Delivery details are only needed when you offer delivery.">Choose how customers can receive the item. Delivery details are only needed when you offer delivery.</p><div class="form-grid two">
         <label><span data-i18n-text="Delivery">Delivery</span>
@@ -1297,7 +1297,7 @@
         <h3 data-i18n-text="Business details">Business details</h3>
         <div class="form-grid two">
           <label>Company name<input id="accBusinessName" required></label>
-          <label>Contact person<input id="accContactName" required></label>
+          <label><span data-i18n-text="Contact person">Contact person</span><input id="accContactName" required></label>
           <label>Phone<input id="accPhone" required></label>
           <label>Email<input type="email" id="accEmail" required disabled></label>
           <label class="full">Business address<input id="accAddress" placeholder="Street, city, postcode"></label>
@@ -1529,7 +1529,7 @@
         <div class="form-grid two">
           <label>Email<input type="email" id="adminSupplierEmail" required placeholder="supplier@example.com"></label>
           <label>Business / profile name<input id="adminSupplierBusiness" placeholder="Klaipėda Rentals"></label>
-          <label>Contact person<input id="adminSupplierName" placeholder="Name"></label>
+          <label><span data-i18n-text="Contact person">Contact person</span><input id="adminSupplierName" placeholder="Name"></label>
           <label>Phone<input id="adminSupplierPhone" placeholder="+370..."></label>
           <label>Country<input id="adminSupplierCountry" value="LT"></label>
           <label>City<input id="adminSupplierCity" value="Klaipėda"></label>
