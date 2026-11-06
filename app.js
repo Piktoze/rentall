@@ -829,9 +829,10 @@ document.getElementById('connectStripeBtn').addEventListener('click',async(e)=>{
       msg.textContent='Demo Stripe account is active. No real onboarding is required in demo mode.';
       return;
     }
-    msg.textContent='Loading secure Stripe onboarding…';
-    await mountStripeEmbeddedOnboarding(status.accountId);
-    msg.textContent='Complete the Stripe verification form below, then refresh Stripe status.';
+    msg.textContent='Opening secure Stripe onboarding…';
+    const link=await apiJson('/api/stripe/connect/hosted-onboarding-link',{method:'POST',body:JSON.stringify({})});
+    if(!link.url) throw new Error('Stripe onboarding link was not created');
+    window.location.assign(link.url);
   }catch(err){
     msg.textContent=`Could not start Stripe onboarding: ${err.message}`;
   }

@@ -102,6 +102,19 @@ export async function createEmbeddedOnboardingSession(stripe,accountId){
   });
 }
 
+export async function createHostedOnboardingLink(stripe,accountId,{refreshUrl,returnUrl}={}){
+  if(!stripe?.accountLinks?.create) throw new Error('Stripe Account Links API is unavailable');
+  const refresh=String(refreshUrl||'').trim();
+  const done=String(returnUrl||'').trim();
+  if(!refresh||!done) throw new Error('Stripe onboarding refresh and return URLs are required');
+  return stripe.accountLinks.create({
+    account:String(accountId),
+    refresh_url:refresh,
+    return_url:done,
+    type:'account_onboarding'
+  });
+}
+
 export async function createExpressLoginLink(stripe,accountId){
   if(!stripe?.accounts?.createLoginLink) throw new Error('Stripe Express login-link API is unavailable');
   return stripe.accounts.createLoginLink(String(accountId));

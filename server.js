@@ -117,6 +117,7 @@ import {
   retrieveDirectMerchantAccountV2,
   directMerchantCapabilityStatus,
   createEmbeddedOnboardingSession,
+  createHostedOnboardingLink,
   createExpressLoginLink,
   createDirectChargePaymentIntent,
   retrieveDirectChargePaymentIntent,
@@ -1368,7 +1369,11 @@ function directStatusResponse(status,{demo=false}={}){
   const reqs=Array.isArray(status?.requirements)?status.requirements:[];
   const currentlyDue=reqs.map(entry=>{
     if(typeof entry==='string') return entry;
-    return entry?.reference || entry?.type || entry?.reason || null;
+    // Accounts v2 requirement entries expose the actionable field path in
+    // `description` (for example `identity.individual.phone`).  Treating a
+    // missing legacy `reference` as "nothing due" incorrectly marked fresh
+    // restricted accounts as submitted and hid the exact onboarding work.
+    return entry?.description || entry?.reference || entry?.type || entry?.reason || null;
   }).filter(Boolean);
   const active=String(status?.merchantCapabilityStatus||'')==='active';
   return {
@@ -1436,6 +1441,22 @@ app.post('/api/stripe/connect/onboarding-link', requireRole('supplier','admin'),
     if(String(connection.connectApi||'')!=='v2_merchant_direct') return res.status(409).json({error:'Supplier account requires a new Direct Charges Connect account.',code:'SUPPLIER_CONNECT_V2_DIRECT_REQUIRED'});
     const session=await createEmbeddedOnboardingSession(stripe,connection.stripeAccountId);
     res.json({accountId:connection.stripeAccountId,clientSecret:session.client_secret,mode:'embedded'});
+  }catch(err){res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to start Stripe onboarding':err.message});}
+});
+
+app.post('/api/stripe/connect/hosted-onboarding-link', requireRole('supplier','admin'), async (req,res)=>{
+  try{
+    if(demoPaymentsEnabled) return res.json({demo:true,state:'active',url:null});
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const connection=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+    if(!connection) return res.status(404).json({error:'No connected account'});
+    if(String(connection.connectApi||'')!=='v2_merchant_direct') return res.status(409).json({error:'Supplier account requires a new Direct Charges Connect account.',code:'SUPPLIER_CONNECT_V2_DIRECT_REQUIRED'});
+    const origin=publicOrigin(req);
+    const link=await createHostedOnboardingLink(stripe,connection.stripeAccountId,{
+      refreshUrl:`${origin}/?view=supplier-payouts&stripe_onboarding=refresh`,
+      returnUrl:`${origin}/?view=supplier-payouts&stripe_onboarding=return`
+    });
+    res.json({url:link.url,expiresAt:link.expires_at||null,mode:'hosted'});
   }catch(err){res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to start Stripe onboarding':err.message});}
 });
 
