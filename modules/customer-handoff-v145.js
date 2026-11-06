@@ -1,13 +1,14 @@
 // V145: server-checked listing → availability → exact-listing checkout handoff.
 (function(){
  let checked=null;
+ const t=(key)=>window.RentInOrbitI18n?.t?.(key)||key;
  window.rentinorbitAvailabilityClass=day=>day.remainingQuantity<=0?'soldout':day.remainingQuantity<day.totalQuantity?'limited':'free';
 
  window.rentinorbitRenderAvailabilityCalendar=async()=>{
   if(!activeAvailabilityListing)return;
   const from=document.getElementById('availabilityFrom').value,to=document.getElementById('availabilityTo').value,grid=document.getElementById('availabilityCalendarGrid');if(!from||!to)return;
   grid.innerHTML='<div>Loading…</div>';
-  try{await syncListingsToServer();const data=await apiJson(`/api/rentals/calendar?listingId=${encodeURIComponent(activeAvailabilityListing.id)}&fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}`);grid.innerHTML=data.days.map(day=>`<div class="availability-day ${window.rentinorbitAvailabilityClass(day)}"><b>${day.date}</b><small>${day.remainingQuantity} of ${day.totalQuantity} available</small></div>`).join('')}
+  try{await syncListingsToServer();const data=await apiJson(`/api/rentals/calendar?listingId=${encodeURIComponent(activeAvailabilityListing.id)}&fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}`);grid.innerHTML=data.days.map(day=>`<div class="availability-day ${window.rentinorbitAvailabilityClass(day)}"><b>${day.date}</b><small>${day.remainingQuantity} ${t('of')} ${day.totalQuantity} ${t('available')}</small></div>`).join('')}
   catch(err){grid.innerHTML=`<div class="webhook-error">${escapeHtml(err.message||'Unknown error')}</div>`}
  };
 
@@ -20,22 +21,22 @@
   const proceed=document.getElementById('v145AvailabilityContinue');
   proceed.disabled=true;checked=null;
   if(!from||!to||to<=from){result.textContent='Choose an end date after the start date.';result.dataset.state='error';return false}
-  result.textContent='Checking live availability…';result.dataset.state='loading';
+  result.textContent=t('Checking live availability…');result.dataset.state='loading';
   try{
    await syncListingsToServer();
    const data=await fetchAvailability(activeAvailabilityListing.id,from,to,quantity);
    checked={...data,from,to,quantity};
-   result.textContent=data.available?`${quantity} ${quantity===1?'unit':'units'} available for your full rental. Continue to reserve.`:`Not enough inventory for the full rental. ${data.remainingQuantity||0} available.`;
+   result.textContent=data.available?`${quantity} ${t(quantity===1?'unit':'units')} ${t('available for your full rental. Continue to reserve.')}`:`${t('Not enough inventory for the full rental.')} ${data.remainingQuantity||0} ${t('available')}.`;
    result.dataset.state=data.available?'success':'error';proceed.disabled=!data.available;
    await renderAvailabilityCalendar();
    return Boolean(data.available);
-  }catch(err){result.textContent=err.message||'Live availability could not be checked. Try again.';result.dataset.state='error';return false}
+  }catch(err){result.textContent=err.message||t('Live availability could not be checked. Try again.');result.dataset.state='error';return false}
  }
 
  window.rentinorbitOpenAvailabilityV145=async function(listingId){
   const listing=loadUniversalListings().find(l=>String(l.id)===String(listingId));if(!listing)return;
   activeAvailabilityListing=listing;checked=null;
-  document.getElementById('availabilityTitle').textContent=`${listing.title} availability`;
+  document.getElementById('availabilityTitle').textContent=`${listing.title} · ${t('Availability')}`;
   const todayIso=new Date().toISOString().slice(0,10),ctx=getCurrentSearchContext();
   const from=ctx.from>=todayIso?ctx.from:todayIso,next=new Date(`${from}T00:00:00`);next.setDate(next.getDate()+7);
   const to=ctx.to>from?ctx.to:next.toISOString().slice(0,10);
@@ -49,13 +50,13 @@
  openAvailabilityCalendar=window.rentinorbitOpenAvailabilityV145;
 
  window.rentinorbitCheckoutAvailabilityPreflight=async({listing,startDate,endDate,quantity})=>{
-  const status=document.getElementById('v145CheckoutPreflight');status.textContent='Checking live availability…';status.dataset.state='loading';
+  const status=document.getElementById('v145CheckoutPreflight');status.textContent=t('Checking live availability…');status.dataset.state='loading';
   if(!listing){status.textContent='This listing could not be resolved. Return to the listing and try again.';status.dataset.state='error';return false}
   try{
    const data=await fetchAvailability(listing.id,startDate,endDate,quantity);
-   status.textContent=data.available?`Available · ${data.remainingQuantity} remain after this reservation.`:`Those dates are no longer available for ${quantity} ${quantity===1?'unit':'units'}. ${data.remainingQuantity||0} remain.`;
+   status.textContent=data.available?`${t('Available')} · ${data.remainingQuantity} ${t('remain after this reservation.')}`:`${t('Those dates are no longer available for')} ${quantity} ${t(quantity===1?'unit':'units')}. ${data.remainingQuantity||0} ${t('remain')}.`;
    status.dataset.state=data.available?'success':'error';return Boolean(data.available);
-  }catch(err){status.textContent=err.message||'Availability could not be verified. Try again.';status.dataset.state='error';return false}
+  }catch(err){status.textContent=err.message||t('Availability could not be verified. Try again.');status.dataset.state='error';return false}
  };
 
  const oldRefresh=document.getElementById('refreshAvailabilityBtn');
