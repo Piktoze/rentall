@@ -5768,7 +5768,7 @@ async function handleCustomerDeepLinkV81(){
   }
 
   if(view==='my-bookings'){
-    const targetBooking=params.get('booking')||'',payNow=params.get('pay')==='1';
+    const targetBooking=qs.get('booking')||'',payNow=qs.get('pay')==='1';
     await loadUnifiedCustomerBookings();
     document.getElementById('myBookingsBtn')?.click();
     if(targetBooking){
