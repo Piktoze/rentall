@@ -3,6 +3,7 @@ import {execFileSync} from 'node:child_process';
 
 // Guard all source-marked Lithuanian UI labels and booking completion accessibility.
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['supplier-i18n-v203.test.mjs'],{stdio:'inherit'});
 
 const server=fs.readFileSync('./server.js','utf8');
 const app=fs.readFileSync('./app.js','utf8');
