@@ -135,7 +135,7 @@
       const previous=ownedControlSource.get(el);
       const source=(previous && shown===previous.rendered)?previous.source:shown.trim();
       if(!source || !dictionaries.lt?.[source]) continue;
-      const translated=lang==='en'?source:lookup(source,lang);
+      const translated=lang==='en'?source:(lookup(source,lang)||source);
       if(translated==null) continue;
       const prefix=shown.match(/^\s*/)?.[0]||'';
       const suffix=shown.match(/\s*$/)?.[0]||'';
