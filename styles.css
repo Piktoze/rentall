@@ -1824,3 +1824,8 @@ html.rentinorbit-route-loading::after{
   align-items:center;justify-content:center;background:#f7f7f2;color:#263a3b;
   font:600 16px/1.4 system-ui,sans-serif;z-index:2147483647;
 }
+
+/* V203 booking confirmation: long content must start within the scrollable modal. */
+.checkout-modal.open:has(.booking-success.show){align-items:flex-start;scroll-padding-top:12px;}
+.checkout-modal.open:has(.booking-success.show)>.checkout-panel{margin:0 auto;min-width:0;}
+@media(max-width:620px){.checkout-modal.open:has(.booking-success.show)>.checkout-panel{max-height:94dvh;overflow-y:auto;overscroll-behavior:contain;}}
