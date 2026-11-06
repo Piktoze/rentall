@@ -1710,13 +1710,14 @@ function renderCheckoutPriceBreakdown({rental,delivery,total,securityDeposit=0})
   const days=(Number.isFinite(sm)&&Number.isFinite(em)&&em>sm)?Math.max(1,Math.round((em-sm)/86400000)):1;
   const trip=getTripContext();
   const qty=Math.max(1,Number(trip?.qty||document.getElementById('quantitySearch')?.value||1));
-  box.innerHTML=`<div class="price-breakdown-row"><span>Rental · ${days} ${days===1?'day':'days'} · ${qty} ${qty===1?'item':'items'}</span><strong>${money(rental)}</strong></div>
-  ${delivery>0?`<div class="price-breakdown-row"><span>Delivery</span><strong>${money(delivery)}</strong></div>`:''}
-  ${securityDeposit>0?`<div class="price-breakdown-row v97-deposit-row"><span>Refundable security deposit</span><strong>${money(securityDeposit)}</strong></div>`:''}
-  <div class="price-breakdown-total"><span>Estimated total</span><strong>${money(total)}</strong></div>
-  <p class="price-breakdown-note">Final price is verified securely before the booking is created.</p>`;
+  box.innerHTML=`<div class="price-breakdown-row"><span>${escapeHtml(uiText('Rental'))} · ${days} ${escapeHtml(uiText(days===1?'day':'days'))} · ${qty} ${escapeHtml(uiText(qty===1?'item':'items'))}</span><strong>${money(rental)}</strong></div>
+  ${delivery>0?`<div class="price-breakdown-row"><span>${escapeHtml(uiText('Delivery'))}</span><strong>${money(delivery)}</strong></div>`:''}
+  ${securityDeposit>0?`<div class="price-breakdown-row v97-deposit-row"><span>${escapeHtml(uiText('Refundable security deposit'))}</span><strong>${money(securityDeposit)}</strong></div>`:''}
+  <div class="price-breakdown-total"><span>${escapeHtml(uiText('Estimated total'))}</span><strong>${money(total)}</strong></div>
+  <p class="price-breakdown-note">${escapeHtml(uiText("Final price is verified securely before the booking is created."))}</p>`;
 }
 
+document.addEventListener('rentinorbit:language-changed',()=>{if(document.getElementById('checkoutPriceBreakdown'))refreshCheckoutTotals();});
 function refreshCheckoutTotals(){
   const rental=getCheckoutRentalSubtotal();
   const deliveryRule=resolveDeliveryPricing();
@@ -1729,7 +1730,7 @@ function refreshCheckoutTotals(){
   document.getElementById('paymentRental').textContent=money(rental);
   document.getElementById('paymentDelivery').textContent=deliveryRule.eligible ? money(delivery) : '—';
   document.getElementById('paymentTotal').textContent=money(total);
-  document.getElementById('payBtn').textContent=`Continue to secure payment · ${money(total)}`;
+  document.getElementById('payBtn').textContent=`${uiText("Continue to secure payment")} · ${money(total)}`;
   const selectedListing=loadUniversalListings().find(l=>String(l.id)===String(getTripContext()?.listingId||'')) || null;
   const securityDeposit=Math.max(0,Number(selectedListing?.deposit||0));
   renderCheckoutPriceBreakdown({rental,delivery,total,securityDeposit});
