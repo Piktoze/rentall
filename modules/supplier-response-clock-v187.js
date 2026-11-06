@@ -8,7 +8,11 @@ export function validTimezone(value){
 }
 export function supplierTimezoneForListing(listing){
   const configured=validTimezone(listing?.supplierTimezone);
-  const countryDefault=COUNTRY_TIMEZONE_DEFAULTS[String(listing?.country||'').toUpperCase()];
+  const rawCountry=String(listing?.country||'').trim().toUpperCase();
+  const rawCity=String(listing?.city||listing?.deliveryCity||'').trim().toLowerCase();
+  const normalizedCountry=rawCountry==='LITHUANIA'||rawCountry==='LIETUVA'?'LT':rawCountry;
+  const countryDefault=COUNTRY_TIMEZONE_DEFAULTS[normalizedCountry]||
+    (/^(vilnius|kaunas|klaipėda|klaipeda|šiauliai|siauliai|panevėžys|panevezys|palanga|gargždai|gargzdai|kretinga)$/.test(rawCity)?'Europe/Vilnius':null);
   // A UTC placeholder in an otherwise geolocated listing is not the supplier's local time.
   if(!configured || /^(UTC|Etc\/UTC|Etc\/GMT|GMT)$/i.test(configured)) return countryDefault||configured||'UTC';
   return configured;
