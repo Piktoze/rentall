@@ -165,7 +165,7 @@
       card.innerHTML=`<h3>${esc(tr('Renter trust'))}</h3><div class="supplier-order-grid"><div><span>${esc(tr('Renter rating'))}</span><b>${avg?`★ ${Number(avg).toFixed(1)} · ${count} ${tr(count===1?'review':'reviews')}`:tr('New renter')}</b></div><div><span>${esc(tr('Rental agreement'))}</span><b>${agreement?.supplierAcceptedAt?tr('Accepted by both sides'):agreement?.customerAcceptedAt?tr('Renter accepted · supplier pending'):tr('Pending')}</b></div></div>`;
       summary.appendChild(card);
       const controls=document.createElement('div');controls.className='v172-supplier-trust-actions';
-      controls.innerHTML=`<button class="secondary" type="button" data-v172-supplier-message>${esc(tr('Messages'))}</button><button class="secondary" type="button" data-v172-supplier-agreement>${esc(tr('View agreement'))}</button>${['returned','completed'].includes(booking.status)?'<button class="secondary v172-rate-renter" type="button" data-id="'+esc(bookingId)+'">Rate renter</button>':''}`;
+      controls.innerHTML=`<button class="secondary" type="button" data-v172-supplier-message>${esc(tr('Messages'))}</button><button class="secondary" type="button" data-v172-supplier-agreement>${esc(tr('View agreement'))}</button>${['returned','completed'].includes(booking.status)?'<button class="secondary v172-rate-renter" type="button" data-id="'+esc(bookingId)+'">'+esc(tr('Rate renter'))+'</button>':''}`;
       actions.appendChild(controls);
       controls.querySelector('[data-v172-supplier-message]')?.addEventListener('click',()=>startConversation(booking.listingId,bookingId));
       controls.querySelector('[data-v172-supplier-agreement]')?.addEventListener('click',()=>openAgreement(bookingId));
