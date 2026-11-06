@@ -66,7 +66,9 @@
   function validTimezone(value){const tz=String(value||'').trim();if(!tz)return null;try{new Intl.DateTimeFormat('en',{timeZone:tz}).format(new Date());return tz}catch{return null}}
   function listing(){try{if(typeof activeCheckoutListing!=='undefined'&&activeCheckoutListing)return activeCheckoutListing;if(typeof inferCheckoutListing==='function')return inferCheckoutListing()}catch{}return null}
   function timezoneFor(l){
-    const configured=validTimezone(l?.supplierTimezone),countryDefault=COUNTRY_TZ[String(l?.country||'').toUpperCase()];
+    const configured=validTimezone(l?.supplierTimezone),rawCountry=String(l?.country||'').trim().toUpperCase(),rawCity=String(l?.city||l?.deliveryCity||'').trim().toLowerCase();
+    const normalizedCountry=rawCountry==='LITHUANIA'||rawCountry==='LIETUVA'?'LT':rawCountry;
+    const countryDefault=COUNTRY_TZ[normalizedCountry]||(/^(vilnius|kaunas|klaipėda|klaipeda|šiauliai|siauliai|panevėžys|panevezys|palanga|gargždai|gargzdai|kretinga)$/.test(rawCity)?'Europe/Vilnius':null);
     if(!configured || /^(UTC|Etc\/UTC|Etc\/GMT|GMT)$/i.test(configured))return countryDefault||configured||'UTC';
     return configured;
   }
