@@ -636,18 +636,18 @@ function renderBookingConfirmation(result){
   const total=Number(result?.price?.total ?? booking.orderValue ?? 0);
   card.innerHTML=`<div class="booking-confirmation-icon" aria-hidden="true">✓</div>
     <div>
-      <h3>Booking request received</h3>
-      <p class="booking-confirmation-ref">Reference <strong>${id}</strong></p>
+      <h3>${escapeHtml(uiText('Booking request received'))}</h3>
+      <p class="booking-confirmation-ref">${escapeHtml(uiText('Reference'))} <strong>${id}</strong></p>
       ${window.rentinorbitBookingStatus?.render?.(booking)||''}
       <div class="booking-confirmation-grid">
-        <span>Dates<strong>${start} → ${end}</strong></span>
-        <span>Quantity<strong>${qty}</strong></span>
-        <span>Verified total<strong>${money(total)}</strong></span>
+        <span>${escapeHtml(uiText('Dates'))}<strong>${start} → ${end}</strong></span>
+        <span>${escapeHtml(uiText('Quantity'))}<strong>${qty}</strong></span>
+        <span>${escapeHtml(uiText('Verified total'))}<strong>${money(total)}</strong></span>
       </div>
-      <p>Your supplier has been notified. You can follow the booking status in <strong>My bookings</strong>.</p>
+      <p>${escapeHtml(uiText('Your supplier has been notified. You can follow the booking status in'))} <strong>${escapeHtml(uiText('My bookings'))}</strong>.</p>
       <div class="booking-confirmation-actions">
-        <button type="button" class="btn primary" id="confirmationMyBookings">View my bookings</button>
-        ${result.paymentToken?'<button type="button" class="btn secondary" id="confirmationCopyLink">Copy secure booking link</button>':''}
+        <button type="button" class="btn primary" id="confirmationMyBookings">${escapeHtml(uiText('View my bookings'))}</button>
+        ${result.paymentToken?'<button type="button" class="btn secondary" id="confirmationCopyLink">${escapeHtml(uiText('Copy secure booking link'))}</button>':''}
       </div>
       <p id="confirmationActionStatus" class="booking-confirmation-action-status" role="status" aria-live="polite"></p>
     </div>`;
@@ -662,9 +662,9 @@ function renderBookingConfirmation(result){
     const url=`${location.origin}${location.pathname}?booking=${encodeURIComponent(id)}&access=${encodeURIComponent(token)}`;
     try{
       await navigator.clipboard.writeText(url);
-      if(status) status.textContent='Secure booking link copied.';
+      if(status) status.textContent=uiText('Secure booking link copied.');
     }catch{
-      if(status) status.textContent='Copy failed. Open My bookings to access this booking.';
+      if(status) status.textContent=uiText('Copy failed. Open My bookings to access this booking.');
     }
   });
   card.hidden=false;
@@ -3027,8 +3027,8 @@ bookingForm.addEventListener('submit',async(e)=>{
     renderReview();
     document.getElementById('successSummary').innerHTML=
       document.getElementById('reviewCard').innerHTML +
-      `<div class="review-row"><span>Booking status</span><b>Pending supplier confirmation</b></div>` +
-      `<div class="review-row"><span>Remaining quantity</span><b>${result.availabilityAfter?.remainingQuantity ?? '—'}</b></div>`;
+      `<div class="review-row"><span>${escapeHtml(uiText('Booking status'))}</span><b>${escapeHtml(uiText('Pending supplier confirmation'))}</b></div>` +
+      `<div class="review-row"><span>${escapeHtml(uiText('Remaining quantity'))}</span><b>${result.availabilityAfter?.remainingQuantity ?? '—'}</b></div>`;
 
     bookingForm.style.display='none';
     successPanel.classList.add('show');
