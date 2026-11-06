@@ -35,13 +35,13 @@
     const list=$('conversationList');if(!list)return;
     const user=await getUser(true);
     if(!user){list.innerHTML=`<p class="muted">${esc(tr('Log in to use RentInOrbit messages.'))}</p>`;return;}
-    list.innerHTML='<p class="muted">Loading conversations…</p>';
+    list.innerHTML=`<p class="muted">${esc(tr('Loading conversations…'))}</p>`;
     try{
       const data=await call('/api/conversations');
       const rows=data.conversations||[];
       list.innerHTML=rows.length?rows.map(c=>{
         const counterpart=String(user.email||'').toLowerCase()===String(c.customerEmail||'').toLowerCase()?c.supplierEmail:c.customerEmail;
-        return `<button type="button" class="conversation-row ${String(c.conversationId)===String(selectId||activeConversationId)?'active':''}" data-conversation-id="${esc(c.conversationId)}"><b>${esc(c.listingTitle||tr('Rental'))}</b><span>${esc(counterpart||'RentInOrbit user')}</span><small>${esc(c.lastMessage||tr('No messages yet'))}</small></button>`;
+        return `<button type="button" class="conversation-row ${String(c.conversationId)===String(selectId||activeConversationId)?'active':''}" data-conversation-id="${esc(c.conversationId)}"><b>${esc(c.listingTitle||tr('Rental'))}</b><span>${esc(counterpart||tr('RentInOrbit user'))}</span><small>${esc(c.lastMessage||tr('No messages yet'))}</small></button>`;
       }).join(''):`<p class="muted">${esc(tr('No conversations yet. Open a listing and choose “Message supplier”.'))}</p>`;
       list.querySelectorAll('[data-conversation-id]').forEach(btn=>btn.addEventListener('click',()=>openConversation(btn.dataset.conversationId)));
       const desired=selectId||activeConversationId;
@@ -106,7 +106,7 @@
       const data=await call(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/agreement${qs}`);
       const a=data.agreement,s=a.snapshot||{};
       const content=$('agreementContent');
-      content.innerHTML=`<div class="agreement-status-grid"><div><span>Agreement</span><b>${esc(a.agreementId)}</b></div><div><span>Version</span><b>${esc(a.termsVersion)}</b></div><div><span>Renter accepted</span><b>${a.customerAcceptedAt?'✓ '+esc(new Date(a.customerAcceptedAt).toLocaleString()):'Pending'}</b></div><div><span>Supplier accepted</span><b>${a.supplierAcceptedAt?'✓ '+esc(new Date(a.supplierAcceptedAt).toLocaleString()):'Pending confirmation'}</b></div></div><div class="review-card"><h3>${esc(s.listingTitle||'Rental item')}</h3><div class="review-row"><span>Rental dates</span><b>${esc(s.startDate||'—')} → ${esc(s.endDate||'—')}</b></div><div class="review-row"><span>Quantity</span><b>${esc(s.quantity||1)}</b></div><div class="review-row"><span>Rental</span><b>€${Number(s.rentalAmount||0).toFixed(2)}</b></div><div class="review-row"><span>Delivery</span><b>€${Number(s.deliveryFee||0).toFixed(2)}</b></div><div class="review-row total"><span>Total</span><b>€${Number(s.total||0).toFixed(2)}</b></div><div class="review-row"><span>Security deposit</span><b>€${Number(s.securityDeposit||0).toFixed(2)}</b></div><div class="review-row"><span>Cancellation</span><b>${esc(s.cancellationPolicy||'moderate')}</b></div></div><div class="agreement-terms"><h3>Rental commitments</h3><ol>${(s.terms||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><p class="muted">This agreement is a timestamped record of the booking terms accepted through RentInOrbit.</p>`;
+      content.innerHTML=`<div class="agreement-status-grid"><div><span>${esc(tr('Agreement'))}</span><b>${esc(a.agreementId)}</b></div><div><span>${esc(tr('Version'))}</span><b>${esc(a.termsVersion)}</b></div><div><span>${esc(tr('Renter accepted'))}</span><b>${a.customerAcceptedAt?'✓ '+esc(new Date(a.customerAcceptedAt).toLocaleString()):tr('Pending')}</b></div><div><span>${esc(tr('Supplier accepted'))}</span><b>${a.supplierAcceptedAt?'✓ '+esc(new Date(a.supplierAcceptedAt).toLocaleString()):tr('Pending confirmation')}</b></div></div><div class="review-card"><h3>${esc(s.listingTitle||'Rental item')}</h3><div class="review-row"><span>${esc(tr('Rental dates'))}</span><b>${esc(s.startDate||'—')} → ${esc(s.endDate||'—')}</b></div><div class="review-row"><span>${esc(tr('Quantity'))}</span><b>${esc(s.quantity||1)}</b></div><div class="review-row"><span>${esc(tr('Rental'))}</span><b>€${Number(s.rentalAmount||0).toFixed(2)}</b></div><div class="review-row"><span>${esc(tr('Delivery'))}</span><b>€${Number(s.deliveryFee||0).toFixed(2)}</b></div><div class="review-row total"><span>${esc(tr('Total'))}</span><b>€${Number(s.total||0).toFixed(2)}</b></div><div class="review-row"><span>${esc(tr('Security deposit'))}</span><b>€${Number(s.securityDeposit||0).toFixed(2)}</b></div><div class="review-row"><span>${esc(tr('Cancellation'))}</span><b>${esc(tr(s.cancellationPolicy||'moderate'))}</b></div></div><div class="agreement-terms"><h3>${esc(tr('Rental commitments'))}</h3><ol>${(s.terms||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><p class="muted">${esc(tr('This agreement is a timestamped record of the booking terms accepted through RentInOrbit.'))}</p>`;
       openModal('agreementModal');
     }catch(err){toast(err.message,'error');}
   }
@@ -126,7 +126,7 @@
     e.preventDefault();const bookingId=$('renterReviewBookingId').value;
     try{
       await call(`/api/supplier/bookings/${encodeURIComponent(bookingId)}/customer-review`,{method:'POST',body:JSON.stringify({rating:Number($('renterReviewRating').value),comment:$('renterReviewComment').value.trim()})});
-      closeModal('renterReviewModal');toast('Renter review published.');
+      closeModal('renterReviewModal');toast(tr('Renter review published.'));
       if(typeof openLiveSupplierOrder==='function')openLiveSupplierOrder(bookingId);
     }catch(err){toast(err.message,'error');}
   });
@@ -162,10 +162,10 @@
       try{agreement=(await call(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/agreement`)).agreement;}catch{}
       const count=Number(rep.customer?.summary?.reviewCount||0),avg=rep.customer?.summary?.averageRating;
       const card=document.createElement('div');card.className='supplier-order-card v172-renter-trust';
-      card.innerHTML=`<h3>Renter trust</h3><div class="supplier-order-grid"><div><span>Renter rating</span><b>${avg?`★ ${Number(avg).toFixed(1)} · ${count} ${tr(count===1?'review':'reviews')}`:tr('New renter')}</b></div><div><span>Rental agreement</span><b>${agreement?.supplierAcceptedAt?'Accepted by both sides':agreement?.customerAcceptedAt?'Renter accepted · supplier pending':'Pending'}</b></div></div>`;
+      card.innerHTML=`<h3>${esc(tr('Renter trust'))}</h3><div class="supplier-order-grid"><div><span>${esc(tr('Renter rating'))}</span><b>${avg?`★ ${Number(avg).toFixed(1)} · ${count} ${tr(count===1?'review':'reviews')}`:tr('New renter')}</b></div><div><span>${esc(tr('Rental agreement'))}</span><b>${agreement?.supplierAcceptedAt?tr('Accepted by both sides'):agreement?.customerAcceptedAt?tr('Renter accepted · supplier pending'):tr('Pending')}</b></div></div>`;
       summary.appendChild(card);
       const controls=document.createElement('div');controls.className='v172-supplier-trust-actions';
-      controls.innerHTML=`<button class="secondary" type="button" data-v172-supplier-message>Messages</button><button class="secondary" type="button" data-v172-supplier-agreement>View agreement</button>${['returned','completed'].includes(booking.status)?'<button class="secondary v172-rate-renter" type="button" data-id="'+esc(bookingId)+'">Rate renter</button>':''}`;
+      controls.innerHTML=`<button class="secondary" type="button" data-v172-supplier-message>${esc(tr('Messages'))}</button><button class="secondary" type="button" data-v172-supplier-agreement>${esc(tr('View agreement'))}</button>${['returned','completed'].includes(booking.status)?'<button class="secondary v172-rate-renter" type="button" data-id="'+esc(bookingId)+'">Rate renter</button>':''}`;
       actions.appendChild(controls);
       controls.querySelector('[data-v172-supplier-message]')?.addEventListener('click',()=>startConversation(booking.listingId,bookingId));
       controls.querySelector('[data-v172-supplier-agreement]')?.addEventListener('click',()=>openAgreement(bookingId));
