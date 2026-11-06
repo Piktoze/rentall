@@ -4309,7 +4309,10 @@ function wireAuthoritativeCheckout(){
     const trip=getTripContext();
     const quantity=Number(trip?.qty || document.getElementById('quantitySearch')?.value || 1);
     const delivery=getDeliveryFormData();
+    const pickupOnly=/pickup|atsiim|atsiėm/i.test(document.getElementById('accommodationType')?.value||'');
     const customer=authoritativeCustomerData();
+    const submitError=document.getElementById('checkoutSubmitError');
+    if(submitError){submitError.hidden=true;submitError.textContent='';}
 
     if(!listing || !startDate || !endDate){ unlockBookingSubmit(cleanForm); return; }
 
@@ -4329,9 +4332,10 @@ function wireAuthoritativeCheckout(){
           customerName:customer.name,
           customerEmail:customer.email,
           customerPhone:customer.phone,
-          accommodationName:delivery.accommodationName,
+          // For pickup, optional meeting details must not be billed as delivery.
+          accommodationName:pickupOnly?null:delivery.accommodationName,
           deliveryCity:document.getElementById('deliveryArea')?.value?.trim()||'',
-          deliveryAddress:delivery.address,
+          deliveryAddress:pickupOnly?null:delivery.address,
           roomNumber:delivery.roomNumber,
           contactPerson:delivery.bookingName || customer.name,
           deliveryInstructions:delivery.instructions,
@@ -4364,11 +4368,9 @@ function wireAuthoritativeCheckout(){
       loadCustomerBookingsSecure().catch(()=>{});
       unlockBookingSubmit(cleanForm,{completed:true});
     }catch(err){
-      const note=document.getElementById('deliveryRuleNote');
-      if(note){
-        note.textContent=err.message||'Selected quantity is no longer available.';
-        note.className='delivery-rule-note error';
-      }
+      const errorBox=document.getElementById('checkoutSubmitError');
+      if(errorBox){errorBox.textContent=err?.message||'Nepavyko pateikti rezervacijos.';errorBox.hidden=false;}
+      else console.error('Booking submission failed',err?.message);
     }finally{
       unlockBookingSubmit(cleanForm);
       if(payBtn){
