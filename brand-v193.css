@@ -129,3 +129,13 @@ body:not(.rio-authenticated) #supplierLocked{display:none!important}
 .browse-tools .geo-search-controls,.browse-tools .saved-search-toolbar,.browse-tools .results-view-controls{margin:0!important}
 body:not(.rio-supplier) #list-item{display:none!important}
 body.rio-supplier #list-item{display:block!important}
+
+/* Staging minimalist UX pass 1: keep the search form as the primary landing action.
+   Booking stage navigation and supplier listing flows remain in the DOM and functional. */
+.v120-journey,
+.hero-intent-actions { display: none !important; }
+.topbar .navlinks #navListItemBtn {
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
