@@ -6,7 +6,13 @@ export function validTimezone(value){
   const tz=String(value||'').trim(); if(!tz)return null;
   try{new Intl.DateTimeFormat('en',{timeZone:tz}).format(new Date());return tz}catch{return null}
 }
-export function supplierTimezoneForListing(listing){return validTimezone(listing?.supplierTimezone)||COUNTRY_TIMEZONE_DEFAULTS[String(listing?.country||'').toUpperCase()]||'UTC'}
+export function supplierTimezoneForListing(listing){
+  const configured=validTimezone(listing?.supplierTimezone);
+  const countryDefault=COUNTRY_TIMEZONE_DEFAULTS[String(listing?.country||'').toUpperCase()];
+  // A UTC placeholder in an otherwise geolocated listing is not the supplier's local time.
+  if(!configured || /^(UTC|Etc\/UTC|Etc\/GMT|GMT)$/i.test(configured)) return countryDefault||configured||'UTC';
+  return configured;
+}
 function zonedParts(date,timeZone){
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date);
   const bag={}; for(const p of parts)if(p.type!=='literal')bag[p.type]=Number(p.value);
