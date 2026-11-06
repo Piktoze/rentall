@@ -144,7 +144,7 @@
       const rc=Number(reputation.reviewCount||0);
       const rating=reputation.averageRating?`★ ${Number(reputation.averageRating).toFixed(1)} · ${rc} ${tr(rc===1?'verified rental':'verified rentals')}`:tr('New supplier on RentInOrbit');
       const url=`/listing/${encodeURIComponent(listingId)}/${slug(listing?.title)}`;
-      panel.innerHTML=`<div><small>Supplier reputation</small><strong>${esc(rating)}</strong><span>Reviews come from completed rentals.</span></div><div class="v172-trust-actions"><button type="button" class="secondary" id="v172MessageSupplier">Message supplier</button><a class="secondary" href="${esc(url)}">Share listing</a></div>`;
+      panel.innerHTML=`<div><small>${esc(tr("Supplier reputation"))}</small><strong>${esc(rating)}</strong><span>${esc(tr("Reviews come from completed rentals."))}</span></div><div class="v172-trust-actions"><button type="button" class="secondary" id="v172MessageSupplier">${esc(tr("Message supplier"))}</button><a class="secondary" href="${esc(url)}">${esc(tr("Share listing"))}</a></div>`;
       const main=root.querySelector('.v92-listing-main')||root;main.appendChild(panel);
       panel.querySelector('#v172MessageSupplier')?.addEventListener('click',()=>startConversation(listingId));
     };
