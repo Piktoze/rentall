@@ -139,3 +139,12 @@ body.rio-supplier #list-item{display:block!important}
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* STAGING_LISTING_MINIMAL_V1 */
+/* The listing form displays all sections at once, so a numbered four-step
+   progress indicator is misleading. Keep real field groups and safety notes. */
+#listingModal .v111-listing-progress,
+#listingModal .v111-listing-lead,
+#listingModal .v111-form-section > p { display: none !important; }
+#listingModal .v111-form-section > h3 { margin-bottom: 12px; }
+#listingModal .v111-form-section { margin-bottom: 18px; }
