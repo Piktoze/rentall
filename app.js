@@ -1285,13 +1285,29 @@ function renderUniversalListings(items=loadUniversalListings()){
 renderUniversalListings();
 
 const listingModal=document.getElementById('listingModal');
+let listingModalReturnFocus=null;
+function closeListingModalAccessible(){
+  if(!listingModal) return;
+  listingModal.classList.remove('open');
+  listingModal.setAttribute('aria-hidden','true');
+  if(listingModalReturnFocus?.isConnected) listingModalReturnFocus.focus();
+}
 document.getElementById('navListItemBtn')?.addEventListener('click',()=>document.getElementById('openListingFormBtn')?.click());
 document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
   if(!currentSupplier()){ openAuth('register'); return; }
   refreshInstantBookEligibility().catch(()=>{});
+  listingModalReturnFocus=document.activeElement;
   listingModal.classList.add('open');
+  listingModal.setAttribute('aria-hidden','false');
+  document.getElementById('closeListingModal')?.focus();
 });
-document.getElementById('closeListingModal')?.addEventListener('click',()=>listingModal.classList.remove('open'));
+document.getElementById('closeListingModal')?.addEventListener('click',closeListingModalAccessible);
+listingModal?.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && listingModal.classList.contains('open')){
+    e.preventDefault();
+    closeListingModalAccessible();
+  }
+});
 
 document.getElementById('listingForm')?.addEventListener('submit',e=>{
   e.preventDefault();
@@ -1320,7 +1336,7 @@ document.getElementById('listingForm')?.addEventListener('submit',e=>{
   renderUniversalListings(items);
   document.getElementById('listingMsg').textContent='Listing published.';
   e.target.reset();
-  setTimeout(()=>listingModal.classList.remove('open'),450);
+  setTimeout(closeListingModalAccessible,450);
 });
 
 document.getElementById('searchForm')?.addEventListener('submit',e=>{
