@@ -446,8 +446,8 @@
       <div class="eyebrow" data-i18n-text="Account access">Account access</div>
       <h2 data-i18n-text="Log in to RentInOrbit">Log in to RentInOrbit</h2>
       <form id="supplierLoginForm" class="auth-form">
-        <label>Email<input type="email" id="loginEmail" required placeholder="name@example.com"></label>
-        <label>Password<input type="password" id="loginPassword" required placeholder="••••••••"></label>
+        <label><span data-i18n-text="Email">Email</span><input type="email" id="loginEmail" required placeholder="name@example.com"></label>
+        <label><span data-i18n-text="Password">Password</span><input type="password" id="loginPassword" required placeholder="••••••••"></label>
         <button class="primary" type="submit" data-i18n-text="Log in">Log in</button>
         <small id="loginMsg"></small>
       </form>
@@ -475,7 +475,7 @@
           </label>
           <label><span data-i18n-text="Profile name">Profile name</span><input id="regBusinessName" required placeholder="e.g. Jonas or Klaipėda Rentals"></label>
           <label><span data-i18n-text="Contact person">Contact person</span><input id="regContactName" required placeholder="Anna Smith"></label>
-          <label>Email<input type="email" id="regEmail" required></label>
+          <label><span data-i18n-text="Email">Email</span><input type="email" id="regEmail" required></label>
           <label data-supplier-register-field><span data-i18n-text="Phone / WhatsApp">Phone / WhatsApp</span><input id="regPhone" placeholder="+370..."></label>
           
           <label><span data-i18n-text="Country">Country</span>
@@ -489,9 +489,9 @@
               <option value="FR" data-i18n-text="France">France</option>
             </select>
           </label>
-          <label>City<input id="regArea" required placeholder="e.g. Klaipėda"></label>
+          <label><span data-i18n-text="City">City</span><input id="regArea" required placeholder="e.g. Klaipėda"></label>
           
-          <label>Password<input type="password" id="regPassword" required minlength="8"></label>
+          <label><span data-i18n-text="Password">Password</span><input type="password" id="regPassword" required minlength="8"></label>
           
           
         </div>
@@ -555,7 +555,7 @@
             <option value="FR" data-i18n-text="France">France</option>
           </select>
         </label>
-        <label>City<input id="listingCity" required placeholder="Klaipėda"></label>
+        <label><span data-i18n-text="City">City</span><input id="listingCity" required placeholder="Klaipėda"></label>
         
 <label><span data-i18n-text="Latitude">Latitude</span>
   <input type="number" id="listingLatitude" step="0.000001" min="-90" max="90" placeholder="55.7033">
@@ -652,7 +652,7 @@
 </label>
 <div class="full listing-photo-preview" id="listingPhotoPreview"></div>
 
-          <label class="full">Description<textarea id="listingDescription" rows="4" placeholder="Condition, dimensions, accessories, pickup details..."></textarea></label>
+          <label class="full"><span data-i18n-text="Description">Description</span><textarea id="listingDescription" rows="4" placeholder="Condition, dimensions, accessories, pickup details..."></textarea></label>
       </div></div>
       <div class="v111-publish-note"><b data-i18n-text="Before publishing">Before publishing</b><span data-i18n-text="Check price, quantity, location and fulfilment details. Your listing will become visible to customers.">Check price, quantity, location and fulfilment details. Your listing will become visible to customers.</span></div>
       <button class="primary v111-publish" type="submit" data-i18n-text="Publish rental listing">Publish rental listing</button>
@@ -1296,13 +1296,13 @@
       <div class="profile-section">
         <h3 data-i18n-text="Business details">Business details</h3>
         <div class="form-grid two">
-          <label>Company name<input id="accBusinessName" required></label>
+          <label><span data-i18n-text="Company name">Company name</span><input id="accBusinessName" required></label>
           <label><span data-i18n-text="Contact person">Contact person</span><input id="accContactName" required></label>
-          <label>Phone<input id="accPhone" required></label>
-          <label>Email<input type="email" id="accEmail" required disabled></label>
-          <label class="full">Business address<input id="accAddress" placeholder="Street, city, postcode"></label>
-          <label>Business type<input id="accBusinessType"></label>
-          <label>Website / Instagram<input id="accWebsite"></label>
+          <label><span data-i18n-text="Phone">Phone</span><input id="accPhone" required></label>
+          <label><span data-i18n-text="Email">Email</span><input type="email" id="accEmail" required disabled></label>
+          <label class="full"><span data-i18n-text="Business address">Business address</span><input id="accAddress" placeholder="Street, city, postcode"></label>
+          <label><span data-i18n-text="Business type">Business type</span><input id="accBusinessType"></label>
+          <label><span data-i18n-text="Website / Instagram">Website / Instagram</span><input id="accWebsite"></label>
         </div>
       </div>
 
@@ -1310,12 +1310,12 @@
         <h3 data-i18n-text="Delivery zones">Delivery zones</h3>
         <p class="section-note" data-i18n-text="Select the areas where you can deliver rental equipment.">Select the areas where you can deliver rental equipment.</p>
         <div class="form-grid" id="deliveryZones">
-          <label class="full">Delivery zones<input id="accDeliveryZones" placeholder="e.g. Klaipėda, Vilnius, Barcelona"></label>
+          <label class="full"><span data-i18n-text="Delivery zones">Delivery zones</span><input id="accDeliveryZones" placeholder="e.g. Klaipėda, Vilnius, Barcelona"></label>
         </div>
 
         <div class="form-grid two">
-          <label>Default delivery fee (€)<input id="accDeliveryFee" type="number" min="0" step="0.5" placeholder="10"></label>
-          <label>Free delivery above (€)<input id="accFreeDeliveryAbove" type="number" min="0" step="1" placeholder="100"></label>
+          <label><span data-i18n-text="Default delivery fee (€)">Default delivery fee (€)</span><input id="accDeliveryFee" type="number" min="0" step="0.5" placeholder="10"></label>
+          <label><span data-i18n-text="Free delivery above (€)">Free delivery above (€)</span><input id="accFreeDeliveryAbove" type="number" min="0" step="1" placeholder="100"></label>
         </div>
       </div>
 
@@ -1323,7 +1323,7 @@
         <h3 data-i18n-text="Payment information">Payment information</h3>
         <p class="section-note" data-i18n-text="Payout details are managed through the secure payment connection for your supplier account.">Payout details are managed through the secure payment connection for your supplier account.</p>
         <div class="form-grid two">
-          <label>Account holder name<input id="accPayoutName" placeholder="Your profile S.L."></label>
+          <label><span data-i18n-text="Account holder name">Account holder name</span><input id="accPayoutName" placeholder="Your profile S.L."></label>
           <label><span data-i18n-text="Bank / payout country">Bank / payout country</span>
             <select id="accPayoutCountry">
               <option value="" data-i18n-text="Select country">Select country</option>
@@ -1336,8 +1336,8 @@
               <option value="Other" data-i18n-text="Other">Other</option>
             </select>
           </label>
-          <label class="full">IBAN<input id="accIban" placeholder="IBAN" data-i18n-placeholder="IBAN"></label>
-          <label>VAT / Tax ID<input id="accTaxId" placeholder="B12345678"></label>
+          <label class="full"><span data-i18n-text="IBAN">IBAN</span><input id="accIban" placeholder="IBAN" data-i18n-placeholder="IBAN"></label>
+          <label><span data-i18n-text="VAT / Tax ID">VAT / Tax ID</span><input id="accTaxId" placeholder="B12345678"></label>
           <label><span data-i18n-text="Payout schedule">Payout schedule</span>
             <select id="accPayoutSchedule">
               <option value="Weekly" data-i18n-text="Weekly">Weekly</option>
@@ -1527,12 +1527,12 @@
       <div class="panel-head"><div><h3 data-i18n-text="Supplier pre-launch">Supplier pre-launch</h3><p data-i18n-text="Create suppliers now. Invitations are sent only when you decide to activate them.">Create suppliers now. Invitations are sent only when you decide to activate them.</p></div><button class="secondary" id="inviteAllReadySuppliersBtn" type="button" data-i18n-text="Invite all ready">Invite all ready</button></div>
       <form id="adminSupplierForm" class="auth-form compact-admin-form">
         <div class="form-grid two">
-          <label>Email<input type="email" id="adminSupplierEmail" required placeholder="supplier@example.com"></label>
-          <label>Business / profile name<input id="adminSupplierBusiness" placeholder="Klaipėda Rentals"></label>
+          <label><span data-i18n-text="Email">Email</span><input type="email" id="adminSupplierEmail" required placeholder="supplier@example.com"></label>
+          <label><span data-i18n-text="Business / profile name">Business / profile name</span><input id="adminSupplierBusiness" placeholder="Klaipėda Rentals"></label>
           <label><span data-i18n-text="Contact person">Contact person</span><input id="adminSupplierName" placeholder="Name"></label>
-          <label>Phone<input id="adminSupplierPhone" placeholder="+370..."></label>
-          <label>Country<input id="adminSupplierCountry" value="LT"></label>
-          <label>City<input id="adminSupplierCity" value="Klaipėda"></label>
+          <label><span data-i18n-text="Phone">Phone</span><input id="adminSupplierPhone" placeholder="+370..."></label>
+          <label><span data-i18n-text="Country">Country</span><input id="adminSupplierCountry" value="LT"></label>
+          <label><span data-i18n-text="City">City</span><input id="adminSupplierCity" value="Klaipėda"></label>
         </div>
         <button class="primary" type="submit" data-i18n-text="Save pre-launch supplier">Save pre-launch supplier</button><small id="adminSupplierMsg"></small>
       </form>
@@ -1544,17 +1544,17 @@
       <p class="muted" data-i18n-text="The listing stays hidden until the supplier activates the account and confirms availability.">The listing stays hidden until the supplier activates the account and confirms availability.</p>
       <form id="adminPrelaunchListingForm" class="auth-form compact-admin-form">
         <div class="form-grid two">
-          <label>Supplier email<input type="email" id="adminListingSupplierEmail" required></label>
-          <label>Title<input id="adminListingTitle" required placeholder="Folding chairs"></label>
-          <label>Category<select id="adminListingCategory"><option value="tools" data-i18n-text="Tools &amp; equipment">Tools & equipment</option><option value="events" data-i18n-text="Events &amp; parties">Events & parties</option><option value="furniture" data-i18n-text="Furniture">Furniture</option><option value="electronics" data-i18n-text="Electronics">Electronics</option><option value="photo" data-i18n-text="Photo &amp; video">Photo & video</option><option value="garden" data-i18n-text="Garden &amp; outdoor">Garden & outdoor</option><option value="transport" data-i18n-text="Trailers &amp; transport gear">Trailers & transport gear</option><option value="sports" data-i18n-text="Sports &amp; leisure">Sports & leisure</option><option value="other" data-i18n-text="Other">Other</option></select></label>
-          <label>City<input id="adminListingCity" value="Klaipėda" required></label>
-          <label>Quantity<input type="number" id="adminListingQuantity" min="1" value="1" required></label>
-          <label>Price / day (€)<input type="number" id="adminListingPriceDay" min="0" step="0.5" required></label>
-          <label>Price / week (€)<input type="number" id="adminListingPriceWeek" min="0" step="0.5"></label>
-          <label>Deposit (€)<input type="number" id="adminListingDeposit" min="0" step="1"></label>
-          <label>Booking mode<select id="adminListingBookingMode"><option value="request" data-i18n-text="Request to book">Request to book</option><option value="instant" data-i18n-text="Instant Book">Instant Book</option></select></label>
-          <label>Response deadline<select id="adminListingResponseHours"><option value="2" data-i18n-text="2 active hours">2 active hours</option><option value="4" selected data-i18n-text="4 active hours">4 active hours</option><option value="8" data-i18n-text="8 active hours">8 active hours</option><option value="24" data-i18n-text="24 active hours">24 active hours</option></select></label>
-          <label class="full">Description<textarea id="adminListingDescription" rows="3"></textarea></label>
+          <label><span data-i18n-text="Supplier email">Supplier email</span><input type="email" id="adminListingSupplierEmail" required></label>
+          <label><span data-i18n-text="Title">Title</span><input id="adminListingTitle" required placeholder="Folding chairs"></label>
+          <label><span data-i18n-text="Category">Category</span><select id="adminListingCategory"><option value="tools" data-i18n-text="Tools &amp; equipment">Tools & equipment</option><option value="events" data-i18n-text="Events &amp; parties">Events & parties</option><option value="furniture" data-i18n-text="Furniture">Furniture</option><option value="electronics" data-i18n-text="Electronics">Electronics</option><option value="photo" data-i18n-text="Photo &amp; video">Photo & video</option><option value="garden" data-i18n-text="Garden &amp; outdoor">Garden & outdoor</option><option value="transport" data-i18n-text="Trailers &amp; transport gear">Trailers & transport gear</option><option value="sports" data-i18n-text="Sports &amp; leisure">Sports & leisure</option><option value="other" data-i18n-text="Other">Other</option></select></label>
+          <label><span data-i18n-text="City">City</span><input id="adminListingCity" value="Klaipėda" required></label>
+          <label><span data-i18n-text="Quantity">Quantity</span><input type="number" id="adminListingQuantity" min="1" value="1" required></label>
+          <label><span data-i18n-text="Price / day (€)">Price / day (€)</span><input type="number" id="adminListingPriceDay" min="0" step="0.5" required></label>
+          <label><span data-i18n-text="Price / week (€)">Price / week (€)</span><input type="number" id="adminListingPriceWeek" min="0" step="0.5"></label>
+          <label><span data-i18n-text="Deposit (€)">Deposit (€)</span><input type="number" id="adminListingDeposit" min="0" step="1"></label>
+          <label><span data-i18n-text="Booking mode">Booking mode</span><select id="adminListingBookingMode"><option value="request" data-i18n-text="Request to book">Request to book</option><option value="instant" data-i18n-text="Instant Book">Instant Book</option></select></label>
+          <label><span data-i18n-text="Response deadline">Response deadline</span><select id="adminListingResponseHours"><option value="2" data-i18n-text="2 active hours">2 active hours</option><option value="4" selected data-i18n-text="4 active hours">4 active hours</option><option value="8" data-i18n-text="8 active hours">8 active hours</option><option value="24" data-i18n-text="24 active hours">24 active hours</option></select></label>
+          <label class="full"><span data-i18n-text="Description">Description</span><textarea id="adminListingDescription" rows="3"></textarea></label>
         </div>
         <button class="primary" type="submit" data-i18n-text="Save hidden listing">Save hidden listing</button><small id="adminListingMsg"></small>
       </form>
@@ -1644,8 +1644,8 @@
     <h2 data-i18n-text="Rate the renter">Rate the renter</h2>
     <form id="renterReviewForm" class="auth-form">
       <input type="hidden" id="renterReviewBookingId">
-      <label>Rating<select id="renterReviewRating" required><option value="5" data-i18n-text="5 — Excellent">5 — Excellent</option><option value="4" data-i18n-text="4 — Very good">4 — Very good</option><option value="3" data-i18n-text="3 — Good">3 — Good</option><option value="2" data-i18n-text="2 — Fair">2 — Fair</option><option value="1" data-i18n-text="1 — Poor">1 — Poor</option></select></label>
-      <label>Comment<textarea id="renterReviewComment" rows="4" maxlength="2000" placeholder="Communication, punctuality and return condition…"></textarea></label>
+      <label><span data-i18n-text="Rating">Rating</span><select id="renterReviewRating" required><option value="5" data-i18n-text="5 — Excellent">5 — Excellent</option><option value="4" data-i18n-text="4 — Very good">4 — Very good</option><option value="3" data-i18n-text="3 — Good">3 — Good</option><option value="2" data-i18n-text="2 — Fair">2 — Fair</option><option value="1" data-i18n-text="1 — Poor">1 — Poor</option></select></label>
+      <label><span data-i18n-text="Comment">Comment</span><textarea id="renterReviewComment" rows="4" maxlength="2000" placeholder="Communication, punctuality and return condition…"></textarea></label>
       <button class="primary" type="submit" data-i18n-text="Publish renter review">Publish renter review</button>
     </form>
   </div>
