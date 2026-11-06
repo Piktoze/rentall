@@ -5519,7 +5519,7 @@ function localizeBookingTimelineMessage(message){
   // Variable booking details are kept unchanged; only fixed English phrases are translated.
   return source
     .replace(/^Your reservation is pending\. Inventory is held until payment expiry\.?$/i,uiText('Your reservation is pending. Inventory is held until payment expiry.'))
-    .replace(/^Test Supplier request (\d+) × (.+) for (\d{4}-\d{2}-\d{2} → \d{4}-\d{2}-\d{2})\.?$/i,(_,quantity,item,dates)=>
+    .replace(/^Test Supplier request(?:ed)? (\d+) × (.+) for (\d{4}-\d{2}-\d{2} → \d{4}-\d{2}-\d{2})\.?$/i,(_,quantity,item,dates)=>
       `${uiText('Booking request:')} ${quantity} × ${item} · ${dates}`);
 }
 async function loadUnifiedCustomerBookings(){
