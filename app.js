@@ -1285,6 +1285,7 @@ function renderUniversalListings(items=loadUniversalListings()){
 renderUniversalListings();
 
 const listingModal=document.getElementById('listingModal');
+document.getElementById('navListItemBtn')?.addEventListener('click',()=>document.getElementById('openListingFormBtn')?.click());
 document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
   if(!currentSupplier()){ openAuth('register'); return; }
   refreshInstantBookEligibility().catch(()=>{});
