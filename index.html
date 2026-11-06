@@ -594,7 +594,7 @@
         <label>Hotel / apartment delivery
           <select id="listingAccommodationDelivery">
             <option value="yes" data-i18n-text="Yes">Yes</option>
-            <option value="no">No</option>
+            <option value="no" data-i18n-text="No">No</option>
           </select>
         </label>
 
@@ -1373,16 +1373,16 @@
 <div class="account-modal" id="returnBookingModal" aria-hidden="true">
   <div class="auth-panel profile-panel" role="dialog" aria-modal="true" aria-labelledby="returnBookingTitle">
     <button class="close-modal" id="closeReturnBookingModal" type="button" aria-label="Close" data-i18n-aria-label="Close">×</button>
-    <div class="eyebrow">Return item</div>
-    <h2 id="returnBookingTitle">Record the item return</h2>
-    <p class="subcopy">Choose the observed condition and add optional notes. This action moves the rental to returned.</p>
+    <div class="eyebrow" data-i18n-text="Return item">Return item</div>
+    <h2 id="returnBookingTitle" data-i18n-text="Record the item return">Record the item return</h2>
+    <p class="subcopy" data-i18n-text="Choose the observed condition and add optional notes. This action moves the rental to returned.">Choose the observed condition and add optional notes. This action moves the rental to returned.</p>
     <form id="returnBookingForm" class="auth-form">
       <input type="hidden" id="returnBookingId">
       <label>Return condition
         <select id="returnBookingCondition" required>
-          <option value="good">Good</option>
-          <option value="damaged">Damaged</option>
-          <option value="missing">Missing or missing parts</option>
+          <option value="good" data-i18n-text="Good">Good</option>
+          <option value="damaged" data-i18n-text="Damaged">Damaged</option>
+          <option value="missing" data-i18n-text="Missing or missing parts">Missing or missing parts</option>
         </select>
       </label>
       <label>Return notes
@@ -1391,7 +1391,7 @@
       <div id="returnBookingError" class="form-error" role="alert" aria-live="polite"></div>
       <div class="return-booking-modal-actions">
         <button class="secondary" id="cancelReturnBookingBtn" type="button" data-i18n-text="Cancel">Cancel</button>
-        <button class="primary" id="submitReturnBookingBtn" type="submit">Mark returned</button>
+        <button class="primary" id="submitReturnBookingBtn" type="submit" data-i18n-text="Mark returned">Mark returned</button>
       </div>
     </form>
   </div>
