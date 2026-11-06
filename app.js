@@ -2109,47 +2109,47 @@ renderReview = function(){
     <h3>${names}</h3>
 
     <div class="review-row">
-      <span>Rental period</span>
+      <span>${escapeHtml(uiText('Rental period'))}</span>
       <b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b>
     </div>
 
     <div class="delivery-summary-card">
-      <h4>Delivery details</h4>
+      <h4>${escapeHtml(uiText('Delivery details'))}</h4>
       <div class="delivery-summary-grid">
         <div>
-          <span>Hotel / apartment</span>
+          <span>${escapeHtml(uiText('Hotel / apartment'))}</span>
           <b>${delivery.accommodationName || '—'}</b>
         </div>
         <div>
-          <span>City / area</span>
+          <span>${escapeHtml(uiText('City / area'))}</span>
           <b>${document.getElementById('deliveryArea').value || '—'}</b>
         </div>
         <div>
-          <span>Address</span>
+          <span>${escapeHtml(uiText('Address'))}</span>
           <b>${delivery.address || '—'}</b>
         </div>
         <div>
-          <span>Room / apartment number</span>
-          <b>${delivery.roomNumber || 'Not provided'}</b>
+          <span>${escapeHtml(uiText('Room / apartment number'))}</span>
+          <b>${delivery.roomNumber || uiText('Not provided')}</b>
         </div>
         <div>
-          <span>Contact person</span>
+          <span>${escapeHtml(uiText('Contact person'))}</span>
           <b>${delivery.bookingName || '—'}</b>
         </div>
         <div>
-          <span>Delivery window</span>
+          <span>${escapeHtml(uiText('Delivery window'))}</span>
           <b>${activeCheckoutListing?.deliveryWindow || document.getElementById('deliveryWindow').value || '—'}</b>
         </div>
         <div class="delivery-summary-instructions">
-          <span>Delivery instructions</span>
-          <b>${delivery.instructions || 'No special instructions'}</b>
+          <span>${escapeHtml(uiText('Delivery instructions'))}</span>
+          <b>${delivery.instructions || uiText('No special instructions')}</b>
         </div>
       </div>
     </div>
 
-    <div class="review-row"><span>Rental</span><b>${money(price.rental)}</b></div>
-    <div class="review-row"><span>Delivery</span><b>${price.deliveryRule.eligible ? money(price.delivery) : 'Not available'}</b></div>
-    <div class="review-row total"><span>Total</span><b>${money(price.total)}</b></div>`;
+    <div class="review-row"><span>${escapeHtml(uiText('Rental'))}</span><b>${money(price.rental)}</b></div>
+    <div class="review-row"><span>${escapeHtml(uiText('Delivery'))}</span><b>${price.deliveryRule.eligible ? money(price.delivery) : uiText('Not available')}</b></div>
+    <div class="review-row total"><span>${escapeHtml(uiText('Total'))}</span><b>${money(price.total)}</b></div>`;
 
   document.getElementById('reviewCard').innerHTML=html;
 };
