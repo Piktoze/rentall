@@ -36,4 +36,11 @@ for(const key of ['Gross paid rentals','Platform fees','Estimated supplier earni
 }
 assert.match(command,/Payment becomes available only after supplier approval/,'Do not prompt payment before supplier approves');
 assert.match(notifications,/renterNotificationText\(n\.title\)/,'Dynamic notification titles must be translated');
+// Rental commitments arrive as immutable English snapshots; translate for display only.
+for(const term of [
+ 'Use the item only for its intended purpose.',
+ 'Return the item on time in the condition received, allowing for normal wear.',
+ 'Damage, loss, cancellation and deposit handling follow the listing and RentInOrbit terms.'
+]) assert.ok(lt.includes(JSON.stringify(term)+':'),'Missing agreed rental term translation: '+term);
+assert.match(trust,/\(s\.terms\|\|\[\]\)\.map\(x=>`<li>\$\{esc\(tr\(x\)\)\}<\/li>`\)/,'Agreed terms must be translated at render time');
 console.log('PASS: supplier and renter localization and safe booking order checked');
