@@ -2910,7 +2910,7 @@ document.addEventListener('click',async e=>{
   const status=btn.dataset.status;
   let reason=null;
   if(status==='cancelled'){
-    reason=window.prompt('Cancellation reason (optional):','') || null;
+    reason=window.prompt(uiText('Cancellation reason (optional):'),'') || null;
   }
 
   try{
@@ -2922,7 +2922,7 @@ document.addEventListener('click',async e=>{
     if(note){
       const msg=document.createElement('div');
       msg.className='lifecycle-note';
-      msg.textContent=`Status updated to ${result.booking.status}. Remaining quantity: ${result.availability?.remainingQuantity ?? '—'}.`;
+      msg.textContent=`${uiText('Status updated to')} ${uiText(result.booking.status)}. ${uiText('Remaining quantity')}: ${result.availability?.remainingQuantity ?? '—'}.`;
       note.appendChild(msg);
     }
   }catch(err){
@@ -2958,7 +2958,7 @@ openSupplierOrder=async function(bookingId){
     const actions=document.getElementById('supplierOrderActions');
     actions.innerHTML=`
       <div>
-        <b>Inventory booking status: ${real.status}</b>
+        <b>${escapeHtml(uiText('Inventory booking status'))}: ${escapeHtml(uiText(real.status))}</b>
         <div class="lifecycle-actions">${lifecycleButtonsFor(real)}</div>
       </div>`;
   }catch{}
@@ -3859,12 +3859,12 @@ async function initializeSupplierInvitation(){
   const modal=document.getElementById('supplierActivationModal'), summary=document.getElementById('supplierActivationSummary');
   try{
     const data=await apiJson(`/api/supplier/activation/${encodeURIComponent(token)}`);
-    if(summary) summary.textContent=`${data.supplier.businessName||data.supplier.displayName||data.supplier.email}: ${data.listingCount} prepared listing(s). Activate the account, then confirm availability before anything becomes public.`;
+    if(summary) summary.textContent=`${data.supplier.businessName||data.supplier.displayName||data.supplier.email}: ${data.listingCount} ${uiText('prepared listings. Activate the account, then confirm availability before anything becomes public.')}`;
     modal?.classList.add('open'); modal?.setAttribute('aria-hidden','false');
     const form=document.getElementById('supplierActivationForm');
     form?.addEventListener('submit',async e=>{
       e.preventDefault(); const msg=document.getElementById('supplierActivationMsg');
-      try{const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({token,password:document.getElementById('supplierActivationPassword').value})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent='Account activated. Now confirm that your prepared listings are still available.';await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
+      try{const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({token,password:document.getElementById('supplierActivationPassword').value})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent=uiText('Account activated. Now confirm that your prepared listings are still available.');await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
     },{once:true});
   }catch(err){if(summary) summary.textContent=err.message;modal?.classList.add('open');}
 }
@@ -4409,7 +4409,7 @@ function wireAuthoritativeAuth(){
         closeAuth();
         await hydrateListingsFromServer();
         await renderBookings();
-        if(typeof showToast==='function') showToast('Signed in successfully.','success',2200);
+        if(typeof showToast==='function') showToast(uiText('Signed in successfully.'),'success',2200);
         if(serverUser?.role==='supplier') document.getElementById('supplier-dashboard')?.scrollIntoView({behavior:'smooth'});
         if(serverUser?.role==='admin') loadAdminDashboard().catch(()=>{});
       }catch(err){alert(err.message);}
@@ -4438,7 +4438,7 @@ function wireAuthoritativeAuth(){
         });
         closeAuth();
         await hydrateListingsFromServer();
-        if(typeof showToast==='function') showToast('Account created — you are now signed in.','success',2600);
+        if(typeof showToast==='function') showToast(uiText('Account created — you are now signed in.'),'success',2600);
         if(role==='supplier') document.getElementById('supplier-dashboard')?.scrollIntoView({behavior:'smooth'});
       }catch(err){alert(err.message);}
     });
