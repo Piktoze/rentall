@@ -291,7 +291,7 @@
       <div class="browse-tools-panel">
 <div class="geo-search-controls">
   <button class="secondary" type="button" id="useMyLocationBtn" data-i18n-text="Use my location">Use my location</button>
-  <label>Radius
+  <label><span data-i18n-text="Radius">Radius</span>
     <select id="radiusFilter">
       <option value="5">5 km</option>
       <option value="10">10 km</option>
@@ -301,7 +301,7 @@
       <option value="0" data-i18n-text="Any distance">Any distance</option>
     </select>
   </label>
-  <label>Sort
+  <label><span data-i18n-text="Sort">Sort</span>
     <select id="listingSort">
       <option value="relevance" data-i18n-text="Recommended">Recommended</option>
       <option value="distance" data-i18n-text="Distance">Distance</option>
@@ -461,13 +461,13 @@
       <div class="v110-onboarding-steps" aria-label="Account setup steps" data-i18n-aria-label="Account setup steps"><span class="active" data-i18n-text="1 · Account">1 · Account</span><span data-i18n-text="2 · Profile">2 · Profile</span><span data-i18n-text="3 · Start using RentInOrbit">3 · Start using RentInOrbit</span></div>
       <form id="supplierRegisterForm" class="auth-form">
         <div class="form-grid two">
-          <label>How do you want to start?
+          <label><span data-i18n-text="How do you want to start?">How do you want to start?</span>
             <select id="regRole" required>
               <option value="customer" data-i18n-text="Rent items for now">Rent items for now</option>
               <option value="supplier" data-i18n-text="Rent items and rent out my items">Rent items and rent out my items</option>
             </select>
           </label>
-          <label data-supplier-register-field>Account type
+          <label data-supplier-register-field><span data-i18n-text="Account type">Account type</span>
             <select id="regAccountType">
               <option value="individual" data-i18n-text="Individual">Individual</option>
               <option value="business" data-i18n-text="Business">Business</option>
@@ -478,7 +478,7 @@
           <label>Email<input type="email" id="regEmail" required></label>
           <label data-supplier-register-field>Phone / WhatsApp<input id="regPhone" placeholder="+370..."></label>
           
-          <label>Country
+          <label><span data-i18n-text="Country">Country</span>
             <select id="regCountry" required>
               <option value="LT" data-i18n-text="Lithuania">Lithuania</option>
               <option value="ES" data-i18n-text="Spain">Spain</option>
@@ -528,7 +528,7 @@
     <form id="listingForm" class="auth-form">
       <div class="v111-form-section"><h3 data-i18n-text="Item basics">Item basics</h3><p data-i18n-text="What are you renting and where is it available?">What are you renting and where is it available?</p><div class="form-grid two">
         <label class="full">Listing title<input id="listingTitle" required placeholder="Evening dress or 10 folding chairs"></label>
-        <label>Category
+        <label><span data-i18n-text="Category">Category</span>
           <select id="listingCategory" required>
             <option value="furniture" data-i18n-text="Furniture">Furniture</option>
             <option value="tools" data-i18n-text="Tools &amp; equipment">Tools & equipment</option>
@@ -544,7 +544,7 @@
           </select>
         </label>
         <label>Quantity available<input type="number" id="listingQuantity" min="1" value="1" required></label>
-        <label>Country
+        <label><span data-i18n-text="Country">Country</span>
           <select id="listingCountry">
             <option value="LT" data-i18n-text="Lithuania">Lithuania</option>
             <option value="ES" data-i18n-text="Spain">Spain</option>
@@ -557,10 +557,10 @@
         </label>
         <label>City<input id="listingCity" required placeholder="Klaipėda"></label>
         
-<label>Latitude
+<label><span data-i18n-text="Latitude">Latitude</span>
   <input type="number" id="listingLatitude" step="0.000001" min="-90" max="90" placeholder="55.7033">
 </label>
-<label>Longitude
+<label><span data-i18n-text="Longitude">Longitude</span>
   <input type="number" id="listingLongitude" step="0.000001" min="-180" max="180" placeholder="21.1443">
 </label>
 <label class="full geo-help">
@@ -573,7 +573,7 @@
         <label>Price per day (€)<input type="number" id="listingPriceDay" min="0" step="0.5" required></label>
         <label>Price per week (€)<input type="number" id="listingPriceWeek" min="0" step="0.5"></label>
         
-<label>Cancellation policy
+<label><span data-i18n-text="Cancellation policy">Cancellation policy</span>
   <select id="listingCancellationPolicy">
     <option value="flexible" data-i18n-text="Flexible">Flexible</option>
     <option value="moderate" selected data-i18n-text="Moderate">Moderate</option>
@@ -584,33 +584,33 @@
           <label>Security deposit (€)<input type="number" id="listingDeposit" min="0" step="1"></label>
       </div></div>
       <div class="v111-form-section"><h3 data-i18n-text="Pickup &amp; delivery">Pickup & delivery</h3><p data-i18n-text="Choose how customers can receive the item. Delivery details are only needed when you offer delivery.">Choose how customers can receive the item. Delivery details are only needed when you offer delivery.</p><div class="form-grid two">
-        <label>Delivery
+        <label><span data-i18n-text="Delivery">Delivery</span>
           <select id="listingDelivery">
             <option value="Pickup only" data-i18n-text="Pickup only">Pickup only</option>
             <option value="Delivery available" data-i18n-text="Delivery available">Delivery available</option>
             <option value="Pickup or delivery" data-i18n-text="Pickup or delivery">Pickup or delivery</option>
           </select>
         </label>
-        <label>Hotel / apartment delivery
+        <label><span data-i18n-text="Hotel / apartment delivery">Hotel / apartment delivery</span>
           <select id="listingAccommodationDelivery">
             <option value="yes" data-i18n-text="Yes">Yes</option>
             <option value="no" data-i18n-text="No">No</option>
           </select>
         </label>
 
-        <label class="full">Served hotel delivery zones
+        <label class="full"><span data-i18n-text="Served hotel delivery zones">Served hotel delivery zones</span>
           <input id="listingDeliveryZones" placeholder="e.g. Klaipėda, Vilnius, Barcelona">
         </label>
 
-        <label>Delivery fee (€)
+        <label><span data-i18n-text="Delivery fee (€)">Delivery fee (€)</span>
           <input type="number" id="listingHotelDeliveryFee" min="0" step="0.5" placeholder="10">
         </label>
 
-        <label>Minimum order (€)
+        <label><span data-i18n-text="Minimum order (€)">Minimum order (€)</span>
           <input type="number" id="listingMinOrder" min="0" step="1" placeholder="25">
         </label>
 
-        <label>Delivery lead time
+        <label><span data-i18n-text="Delivery lead time">Delivery lead time</span>
           <select id="listingDeliveryLeadTime">
             <option value="2 hours" data-i18n-text="Within 2 hours">Within 2 hours</option>
             <option value="same day" data-i18n-text="Same day">Same day</option>
@@ -620,7 +620,7 @@
           </select>
         </label>
 
-        <label>Delivery time window
+        <label><span data-i18n-text="Delivery time window">Delivery time window</span>
           <select id="listingDeliveryWindow">
             <option value="08:00–12:00">08:00–12:00</option>
             <option value="12:00–16:00">12:00–16:00</option>
@@ -628,13 +628,13 @@
             <option value="08:00–20:00" data-i18n-text="Any time 08:00–20:00">Any time 08:00–20:00</option>
           </select>
         </label>
-        <label>Booking confirmation
+        <label><span data-i18n-text="Booking confirmation">Booking confirmation</span>
           <select id="listingBookingMode">
             <option value="request" data-i18n-text="Request to book">Request to book</option>
             <option value="instant" disabled data-i18n-text="Instant Book — verified payout accounts only">Instant Book — verified payout accounts only</option>
           </select>
         </label>
-        <label>Response time
+        <label><span data-i18n-text="Response time">Response time</span>
           <select id="listingResponseHours">
             <option value="2" data-i18n-text="2 active hours">2 active hours</option>
             <option value="4" selected data-i18n-text="4 active hours">4 active hours</option>
@@ -646,7 +646,7 @@
         
       </div></div>
       <div class="v111-form-section"><h3 data-i18n-text="Photos &amp; description">Photos & description</h3><p data-i18n-text="Clear photos and an accurate description help customers book confidently.">Clear photos and an accurate description help customers book confidently.</p><div class="form-grid two">
-<label class="full">Photos
+<label class="full"><span data-i18n-text="Photos">Photos</span>
   <input id="listingPhotos" type="file" accept="image/png,image/jpeg,image/webp" multiple>
   <small data-i18n-text="Upload up to 6 photos. First photo becomes the cover image.">Upload up to 6 photos. First photo becomes the cover image.</small>
 </label>
@@ -799,7 +799,7 @@
             <div class="setup-step" id="stripeStepPayout"><span>4</span><div><b data-i18n-text="Payouts enabled">Payouts enabled</b><small id="stripePayoutText" data-i18n-text="Pending">Pending</small></div></div>
           </div>
 
-          <label class="field">Supplier type
+          <label class="field"><span data-i18n-text="Supplier type">Supplier type</span>
             <select id="stripeLegalEntityType">
               <option value="individual" data-i18n-text="Individual">Individual</option>
               <option value="company" data-i18n-text="Company">Company</option>
@@ -838,7 +838,7 @@
             <span class="status confirmed" id="payoutScheduleBadge" data-i18n-text="Weekly">Weekly</span>
           </div>
 
-          <label class="payment-select-label">How often should we send your payouts?
+          <label class="payment-select-label"><span data-i18n-text="How often should we send your payouts?">How often should we send your payouts?</span>
             <select id="paymentsScheduleSelect">
               <option value="Weekly" data-i18n-text="Weekly">Weekly</option>
               <option value="Every 2 weeks" data-i18n-text="Every 2 weeks">Every 2 weeks</option>
@@ -865,13 +865,13 @@
         </div>
 
         <div class="webhook-filters">
-          <label>Event type
+          <label><span data-i18n-text="Event type">Event type</span>
             <select id="webhookTypeFilter">
               <option value="all" data-i18n-text="All event types">All event types</option>
             </select>
           </label>
 
-          <label>Status
+          <label><span data-i18n-text="Status">Status</span>
             <select id="webhookStatusFilter">
               <option value="all" data-i18n-text="All statuses">All statuses</option>
               <option value="processed" data-i18n-text="Processed">Processed</option>
@@ -881,11 +881,11 @@
             </select>
           </label>
 
-          <label>From date
+          <label><span data-i18n-text="From date">From date</span>
             <input type="date" id="webhookFromDate">
           </label>
 
-          <label>To date
+          <label><span data-i18n-text="To date">To date</span>
             <input type="date" id="webhookToDate">
           </label>
 
@@ -971,7 +971,7 @@
         </div>
 
         <div class="booking-filters">
-          <label>Status
+          <label><span data-i18n-text="Status">Status</span>
             <select id="bookingFilter">
               <option value="all" data-i18n-text="All statuses">All statuses</option>
               <option value="pending" data-i18n-text="Pending">Pending</option>
@@ -980,13 +980,13 @@
             </select>
           </label>
 
-          <label>City
+          <label><span data-i18n-text="City">City</span>
             <select id="bookingCityFilter">
               <option value="all" data-i18n-text="All cities">All cities</option>
             </select>
           </label>
 
-          <label>Delivery date
+          <label><span data-i18n-text="Delivery date">Delivery date</span>
             <input type="date" id="bookingDateFilter">
           </label>
 
@@ -1324,7 +1324,7 @@
         <p class="section-note" data-i18n-text="Payout details are managed through the secure payment connection for your supplier account.">Payout details are managed through the secure payment connection for your supplier account.</p>
         <div class="form-grid two">
           <label>Account holder name<input id="accPayoutName" placeholder="Your profile S.L."></label>
-          <label>Bank / payout country
+          <label><span data-i18n-text="Bank / payout country">Bank / payout country</span>
             <select id="accPayoutCountry">
               <option value="" data-i18n-text="Select country">Select country</option>
               <option value="Lithuania" data-i18n-text="Lithuania">Lithuania</option>
@@ -1338,14 +1338,14 @@
           </label>
           <label class="full">IBAN<input id="accIban" placeholder="IBAN" data-i18n-placeholder="IBAN"></label>
           <label>VAT / Tax ID<input id="accTaxId" placeholder="B12345678"></label>
-          <label>Payout schedule
+          <label><span data-i18n-text="Payout schedule">Payout schedule</span>
             <select id="accPayoutSchedule">
               <option value="Weekly" data-i18n-text="Weekly">Weekly</option>
               <option value="Every 2 weeks" data-i18n-text="Every 2 weeks">Every 2 weeks</option>
               <option value="Monthly" data-i18n-text="Monthly">Monthly</option>
             </select>
           </label>
-          <label>Plan
+          <label><span data-i18n-text="Plan">Plan</span>
             <select id="accPlan">
               <option value="Free" data-i18n-text="Pilot — Free">Pilot — Free</option>
             </select>
@@ -1378,14 +1378,14 @@
     <p class="subcopy" data-i18n-text="Choose the observed condition and add optional notes. This action moves the rental to returned.">Choose the observed condition and add optional notes. This action moves the rental to returned.</p>
     <form id="returnBookingForm" class="auth-form">
       <input type="hidden" id="returnBookingId">
-      <label>Return condition
+      <label><span data-i18n-text="Return condition">Return condition</span>
         <select id="returnBookingCondition" required>
           <option value="good" data-i18n-text="Good">Good</option>
           <option value="damaged" data-i18n-text="Damaged">Damaged</option>
           <option value="missing" data-i18n-text="Missing or missing parts">Missing or missing parts</option>
         </select>
       </label>
-      <label>Return notes
+      <label><span data-i18n-text="Return notes">Return notes</span>
         <textarea id="returnBookingNotes" rows="4" maxlength="3000" placeholder="Optional condition or handover notes"></textarea>
       </label>
       <div id="returnBookingError" class="form-error" role="alert" aria-live="polite"></div>
@@ -1446,13 +1446,13 @@
   </div>
 
   <div class="supplier-calendar-controls">
-    <label>Item
+    <label><span data-i18n-text="Item">Item</span>
       <select id="supplierCalendarListing"></select>
     </label>
-    <label>From
+    <label><span data-i18n-text="From">From</span>
       <input id="supplierCalendarFrom" type="date">
     </label>
-    <label>To
+    <label><span data-i18n-text="To">To</span>
       <input id="supplierCalendarTo" type="date">
     </label>
   </div>
@@ -1476,7 +1476,7 @@
     <h2 data-i18n-text="Rate your rental">Rate your rental</h2>
     <form id="reviewForm">
       <input type="hidden" id="reviewBookingId">
-      <label>Rating
+      <label><span data-i18n-text="Rating">Rating</span>
         <select id="reviewRating" required>
           <option value="5" data-i18n-text="5 — Excellent">5 — Excellent</option>
           <option value="4" data-i18n-text="4 — Very good">4 — Very good</option>
@@ -1485,7 +1485,7 @@
           <option value="1" data-i18n-text="1 — Poor">1 — Poor</option>
         </select>
       </label>
-      <label>Comment
+      <label><span data-i18n-text="Comment">Comment</span>
         <textarea id="reviewComment" rows="4" placeholder="How was the item and handover?"></textarea>
       </label>
       <button class="primary" type="submit" data-i18n-text="Submit review">Submit review</button>
@@ -1736,7 +1736,7 @@
       <div class="eyebrow" data-i18n-text="Personalize">Personalize</div>
       <h2 data-i18n-text="Set your language and currency">Set your language and currency</h2>
       <div class="onboarding-form-grid">
-        <label>Language
+        <label><span data-i18n-text="Language">Language</span>
           <select id="onboardingLanguage">
             <option value="lt">Lietuvių</option>
             <option value="en">English</option>
@@ -1745,7 +1745,7 @@
             <option value="ru">Русский</option>
           </select>
         </label>
-        <label>Currency
+        <label><span data-i18n-text="Currency">Currency</span>
           <select id="onboardingCurrency">
             <option value="EUR">EUR €</option>
           </select>
