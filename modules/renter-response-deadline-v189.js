@@ -65,7 +65,11 @@
   const copy=()=>COPY[lang()]||COPY.en;
   function validTimezone(value){const tz=String(value||'').trim();if(!tz)return null;try{new Intl.DateTimeFormat('en',{timeZone:tz}).format(new Date());return tz}catch{return null}}
   function listing(){try{if(typeof activeCheckoutListing!=='undefined'&&activeCheckoutListing)return activeCheckoutListing;if(typeof inferCheckoutListing==='function')return inferCheckoutListing()}catch{}return null}
-  function timezoneFor(l){return validTimezone(l?.supplierTimezone)||COUNTRY_TZ[String(l?.country||'').toUpperCase()]||'UTC'}
+  function timezoneFor(l){
+    const configured=validTimezone(l?.supplierTimezone),countryDefault=COUNTRY_TZ[String(l?.country||'').toUpperCase()];
+    if(!configured || /^(UTC|Etc\/UTC|Etc\/GMT|GMT)$/i.test(configured))return countryDefault||configured||'UTC';
+    return configured;
+  }
   function zonedParts(date,timeZone){
     const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date);
     const bag={};for(const p of parts)if(p.type!=='literal')bag[p.type]=Number(p.value);
