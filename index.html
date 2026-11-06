@@ -1121,9 +1121,9 @@
         <div id="checkoutItems" class="checkout-items"></div>
 
         <div class="form-grid two">
-          <label>Rental start date<input type="date" id="rentalStart" required></label>
-          <label>Pickup / rental start time (supplier local time)<input type="time" id="rentalStartTime" required></label>
-          <label>Rental end date<input type="date" id="rentalEnd" required></label>
+          <label><span data-i18n-text="Rental start date">Rental start date</span><input type="date" id="rentalStart" required></label>
+          <label><span data-i18n-text="Pickup / rental start time (supplier local time)">Pickup / rental start time (supplier local time)</span><input type="time" id="rentalStartTime" required></label>
+          <label><span data-i18n-text="Rental end date">Rental end date</span><input type="date" id="rentalEnd" required></label>
         </div>
 
         <div class="checkout-summary">
@@ -1143,40 +1143,40 @@
         <h2 data-i18n-text="Delivery details">Delivery details</h2>
 
         <div class="form-grid two">
-          <label>Handover method
+          <label><span data-i18n-text="Handover method">Handover method</span>
             <select id="accommodationType" required>
-              <option value="">Select</option>
-              <option>Pickup from owner</option>
-              <option>Delivery to my address</option>
-              <option>Meet at agreed location</option>
+              <option value="" data-i18n-text="Select">Select</option>
+              <option value="Pickup from owner" data-i18n-text="Pickup from owner">Pickup from owner</option>
+              <option value="Delivery to my address" data-i18n-text="Delivery to my address">Delivery to my address</option>
+              <option value="Meet at agreed location" data-i18n-text="Meet at agreed location">Meet at agreed location</option>
             </select>
           </label>
-          <label>City / area
+          <label><span data-i18n-text="City / area">City / area</span>
             <input id="deliveryArea" required placeholder="e.g. Klaipėda">
           </label>
-          <label class="full">Hotel / apartment name
-            <input id="hotelName" placeholder="e.g. Hotel name or apartment name" required>
+          <label class="full"><span data-i18n-text="Hotel / apartment name">Hotel / apartment name</span>
+            <input id="hotelName" placeholder="e.g. Hotel name or apartment name" data-i18n-placeholder="e.g. Hotel name or apartment name" required>
           </label>
-          <label class="full">Hotel / apartment address
-            <input id="deliveryAddress" placeholder="Street, number, postcode, city" required>
+          <label class="full"><span data-i18n-text="Hotel / apartment address">Hotel / apartment address</span>
+            <input id="deliveryAddress" placeholder="Street, number, postcode, city" data-i18n-placeholder="Street, number, postcode, city" required>
           </label>
-          <label>Guest / booking name
+          <label><span data-i18n-text="Guest / booking name">Guest / booking name</span>
             <input id="hotelBookingName" placeholder="e.g. Anna Smith">
           </label>
-          <label>Room / apartment number
-            <input id="roomNumber" placeholder="Optional">
+          <label><span data-i18n-text="Room / apartment number">Room / apartment number</span>
+            <input id="roomNumber" placeholder="Optional" data-i18n-placeholder="Optional">
           </label>
-          <label class="full">Delivery instructions
-            <textarea id="deliveryInstructions" rows="3" placeholder="e.g. Leave with reception, call on arrival, meet in lobby, gate code..."></textarea>
+          <label class="full"><span data-i18n-text="Delivery instructions">Delivery instructions</span>
+            <textarea id="deliveryInstructions" rows="3" placeholder="e.g. Leave with reception, call on arrival, meet in lobby, gate code..." data-i18n-placeholder="e.g. Leave with reception, call on arrival, meet in lobby, gate code..."></textarea>
           </label>
-          <label>Preferred delivery window
+          <label><span data-i18n-text="Preferred delivery window">Preferred delivery window</span>
             <select id="deliveryWindow">
               <option>08:00–12:00</option>
               <option>12:00–16:00</option>
               <option>16:00–20:00</option>
             </select>
           </label>
-          <label>Flight number<input id="flightNumber" placeholder="Optional"></label>
+          <label><span data-i18n-text="Flight number">Flight number</span><input id="flightNumber" placeholder="Optional" data-i18n-placeholder="Optional"></label>
         </div>
 
         <div class="step-actions">
@@ -1190,12 +1190,12 @@
         <h2 data-i18n-text="Your details">Your details</h2>
 
         <div class="form-grid two">
-          <label>First name<input id="firstName" required></label>
-          <label>Last name<input id="lastName" required></label>
-          <label>Email<input type="email" id="email" required></label>
-          <label>Phone<input type="tel" id="phone" placeholder="+34..." required></label>
-          <label>WhatsApp<input type="tel" id="whatsapp" placeholder="Optional"></label>
-          <label>Preferred language
+          <label><span data-i18n-text="First name">First name</span><input id="firstName" required></label>
+          <label><span data-i18n-text="Last name">Last name</span><input id="lastName" required></label>
+          <label><span data-i18n-text="Email">Email</span><input type="email" id="email" required></label>
+          <label><span data-i18n-text="Phone">Phone</span><input type="tel" id="phone" placeholder="+34..." required></label>
+          <label><span data-i18n-text="WhatsApp">WhatsApp</span><input type="tel" id="whatsapp" placeholder="Optional" data-i18n-placeholder="Optional"></label>
+          <label><span data-i18n-text="Preferred language">Preferred language</span>
             <select id="preferredLanguage">
               <option>English</option>
               <option>Lietuvių</option>
@@ -1204,7 +1204,7 @@
               <option>Русский</option>
             </select>
           </label>
-          <label class="full">Notes for owner<textarea id="supplierNotes" rows="4" placeholder="Anything the owner should know?"></textarea></label>
+          <label class="full"><span data-i18n-text="Notes for owner">Notes for owner</span><textarea id="supplierNotes" rows="4" placeholder="Anything the owner should know?" data-i18n-placeholder="Anything the owner should know?"></textarea></label>
         </div>
 
         <div class="step-actions">
@@ -1403,15 +1403,15 @@
     <div class="eyebrow" data-i18n-text="Availability">Availability</div>
     <h2 id="availabilityTitle" data-i18n-text="Item availability">Item availability</h2>
     <div class="availability-controls">
-      <label>From<input type="date" id="availabilityFrom"></label>
-      <label>To<input type="date" id="availabilityTo"></label>
-      <label>Quantity<input type="number" id="availabilityQuantity" min="1" step="1" value="1" inputmode="numeric"></label>
+      <label><span data-i18n-text="From">From</span><input type="date" id="availabilityFrom"></label>
+      <label><span data-i18n-text="To">To</span><input type="date" id="availabilityTo"></label>
+      <label><span data-i18n-text="Quantity">Quantity</span><input type="number" id="availabilityQuantity" min="1" step="1" value="1" inputmode="numeric"></label>
       <button class="secondary" id="refreshAvailabilityBtn" type="button" data-i18n-text="Check dates">Check dates</button>
     </div>
     <div class="availability-legend">
-      <span><i class="availability-dot free"></i> Available</span>
-      <span><i class="availability-dot limited"></i> Limited</span>
-      <span><i class="availability-dot soldout"></i> Fully booked</span>
+      <span><i class="availability-dot free"></i> <span data-i18n-text="Available">Available</span></span>
+      <span><i class="availability-dot limited"></i> <span data-i18n-text="Limited">Limited</span></span>
+      <span><i class="availability-dot soldout"></i> <span data-i18n-text="Fully booked">Fully booked</span></span>
     </div>
     <div class="availability-calendar-grid" id="availabilityCalendarGrid"></div>
     <div class="v145-availability-result" id="v145AvailabilityResult" aria-live="polite" data-i18n-text="Choose dates and quantity to check live availability.">Choose dates and quantity to check live availability.</div>
