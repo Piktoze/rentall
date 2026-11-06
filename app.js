@@ -2869,16 +2869,16 @@ function lifecycleButtonsFor(booking){
   if(!id) return '';
 
   if(booking.status==='pending'){
-    return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="confirmed">Confirm</button>
-            <button class="mini-action decline backend-status-action" data-booking-id="${id}" data-status="declined">Decline</button>`;
+    return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="confirmed">${escapeHtml(uiText('Confirm'))}</button>
+            <button class="mini-action decline backend-status-action" data-booking-id="${id}" data-status="declined">${escapeHtml(uiText('Decline'))}</button>`;
   }
   if(booking.status==='confirmed'){
-    return `<button class="mini-action backend-status-action" data-booking-id="${id}" data-status="active">Mark handed over</button>
+    return `<button class="mini-action backend-status-action" data-booking-id="${id}" data-status="active">${escapeHtml(uiText('Mark handed over'))}</button>
             <button class="mini-action decline backend-status-action" data-booking-id="${id}" data-status="cancelled">Cancel</button>`;
   }
   if(booking.status==='active'){
     return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="returned">Mark returned</button>
-            <button class="mini-action backend-status-action" data-booking-id="${id}" data-status="completed">Complete</button>`;
+            <button class="mini-action backend-status-action" data-booking-id="${id}" data-status="completed">${escapeHtml(uiText('Complete'))}</button>`;
   }
   if(booking.status==='returned'){
     return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="completed">Complete</button>`;
@@ -3298,7 +3298,7 @@ renderUniversalListings=function(items=loadUniversalListings()){
 };
 
 async function cancelLiveBooking(bookingId){
-  const reason=window.prompt('Cancellation reason (customer receives a full rental-price refund):','')||null;
+  const reason=window.prompt(uiText('Cancellation reason (customer receives a full rental-price refund):'),'')||null;
   return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/cancel`,{
     method:'POST',
     body:JSON.stringify({reason})
@@ -3334,7 +3334,7 @@ document.getElementById('returnBookingForm')?.addEventListener('submit',event=>{
   const condition=document.getElementById('returnBookingCondition').value;
   const notes=document.getElementById('returnBookingNotes').value.trim()||null;
   if(!['good','damaged','missing'].includes(condition)){
-    document.getElementById('returnBookingError').textContent='Choose a valid return condition.';
+    document.getElementById('returnBookingError').textContent=uiText('Choose a valid return condition.');
     return;
   }
   closeReturnBookingDialog({condition,notes});
@@ -3357,17 +3357,17 @@ lifecycleButtonsFor=function(booking){
   if(!id) return '';
 
   if(booking.status==='pending'){
-    return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="confirmed">Confirm</button>
-            <button class="mini-action decline backend-status-action" data-booking-id="${id}" data-status="declined">Decline</button>
-            <button class="mini-action decline cancel-booking-action" data-booking-id="${id}">Cancel + refund</button>`;
+    return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="confirmed">${escapeHtml(uiText('Confirm'))}</button>
+            <button class="mini-action decline backend-status-action" data-booking-id="${id}" data-status="declined">${escapeHtml(uiText('Decline'))}</button>
+            <button class="mini-action decline cancel-booking-action" data-booking-id="${id}">${escapeHtml(uiText('Cancel + refund'))}</button>`;
   }
   if(booking.status==='confirmed'){
-    return `<button class="mini-action backend-status-action" data-booking-id="${id}" data-status="active">Mark handed over</button>
-            <button class="mini-action decline cancel-booking-action" data-booking-id="${id}">Cancel + refund</button>`;
+    return `<button class="mini-action backend-status-action" data-booking-id="${id}" data-status="active">${escapeHtml(uiText('Mark handed over'))}</button>
+            <button class="mini-action decline cancel-booking-action" data-booking-id="${id}">${escapeHtml(uiText('Cancel + refund'))}</button>`;
   }
   if(booking.status==='active'){
-    return `<button class="mini-action accept return-booking-action" data-booking-id="${id}">Mark returned</button>
-            <button class="mini-action backend-status-action" data-booking-id="${id}" data-status="completed">Complete</button>`;
+    return `<button class="mini-action accept return-booking-action" data-booking-id="${id}">${escapeHtml(uiText('Mark returned'))}</button>
+            <button class="mini-action backend-status-action" data-booking-id="${id}" data-status="completed">${escapeHtml(uiText('Complete'))}</button>`;
   }
   if(booking.status==='returned'){
     return `<button class="mini-action accept backend-status-action" data-booking-id="${id}" data-status="completed">Complete</button>`;
@@ -3381,7 +3381,7 @@ document.addEventListener('click',async e=>{
     cancelBtn.disabled=true;
     try{
       const result=await cancelLiveBooking(cancelBtn.dataset.bookingId);
-      alert(`Booking cancelled. Customer refund: ${money(result.refundAmount||0)}.`);
+      alert(`${uiText('Booking cancelled. Customer refund:')} ${money(result.refundAmount||0)}.`);
       await refreshLiveSupplierBookings();
       await renderBookings();
       await renderSupplierAvailability();
@@ -3417,11 +3417,11 @@ openLiveSupplierOrder=function(bookingId){
   const extra=document.createElement('div');
   extra.className='supplier-order-card';
   extra.innerHTML=`
-    <h3>Policy & return</h3>
+    <h3>${escapeHtml(uiText('Policy & return'))}</h3>
     <div class="supplier-order-grid">
-      <div><span>Refund amount</span><b>${b.refundAmount!=null?money(b.refundAmount):'—'}</b></div>
-      <div><span>Return condition</span><b>${b.returnCondition||'—'}</b></div>
-      <div class="supplier-order-instructions"><span>Return notes</span><b>${b.returnNotes||'—'}</b></div>
+      <div><span>${escapeHtml(uiText('Refund amount'))}</span><b>${b.refundAmount!=null?money(b.refundAmount):'—'}</b></div>
+      <div><span>${escapeHtml(uiText('Return condition'))}</span><b>${escapeHtml(uiText(b.returnCondition||'—'))}</b></div>
+      <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Return notes'))}</span><b>${b.returnNotes||'—'}</b></div>
     </div>`;
   summary.appendChild(extra);
 };
@@ -3543,17 +3543,17 @@ openLiveSupplierOrder=function(bookingId){
   const disputeBtn=document.createElement('button');
   disputeBtn.className='secondary';
   disputeBtn.type='button';
-  disputeBtn.textContent='Open dispute';
+  disputeBtn.textContent=uiText('Open dispute');
   disputeBtn.addEventListener('click',async()=>{
-    const reason=prompt('Dispute reason:','Damage / missing item / payment issue');
+    const reason=prompt(uiText('Dispute reason:'),uiText('Damage / missing item / payment issue'));
     if(!reason) return;
-    const details=prompt('Details (optional):','')||null;
+    const details=prompt(uiText('Details (optional):'),'')||null;
     try{
       await apiJson('/api/rentals/disputes',{
         method:'POST',
         body:JSON.stringify({bookingId,openedBy:'supplier',reason,details})
       });
-      alert('Dispute opened.');
+      alert(uiText('Dispute opened.'));
       loadAdminDashboard();
     }catch(err){ alert(err.message); }
   });
