@@ -122,9 +122,32 @@
       }
     }
   }
+  // Secondary translation for app-owned UI controls recreated by legacy renderers.
+  // Exact dictionary keys only: never translate arbitrary listing text, message
+  // content, editable fields, IDs, or server-provided user descriptions.
+  const ownedControlSource=new WeakMap();
+  function translateKnownControls(lang,root=document){
+    const selector='button, .status, .lifecycle-note, .supplier-order-card h3, .supplier-order-card span, .supplier-order-card small, .booking-table th, .customer-booking-card span';
+    for(const el of explicitElements(root,selector)){
+      if(el.childElementCount || el.matches('[data-i18n-text],[data-i18n]') ||
+         el.closest('[contenteditable="true"],.message-bubble,.listing-description,[data-user-content]')) continue;
+      const shown=el.textContent||'';
+      const previous=ownedControlSource.get(el);
+      const source=(previous && shown===previous.rendered)?previous.source:shown.trim();
+      if(!source || !dictionaries.lt?.[source]) continue;
+      const translated=lang==='en'?source:lookup(source,lang);
+      if(translated==null) continue;
+      const prefix=shown.match(/^\\s*/)?.[0]||'';
+      const suffix=shown.match(/\\s*$/)?.[0]||'';
+      const rendered=prefix+translated+suffix;
+      if(el.textContent!==rendered) el.textContent=rendered;
+      ownedControlSource.set(el,{source,rendered});
+    }
+  }
   function translateOwned(root,lang=current()){
     translateI18nElements(lang,root);
     translateExplicitElements(lang,root);
+    translateKnownControls(lang,root);
     updateLegalLinks(lang,root);
   }
   // Legal/help routes are server-rendered. Always pass the selected interface
@@ -189,11 +212,14 @@
         const lang=current();
         applying=true;
         try{
-          for(const r of batch) if(r.type==='childList') r.addedNodes.forEach(n=>translateOwned(n,lang));
+          for(const r of batch){
+            if(r.type==='childList') r.addedNodes.forEach(n=>translateOwned(n.nodeType===3?n.parentElement:n,lang));
+            if(r.type==='characterData') translateKnownControls(lang,r.target.parentElement);
+          }
         }finally{applying=false;}
       });
     });
-    observer.observe(document.body,{subtree:true,childList:true});
+    observer.observe(document.body,{subtree:true,childList:true,characterData:true});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
