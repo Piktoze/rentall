@@ -933,3 +933,33 @@ body.theme-aurora .hero .hero-intro h1{
    border-radius:18px!important;
  }
 }
+
+/* V227: replace two remaining sage callouts with consistent blue surfaces. */
+body.theme-aurora .v182-freshness-control{
+ background:#eef5ff!important;
+ border:1px solid #ccdef9!important;
+ color:#183967!important;
+ box-shadow:0 4px 16px rgba(20,84,172,.04)!important;
+}
+body.theme-aurora .v182-freshness-control strong,
+body.theme-aurora .v182-freshness-control b{
+ color:#102c61!important;
+}
+body.theme-aurora .v182-freshness-control span,
+body.theme-aurora .v182-freshness-control p{
+ color:#536b90!important;
+}
+body.theme-aurora #listingDetailModal .v92-safe-note{
+ background:#edf4ff!important;
+ border:1px solid #d4e5fc!important;
+ color:#254977!important;
+ border-radius:12px!important;
+}
+body.theme-aurora #listingDetailModal .v92-trust-row>div,
+body.theme-aurora #listingDetailModal .v92-facts>div{
+ background:#f7faff!important;
+ border-color:#dce7f7!important;
+}
+body.theme-aurora #listingDetailModal .v92-photo-stage{
+ background:linear-gradient(135deg,#eaf3ff,#f7faff)!important;
+}
