@@ -3194,8 +3194,8 @@ function openLiveSupplierOrder(bookingId){
         <div><span>${escapeHtml(uiText('City'))}</span><b>${b.deliveryCity||'—'}</b></div>
         <div><span>${escapeHtml(uiText('Address'))}</span><b>${b.deliveryAddress||'—'}</b></div>
         <div><span>${escapeHtml(uiText('Room / apartment'))}</span><b>${b.roomNumber||uiText('Not provided')}</b></div>
-        <div><span>${escapeHtml(uiText('Contact person'))}</span><b>${b.contactPerson||b.customerName||'—'}</b></div>
-        <div><span>${escapeHtml(uiText('Phone'))}</span><b>${b.customerPhone||'—'}</b></div>
+        <div><span>${escapeHtml(uiText('Contact person'))}</span><b>${b.paymentStatus==='paid'?escapeHtml(b.contactPerson||b.customerName||'—'):'Pateikiama po apmokėjimo'}</b></div>
+        <div><span>${escapeHtml(uiText('Phone'))}</span><b>${b.paymentStatus==='paid'?escapeHtml(b.customerPhone||'—'):'Kontaktai pateikiami tik po apmokėjimo'}</b></div>
         <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Delivery instructions'))}</span><b>${b.deliveryInstructions||uiText('No special instructions')}</b></div>
       </div>
     </div>`;
