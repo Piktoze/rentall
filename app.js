@@ -5643,7 +5643,7 @@ async function loadUnifiedCustomerBookings(){
     const bookingStatus=String(b.status||'pending').toLowerCase();
     const canReview=['returned','completed'].includes(bookingStatus);
     const canDispute=['active','returned','completed','cancelled','canceled','declined'].includes(bookingStatus);
-    return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">
+    return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-booking-status="${escapeHtml(bookingStatus)}" data-payment-status="${escapeHtml(String(b.paymentStatus||'').toLowerCase())}" data-listing-id="${escapeHtml(b.listingId||'')}">
       <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(uiText(b.status||'pending'))}</span></div>
       <div class="customer-booking-grid">
         <div><span>${escapeHtml(uiText('Rental dates'))}</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
@@ -5656,6 +5656,7 @@ async function loadUnifiedCustomerBookings(){
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
         <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View details'))}</button>
+        <details class="rio-extra-booking-actions"><summary data-i18n-text="More actions">More actions</summary><div class="rio-extra-actions-inner">
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
         <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View agreement'))}</button>
@@ -5663,6 +5664,7 @@ async function loadUnifiedCustomerBookings(){
         ${canDispute?`<button class="secondary v89-open-dispute" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Report a problem'))}</button>`:''}
         ${currentServerUser && !guestAccess?.revoked?`<button class="secondary v88-revoke-guest" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Revoke guest link'))}</button>`:''}
         ${currentServerUser && guestAccess?.revoked?`<span class="muted">${escapeHtml(uiText('Guest link revoked'))}</span>`:''}
+        </div></details>
       </div>
     </div>`;
   }).join('');
@@ -6415,13 +6417,24 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const actions=card.querySelector('.customer-booking-actions');
       if(!actions)return;
       const id=card.dataset.bookingId;
-      const record=String(card.querySelector('.status')?.textContent||'').trim().toLowerCase();
+      const status=String(card.dataset.bookingStatus||'').toLowerCase();
+      const payment=String(card.dataset.paymentStatus||'').toLowerCase();
+      const buttons=[];
+      // Show only the action relevant to the current stage. Server always
+      // verifies each party's consent and the one-time transfer code.
+      if(['pending','confirmed'].includes(status)){
+        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="accept">Patvirtinti nuomos sutartį</button>');
+      }
+      if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
+        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="pickup">Gauti išdavimo kodą</button>');
+      }
+      if(status==='active'){
+        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="return">Gauti grąžinimo kodą</button>');
+      }
+      if(!buttons.length)return;
       const div=document.createElement('div');
       div.className='rio-renter-trust';
-      div.style.cssText='display:flex;flex-wrap:wrap;gap:8px;width:100%;margin-top:12px';
-      div.innerHTML='<button class="secondary" type="button" data-rio-trust-renter="accept">Patvirtinti nuomos sutartį</button> '+
-        '<button class="secondary" type="button" data-rio-trust-renter="pickup">Gauti išdavimo kodą</button> '+
-        '<button class="secondary" type="button" data-rio-trust-renter="return">Gauti grąžinimo kodą</button>';
+      div.innerHTML=buttons.join('');
       div.querySelectorAll('[data-rio-trust-renter]').forEach(btn=>btn.dataset.bookingId=id);
       actions.appendChild(div);
     });
