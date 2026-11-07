@@ -21,6 +21,7 @@ for(const suite of [
   'localization-and-photos-v215.test.js',
   'localization-complete-v216.test.js',
   'listing-photo-submit-v217.test.js',
+  'supplier-hub-removal-v218.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
