@@ -35,7 +35,7 @@ try{
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
  acceptRentalAgreement(id,'customer');
  const customer=issueRentalTransferCode(id,'pickup','customer');
- assert.match(customer.code,/^\\d{6}$/);
+ assert.match(customer.code,/^\d{6}$/);
  assert.equal(getRentalAgreement(id).supplierAcceptedAt,null,'supplier signature is independently required');
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
  // Even a valid renter PIN cannot transfer an item before supplier signs.
