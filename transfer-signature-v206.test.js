@@ -11,7 +11,7 @@ process.env.DB_PATH=filename;
 for(const ext of ['','-wal','-shm'])try{fs.unlinkSync(filename+ext)}catch{}
 const {
  db,upsertRentalListing,createRentalBookingAtomic,createRentalAgreement,
- getRentalAgreement,acceptRentalAgreement,setBookingPaymentDetails,
+ getRentalAgreement,acceptRentalAgreement,getRentalAgreementAcceptanceAudit,setBookingPaymentDetails,
  issueRentalTransferCode,verifyAndConsumeRentalTransferCode,
  getRentalBookingById
 }=await import('./db.js');
@@ -33,7 +33,11 @@ try{
  // Neither side signed: renter cannot receive a code; supplier never receives one.
  errorCode(()=>issueRentalTransferCode(id,'pickup','customer'),'OWN_AGREEMENT_REQUIRED');
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
- acceptRentalAgreement(id,'customer');
+ acceptRentalAgreement(id,'customer',{actorEmail:'renter@testing.invalid',authMethod:'booking_guest_token'});
+ assert.equal(getRentalAgreementAcceptanceAudit(id).length,1);
+ assert.equal(getRentalAgreementAcceptanceAudit(id)[0].actorEmail,'renter@testing.invalid');
+ assert.equal(getRentalAgreementAcceptanceAudit(id)[0].authMethod,'booking_guest_token');
+ assert.match(getRentalAgreementAcceptanceAudit(id)[0].snapshotSha256,/^[a-f0-9]{64}$/);
  const customer=issueRentalTransferCode(id,'pickup','customer');
  assert.match(customer.code,/^\d{6}$/);
  assert.equal(getRentalAgreement(id).supplierAcceptedAt,null,'supplier signature is independently required');
@@ -41,7 +45,11 @@ try{
  // Even a valid renter PIN cannot transfer an item before supplier signs.
  errorCode(()=>verifyAndConsumeRentalTransferCode(id,'pickup',customer.code),'AGREEMENT_REQUIRED');
  assert.equal(getRentalBookingById(id).status,'confirmed');
- acceptRentalAgreement(id,'supplier');
+ acceptRentalAgreement(id,'supplier',{actorEmail:'supplier@testing.invalid',authMethod:'session'});
+ assert.equal(getRentalAgreementAcceptanceAudit(id).length,2);
+ assert.equal(getRentalAgreementAcceptanceAudit(id).find(v=>v.party==='supplier').actorEmail,'supplier@testing.invalid');
+ acceptRentalAgreement(id,'supplier',{actorEmail:'attacker@testing.invalid',authMethod:'session'});
+ assert.equal(getRentalAgreementAcceptanceAudit(id).length,2,'repeated acceptance cannot replace audit record');
  // Neither a second supplier PIN nor a wrong renter PIN can complete the transfer.
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
  const wrongCode=customer.code==='000000'?'000001':'000000';
