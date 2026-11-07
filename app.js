@@ -1322,6 +1322,19 @@ listingModal?.addEventListener('keydown',e=>{
 
 document.getElementById('listingForm')?.addEventListener('submit',e=>{
   e.preventDefault();
+  const photoInput=document.getElementById('listingPhotos');
+  if(photoInput?.dataset.uploading==='true' || pendingListingPhotoUrls.length<2 || pendingListingPhotoUrls.length>5){
+    // A late submit listener cannot undo a saved listing: reject here, before
+    // the first mutation or any other persistence/checkout submit listener.
+    e.stopImmediatePropagation();
+    const error=photoInput?.dataset.uploading==='true'
+      ? (window.RentInOrbitI18n?.t?.('Finish uploading photos first.')||'Pirmiausia užbaik nuotraukų įkėlimą.')
+      : (window.RentInOrbitI18n?.t?.('A listing requires 2 to 5 photos.')||'Skelbimui būtinos 2–5 nuotraukos.');
+    const preview=document.getElementById('listingPhotoPreview');
+    if(preview)preview.textContent=error;
+    photoInput?.focus();
+    return;
+  }
   const s=currentSupplier(); if(!s) return;
   const items=loadUniversalListings();
   const listing={
@@ -3755,22 +3768,6 @@ document.getElementById('listingForm')?.addEventListener('submit',()=>{
     if(preview)preview.innerHTML='';
   },300);
 }, true);
-
-// Capture before every existing listing submit handler; invalid photo sets
-// must never create either local or server-side published listings.
-document.getElementById('listingForm')?.addEventListener('submit',event=>{
-  const photoInput=document.getElementById('listingPhotos');
-  if(photoInput?.dataset.uploading==='true' || pendingListingPhotoUrls.length<2 ||
-     pendingListingPhotoUrls.length>5){
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const message=photoInput?.dataset.uploading==='true'?
-      'Pirmiausia užbaik nuotraukų įkėlimą.':'Skelbimui būtinos 2–5 nuotraukos.';
-    const preview=document.getElementById('listingPhotoPreview');
-    if(preview)preview.textContent=message;
-    photoInput?.focus();
-  }
-},true);
 
 function favoriteIds(){
   try{return JSON.parse(localStorage.getItem('rentinorbit_favorites')||'[]');}
