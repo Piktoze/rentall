@@ -132,14 +132,22 @@
       e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openExistingDrawer();
     },true);
   }
+  function closeExistingDrawer(){
+    const drawer=$('supplierActionDrawer');
+    if(!drawer)return;
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden','true');
+    document.body.classList.remove('supplier-drawer-open');
+    // A closed drawer must never keep the page locked or intercept clicks.
+  }
   function interceptDrawerActions(){
     const drawer=$('supplierActionDrawer');if(!drawer||drawer.dataset.v179Actions)return;drawer.dataset.v179Actions='1';
     drawer.addEventListener('click',async e=>{
       const action=e.target.closest('[data-supplier-action]')?.dataset.supplierAction;if(!action)return;
-      if(action==='messages'){e.preventDefault();e.stopImmediatePropagation();drawer.classList.remove('open');openMessages();return;}
-      if(action==='calendar'){e.preventDefault();e.stopImmediatePropagation();drawer.classList.remove('open');openCalendar();return;}
-      if(action==='add'){e.preventDefault();e.stopImmediatePropagation();drawer.classList.remove('open');await openListing();return;}
-      if(action==='orders'&&user()?.role==='customer'){e.preventDefault();e.stopImmediatePropagation();drawer.classList.remove('open');$('customerBookingsSection')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+      if(action==='messages'){e.preventDefault();e.stopImmediatePropagation();closeExistingDrawer();openMessages();return;}
+      if(action==='calendar'){e.preventDefault();e.stopImmediatePropagation();closeExistingDrawer();openCalendar();return;}
+      if(action==='add'){e.preventDefault();e.stopImmediatePropagation();closeExistingDrawer();await openListing();return;}
+      if(action==='orders'&&user()?.role==='customer'){e.preventDefault();e.stopImmediatePropagation();closeExistingDrawer();$('customerBookingsSection')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     },true);
   }
 
