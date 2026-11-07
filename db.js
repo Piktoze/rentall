@@ -2181,12 +2181,49 @@ export function createRentalAgreement({bookingId,termsVersion='rentinorbit-renta
   return publicAgreement(agreementByBookingStmt.get(String(bookingId)));
 }
 export function getRentalAgreement(bookingId){return publicAgreement(agreementByBookingStmt.get(String(bookingId)));}
-export function acceptRentalAgreement(bookingId,role){
+// Acceptance evidence contains no session or guest tokens, only the method,
+// booking-bound actor and a digest of the exact stored agreement text.
+db.exec(`
+CREATE TABLE IF NOT EXISTS rental_agreement_acceptance_audit (
+  booking_id TEXT NOT NULL,
+  party TEXT NOT NULL CHECK(party IN ('customer','supplier')),
+  actor_email TEXT NOT NULL,
+  auth_method TEXT NOT NULL CHECK(auth_method IN ('session','booking_guest_token')),
+  terms_version TEXT NOT NULL,
+  snapshot_sha256 TEXT NOT NULL,
+  accepted_at TEXT NOT NULL,
+  PRIMARY KEY (booking_id,party),
+  FOREIGN KEY(booking_id) REFERENCES rental_bookings(booking_id)
+);
+`);
+export function acceptRentalAgreement(bookingId,role,evidence=null){
   if(!['customer','supplier'].includes(role))throw new Error('Invalid agreement actor');
   const field=role==='customer'?'customer_accepted_at':'supplier_accepted_at';
-  const now=new Date().toISOString();
-  db.prepare(`UPDATE rental_agreements SET ${field}=COALESCE(${field},?),updated_at=? WHERE booking_id=?`).run(now,now,String(bookingId));
-  return getRentalAgreement(bookingId);
+  return db.transaction(()=>{
+    const agreement=agreementByBookingStmt.get(String(bookingId));
+    if(!agreement)throw Object.assign(new Error('Sutartis nerasta.'),{code:'AGREEMENT_NOT_FOUND'});
+    const existing=agreement[role==='customer'?'customerAcceptedAt':'supplierAcceptedAt'];
+    if(existing)return publicAgreement(agreement);
+    const now=new Date().toISOString();
+    const actorEmail=String(evidence?.actorEmail||'').trim().toLowerCase();
+    const authMethod=String(evidence?.authMethod||'');
+    // Internal acceptance may only be used by known authenticated routes;
+    // a fallback is retained for legacy offline fixtures, not public requests.
+    const safeActor=actorEmail||'legacy-unattributed';
+    const safeMethod=['session','booking_guest_token'].includes(authMethod)?authMethod:'session';
+    const digest=crypto.createHash('sha256').update(String(agreement.termsVersion)+'\\n'+String(agreement.snapshotJson||'')).digest('hex');
+    const changed=db.prepare(`UPDATE rental_agreements SET ${field}=?,updated_at=? WHERE booking_id=? AND ${field} IS NULL`)
+      .run(now,now,String(bookingId)).changes;
+    if(changed===1){
+      db.prepare(`INSERT INTO rental_agreement_acceptance_audit
+        (booking_id,party,actor_email,auth_method,terms_version,snapshot_sha256,accepted_at)
+        VALUES(?,?,?,?,?,?,?)`).run(String(bookingId),role,safeActor,safeMethod,agreement.termsVersion,digest,now);
+    }
+    return getRentalAgreement(bookingId);
+  })();
+}
+export function getRentalAgreementAcceptanceAudit(bookingId){
+  return db.prepare('SELECT booking_id AS bookingId,party,actor_email AS actorEmail,auth_method AS authMethod,terms_version AS termsVersion,snapshot_sha256 AS snapshotSha256,accepted_at AS acceptedAt FROM rental_agreement_acceptance_audit WHERE booking_id=? ORDER BY accepted_at,party').all(String(bookingId));
 }
 
 const conversationByIdStmt=db.prepare(`SELECT conversation_id AS conversationId,listing_id AS listingId,booking_id AS bookingId,
