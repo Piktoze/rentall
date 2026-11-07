@@ -158,3 +158,9 @@ body.rio-supplier #list-item{display:block!important}
 #supplier-dashboard #v128SupplierCockpit .v128-cockpit-head .eyebrow,
 #supplier-dashboard #v128SupplierCockpit .v128-cockpit-head p.muted { display: none !important; }
 #supplier-dashboard #v128SupplierCockpit .v128-cockpit-head { gap: 12px; }
+
+/* STAGING_RENTER_MINIMAL_V1: one clear bookings heading; keep privacy notice,
+   filters, cards, payment and support actions accessible. */
+#customerBookingsSection > .panel-head .eyebrow,
+#customerBookingsSection > .panel-head p[data-i18n-text="Track reservations, cancellation/refund status and completed rentals."] { display: none !important; }
+#customerBookingsSection > .panel-head { gap: 12px; }
