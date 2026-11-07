@@ -15,6 +15,7 @@ for(const suite of [
   'rental-identity-boundary-v209.test.js',
   'rental-http-e2e-v210.test.js',
   'minimal-supplier-offer-v211.test.js',
+  'ux-focus-v212.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
