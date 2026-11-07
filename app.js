@@ -6000,8 +6000,9 @@ async function loadSupplierInventoryV94(){
         select.value=selected;
       }
       initSupplierCalendarDates();
-      await renderSupplierAvailability();
+      // Reveal immediately; a slow calendar API must not make the click appear inert.
       section.scrollIntoView({behavior:'smooth',block:'start'});
+      await renderSupplierAvailability();
     }));
     body.querySelectorAll('.v94-archive-listing').forEach(btn=>btn.addEventListener('click',async()=>{
       const listing=v94SupplierListings.find(l=>String(l.id)===String(btn.dataset.listing));
