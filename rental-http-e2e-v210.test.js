@@ -9,7 +9,7 @@ import {spawn} from 'node:child_process';
 
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
 const dbPath=path.join(folder,'integration.sqlite');
-const env={...process.env,DB_PATH:dbPath,NODE_ENV:'test',RENTINORBIT_STAGING:'true',
+const env={...process.env,DB_PATH:dbPath,UPLOADS_DIR:path.join(folder,'uploads'),NODE_ENV:'test',RENTINORBIT_STAGING:'true',
   RENTINORBIT_DEMO_PAYMENTS:'true',RENTINORBIT_PREAUTH_ENABLED:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
   RENTALL_SEED_DEMO_USERS:'false'};
 for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
@@ -81,6 +81,29 @@ try{
  assert.ok(ready,'Temporary server startup failed: '+logs.slice(-2500));
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
+ // New public listing must have two to five real uploaded photo files.
+ const listingBase={id:'photo-e2e-listing',title:'Photo integration fixture',
+   city:'Vilnius',quantity:1,priceDay:12,bookingMode:'request'};
+ const publish=photos=>api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
+   data:{listing:{...listingBase,photos,coverPhoto:photos[0]||''}}});
+ status(await publish([]),400,'No-photo listing denied');
+ status(await publish(['/uploads/not-present.png']),400,'Single-photo listing denied');
+ const tinyPng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/Y4kAAAAASUVORK5CYII=';
+ const photos=[];
+ for(let i=0;i<2;i++){
+   const uploaded=await api('/api/uploads/image',{method:'POST',cookie:supplierCookie,
+     data:{dataUrl:tinyPng,fileName:'e2e-photo-'+i+'.png'}});
+   status(uploaded,200,'Photo file upload');
+   assert.ok(uploaded.body.url?.startsWith('/uploads/'));
+   photos.push(uploaded.body.url);
+ }
+ status(await publish([photos[0]]),400,'One uploaded photo denied');
+ status(await publish([...photos,...photos,...photos]),400,'Six uploaded photos denied');
+ status(await publish(['/uploads/missing-a.png','/uploads/missing-b.png']),400,'Missing uploaded image denied');
+ const published=await publish(photos);
+ status(published,200,'Two uploaded photos permit listing publication');
+ assert.equal(published.body.listing.photos.length,2);
+
  // Demo is strictly local: verify authorization and terminal state do not regress.
  // Pending request must never create a TEST or demo payment intent until
  // the supplier has accepted the booking, even if preauth flag is requested.
