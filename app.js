@@ -702,22 +702,22 @@ function applyStripeLiveStatus(st){
   const connected=state==='active';
   const submitted=!!st.detailsSubmitted;
 
-  badge.textContent = connected ? 'Connected' :
+  badge.textContent = uiText(connected ? 'Connected' :
     state==='needs_information' ? 'Needs information' :
     state==='restricted' ? 'Restricted' :
     submitted ? 'Submitted' :
-    state==='not_created' ? 'Not connected' : 'In progress';
+    state==='not_created' ? 'Not connected' : 'In progress');
 
   badge.className='status '+(connected?'confirmed':'pending');
-  bankBadge.textContent = st.payoutsEnabled ? 'Verified' : 'Pending';
+  bankBadge.textContent = uiText(st.payoutsEnabled ? 'Verified' : 'Pending');
   bankBadge.className='status '+(st.payoutsEnabled?'confirmed':'pending');
 
   document.getElementById('stripeIdentityText').textContent =
-    submitted ? 'Submitted' : 'Not complete';
+    uiText(submitted ? 'Submitted' : 'Not complete');
   document.getElementById('stripeBankText').textContent =
-    st.payoutsEnabled ? 'Verified for payouts' : 'Pending verification';
+    uiText(st.payoutsEnabled ? 'Verified for payouts' : 'Pending verification');
   document.getElementById('stripePayoutText').textContent =
-    st.payoutsEnabled ? 'Enabled' : 'Not enabled';
+    uiText(st.payoutsEnabled ? 'Enabled' : 'Not enabled');
 
   document.getElementById('stripeStepIdentity').classList.toggle('done', submitted);
   document.getElementById('stripeStepBank').classList.toggle('done', !!st.payoutsEnabled);
@@ -725,9 +725,10 @@ function applyStripeLiveStatus(st){
 
   openBtn.disabled=!submitted;
   message.textContent = st.currentlyDue?.length
-    ? `Stripe still requires: ${st.currentlyDue.join(', ')}`
-    : connected ? 'Stripe onboarding complete. Payouts are enabled.'
-    : 'Stripe account created. Continue onboarding to complete verification.';
+    ? `${uiText('Stripe still requires:')} ${st.currentlyDue.join(', ')}`
+    : connected && st.payoutsEnabled ? uiText('Stripe onboarding complete. Payouts are enabled.')
+    : connected ? uiText('Stripe account connected. Payouts are not yet enabled.')
+    : uiText('Stripe account created. Continue onboarding to complete verification.');
 }
 
 function syncInstantBookEligibility(){
