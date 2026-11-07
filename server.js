@@ -2309,8 +2309,11 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   const id=req.params.bookingId,user=sessionUser(req),booking=getRentalBookingById(id);
   if(!booking||!bookingAccessAllowed(req,id))return res.status(403).json({error:'Rezervacija nepasiekiama.'});
   const supplier=user?.role==='supplier'&&canSupplierManageBooking(user,id);
-  const customer=!supplier && !!((user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
-    verifyBookingPaymentToken(id,req.body?.accessToken||''));
+  const accountCustomer=!!user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase();
+  // A guest token is not an identity switch for an authenticated third party.
+  // To sign as a guest, the renter must use an unauthenticated browser session.
+  const guestCustomer=!user&&!!verifyBookingPaymentToken(id,req.body?.accessToken||'');
+  const customer=!supplier&&(accountCustomer||guestCustomer);
   if(!supplier&&!customer)return res.status(403).json({error:'Negalite patvirtinti šios sutarties.'});
   if(req.body?.accepted!==true)return res.status(400).json({error:'Būtinas aiškus sutarties patvirtinimas.'});
   const agreement=getRentalAgreement(id);
@@ -2318,7 +2321,7 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   res.set('Cache-Control','no-store, private');
   res.json({agreement:acceptRentalAgreement(id,supplier?'supplier':'customer',{
     actorEmail:supplier?String(user.email):String(booking.customerEmail||''),
-    authMethod:supplier||user?.email?.toLowerCase()===String(booking.customerEmail||'').toLowerCase()?'session':'booking_guest_token'
+    authMethod:user?'session':'booking_guest_token'
   })});
 });
 app.post('/api/rentals/bookings/:bookingId/transfer-code',
@@ -2326,16 +2329,14 @@ app.post('/api/rentals/bookings/:bookingId/transfer-code',
   const id=req.params.bookingId,booking=getRentalBookingById(id),user=sessionUser(req);
   if(!booking)return res.status(404).json({error:'Rezervacija nerasta.'});
   const isSupplier=!!user&&user.role==='supplier'&&canSupplierManageBooking(user,id);
-  const isCustomer=!!(
-    (user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
-    verifyBookingPaymentToken(id,req.body?.accessToken||'')
-  );
-  // Only the authenticated actual supplier or the customer/holder of the
-  // booking-specific guest token can request their OWN code.
-  const role=isSupplier?'supplier':isCustomer?'customer':null;
-  if(!role)return res.status(403).json({error:'Negalite gauti šios rezervacijos kodo.'});
+  const isAccountCustomer=!!user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase();
+  const isGuestCustomer=!user&&!!verifyBookingPaymentToken(id,req.body?.accessToken||'');
+  // A supplier cannot request a renter PIN. An authenticated unrelated user
+  // cannot upgrade their identity by attaching somebody else's guest token.
+  if(isSupplier||(!isAccountCustomer&&!isGuestCustomer))
+    return res.status(403).json({error:'Tik nuomininkas gali gauti šios rezervacijos kodą.'});
   try{
-    const value=issueRentalTransferCode(id,req.body?.purpose,role);
+    const value=issueRentalTransferCode(id,req.body?.purpose,'customer');
     res.set('Cache-Control','no-store, private');
     res.json(value);
   }catch(err){
