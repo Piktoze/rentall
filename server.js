@@ -2346,10 +2346,9 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
   if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
   try{
     const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code,{
-      supplierCode:req.body?.supplierCode,
       returnCondition:req.body?.returnCondition,returnNotes:req.body?.returnNotes
     });
-    if(!result.ok)return res.status(409).json({error:'Neteisingas vienos iš šalių kodas.',code:result.reason});
+    if(!result.ok)return res.status(409).json({error:'Neteisingas nuomininko kodas.',code:result.reason});
     const booking=result.booking;
     const listing=booking?getRentalListing(booking.listingId):null;
     const purpose=req.body?.purpose;
