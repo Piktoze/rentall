@@ -76,6 +76,29 @@
       if(desc&&translatedDescription)desc.textContent=translatedDescription;
     }catch{/* Show supplier's original words if translation fails. */}
   }
+  async function translateDetail(){
+    const host=document.getElementById('listingDetailContent');
+    if(!host||!host.querySelector('.v92-listing-main h2'))return;
+    const title=host.querySelector('.v92-listing-main h2');
+    const description=host.querySelector('.v92-description');
+    if(!host.dataset.rioOriginalTitle)host.dataset.rioOriginalTitle=title.textContent||'';
+    if(description&&!host.dataset.rioOriginalDescription)host.dataset.rioOriginalDescription=description.textContent||'';
+    const original=host.dataset.rioOriginalTitle,target=language();
+    title.textContent=original;
+    if(description)description.textContent=host.dataset.rioOriginalDescription||'';
+    let source=host.dataset.sourceLang;
+    if(!supported.has(source))source=await detectLanguage(original+' '+(host.dataset.rioOriginalDescription||''));
+    if(!host.isConnected||language()!==target||source===target||!supported.has(source))return;
+    const model=await translator(source,target,false);
+    if(!model||language()!==target)return;
+    try{
+      const titleValue=await model.translate(original);
+      const descriptionValue=description?.textContent?await model.translate(host.dataset.rioOriginalDescription):'';
+      if(language()!==target)return;
+      title.textContent=titleValue;
+      if(description&&descriptionValue)description.textContent=descriptionValue;
+    }catch{}
+  }
   function update(){
     for(const card of document.querySelectorAll('#listingPreviewGrid .listing-card[data-listing-id]')){
       if(card.dataset.rioTranslatedLang===language())continue;
@@ -89,12 +112,24 @@
       card.querySelector('[data-translate-listing]')?.remove();
     }
     update();
+    translateDetail().catch(()=>{});
   });
   function init(){
     const grid=document.getElementById('listingPreviewGrid');
     if(!grid)return;
     const observer=new MutationObserver(()=>{queueMicrotask(update)});
     observer.observe(grid,{childList:true,subtree:false});
+    const details=document.getElementById('listingDetailContent');
+    if(details){
+      const detailObserver=new MutationObserver(records=>{
+        if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&n.matches?.('.v92-listing-layout')))){
+          delete details.dataset.rioOriginalTitle;
+          delete details.dataset.rioOriginalDescription;
+          translateDetail().catch(()=>{});
+        }
+      });
+      detailObserver.observe(details,{childList:true,subtree:false});
+    }
     update();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
