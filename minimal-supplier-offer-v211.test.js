@@ -8,8 +8,10 @@ assert.ok(start>=0&&end>start,'Supplier offer section missing');
 const pricing=html.slice(start,end);
 assert.ok(pricing.includes('data-platform-fee'),'Visible commission must be transparent');
 assert.ok(pricing.includes('plan-price'),'Visible monthly charge must be transparent');
-assert.ok(pricing.includes('href="#partnerForm"'),'One clear supplier CTA must remain');
-assert.equal((pricing.match(/href="#partnerForm"/g)||[]).length,1,'One supplier CTA in offer');
+assert.ok(pricing.includes('href="#list-item" id="supplierOfferStartBtn"'),'Supplier offer must link to accessible listing action');
+assert.equal((pricing.match(/id="supplierOfferStartBtn"/g)||[]).length,1,'One supplier CTA in offer');
+assert.ok(html.includes('class="hero-supplier-cta listing-section" id="list-item"'),'Listing action must be in top hero');
+assert.equal((html.match(/id="openListingFormBtn"/g)||[]).length,1,'Single working listing form trigger');
 for(const key of ['supplier_offer_copy','supplier_offer_b1','supplier_offer_note','supplier_offer_label'])
  assert.ok(!pricing.includes('data-i18n="'+key+'"'),'Repeated or speculative offer messaging: '+key);
 assert.ok(!pricing.includes('Paid plans'),'Future plans should not be advertised');
