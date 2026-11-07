@@ -2316,7 +2316,10 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   const agreement=getRentalAgreement(id);
   if(!agreement)return res.status(404).json({error:'Sutartis nerasta.'});
   res.set('Cache-Control','no-store, private');
-  res.json({agreement:acceptRentalAgreement(id,supplier?'supplier':'customer')});
+  res.json({agreement:acceptRentalAgreement(id,supplier?'supplier':'customer',{
+    actorEmail:supplier?String(user.email):String(booking.customerEmail||''),
+    authMethod:supplier||user?.email?.toLowerCase()===String(booking.customerEmail||'').toLowerCase()?'session':'booking_guest_token'
+  })});
 });
 app.post('/api/rentals/bookings/:bookingId/transfer-code',
   simpleRateLimit({windowMs:60000,max:8,keyPrefix:'transfer-issue'}),(req,res)=>{
