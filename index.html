@@ -88,7 +88,7 @@
       <p class="hero-copy" data-i18n="hero_copy">A dress for one night, 10 chairs for New Year’s Eve, a drill for the weekend or travel gear abroad — rent it instead of buying, or list what you already own.</p>
       <div class="hero-intent-actions" aria-label="Choose how to use RentInOrbit">
         <a class="hero-intent primary" href="#searchForm" data-i18n="hero_rent_cta">I want to rent</a>
-        <a class="hero-intent secondary" href="#pricing" data-i18n="hero_earn_cta">I want to earn</a>
+        <a class="hero-intent secondary" href="#list-item" id="heroEarnStartBtn" data-i18n="hero_earn_cta">I want to earn</a>
       </div>
 
       <div class="search-mode-wrap">
@@ -249,7 +249,13 @@
   <span><i></i> Local delivery</span>
 </div>
     </div>
-</div>
+    <aside class="hero-supplier-cta listing-section" id="list-item" aria-label="List an item">
+      <div class="eyebrow" data-i18n-text="List an item">List an item</div>
+      <h2 data-i18n-text="Rent out what you already own">Rent out what you already own</h2>
+      <p class="subcopy" data-i18n-text="Individuals and businesses can publish items, quantities, prices and availability.">Individuals and businesses can publish items, quantities, prices and availability.</p>
+      <button class="primary" type="button" id="openListingFormBtn" data-i18n-text="+ Create listing">+ Create listing</button>
+    </aside>
+  </div>
 </section>
 
 
@@ -404,7 +410,7 @@
           <li data-i18n="supplier_offer_b3">Set pickup, delivery, price, deposit and availability</li>
           <li data-i18n="supplier_offer_b4">Early suppliers can send us their items — we can prepare the first listings for you</li>
         </ul>
-        <a class="primary-link" href="#partnerForm" data-i18n="supplier_offer_cta">Start earning from what you own</a>
+        <a class="primary-link" href="#list-item" id="supplierOfferStartBtn" data-i18n="supplier_offer_cta">Start earning from what you own</a>
       </div>
     </div>
   </div>
@@ -499,19 +505,7 @@
 </div>
 
 
-<section class="section listing-section" id="list-item">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow" data-i18n-text="List an item">List an item</div>
-        <h2 data-i18n-text="Rent out what you already own">Rent out what you already own</h2>
-        <p class="subcopy" data-i18n-text="Individuals and businesses can publish items, quantities, prices and availability.">Individuals and businesses can publish items, quantities, prices and availability.</p>
-      </div>
-      <button class="primary" id="openListingFormBtn" data-i18n-text="+ Create listing">+ Create listing</button>
-    </div>
-    
-  </div>
-</section>
+
 
 <div class="listing-modal" id="listingModal" role="dialog" aria-modal="true" aria-labelledby="listingDialogTitle" aria-hidden="true">
   <div class="auth-panel profile-panel">
