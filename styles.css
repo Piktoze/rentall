@@ -1829,3 +1829,20 @@ html.rentinorbit-route-loading::after{
 .checkout-modal.open:has(.booking-success.show){align-items:flex-start;scroll-padding-top:12px;}
 .checkout-modal.open:has(.booking-success.show)>.checkout-panel{margin:0 auto;min-width:0;}
 @media(max-width:620px){.checkout-modal.open:has(.booking-success.show)>.checkout-panel{max-height:94dvh;overflow-y:auto;overscroll-behavior:contain;}}
+
+
+/* V212: role-aware and progressive disclosure UX */
+#partnerLead[hidden],#rioRegisteredSupplierShortcut[hidden],.rio-command-legacy[hidden]{display:none!important}
+.rio-auth-supplier-shortcut{max-width:420px;display:flex;flex-direction:column;align-items:flex-start;gap:16px;justify-content:center}
+.rio-auth-supplier-shortcut p{margin:0;line-height:1.5;color:inherit}
+.rio-auth-supplier-shortcut .primary-link{display:inline-flex;text-decoration:none;justify-content:center;align-items:center;min-height:48px}
+.rio-extra-booking-actions{flex-basis:100%;width:100%;margin-top:4px}
+.rio-extra-booking-actions summary{display:inline-flex;align-items:center;min-height:40px;cursor:pointer;font-weight:600;border:1px solid #cfddd4;border-radius:12px;padding:9px 14px;color:#215740;background:#fff}
+.rio-extra-booking-actions[open] summary{margin-bottom:12px}
+.rio-extra-actions-inner{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rio-renter-trust{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:100%;margin-top:0!important}
+.rio-next-step-only{padding:20px 24px}
+.rio-next-step-only .v140-command-head{display:block;margin:0}
+.rio-next-step-only .v140-command-head strong{display:block;margin:8px 0 6px;font-size:1.12rem}
+.rio-next-step-only .v140-command-head .muted{margin:0}
+#how{scroll-margin-top:140px}
