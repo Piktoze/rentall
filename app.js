@@ -5963,30 +5963,59 @@ document.getElementById('v93RefreshOps')?.addEventListener('click',()=>renderBoo
 // V94 — authoritative supplier inventory/pricing workspace
 let v94SupplierListings=[];
 async function loadSupplierInventoryV94(){
-  const body=document.getElementById('v94InventoryBody'); if(!body) return;
-  body.innerHTML='<tr><td colspan="7">Loading inventory…</td></tr>';
+  const body=document.getElementById('v94InventoryBody');if(!body)return;
+  body.innerHTML='<tr><td colspan="7">Kraunami skelbimai…</td></tr>';
   try{
     const data=await apiJson('/api/supplier/listings');
-    v94SupplierListings=Array.isArray(data.listings)?data.listings:[];
+    // Archived records remain in the audit database, not in active inventory.
+    v94SupplierListings=(Array.isArray(data.listings)?data.listings:[])
+      .filter(l=>!['archived','deleted'].includes(String(l.lifecycleStatus||'').toLowerCase()) && String(l.moderationStatus||'active')!=='paused');
     const units=v94SupplierListings.reduce((n,l)=>n+Math.max(0,Number(l.quantity||0)),0);
     const capacity=v94SupplierListings.reduce((n,l)=>n+Math.max(0,Number(l.quantity||0))*Math.max(0,Number(l.priceDay||0)),0);
     const avg=v94SupplierListings.length?v94SupplierListings.reduce((n,l)=>n+Math.max(0,Number(l.priceDay||0)),0)/v94SupplierListings.length:0;
     const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-    set('v94ListingCount',String(v94SupplierListings.length));set('v94UnitCount',String(units));set('v94AvgRate',money(avg));set('v94DailyCapacity',money(capacity));
+    set('v94ListingCount',String(v94SupplierListings.length));set('v94UnitCount',String(units));
+    set('v94AvgRate',money(avg));set('v94DailyCapacity',money(capacity));
     window.dispatchEvent(new CustomEvent('rentinorbit:supplier-inventory',{detail:{listings:v94SupplierListings.map(l=>({id:l.id,title:l.title,status:l.status,active:l.active,quantity:Number(l.quantity||0),priceDay:Number(l.priceDay||0)}))}}));
     body.innerHTML=v94SupplierListings.map(l=>`<tr>
-      <td><b>${escapeHtml(l.title||'Rental item')}</b><small>${escapeHtml(l.category||'')}</small></td>
-      <td><b>${Math.max(0,Number(l.quantity||0))}</b> units</td>
+      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small></td>
+      <td><b>${Math.max(0,Number(l.quantity||0))}</b> vnt.</td>
       <td>${money(Number(l.priceDay||0))}</td><td>${Number(l.priceWeek||0)>0?money(Number(l.priceWeek)):'—'}</td>
-      <td>${Number(l.deposit||0)>0?money(Number(l.deposit)):'None'}</td>
+      <td>${Number(l.deposit||0)>0?money(Number(l.deposit)):'Nėra'}</td>
       <td>${escapeHtml([l.city,l.country].filter(Boolean).join(', ')||'—')}</td>
-      <td><button class="secondary v94-calendar-jump" data-listing="${escapeHtml(l.id)}" type="button">Open calendar</button></td>
-    </tr>`).join('')||'<tr><td colspan="7">No listings yet. Publish your first item to start renting.</td></tr>';
-    document.querySelectorAll('.v94-calendar-jump').forEach(btn=>btn.addEventListener('click',()=>{
-      const select=document.getElementById('supplierCalendarListing'); if(select){select.value=btn.dataset.listing;select.dispatchEvent(new Event('change'))}
-      document.getElementById('supplierAvailabilitySection')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+      <td><div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="secondary v94-calendar-jump" data-listing="${escapeHtml(l.id)}" type="button">Atidaryti kalendorių</button>
+        <button class="secondary v94-archive-listing" data-listing="${escapeHtml(l.id)}" type="button">Pašalinti skelbimą</button>
+      </div></td>
+    </tr>`).join('')||'<tr><td colspan="7">Aktyvių skelbimų nėra.</td></tr>';
+    body.querySelectorAll('.v94-calendar-jump').forEach(btn=>btn.addEventListener('click',async()=>{
+      const section=document.getElementById('supplierAvailabilitySection');
+      if(!section)return;
+      // The V178 simplified supplier interface hides the calendar by default.
+      section.classList.add('supplier-v178-external-visible');
+      const select=document.getElementById('supplierCalendarListing');
+      if(select){
+        const selected=btn.dataset.listing;
+        select.innerHTML=v94SupplierListings.map(l=>`<option value="${escapeHtml(l.id)}">${escapeHtml(l.title||l.id)}</option>`).join('');
+        select.value=selected;
+      }
+      initSupplierCalendarDates();
+      await renderSupplierAvailability();
+      section.scrollIntoView({behavior:'smooth',block:'start'});
     }));
-  }catch(err){body.innerHTML=`<tr><td colspan="7">${escapeHtml(err.message||'Unable to load inventory')}</td></tr>`}
+    body.querySelectorAll('.v94-archive-listing').forEach(btn=>btn.addEventListener('click',async()=>{
+      const listing=v94SupplierListings.find(l=>String(l.id)===String(btn.dataset.listing));
+      if(!listing)return;
+      if(!window.confirm(`Pašalinti „${listing.title}“ iš aktyvių skelbimų? Nuomos ir mokėjimų istorija bus išsaugota.`))return;
+      btn.disabled=true;
+      try{
+        await apiJson('/api/supplier/listings/'+encodeURIComponent(listing.id)+'/archive',{method:'POST',body:'{}'});
+        await loadSupplierInventoryV94();
+        await hydrateListingsFromServer();
+        showToast('Skelbimas pašalintas iš aktyvių nuomos pasiūlymų.','success');
+      }catch(err){btn.disabled=false;showToast(err.message||'Nepavyko pašalinti skelbimo.','error');}
+    }));
+  }catch(err){body.innerHTML=`<tr><td colspan="7">${escapeHtml(err.message||'Nepavyko įkelti skelbimų')}</td></tr>`;}
 }
 document.getElementById('v94RefreshInventory')?.addEventListener('click',loadSupplierInventoryV94);
 const v94InitSupplierAvailability=initSupplierAvailability;
