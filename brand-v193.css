@@ -810,3 +810,90 @@ body.theme-aurora #pricing .plans.plans-single{margin-top:0!important}
     margin-bottom:16px!important;
   }
 }
+
+/* V225: complete blue calendar and shared legal/help header styling. */
+body.theme-aurora .supplier-cal-day.free,
+body.theme-aurora #supplierAvailabilitySection .supplier-cal-day.free{
+  background:#eaf3ff!important;
+  border-color:#cfe0fa!important;
+  color:#123b78!important;
+}
+body.theme-aurora .supplier-cal-day.limited,
+body.theme-aurora #supplierAvailabilitySection .supplier-cal-day.limited{
+  background:#f0edff!important;
+  border-color:#ded6ff!important;
+  color:#413180!important;
+}
+body.theme-aurora .supplier-cal-day.soldout,
+body.theme-aurora #supplierAvailabilitySection .supplier-cal-day.soldout{
+  background:#fff0f0!important;
+  border-color:#f1d7d7!important;
+  color:#773838!important;
+}
+body.theme-aurora .supplier-cal-day.free b,
+body.theme-aurora .supplier-cal-day.free .supplier-calendar-status,
+body.theme-aurora .supplier-cal-day.free small{color:#164b99!important}
+body.theme-aurora .supplier-calendar-grid,
+body.theme-aurora #supplierAvailabilitySection .supplier-calendar-grid{
+  background:#eff5ff!important;
+  border-color:#d4e3f8!important;
+}
+body.legal-shell.theme-aurora{
+  background:#f7f9ff!important;
+  color:#1b3156!important;
+}
+body.legal-shell .legal-topbar{
+  background:rgba(255,255,255,.97)!important;
+  border-bottom:1px solid #dbe5f5!important;
+}
+body.legal-shell .legal-topbar .container.nav{min-height:100px!important}
+body.legal-shell .legal-topbar .legal-brand.brand-logo{
+  background:transparent!important;
+  box-shadow:none!important;
+  border:none!important;
+  color:transparent!important;
+  font-size:0!important;
+  padding:0!important;
+  width:248px!important;
+  min-width:0!important;
+  height:auto!important;
+  margin:0!important;
+}
+body.legal-shell .legal-topbar .legal-brand.brand-logo img{
+  display:block!important;
+  width:248px!important;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:82px!important;
+  object-fit:contain!important;
+}
+body.legal-shell .legal-page h1,
+body.legal-shell .legal-page h2,
+body.legal-shell .faq-item summary,
+body.legal-shell .help-contact h2,
+body.legal-shell .policy-section h2{
+  color:#12376f!important;
+  -webkit-text-fill-color:#12376f!important;
+}
+body.legal-shell .faq-item,
+body.legal-shell .help-contact,
+body.legal-shell .legal-page .help-group{
+  border-color:#dbe5f5!important;
+}
+body.legal-shell .help-contact{
+  background:linear-gradient(120deg,#eaf3ff,#f7f9ff)!important;
+}
+body.legal-shell .faq-answer p,
+body.legal-shell .help-contact p,
+body.legal-shell .legal-lead,
+body.legal-shell .policy-section p{color:#536784!important;-webkit-text-fill-color:#536784!important}
+body.legal-shell .legal-topbar .legal-lang.active{
+  background:#176bd0!important;
+  color:#fff!important;
+}
+@media(max-width:760px){
+ body.legal-shell .legal-topbar .container.nav{min-height:78px!important}
+ body.legal-shell .legal-topbar .legal-brand.brand-logo{width:170px!important}
+ body.legal-shell .legal-topbar .legal-brand.brand-logo img{width:170px!important}
+}
+/* Retain reserved/unavailable calendar contrast and do not alter booking logic. */
