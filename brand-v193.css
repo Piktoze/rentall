@@ -620,3 +620,158 @@ body.theme-aurora .supplier-view-switch button:hover,
 body.theme-aurora .help-jump a:hover{background:#ecf4ff!important;color:#0a60c6!important}
 /* Informational checks use blue; critical warnings and validation errors retain semantic colors. */
 body.theme-aurora .rentinorbit-promise .promise-points span::before{color:#0878ef!important}
+
+/* V223: site-wide visual consistency and centered editorial typography. */
+body.theme-aurora{
+  --accent:#0878ef!important;
+  --accent2:#eaf4ff!important;
+  --accent-2:#38bdf8!important;
+  --accent-dark:#153e83!important;
+  --surface:#f4f8ff!important;
+  --surface-warm:#f8faff!important;
+  --surface-cream:#f8faff!important;
+  --surface-sage:#edf4ff!important;
+  --premium-sage:#edf4ff!important;
+  --ink:#10234b!important;
+  --ink-body:#344563!important;
+  --ink-muted:#687a95!important;
+}
+body.theme-aurora .section.editorial-accent-section,
+body.theme-aurora #pricing,
+body.theme-aurora #sustainability,
+body.theme-aurora #how,
+body.theme-aurora .sustainability-section{
+  border-color:#dce7f6!important;
+}
+body.theme-aurora #pricing>.container{
+  width:min(1100px,calc(100% - 40px))!important;
+  margin-inline:auto!important;
+}
+body.theme-aurora #pricing>.container>.eyebrow,
+body.theme-aurora #pricing>.container>h2,
+body.theme-aurora #pricing>.container>.subcopy,
+body.theme-aurora #pricing>.container>.section-note{
+  display:block!important;
+  width:100%!important;
+  max-width:960px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+  text-wrap:balance;
+}
+body.theme-aurora #pricing>.container>h2{
+  font-size:clamp(32px,4vw,54px)!important;
+  line-height:1.1!important;
+  margin-top:12px!important;
+  margin-bottom:24px!important;
+}
+body.theme-aurora #pricing .plans.plans-single{
+  width:100%!important;
+  max-width:780px!important;
+  margin-inline:auto!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  justify-items:center!important;
+}
+body.theme-aurora #pricing .pilot-offer{
+  width:100%!important;
+  margin:0 auto!important;
+  border:1px solid #dbe6f7!important;
+  border-radius:24px!important;
+  background:#fff!important;
+  color:#2f4364!important;
+  box-shadow:0 20px 44px rgba(24,55,108,.09)!important;
+  transform:none!important;
+}
+body.theme-aurora #pricing .pilot-offer .plan-price,
+body.theme-aurora #pricing .pilot-offer .plan-price *,
+body.theme-aurora #pricing .pilot-offer .commission,
+body.theme-aurora #pricing .pilot-offer .plan-label{
+  color:#123f83!important;
+  -webkit-text-fill-color:#123f83!important;
+  text-align:center!important;
+}
+body.theme-aurora #pricing .pilot-offer .commission{
+  color:#075fc5!important;
+  -webkit-text-fill-color:#075fc5!important;
+}
+body.theme-aurora #pricing .pilot-offer .plan-price{
+  margin-inline:auto!important;
+  width:100%!important;
+}
+body.theme-aurora #pricing .pilot-offer ul,
+body.theme-aurora #pricing .pilot-offer li{
+  color:#455876!important;
+  -webkit-text-fill-color:#455876!important;
+}
+body.theme-aurora #pricing .pilot-offer ul{
+  max-width:660px!important;
+  margin:18px auto!important;
+  text-align:left!important;
+  line-height:1.75!important;
+}
+body.theme-aurora #pricing .pilot-offer .primary-link,
+body.theme-aurora #pricing .pilot-offer .primary{
+  width:100%!important;
+  text-align:center!important;
+}
+body.theme-aurora .section-head:not(.listing-section .section-head),
+body.theme-aurora .section>.container>.eyebrow,
+body.theme-aurora .section>.container>h2,
+body.theme-aurora .section>.container>.section-note,
+body.theme-aurora .section>.container>.subcopy{
+  text-align:center!important;
+}
+body.theme-aurora .section-head{
+  justify-content:center!important;
+  align-items:center!important;
+  max-width:1180px;
+  margin-inline:auto;
+}
+body.theme-aurora .section-head>div:first-child{margin-inline:auto!important}
+body.theme-aurora .sustainability-copy{text-align:center!important}
+body.theme-aurora .sustainability-copy h2,
+body.theme-aurora .sustainability-copy>p{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+body.theme-aurora .sustainability-card{
+  text-align:center!important;
+}
+body.theme-aurora .sustainability-card .sustainability-icon{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+body.theme-aurora .sustainability-card h3,
+body.theme-aurora .sustainability-card p{
+  text-align:center!important;
+}
+body.theme-aurora .brand-whisper{
+  color:#6e85ad!important;
+}
+body.theme-aurora .plan,
+body.theme-aurora .pilot-offer,
+body.theme-aurora .sustainability-card,
+body.theme-aurora .rentinorbit-promise,
+body.theme-aurora .promise-points span{
+  border-color:#d9e5f6!important;
+}
+body.theme-aurora .plan .plan-price,
+body.theme-aurora .plan .plan-price b,
+body.theme-aurora .plan .plan-price strong,
+body.theme-aurora .plan .plan-price small,
+body.theme-aurora .plan .commission{
+  color:#123e7b!important;
+  -webkit-text-fill-color:#123e7b!important;
+}
+body.theme-aurora .plan .commission{color:#0c63c9!important;-webkit-text-fill-color:#0c63c9!important}
+body.theme-aurora .plan ul,
+body.theme-aurora .plan li{color:#455876!important}
+body.theme-aurora .sustainability-section{background:linear-gradient(140deg,#edf4ff,#f8faff)!important}
+@media(max-width:760px){
+  body.theme-aurora #pricing>.container{width:calc(100% - 28px)!important}
+  body.theme-aurora #pricing .pilot-offer{padding:24px 20px!important}
+  body.theme-aurora .section-head{gap:16px!important}
+}
+/* Never center form fields, agreement terms, legal prose, rental messages, or data tables. */
