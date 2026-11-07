@@ -6317,8 +6317,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const data=await apiJson(transferEndpoint(bookingId)+'/trust'+(accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
         const ag=data.agreement;
         if(!ag)throw Error('Nuomos sutartis nerasta.');
-        if(!window.confirm('Patvirtinu nuomos sutarties sąlygas: '+String(ag.snapshot?.listingTitle||'daiktas')+
-          ', '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+', €'+Number(ag.snapshot?.total||0).toFixed(2)+'. Sutartis sudaroma su nuomotoju, RentInOrbit tarpininkauja.'))return;
+        const terms=Array.isArray(ag.snapshot?.terms)?ag.snapshot.terms:[];
+        if(!window.confirm('NUOMOS SUTARTIES PATVIRTINIMAS\\n\\nDaiktas: '+String(ag.snapshot?.listingTitle||'daiktas')+
+          '\\nLaikotarpis: '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+
+          '\\nGalutinė suma: €'+Number(ag.snapshot?.total||0).toFixed(2)+
+          '\\nAtšaukimo sąlygos: '+String(ag.snapshot?.cancellationPolicy||'pagal skelbimą')+
+          '\\n\\n'+terms.map((term,i)=>(i+1)+'. '+term).join('\\n')+
+          '\\n\\nSutartis sudaroma tarp nuomininko ir nuomotojo. RentInOrbit teikia tarpininkavimo paslaugą.\\n\\nAr sutinkate?'))return;
         await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true,accessToken})});
         showResult('Nuomos sutartis patvirtinta.');
       }else{
@@ -6357,7 +6362,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           const data=await apiJson(transferEndpoint(bookingId)+'/trust');
           const ag=data.agreement;
           if(!ag)throw Error('Sutartis nerasta.');
-          if(!window.confirm('Patvirtinate nuomos sutartį dėl „'+String(ag.snapshot?.listingTitle||b.title||'daiktas')+'“?'))return;
+          if(!window.confirm('NUOMOTOJO SUTARTIES PATVIRTINIMAS\\n\\nDaiktas: '+
+            String(ag.snapshot?.listingTitle||b.title||'daiktas')+
+            '\\nNuoma: '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+
+            '\\nGalutinė suma: €'+Number(ag.snapshot?.total||0).toFixed(2)+
+            '\\n\\n'+(Array.isArray(ag.snapshot?.terms)?ag.snapshot.terms.map((term,i)=>(i+1)+'. '+term).join('\\n'):'')+
+            '\\n\\nAr patvirtinate šią sutartį su nuomininku?'))return;
           await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true})});
           showResult('Nuomos sutartis patvirtinta.');
         }catch(err){showResult(err.message,true)}finally{this.disabled=false;}
