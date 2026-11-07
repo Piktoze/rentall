@@ -2029,20 +2029,20 @@ CREATE TABLE IF NOT EXISTS rental_party_transfer_codes (
 );
 `);
 export function rentalTransferStatus(bookingId){
-  const rows=db.prepare('SELECT purpose,party,expires_at,consumed_at,failed_attempts FROM rental_party_transfer_codes WHERE booking_id=?').all(String(bookingId));
+  const rows=db.prepare("SELECT purpose,party,expires_at,consumed_at,failed_attempts FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer'").all(String(bookingId));
   return Object.fromEntries(rows.map(r=>[r.purpose+'_'+r.party,{
     expiresAt:r.expires_at,consumedAt:r.consumed_at,attemptsRemaining:Math.max(0,5-r.failed_attempts)
   }]));
 }
 export function issueRentalTransferCode(bookingId,purpose,party='customer'){
-  if(!['pickup','return'].includes(purpose)||!['customer','supplier'].includes(party))
+  if(!['pickup','return'].includes(purpose)||party!=='customer')
     throw Object.assign(new Error('Neteisingas kodo tipas.'),{code:'INVALID_TRANSFER_PURPOSE'});
   const booking=getRentalBookingById(bookingId);
   if(!booking)throw Object.assign(new Error('Rezervacija nerasta.'),{code:'BOOKING_NOT_FOUND'});
   const agreement=getRentalAgreement(bookingId);
   // Importantly, each participant's code depends ONLY on their own signature,
   // never on whether the opposite party has signed.
-  if(!agreement?.[party==='customer'?'customerAcceptedAt':'supplierAcceptedAt'])
+  if(!agreement?.customerAcceptedAt)
     throw Object.assign(new Error('Pirmiausia patvirtinkite savo nuomos sutartį.'),{code:'OWN_AGREEMENT_REQUIRED'});
   if(purpose==='pickup' && (booking.status!=='confirmed'||booking.paymentStatus!=='paid'))
     throw Object.assign(new Error('Rezervacija turi būti patvirtinta ir apmokėta.'),{code:'TRANSFER_NOT_READY'});
@@ -2069,9 +2069,9 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCod
 }={}){
   if(!['pickup','return'].includes(purpose))
     throw Object.assign(new Error('Neteisingas perdavimo tipas.'),{code:'INVALID_TRANSFER_PURPOSE'});
-  const codes={customer:String(customerCode||'').trim(),supplier:String(supplierCode||'').trim()};
-  if(Object.values(codes).some(x=>!/^\d{6}$/.test(x)))
-    throw Object.assign(new Error('Reikalingi abu šešių skaitmenų kodai.'),{code:'INVALID_TRANSFER_CODE'});
+  const codes={customer:String(customerCode||'').trim()};
+  if(!/^\d{6}$/.test(codes.customer))
+    throw Object.assign(new Error('Reikalingas šešių skaitmenų nuomininko kodas.'),{code:'INVALID_TRANSFER_CODE'});
   return db.transaction(()=>{
     const booking=getRentalBookingById(bookingId);
     const required=purpose==='pickup'?'confirmed':'active';
@@ -2082,7 +2082,7 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCod
       throw Object.assign(new Error('Abi šalys turi patvirtinti sutartį prieš perdavimą.'),{code:'AGREEMENT_REQUIRED'});
     if(purpose==='return'&&!['good','damaged','missing'].includes(String(returnCondition||'')))
       throw Object.assign(new Error('Nurodykite grąžinto daikto būklę.'),{code:'RETURN_CONDITION_REQUIRED'});
-    for(const party of ['customer','supplier']){
+    for(const party of ['customer']){
       const row=db.prepare('SELECT * FROM rental_party_transfer_codes WHERE booking_id=? AND purpose=? AND party=?')
         .get(String(bookingId),purpose,party);
       if(!row||row.consumed_at||Date.parse(row.expires_at)<=Date.now()||row.failed_attempts>=5)
@@ -2094,10 +2094,10 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCod
         return {ok:false,reason:'INVALID_TRANSFER_CODE'};
       }
     }
-    // Consume both codes and advance the booking in one DB transaction.
+    // Consume the renter code and advance booking in one DB transaction.
     const now=new Date().toISOString();
     const used=db.prepare('UPDATE rental_party_transfer_codes SET consumed_at=? WHERE booking_id=? AND purpose=? AND party=? AND consumed_at IS NULL');
-    for(const party of ['customer','supplier']){
+    for(const party of ['customer']){
       if(used.run(now,String(bookingId),purpose,party).changes!==1)
         throw Object.assign(new Error('Kodas jau panaudotas.'),{code:'TRANSFER_ALREADY_USED'});
     }
