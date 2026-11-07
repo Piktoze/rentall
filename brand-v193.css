@@ -164,3 +164,10 @@ body.rio-supplier #list-item{display:block!important}
 #customerBookingsSection > .panel-head .eyebrow,
 #customerBookingsSection > .panel-head p[data-i18n-text="Track reservations, cancellation/refund status and completed rentals."] { display: none !important; }
 #customerBookingsSection > .panel-head { gap: 12px; }
+
+/* STAGING_RENTER_MINIMAL_V2: the booking command repeats the selected booking
+   context. Retain its next-step, payment, fulfilment and support controls. */
+#customerBookingsSection #v140BookingCommand .v140-command-head .eyebrow,
+#customerBookingsSection #v140BookingCommand .v140-command-head p.muted,
+#customerBookingsSection #v140BookingCommand .v140-command-head .v140-live { display: none !important; }
+#customerBookingsSection #v140BookingCommand .v140-command-head { gap: 8px; }
