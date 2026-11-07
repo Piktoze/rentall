@@ -3,6 +3,7 @@
  let current=null;
  const tr=k=>window.RentInOrbitI18n?.t?.(k)||k;
  const text=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=tr(v)};
+ const rawText=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v??'')};
  function choose(b){
   current=b||null;
   if(!b){
@@ -52,8 +53,11 @@
     text('v140NextHint','Review the pickup or delivery details before the rental starts.');
   }
   const mode=b.deliveryMethod||b.fulfilment||b.fulfillment||'Pickup';
-  text('v140Fulfilment',mode);
-  text('v140FulfilmentHint',b.pickupAddress||b.deliveryAddress||'Exact details remain on the confirmed booking.');
+  if(['Pickup','Delivery'].includes(String(mode)))text('v140Fulfilment',mode);
+  else rawText('v140Fulfilment',mode);
+  const address=b.pickupAddress||b.deliveryAddress;
+  if(address)rawText('v140FulfilmentHint',address);
+  else text('v140FulfilmentHint','Exact details remain on the confirmed booking.');
  }
  document.addEventListener('rentinorbit:booking-selected',e=>choose(e.detail?.booking||e.detail));
  document.addEventListener('rentinorbit:language-changed',()=>choose(current));
