@@ -162,9 +162,24 @@
   function sync(){
     createDrawer();createHub();interceptAccountButton();upgradeModalBehavior();improveMessages();localizeDrawer();localizeHub();localizeSupplierRoots();
     document.body.classList.toggle('supplier-authenticated',isSupplier());
-    const auth=$('supplierAuthBtn');if(auth&&isSupplier()){auth.setAttribute('aria-haspopup','dialog');auth.title=t('menu');auth.classList.add('supplier-account-trigger');}else if(auth){auth.classList.remove('supplier-account-trigger');}
+    const auth=$('supplierAuthBtn');
+    if(auth&&isSupplier()){
+      // The header is an account menu when authenticated, not a login action.
+      // Remove the static login translation marker to prevent i18n from
+      // overwriting the authenticated label during DOM localization.
+      auth.removeAttribute('data-i18n-text');
+      auth.setAttribute('aria-haspopup','dialog');
+      auth.title=t('menu');
+      auth.classList.add('supplier-account-trigger');
+      const accountLabel=t('drawer');
+      if(auth.textContent!==accountLabel)auth.textContent=accountLabel;
+    }else if(auth){
+      auth.classList.remove('supplier-account-trigger');
+      auth.removeAttribute('aria-haspopup');
+      auth.setAttribute('data-i18n-text','Log in');
+    }
   }
-  document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeHub();localizeSupplierRoots();},0));
+  document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeHub();localizeSupplierRoots();sync();},0));
   const authObserver=new MutationObserver(()=>sync());const auth=$('supplierAuthBtn');if(auth)authObserver.observe(auth,{childList:true,subtree:true,characterData:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();
