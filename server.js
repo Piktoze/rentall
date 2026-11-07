@@ -1530,7 +1530,7 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
     const booking=getRentalBookingById(bookingId); if(!booking)return res.status(404).json({error:'Booking not found'});
     const user=sessionUser(req);
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
-    const guestOwner=!!verifyBookingPaymentToken(bookingId,accessToken);
+    const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
     if(!accountOwner&&!guestOwner)return res.status(403).json({error:'Booking access denied'});
     if(!['pending','confirmed'].includes(booking.status))return res.status(409).json({error:`Deposit cannot be authorized in status ${booking.status}`});
     const amount=Math.round(Math.max(0,Number(booking.securityDepositAmount||0))*100);
@@ -1589,7 +1589,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     if(!booking) return res.status(404).json({error:'Booking not found'});
     const paymentUser=sessionUser(req);
     const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
-    const guestOwner=!!verifyBookingPaymentToken(bookingId,paymentToken);
+    const guestOwner=!paymentUser&&!!verifyBookingPaymentToken(bookingId,paymentToken);
     if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'}); /* STAGING_PAYMENT_OWNER_ACCESS_V2 */
     if(!['pending','confirmed'].includes(booking.status)){
       return res.status(409).json({error:`Booking cannot be paid in status ${booking.status}`});
