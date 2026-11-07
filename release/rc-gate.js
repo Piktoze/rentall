@@ -13,6 +13,7 @@ for(const suite of [
   'transfer-supplier-consent-v207.test.js',
   'rental-status-bypass-v208.test.js',
   'rental-identity-boundary-v209.test.js',
+  'rental-http-e2e-v210.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
