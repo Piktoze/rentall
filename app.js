@@ -5866,6 +5866,20 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
 })();
 
 
+// Re-render dynamic catalog text after a language switch. Static DOM i18n
+// alone cannot update prices, availability labels or server-backed listing cards
+// already built by the legacy renderers.
+document.addEventListener('rentinorbit:language-changed',()=>{
+  try{
+    if(document.getElementById('listingPreviewGrid') && typeof renderGeoAwareListings==='function')
+      renderGeoAwareListings(currentResultItems);
+  }catch(err){console.warn('Catalog locale refresh skipped',err)}
+  const bookings=document.getElementById('customerBookingsSection');
+  if(bookings && (bookings.classList.contains('customer-bookings-open') || document.body.classList.contains('customer-bookings-open'))){
+    loadUnifiedCustomerBookings().catch(()=>{});
+  }
+});
+
 // --- V81: canonical startup deep-link router ---
 async function handleCustomerDeepLinkV81(){
   try {
