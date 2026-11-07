@@ -1304,6 +1304,8 @@ function validateSupplierListingInput(listing){
   for(const photo of photos){
     if(typeof photo!=='string' || !/^\/uploads\/[a-zA-Z0-9_-]+\.(?:png|jpe?g|webp)$/.test(photo))
       throw Object.assign(new Error('Nuotrauka turi būti įkelta per saugų failų įkėlimą.'),{code:'LISTING_PHOTO_INVALID'});
+    if(!fs.existsSync(path.join(runtimeConfig.uploadsDir,path.basename(photo))))
+      throw Object.assign(new Error('Nuotraukos failas nerastas. Įkelk jį iš naujo.'),{code:'LISTING_PHOTO_MISSING'});
   }
   if(listing.coverPhoto && listing.coverPhoto!==photos[0])
     throw Object.assign(new Error('Pagrindinė nuotrauka turi sutapti su pirmąja.'),{code:'LISTING_PHOTO_INVALID'});
