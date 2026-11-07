@@ -775,3 +775,38 @@ body.theme-aurora .sustainability-section{background:linear-gradient(140deg,#edf
   body.theme-aurora .section-head{gap:16px!important}
 }
 /* Never center form fields, agreement terms, legal prose, rental messages, or data tables. */
+
+/* V224: high-contrast, centered supplier slogan adjacent to the offer card. */
+body.theme-aurora #pricing .pricing-orbit-tagline{
+  position:static!important;
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+  width:fit-content!important;
+  max-width:calc(100% - 20px)!important;
+  margin:0 auto 20px!important;
+  padding:10px 22px!important;
+  border:1px solid #c9dfff!important;
+  border-radius:999px!important;
+  background:#eaf3ff!important;
+  color:#075fc4!important;
+  -webkit-text-fill-color:#075fc4!important;
+  font-size:clamp(15px,1.4vw,19px)!important;
+  font-weight:800!important;
+  line-height:1.4!important;
+  letter-spacing:.015em!important;
+  text-transform:none!important;
+  text-align:center!important;
+  white-space:normal!important;
+  text-wrap:balance!important;
+  box-shadow:0 6px 20px rgba(8,120,239,.075)!important;
+}
+body.theme-aurora #pricing .plans.plans-single{margin-top:0!important}
+@media(max-width:620px){
+  body.theme-aurora #pricing .pricing-orbit-tagline{
+    padding:10px 14px!important;
+    border-radius:16px!important;
+    margin-bottom:16px!important;
+  }
+}
