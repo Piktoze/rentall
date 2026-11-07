@@ -222,3 +222,94 @@ body.rio-supplier #supplierAvailabilitySection.supplier-v178-external-visible{
   #supplierAvailabilitySection .supplier-cal-day .supplier-calendar-status{font-size:10px}
   #supplierAvailabilitySection .supplier-cal-day small{font-size:9px}
 }
+
+/* V218: resolve late stylesheet !important conflicts; readable two-column home. */
+body.theme-aurora .hero .container.hero-grid{
+  width:min(1280px,calc(100% - 64px))!important;
+  max-width:1280px!important;
+  grid-template-columns:minmax(0,1.85fr) minmax(330px,1fr)!important;
+  grid-template-areas:"intro intro" "search supplier"!important;
+  gap:28px 30px!important;
+  align-items:start!important;
+  margin-inline:auto!important;
+}
+body.theme-aurora .hero .hero-intro{
+  grid-area:intro!important;
+  max-width:920px!important;
+  width:100%!important;
+  justify-self:center!important;
+}
+body.theme-aurora .hero .hero-intro h1{font-size:clamp(36px,4vw,56px)!important;max-width:900px!important}
+body.theme-aurora .hero .hero-search-column{
+  grid-area:search!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+body.theme-aurora .hero .hero-search-column .search-mode-wrap{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-top:0!important;
+}
+body.theme-aurora .hero .hero-search-column .universal-search,
+body.theme-aurora .hero .hero-search-column .trip-search{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;
+  padding:16px!important;
+  overflow:visible!important;
+}
+body.theme-aurora .hero .hero-search-column .search-card label{
+  grid-column:auto!important;
+  min-width:0!important;
+  padding:12px 13px!important;
+}
+body.theme-aurora .hero .hero-search-column .search-card label.wide{
+  grid-column:1/-1!important;
+}
+body.theme-aurora .hero .hero-search-column .search-card button.primary{
+  grid-column:1/-1!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:52px!important;
+}
+body.theme-aurora .hero #list-item.hero-supplier-cta{
+  grid-area:supplier!important;
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:0!important;
+  margin:49px 0 0!important;
+  padding:26px!important;
+  align-self:start!important;
+  gap:14px!important;
+}
+body.theme-aurora .hero #list-item.hero-supplier-cta h2{
+  font-size:clamp(27px,2.5vw,34px)!important;
+  line-height:1.15!important;
+}
+@media(max-width:1000px){
+  body.theme-aurora .hero .container.hero-grid{
+    width:min(840px,calc(100% - 36px))!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-areas:"intro" "search" "supplier"!important;
+    gap:22px!important;
+  }
+  body.theme-aurora .hero #list-item.hero-supplier-cta{margin:0!important}
+}
+@media(max-width:540px){
+  body.theme-aurora .hero .container.hero-grid{width:calc(100% - 28px)!important}
+  body.theme-aurora .hero .hero-search-column .universal-search,
+  body.theme-aurora .hero .hero-search-column .trip-search{
+    grid-template-columns:minmax(0,1fr)!important;
+    padding:12px!important;
+  }
+  body.theme-aurora .hero .hero-search-column .search-card label,
+  body.theme-aurora .hero .hero-search-column .search-card label.wide,
+  body.theme-aurora .hero .hero-search-column .search-card button.primary{grid-column:1!important}
+  body.theme-aurora .hero #list-item.hero-supplier-cta{padding:20px!important}
+}
