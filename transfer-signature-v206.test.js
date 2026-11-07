@@ -79,7 +79,7 @@ try{
    'Lockout must never advance booking state');
  // The legitimate renter can request a fresh code after lockout.
  const rotated=issueRentalTransferCode(secondId,'pickup','customer');
- assert.match(rotated.code,/^\\d{6}$/);
+ assert.match(rotated.code,/^\d{6}$/);
  assert.equal(verifyAndConsumeRentalTransferCode(secondId,'pickup',rotated.code).ok,true);
  assert.equal(getRentalBookingById(secondId).status,'active');
  errorCode(()=>verifyAndConsumeRentalTransferCode(secondId,'pickup',rotated.code),'TRANSFER_NOT_READY');
