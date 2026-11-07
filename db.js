@@ -1421,6 +1421,19 @@ export function listOwnerRentalListings(ownerEmail){
   return listOwnerFullListingsStmt.all(String(ownerEmail||'')).map(parseListingRow).filter(Boolean);
 }
 
+// Archive rather than physically delete a listing referenced by historical rentals.
+export function archiveOwnerRentalListing(listingId,ownerEmail){
+  const id=String(listingId||'');
+  const owner=String(ownerEmail||'').trim().toLowerCase();
+  const row=db.prepare('SELECT data_json FROM rental_listings WHERE listing_id=? AND owner_email=? COLLATE NOCASE').get(id,owner);
+  if(!row) return null;
+  const listing=parseListingRow(row);
+  const archived={...listing,lifecycleStatus:'archived',moderationStatus:'paused',archivedAt:new Date().toISOString()};
+  const result=db.prepare(`UPDATE rental_listings SET lifecycle_status='archived',moderation_status='paused',data_json=?,updated_at=? WHERE listing_id=? AND owner_email=? COLLATE NOCASE`)
+    .run(JSON.stringify(archived),archived.archivedAt,id,owner);
+  return result.changes?archived:null;
+}
+
 export function deleteOwnerRentalListing(listingId,ownerEmail){
   const result=deleteOwnerListingStmt.run(String(listingId),String(ownerEmail||''));
   return result.changes>0;
