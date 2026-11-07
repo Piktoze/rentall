@@ -1302,6 +1302,13 @@ document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
   listingModal.setAttribute('aria-hidden','false');
   document.getElementById('closeListingModal')?.focus();
 });
+// V216: earning CTAs must open the real listing flow, not a hidden legacy section.
+['heroEarnStartBtn','supplierOfferStartBtn'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('click',event=>{
+    event.preventDefault();
+    document.getElementById('openListingFormBtn')?.click();
+  });
+});
 document.getElementById('closeListingModal')?.addEventListener('click',closeListingModalAccessible);
 listingModal?.addEventListener('keydown',e=>{
   if(!listingModal.classList.contains('open')) return;
