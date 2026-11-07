@@ -1047,6 +1047,7 @@ app.get('/api/config', (req,res)=>{
     stripePublishableKey:process.env.STRIPE_PUBLISHABLE_KEY || '',
     stripeConfigured:!!stripe,
     demoPaymentsEnabled,
+    rentalPreauthEnabled,
     paymentProvider,
     platformFeePercent:DEFAULT_COMMISSION_BPS/100
   });
