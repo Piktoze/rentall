@@ -63,11 +63,11 @@
  document.addEventListener('rentinorbit:language-changed',()=>choose(current));
  document.addEventListener('click',e=>{
   if(e.target.closest('#v140RefreshBooking')){window.refreshCustomerBookings?.();window.refreshLiveBookingStatus?.();}
-  if(e.target.closest('#v140CopyBooking')&&current?.id){
-    const bookingId=String(current.id);
+  if(e.target.closest('#v140CopyBooking')&&(current?.bookingId||current?.id)){
+    const bookingId=String(current.bookingId||current.id);
     if(!navigator.clipboard?.writeText)return;
     Promise.resolve().then(()=>navigator.clipboard.writeText(bookingId)).then(()=>{
-      if(String(current?.id||'')===bookingId)text('v140NextHint','Booking ID copied.');
+      if(String(current?.bookingId||current?.id||'')===bookingId)text('v140NextHint','Booking ID copied.');
     }).catch(()=>{/* Leave the existing instructions unchanged when copying is denied. */});
   }
  });
