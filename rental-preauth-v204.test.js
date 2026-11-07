@@ -37,7 +37,7 @@ await cancelDirectChargePaymentIntent(stripe,{
 assert.equal(calls[2].op,'cancel');
 const server=fs.readFileSync('./server.js','utf8');
 const frontend=fs.readFileSync('./app.js','utf8');
-assert.match(server,/rentalPreauthEnabled=process\.env\.RENTINORBIT_STAGING==='true' && \/\^sk_test_\//,'TEST and staging isolation');
+assert.match(server,/rentalPreauthEnabled=process\.env\.RENTINORBIT_STAGING==='true' && !demoPaymentsEnabled && \/\^sk_test_\//,'TEST and staging isolation');
 assert.match(server,/validateRentalPaymentIntentBinding\(pi,before,connection\.stripeAccountId\)/,'bound authorization');
 assert.match(server,/pi\.status==='requires_capture'/,'capture only an authorized payment');
 assert.match(server,/CUSTOMER_AUTHORIZATION_REQUIRED/,'block approval before authorization');
