@@ -1854,3 +1854,31 @@ body.rio-authenticated #partnerForm { display:none!important; }
 #supplierActionDrawer[aria-hidden="true"] {pointer-events:none!important;}
 body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 #supplierAvailabilitySection.supplier-v179-calendar-open {scroll-margin-top:145px;}
+
+/* V215: listing page CTA aligned with the headline, not the description baseline. */
+.listing-section .section-head{
+  align-items:center;
+  margin-bottom:0;
+}
+.listing-section .section-head > div:first-child{
+  flex:1 1 auto;
+  min-width:0;
+}
+.listing-section #openListingFormBtn{
+  flex:0 0 auto;
+  align-self:center;
+}
+.listing-section{
+  padding-top:48px;
+  padding-bottom:48px;
+}
+@media(max-width:700px){
+  .listing-section .section-head{
+    align-items:stretch;
+    gap:18px;
+  }
+  .listing-section #openListingFormBtn{
+    align-self:stretch;
+    width:100%;
+  }
+}
