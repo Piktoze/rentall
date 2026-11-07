@@ -30,34 +30,37 @@ try{
    listingTitle:'Rental test fixture',startDate:'2099-04-10',endDate:'2099-04-11',total:100
  }});
  const id='transfer-signatures-1';
+ // Neither side signed: renter cannot receive a code; supplier never receives one.
  errorCode(()=>issueRentalTransferCode(id,'pickup','customer'),'OWN_AGREEMENT_REQUIRED');
- errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'OWN_AGREEMENT_REQUIRED');
+ errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
  acceptRentalAgreement(id,'customer');
  const customer=issueRentalTransferCode(id,'pickup','customer');
- assert.match(customer.code,/^\d{6}$/);
- assert.equal(getRentalAgreement(id).supplierAcceptedAt,null,'other signature may remain absent');
- errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'OWN_AGREEMENT_REQUIRED');
- // A code does not grant permission to bypass the other participant.
- errorCode(()=>verifyAndConsumeRentalTransferCode(id,'pickup',customer.code,{supplierCode:'000000'}),'AGREEMENT_REQUIRED');
- acceptRentalAgreement(id,'supplier');
- const supplier=issueRentalTransferCode(id,'pickup','supplier');
- assert.match(supplier.code,/^\d{6}$/);
- assert.notEqual(customer.party,supplier.party);
- const wrongCode=customer.code==='000000'?'000001':'000000';
- assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',wrongCode,{supplierCode:supplier.code}).ok,false);
+ assert.match(customer.code,/^\\d{6}$/);
+ assert.equal(getRentalAgreement(id).supplierAcceptedAt,null,'supplier signature is independently required');
+ errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
+ // Even a valid renter PIN cannot transfer an item before supplier signs.
+ errorCode(()=>verifyAndConsumeRentalTransferCode(id,'pickup',customer.code),'AGREEMENT_REQUIRED');
  assert.equal(getRentalBookingById(id).status,'confirmed');
- assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',customer.code,{supplierCode:supplier.code}).ok,true);
+ acceptRentalAgreement(id,'supplier');
+ // Neither a second supplier PIN nor a wrong renter PIN can complete the transfer.
+ errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
+ const wrongCode=customer.code==='000000'?'000001':'000000';
+ assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',wrongCode).ok,false);
+ assert.equal(getRentalBookingById(id).status,'confirmed');
+ assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',customer.code).ok,true);
  assert.equal(getRentalBookingById(id).status,'active');
- errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'TRANSFER_NOT_READY');
- // Existing pickup PINs cannot be replayed as return PINs.
+ // A consumed pickup PIN cannot be used twice.
+ errorCode(()=>verifyAndConsumeRentalTransferCode(id,'pickup',customer.code),'TRANSFER_NOT_READY');
+ errorCode(()=>issueRentalTransferCode(id,'pickup','customer'),'TRANSFER_NOT_READY');
+ // Return uses a new renter-only PIN, with condition mandatory.
  const customerReturn=issueRentalTransferCode(id,'return','customer');
- const supplierReturn=issueRentalTransferCode(id,'return','supplier');
- errorCode(()=>verifyAndConsumeRentalTransferCode(id,'return',customerReturn.code,{supplierCode:supplierReturn.code}),'RETURN_CONDITION_REQUIRED');
+ errorCode(()=>issueRentalTransferCode(id,'return','supplier'),'INVALID_TRANSFER_PURPOSE');
+ errorCode(()=>verifyAndConsumeRentalTransferCode(id,'return',customerReturn.code),'RETURN_CONDITION_REQUIRED');
  assert.equal(verifyAndConsumeRentalTransferCode(id,'return',customerReturn.code,{
-   supplierCode:supplierReturn.code,returnCondition:'good',returnNotes:'Undamaged'
+   returnCondition:'good',returnNotes:'Undamaged'
  }).ok,true);
  assert.equal(getRentalBookingById(id).status,'returned');
- console.log('PASS independent signatures, both-party transfer PINs, no replay, recorded return');
+ console.log('PASS renter-only transfer PIN, both signatures, no replay, recorded return');
 }finally{
  db.close();
  for(const ext of ['','-wal','-shm'])try{fs.unlinkSync(filename+ext)}catch{}
