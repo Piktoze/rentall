@@ -1846,3 +1846,11 @@ html.rentinorbit-route-loading::after{
 .rio-next-step-only .v140-command-head strong{display:block;margin:8px 0 6px;font-size:1.12rem}
 .rio-next-step-only .v140-command-head .muted{margin:0}
 #how{scroll-margin-top:140px}
+
+/* V214: one supplier CTA per working area; actual listing modal trigger stays in DOM. */
+body.rio-authenticated #list-item,
+body.rio-authenticated #partnerForm { display:none!important; }
+/* V214: closed drawers cannot cover content or block document scroll. */
+#supplierActionDrawer[aria-hidden="true"] {pointer-events:none!important;}
+body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
+#supplierAvailabilitySection.supplier-v179-calendar-open {scroll-margin-top:145px;}
