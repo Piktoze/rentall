@@ -171,3 +171,13 @@ body.rio-supplier #list-item{display:block!important}
 #customerBookingsSection #v140BookingCommand .v140-command-head p.muted,
 #customerBookingsSection #v140BookingCommand .v140-command-head .v140-live { display: none !important; }
 #customerBookingsSection #v140BookingCommand .v140-command-head { gap: 8px; }
+
+/* Staging v203: make the selected booking visually identifiable without hiding actions. */
+.customer-booking-card.v203-booking-selected{
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 2px rgba(8,120,239,.14),0 10px 30px rgba(6,22,63,.055)!important;
+}
+.customer-booking-card .v203-select-booking:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:3px;
+}
