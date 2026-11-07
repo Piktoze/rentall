@@ -6,8 +6,14 @@ const logic=fs.readFileSync('modules/supplier-ux-v179.js','utf8');
 const server=fs.readFileSync('server.js','utf8');
 assert.ok(html.includes('href="/help" data-i18n="nav_help"'),'More-menu help must lead to real FAQ page');
 assert.ok(server.includes("app.get('/help'"),'Help route must exist');
-assert.ok(styles.includes('body.rio-authenticated #list-item')&&styles.includes('body.rio-authenticated #partnerForm'),
- 'Signed-in suppliers must not see repeated upload and registration sections');
+assert.ok(styles.includes('body.rio-authenticated #partnerForm'),
+ 'Signed-in suppliers must not see redundant registration sections');
+assert.ok(!styles.includes('body.rio-authenticated #list-item,'),
+ 'Primary listing action in hero must remain visible to signed-in suppliers');
+assert.ok(html.includes('class="hero-supplier-cta listing-section" id="list-item"'),
+ 'Primary listing action must be present beside search in hero');
+assert.equal((html.match(/id="openListingFormBtn"/g)||[]).length,1,
+ 'Exactly one primary listing form trigger must remain');
 assert.ok(html.includes('id="openListingFormBtn"')&&html.includes('id="navListItemBtn"'),
  'Working upload trigger and global navigation retained');
 assert.ok(logic.includes('function closeExistingDrawer()'),'Drawer must have reliable close routine');
