@@ -5574,6 +5574,7 @@ async function loadUnifiedCustomerBookings(){
 
   const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} ${uiText('of')} ${allRows.length}`;
   if(!rows.length){
+    window.rentinorbitBookingCommandSelect?.(null);
     list.innerHTML=`<div class="customer-booking-card"><h3>${escapeHtml(uiText('No bookings yet'))}</h3><p class="muted">${escapeHtml(uiText(currentServerUser?'Bookings made with this account will appear here.':'Sign in for cross-device booking history, or open a guest booking from its secure link.'))}</p></div>`;
     return;
   }
@@ -5594,6 +5595,7 @@ async function loadUnifiedCustomerBookings(){
       ${timeline.length?`<div class="booking-timeline">${timeline.map(t=>`<div class="booking-timeline-item"><b>${escapeHtml(uiText(t.title))}</b><span>${escapeHtml(localizeBookingTimelineMessage(t.message))} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span></div>`).join('')}</div>`:''}
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
+        <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View details'))}</button>
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
         <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View agreement'))}</button>
@@ -5604,6 +5606,22 @@ async function loadUnifiedCustomerBookings(){
       </div>
     </div>`;
   }).join('');
+  // Keep the supplementary status panel synchronized with the booking selected in this list.
+  const selectBookingForCommand=(bookingId,scroll=false)=>{
+    const row=rows.find(x=>String(x.booking.bookingId)===String(bookingId));
+    if(!row)return;
+    window.rentinorbitSelectedBookingId=String(row.booking.bookingId);
+    window.rentinorbitBookingCommandSelect?.(row.booking);
+    list.querySelectorAll('.customer-booking-card').forEach(card=>{
+      card.classList.toggle('v203-booking-selected',card.dataset.bookingId===window.rentinorbitSelectedBookingId);
+    });
+    if(scroll)document.getElementById('v140BookingCommand')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  };
+  list.querySelectorAll('.v203-select-booking').forEach(button=>{
+    button.addEventListener('click',()=>selectBookingForCommand(button.dataset.id,true));
+  });
+  selectBookingForCommand(rows.some(x=>String(x.booking.bookingId)===window.rentinorbitSelectedBookingId)
+    ?window.rentinorbitSelectedBookingId:rows[0].booking.bookingId);
   await window.rentinorbitAlternatives?.hydrate?.(list,rows.map(x=>x.booking));
 
   list.querySelectorAll('.v46-cancel-booking').forEach(btn=>btn.addEventListener('click',async()=>{
