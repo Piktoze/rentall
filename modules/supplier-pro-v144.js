@@ -5,8 +5,25 @@
  const B=()=>Array.isArray(window.liveSupplierBookings)?window.liveSupplierBookings:(Array.isArray(window.bookings)?window.bookings:[]);
  const L=()=>Array.isArray(window.v94SupplierListings)?window.v94SupplierListings:(Array.isArray(window.listings)?window.listings:[]);
  const date=v=>{const d=new Date(v);return Number.isNaN(+d)?null:d};
+ let selectedCalendarListing=null;
+ const language=()=>window.RentInOrbitI18n?.getLanguage?.()||'lt';
+ const txt=(lt,en)=>language()==='lt'?lt:en;
+
  function monthDays(){const now=new Date(), y=now.getFullYear(),m=now.getMonth(),first=new Date(y,m,1),days=new Date(y,m+1,0).getDate();return {now,y,m,first,days};}
- function renderCalendar(){const root=document.getElementById('v144Calendar');if(!root)return;const {now,y,m,first,days}=monthDays(),b=B();const cells=[];for(let i=0;i<first.getDay();i++)cells.push('<div class="v144-day blank"></div>');for(let d=1;d<=days;d++){const day=new Date(y,m,d),next=new Date(y,m,d+1),hits=b.filter(x=>{const s=date(x.startDate),e=date(x.endDate);return s&&e&&!['cancelled','declined','expired'].includes(String(x.status||'').toLowerCase())&&s<next&&e>=day});cells.push(`<div class="v144-day ${d===now.getDate()?'today':''} ${hits.length?'busy':''}"><b>${d}</b>${hits.slice(0,2).map(x=>`<span title="${esc(x.title||x.itemName||'Rental')}">${esc(x.title||x.itemName||'Rental')}</span>`).join('')}${hits.length>2?`<small>+${hits.length-2} more</small>`:''}</div>`)}root.innerHTML=`<div class="v144-month-head"><strong>${first.toLocaleDateString('en',{month:'long',year:'numeric'})}</strong><span>${b.length} bookings tracked</span></div><div class="v144-weekdays">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<b>${x}</b>`).join('')}</div><div class="v144-month-grid">${cells.join('')}</div>`}
+ function renderCalendar(){const root=document.getElementById('v144Calendar');if(!root)return;const {now,y,m,first,days}=monthDays(),allListings=L();
+  const available=allListings.map(l=>({id:String(l.id||l.listingId||''),title:String(l.title||l.name||'')})).filter(l=>l.id);
+  if(!available.some(l=>l.id===selectedCalendarListing))selectedCalendarListing=available[0]?.id||null;
+  const b=selectedCalendarListing?B().filter(x=>String(x.listingId||x.itemId||'')===selectedCalendarListing):[];
+  const selector=available.length?'<label class="v144-listing-filter">'+esc(txt('Skelbimas','Listing'))+
+    ' <select id="v144CalendarListingFilter">'+available.map(l=>'<option value="'+esc(l.id)+'"'+(l.id===selectedCalendarListing?' selected':'')+'>'+esc(l.title)+'</option>').join('')+'</select></label>':
+    '<p>'+esc(txt('Pirmiausia įkelk skelbimą.','Create a listing to see its calendar.'))+'</p>';
+  const cells=[];for(let i=0;i<first.getDay();i++)cells.push('<div class="v144-day blank"></div>');for(let d=1;d<=days;d++){const day=new Date(y,m,d),next=new Date(y,m,d+1),hits=b.filter(x=>{const s=date(x.startDate),e=date(x.endDate);return s&&e&&!['cancelled','declined','expired'].includes(String(x.status||'').toLowerCase())&&s<next&&e>=day});cells.push(`<div class="v144-day ${d===now.getDate()?'today':''} ${hits.length?'busy':''}"><b>${d}</b>${hits.slice(0,2).map(x=>`<span title="${esc(x.title||x.itemName||'Rental')}">${esc(x.title||x.itemName||'Rental')}</span>`).join('')}${hits.length>2?`<small>+${hits.length-2} more</small>`:''}</div>`)}root.innerHTML=`${selector}<div class="v144-month-head"><strong>${first.toLocaleDateString(language(),{month:'long',year:'numeric'})}</strong><span>${b.length} ${txt('rezervacijų','bookings')}</span></div><div class="v144-weekdays">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<b>${x}</b>`).join('')}</div><div class="v144-month-grid">${cells.join('')}</div>`}
+ document.addEventListener('change',e=>{
+   if(e.target?.id==='v144CalendarListingFilter'){
+     selectedCalendarListing=String(e.target.value||'');
+     renderCalendar();
+   }
+ });
  function renderPricing(){const root=document.getElementById('v144Pricing');if(!root)return;const l=L(),b=B();const rows=l.slice(0,8).map(x=>{const price=Number(x.priceDay||x.pricePerDay||x.dailyRate||x.price||0),id=String(x.id||x.listingId||''),related=b.filter(q=>String(q.listingId||q.itemId||'')===id&&!['cancelled','declined'].includes(String(q.status||'').toLowerCase())),signal=related.length>=3?'Strong demand':related.length?'Demand building':'Needs demand';return `<article><div><strong>${esc(x.title||x.name||'Listing')}</strong><span>${signal} · ${related.length} booking${related.length===1?'':'s'}</span></div><div><small>Current daily rate</small><b>${money(price)}</b></div><em>${price?'Price protected':'Set price'}</em></article>`}).join('');root.innerHTML=rows||'<div class="v129-empty"><strong>No pricing data yet</strong><span>Publish inventory to start tracking demand.</span></div>'}
  function render(){renderCalendar();renderPricing()}
  document.addEventListener('DOMContentLoaded',()=>setTimeout(render,220));window.addEventListener('rentinorbit:supplier-bookings',render);window.addEventListener('rentinorbit:supplier-inventory',render);window.refreshSupplierProV144=render;
