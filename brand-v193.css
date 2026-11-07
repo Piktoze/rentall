@@ -153,3 +153,8 @@ body.rio-supplier #list-item{display:block!important}
    v128 is the primary supplier cockpit; the duplicated v143 command center
    remains mounted for existing JS integrations but is not shown to suppliers. */
 #supplier-dashboard #v143SupplierCommand { display: none !important; }
+
+/* STAGING_SUPPLIER_MINIMAL_V3: dashboard already has a heading; preserve metrics/actions. */
+#supplier-dashboard #v128SupplierCockpit .v128-cockpit-head .eyebrow,
+#supplier-dashboard #v128SupplierCockpit .v128-cockpit-head p.muted { display: none !important; }
+#supplier-dashboard #v128SupplierCockpit .v128-cockpit-head { gap: 12px; }
