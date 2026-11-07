@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 const filename=path.resolve('./rentinorbit-transfer-v206-test.sqlite');
+// This test runs during a staging BUILD; it must never use the Railway volume
+// or inherit deployed service credentials/settings for its temporary database.
+process.env.NODE_ENV='test';
+for(const name of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
+  'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH'])delete process.env[name];
 process.env.DB_PATH=filename;
 for(const ext of ['','-wal','-shm'])try{fs.unlinkSync(filename+ext)}catch{}
 const {
@@ -38,7 +43,8 @@ try{
  const supplier=issueRentalTransferCode(id,'pickup','supplier');
  assert.match(supplier.code,/^\d{6}$/);
  assert.notEqual(customer.party,supplier.party);
- assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup','000000',{supplierCode:supplier.code}).ok,false);
+ const wrongCode=customer.code==='000000'?'000001':'000000';
+ assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',wrongCode,{supplierCode:supplier.code}).ok,false);
  assert.equal(getRentalBookingById(id).status,'confirmed');
  assert.equal(verifyAndConsumeRentalTransferCode(id,'pickup',customer.code,{supplierCode:supplier.code}).ok,true);
  assert.equal(getRentalBookingById(id).status,'active');
