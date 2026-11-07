@@ -1296,11 +1296,24 @@ function validateSupplierListingInput(listing){
   if(!Number.isFinite(priceDay) || priceDay<0 || priceDay>1000000) throw new Error('Invalid daily price');
   if(listing.latitude!=null && (Number(listing.latitude)<-90 || Number(listing.latitude)>90)) throw new Error('Invalid latitude');
   if(listing.longitude!=null && (Number(listing.longitude)<-180 || Number(listing.longitude)>180)) throw new Error('Invalid longitude');
+  const photos=Array.isArray(listing.photos)?listing.photos:[];
+  // New public listings require 2-5 successfully uploaded images. The
+  // validation applies to real supplier API requests, not pre-existing rows.
+  if(photos.length<2||photos.length>5)
+    throw Object.assign(new Error('Skelbimui reikia nuo 2 iki 5 nuotraukų.'),{code:'LISTING_PHOTOS_REQUIRED'});
+  for(const photo of photos){
+    if(typeof photo!=='string' || !/^\\/uploads\\/[a-zA-Z0-9_-]+\\.(?:png|jpe?g|webp)$/.test(photo))
+      throw Object.assign(new Error('Nuotrauka turi būti įkelta per saugų failų įkėlimą.'),{code:'LISTING_PHOTO_INVALID'});
+  }
+  if(listing.coverPhoto && listing.coverPhoto!==photos[0])
+    throw Object.assign(new Error('Pagrindinė nuotrauka turi sutapti su pirmąja.'),{code:'LISTING_PHOTO_INVALID'});
   return {
     ...listing,
     title,
     city,
     description:String(listing.description||'').slice(0,3000),
+    photos,
+    coverPhoto:photos[0],
     quantity,
     priceDay,
     priceWeek:Math.max(0,Number(listing.priceWeek||0)),
