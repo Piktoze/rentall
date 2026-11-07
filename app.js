@@ -6328,7 +6328,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           '\\n\\nSutartis sudaroma tarp nuomininko ir nuomotojo. RentInOrbit teikia tarpininkavimo paslaugą.\\n\\nAr sutinkate?'))return;
         await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true,accessToken})});
         showResult('Nuomos sutartis patvirtinta.');
-        const card=document.querySelector('.customer-booking-card[data-booking-id="'+bookingId.replace(/["\\]/g,'\\        showResult('Nuomos sutartis patvirtinta.');')+'"]');
+        const card=[...document.querySelectorAll('.customer-booking-card[data-booking-id]')]
+          .find(el=>el.dataset.bookingId===bookingId);
         if(card)await syncRenterTrustButton(card);
       }else{
         const result=await apiJson(transferEndpoint(bookingId)+'/transfer-code',{
