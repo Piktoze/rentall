@@ -5666,15 +5666,15 @@ async function loadUnifiedCustomerBookings(){
     }
   }));
     list.querySelectorAll('.v88-revoke-guest').forEach(btn=>btn.addEventListener('click',async()=>{
-    if(!confirm('Revoke the secure guest link for this booking? Anyone using the old link will lose access.')) return;
+    if(!confirm(uiText('Revoke the secure guest link for this booking? Anyone using the old link will lose access.'))) return;
     btn.disabled=true;
     try{
       await apiJson(`/api/customer/bookings/${encodeURIComponent(btn.dataset.id)}/revoke-guest-link`,{method:'POST'});
       delete bookingAccessMap()[btn.dataset.id];
       const map=bookingAccessMap(); delete map[btn.dataset.id]; saveBookingAccessMap(map);
-      showToast('Guest link revoked','success',1600);
+      showToast(uiText('Guest link revoked'),'success',1600);
       await loadUnifiedCustomerBookings();
-    }catch(err){showToast(err.message||'Unable to revoke guest link','error',2200)}
+    }catch(err){showToast(err.message||uiText('Unable to revoke guest link'),'error',2200)}
     finally{btn.disabled=false}
   }));
     list.querySelectorAll('.v46-review-booking').forEach(btn=>btn.addEventListener('click',()=>{
