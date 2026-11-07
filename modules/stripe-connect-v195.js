@@ -132,7 +132,8 @@ export async function createDirectChargePaymentIntent(stripe,{
   applicationFeeCents,
   currency='eur',
   metadata={},
-  idempotencyKey
+  idempotencyKey,
+  manualCapture=false
 }={}){
   const amount=Number(amountCents);
   const fee=Number(applicationFeeCents);
@@ -141,7 +142,9 @@ export async function createDirectChargePaymentIntent(stripe,{
   return stripe.paymentIntents.create({
     amount,
     currency:String(currency||'eur').toLowerCase(),
-    automatic_payment_methods:{enabled:true},
+    ...(manualCapture
+      ? {capture_method:'manual',payment_method_types:['card']}
+      : {automatic_payment_methods:{enabled:true}}),
     application_fee_amount:fee,
     metadata
   },connectedRequestOptions(accountId,{idempotencyKey}));
@@ -152,6 +155,14 @@ export async function retrieveDirectChargePaymentIntent(stripe,{accountId,paymen
     String(paymentIntentId),
     {},
     connectedRequestOptions(accountId)
+  );
+}
+
+export async function captureDirectChargePaymentIntent(stripe,{accountId,paymentIntentId,idempotencyKey}={}){
+  return stripe.paymentIntents.capture(
+    String(paymentIntentId),
+    {},
+    connectedRequestOptions(accountId,{idempotencyKey})
   );
 }
 
