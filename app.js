@@ -6340,7 +6340,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(!b||!actions)return;
       // Old status transitions must not be usable without a customer transfer PIN.
       actions.querySelectorAll('[data-status="active"],[data-status="returned"]').forEach(btn=>btn.remove());
-      actions.querySelectorAll('[data-v27-return-booking],.v27-return-booking').forEach(btn=>btn.remove());
+      actions.querySelectorAll('.return-booking-action,[data-v27-return-booking],.v27-return-booking').forEach(btn=>btn.remove());
       const pane=document.createElement('div');
       pane.className='supplier-order-card';
       pane.style.marginTop='14px';
