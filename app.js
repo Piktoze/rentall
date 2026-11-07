@@ -3306,6 +3306,7 @@ async function openListingDetail(listingId){
   const supplierName=listing.ownerName||listing.company||'RentInOrbit supplier';
   const supplierVerified=Boolean(supplierTrust?.verifiedSupplier);
   const responseLabel=listing.bookingMode==='instant'?uiText('Instant Book'):`${uiText('Usually responds within')} ${Number(listing.supplierResponseHours||4)} ${uiText('active hours')}`;
+  document.getElementById('listingDetailContent').dataset.sourceLang=String(listing.sourceLanguage||'');
   document.getElementById('listingDetailContent').innerHTML=`
     <div class="v92-listing-layout">
       <div class="v92-listing-main">
