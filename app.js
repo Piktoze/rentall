@@ -6293,3 +6293,114 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 /* STAGING_CANCEL_UI_REFRESH_V1 */
+
+
+/* STAGING_RENTAL_TRUST_V205: contract + controlled physical transfer */
+(function(){
+  const transferEndpoint=id=>'/api/rentals/bookings/'+encodeURIComponent(id);
+  const t=(text)=>window.RentInOrbitI18n?.getLanguage?.()==='lt'?text:text;
+  const safeId=id=>String(id||'').trim();
+  function showResult(message,error=false){
+    if(typeof showToast==='function')showToast(message,error?'error':'success',4000);
+    else window.alert(message);
+  }
+  // Customer actions are delegated: the customer list is frequently re-rendered.
+  document.addEventListener('click',async e=>{
+    const button=e.target.closest('[data-rio-trust-renter]');
+    if(!button)return;
+    const bookingId=safeId(button.dataset.bookingId),purpose=button.dataset.rioTrustRenter;
+    if(!bookingId)return;
+    const accessToken=typeof bookingAccessToken==='function'?bookingAccessToken(bookingId):'';
+    button.disabled=true;
+    try{
+      if(purpose==='accept'){
+        const data=await apiJson(transferEndpoint(bookingId)+'/trust'+(accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
+        const ag=data.agreement;
+        if(!ag)throw Error('Nuomos sutartis nerasta.');
+        if(!window.confirm('Patvirtinu nuomos sutarties sąlygas: '+String(ag.snapshot?.listingTitle||'daiktas')+
+          ', '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+', €'+Number(ag.snapshot?.total||0).toFixed(2)+'. Sutartis sudaroma su nuomotoju, RentInOrbit tarpininkauja.'))return;
+        await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true,accessToken})});
+        showResult('Nuomos sutartis patvirtinta.');
+      }else{
+        const result=await apiJson(transferEndpoint(bookingId)+'/transfer-code',{
+          method:'POST',body:JSON.stringify({purpose,accessToken})
+        });
+        const action=purpose==='pickup'?'IŠDAVIMO':'GRĄŽINIMO';
+        window.alert(action+' KODAS: '+result.code+'\\nGalioja 15 minučių. Parodykite tik susitikę su nuomotoju. Nekelkite kodo į žinutes.');
+      }
+    }catch(err){showResult(err.message||'Veiksmas nepavyko.',true)}
+    finally{button.disabled=false;}
+  });
+  if(typeof openLiveSupplierOrder==='function'){
+    const previous=openLiveSupplierOrder;
+    openLiveSupplierOrder=function(bookingId){
+      previous(bookingId);
+      const b=Array.isArray(liveSupplierBookings)?liveSupplierBookings.find(v=>String(v.bookingId)===String(bookingId)):null;
+      const actions=document.getElementById('supplierOrderActions');
+      if(!b||!actions)return;
+      // Old status transitions must not be usable without a customer transfer PIN.
+      actions.querySelectorAll('[data-status="active"],[data-status="returned"]').forEach(btn=>btn.remove());
+      actions.querySelectorAll('[data-v27-return-booking],.v27-return-booking').forEach(btn=>btn.remove());
+      const pane=document.createElement('div');
+      pane.className='supplier-order-card';
+      pane.style.marginTop='14px';
+      const state=String(b.status||'');
+      pane.innerHTML='<h3>Nuomos sutartis ir daikto perdavimas</h3>'+
+        '<p class="muted">Prieš perduodant daiktą patvirtinkite sutartį. Nuomininkas pateikia trumpalaikį kodą tik atvykęs.</p>'+
+        '<p class="muted">Tapatybės patikra: neatlikta. Kodo turėjimas savaime nepatvirtina asmens tapatybės.</p>'+
+        '<button class="secondary rio-supplier-agreement" type="button">Patvirtinti nuomos sutartį</button> '+
+        (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Patvirtinti išdavimą pagal kodą':'Patvirtinti grąžinimą pagal kodą')+'</button>':'');
+      actions.appendChild(pane);
+      pane.querySelector('.rio-supplier-agreement')?.addEventListener('click',async function(){
+        this.disabled=true;
+        try{
+          const data=await apiJson(transferEndpoint(bookingId)+'/trust');
+          const ag=data.agreement;
+          if(!ag)throw Error('Sutartis nerasta.');
+          if(!window.confirm('Patvirtinate nuomos sutartį dėl „'+String(ag.snapshot?.listingTitle||b.title||'daiktas')+'“?'))return;
+          await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true})});
+          showResult('Nuomos sutartis patvirtinta.');
+        }catch(err){showResult(err.message,true)}finally{this.disabled=false;}
+      });
+      pane.querySelector('.rio-supplier-transfer')?.addEventListener('click',async function(){
+        const code=window.prompt('Įveskite šešių skaitmenų kodą, kurį nuomininkas pateikia susitikimo metu:','');
+        if(code===null)return;
+        this.disabled=true;
+        try{
+          await apiJson(transferEndpoint(bookingId)+'/transfer-confirm',{
+            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code})
+          });
+          showResult(this.dataset.purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas.');
+          await refreshLiveSupplierBookings();
+          await renderBookings();
+          openLiveSupplierOrder(bookingId);
+        }catch(err){showResult(err.message,true)}finally{this.disabled=false;}
+      });
+    };
+  }
+  function addCustomerTrustControls(){
+    document.querySelectorAll('.customer-booking-card[data-booking-id]').forEach(card=>{
+      if(card.querySelector('.rio-renter-trust'))return;
+      const actions=card.querySelector('.customer-booking-actions');
+      if(!actions)return;
+      const id=card.dataset.bookingId;
+      const record=String(card.querySelector('.status')?.textContent||'').trim().toLowerCase();
+      const div=document.createElement('div');
+      div.className='rio-renter-trust';
+      div.style.cssText='display:flex;flex-wrap:wrap;gap:8px;width:100%;margin-top:12px';
+      div.innerHTML='<button class="secondary" type="button" data-rio-trust-renter="accept">Patvirtinti nuomos sutartį</button> '+
+        '<button class="secondary" type="button" data-rio-trust-renter="pickup">Gauti išdavimo kodą</button> '+
+        '<button class="secondary" type="button" data-rio-trust-renter="return">Gauti grąžinimo kodą</button>';
+      div.querySelectorAll('[data-rio-trust-renter]').forEach(btn=>btn.dataset.bookingId=id);
+      actions.appendChild(div);
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{
+    const host=document.getElementById('customerBookingsList');if(host)new MutationObserver(()=>addCustomerTrustControls()).observe(host,{childList:true});
+    addCustomerTrustControls();
+  },{once:true});
+  else{
+    const host=document.getElementById('customerBookingsList');if(host)new MutationObserver(()=>addCustomerTrustControls()).observe(host,{childList:true});
+    addCustomerTrustControls();
+  }
+})();
