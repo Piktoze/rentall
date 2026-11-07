@@ -5656,7 +5656,7 @@ async function loadUnifiedCustomerBookings(){
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
         <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View details'))}</button>
-        <details class="rio-extra-booking-actions"><summary data-i18n-text="More actions">More actions</summary><div class="rio-extra-actions-inner">
+        <details class="rio-extra-booking-actions"><summary>${escapeHtml(uiText('More actions'))}</summary><div class="rio-extra-actions-inner">
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
         <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View agreement'))}</button>
