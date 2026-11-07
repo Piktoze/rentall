@@ -188,3 +188,37 @@ body.rio-supplier #list-item{display:block!important}
   outline:3px solid var(--accent);
   outline-offset:3px;
 }
+
+/* Supplier availability: centered, readable 7-column calendar, not edge-to-edge tiles. */
+body.rio-supplier #supplierAvailabilitySection.supplier-v178-external-visible{
+  box-sizing:border-box;
+  width:min(1160px,calc(100% - 32px));
+  max-width:1160px;
+  margin:24px auto 64px;
+  padding:24px;
+  border:1px solid #dce5e3;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 6px 28px rgba(13,35,61,.07);
+}
+#supplierAvailabilitySection .supplier-calendar-controls{grid-template-columns:minmax(220px,2fr) repeat(2,minmax(160px,1fr));gap:14px}
+#supplierAvailabilitySection .supplier-calendar-controls label{min-width:0}
+#supplierAvailabilitySection .supplier-calendar-controls select,
+#supplierAvailabilitySection .supplier-calendar-controls input{box-sizing:border-box;width:100%;min-width:0}
+#supplierAvailabilitySection .supplier-calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+#supplierAvailabilitySection .supplier-calendar-weekday{text-align:center;font-size:12px;font-weight:750;color:#51627b;padding:8px 2px}
+#supplierAvailabilitySection .supplier-cal-day{box-sizing:border-box;min-width:0;min-height:92px;padding:10px;overflow-wrap:anywhere}
+#supplierAvailabilitySection .supplier-cal-day b{font-size:12px}
+#supplierAvailabilitySection .supplier-cal-day .supplier-calendar-status{display:block;font-size:12px;font-weight:650;margin:6px 0}
+#supplierAvailabilitySection .supplier-cal-day small{font-size:11px}
+#supplierAvailabilitySection .supplier-calendar-summary{font-size:13px;line-height:1.5}
+#supplierAvailabilitySection .supplier-calendar-loading{grid-column:1/-1;padding:20px;text-align:center}
+@media(max-width:800px){
+  body.rio-supplier #supplierAvailabilitySection.supplier-v178-external-visible{width:calc(100% - 20px);padding:14px;margin:12px auto 40px}
+  #supplierAvailabilitySection .supplier-calendar-controls{grid-template-columns:1fr}
+  #supplierAvailabilitySection .supplier-calendar-grid{gap:3px}
+  #supplierAvailabilitySection .supplier-cal-day{padding:5px;min-height:76px}
+  #supplierAvailabilitySection .supplier-cal-day b{font-size:10px}
+  #supplierAvailabilitySection .supplier-cal-day .supplier-calendar-status{font-size:10px}
+  #supplierAvailabilitySection .supplier-cal-day small{font-size:9px}
+}
