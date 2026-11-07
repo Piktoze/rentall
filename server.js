@@ -255,7 +255,9 @@ const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',
 const demoPaymentsEnabled=String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
 // Authorization/capture experiment is isolated to staging and a Stripe TEST secret.
-const rentalPreauthEnabled=process.env.RENTINORBIT_STAGING==='true' && !demoPaymentsEnabled && /^sk_test_/.test(stripeKey) && process.env.RENTINORBIT_PREAUTH_ENABLED!=='false';
+// Product rule: supplier confirms the request BEFORE any payment/authorization.
+// Keep the legacy preauth branch inert during migration; no environment flag can enable it.
+const rentalPreauthEnabled=false;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1599,10 +1601,10 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     }
 
     const listing=getRentalListing(booking.listingId);
-    // In staging TEST, request bookings authorize funds before supplier approval.
-    // Legacy/non-test flows retain pay-after-confirmation behavior.
-    const preauthorizeRequest=rentalPreauthEnabled && listing?.bookingMode==='request' && booking.status==='pending';
-    if(listing?.bookingMode==='request' && booking.status!=='confirmed' && !preauthorizeRequest){
+    // Payment, authorization and Stripe intent creation are forbidden until
+    // the supplier confirms a request booking, in ALL environments.
+    const preauthorizeRequest=false;
+    if(listing?.bookingMode==='request' && booking.status!=='confirmed'){
       return res.status(409).json({error:'Supplier confirmation is required before payment.',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
     }
     const amount=Math.round(Number(booking.orderValue||0)*100);
