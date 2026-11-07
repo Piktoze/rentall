@@ -2036,9 +2036,9 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       return res.status(403).json({error:'Forbidden'});
     }
     const requestedStatus=req.body?.status || 'confirmed';
-    if(process.env.RENTINORBIT_STAGING==='true' && ['active','returned'].includes(requestedStatus))
+    if(['active','returned'].includes(requestedStatus))
       return res.status(409).json({error:'Daikto išdavimui ir grąžinimui reikalingas vienkartinis nuomininko kodas.',code:'TRANSFER_CODE_REQUIRED'});
-    if(process.env.RENTINORBIT_STAGING==='true' && requestedStatus==='completed' &&
+    if(requestedStatus==='completed' &&
       getRentalBookingById(req.params.bookingId)?.status==='active')
       return res.status(409).json({error:'Prieš užbaigdami nuomą patvirtinkite daikto grąžinimą vienkartiniu kodu.',code:'RETURN_CODE_REQUIRED'});
 
@@ -2251,7 +2251,7 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
 
 app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admin'), simpleRateLimit({windowMs:60000,max:20,keyPrefix:'booking-return'}), (req,res)=>{
   try{
-    if(process.env.RENTINORBIT_STAGING==='true')return res.status(409).json({error:'Patvirtinkite grąžinimą nuomininko vienkartiniu kodu.',code:'TRANSFER_CODE_REQUIRED'});
+    return res.status(409).json({error:'Patvirtinkite grąžinimą nuomininko vienkartiniu kodu.',code:'TRANSFER_CODE_REQUIRED'});
     if(!canSupplierManageBooking(req.appUser,req.params.bookingId)){
       return res.status(403).json({error:'Forbidden'});
     }
