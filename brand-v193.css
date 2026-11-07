@@ -564,3 +564,59 @@ body.theme-aurora .search-mode-tab.active{background:#fff!important;color:#0c62c
 body.theme-aurora .hero #list-item.hero-supplier-cta{background:#fff!important;border-color:#dbe5f4!important}
 body.theme-aurora .hero #list-item.hero-supplier-cta .subcopy{color:#667793!important}
 /* The alert and error colors intentionally retain their semantic significance. */
+
+/* V222: remove remaining legacy sage/forest tones from editorial and trust surfaces. */
+body.theme-aurora .sustainability-section.editorial-accent-section,
+body.theme-aurora section#sustainability,
+body.theme-aurora .sustainability-shell{
+  background:linear-gradient(135deg,#edf4ff 0%,#f8faff 100%)!important;
+  border-color:#dbe6f6!important;
+}
+body.theme-aurora .sustainability-card,
+body.theme-aurora .sustainability-grid>article{
+  background:#fff!important;
+  border:1px solid #dbe6f7!important;
+  box-shadow:0 12px 34px rgba(16,62,145,.065)!important;
+  color:#243c62!important;
+}
+body.theme-aurora .sustainability-icon,
+body.theme-aurora .sustainability-card .sustainability-icon{
+  background:#e2efff!important;
+  color:#086fdf!important;
+  border:1px solid #d3e5fc!important;
+}
+body.theme-aurora .sustainability-card h3,
+body.theme-aurora .sustainability-copy h2,
+body.theme-aurora .sustainability-copy h3{
+  color:#0b204d!important;
+}
+body.theme-aurora .sustainability-card p,
+body.theme-aurora .sustainability-copy>p{
+  color:#5f708e!important;
+  -webkit-text-fill-color:#5f708e!important;
+}
+body.theme-aurora .brand-whisper,
+body.theme-aurora .brand-whisper-orbit,
+body.theme-aurora .brand-whisper-list{
+  color:#607ba8!important;
+}
+body.theme-aurora .rentinorbit-promise,
+body.theme-aurora .promise-points span{
+  background:#f5f8ff!important;
+  border-color:#d9e5f6!important;
+  color:#1d335b!important;
+}
+body.theme-aurora .rentinorbit-promise b,
+body.theme-aurora .rentinorbit-promise strong,
+body.theme-aurora .promise-points b{color:#0d285b!important}
+body.theme-aurora .sustainability-section .eyebrow{color:#075fbe!important}
+body.theme-aurora .supplier-drawer-head h2,
+body.theme-aurora .supplier-simple-copy h2,
+body.theme-aurora .supplier-feature-title h3,
+body.theme-aurora .plan .commission,
+body.theme-aurora .plan .plan-price{color:#103c80!important}
+body.theme-aurora .supplier-drawer-nav button:hover,
+body.theme-aurora .supplier-view-switch button:hover,
+body.theme-aurora .help-jump a:hover{background:#ecf4ff!important;color:#0a60c6!important}
+/* Informational checks use blue; critical warnings and validation errors retain semantic colors. */
+body.theme-aurora .rentinorbit-promise .promise-points span::before{color:#0878ef!important}
