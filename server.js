@@ -2344,11 +2344,13 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
     if(purpose==='return'&&booking){
       const amount=Math.max(0,Number(booking.securityDepositAmount||0));
       if(amount>0){
-        const good=booking.returnCondition==='good';
-        resolveRentalSecurityDeposit(id,{
-          status:good?'release_pending':'claim_pending',
-          resolution:good?'Grąžinimas patvirtintas kodu; užstato atlaisvinimas laukia mokėjimų patikros.':'Daikto būklė pažymėta kaip netinkama; užstato klausimą turi peržiūrėti administratorius.'
-        });
+        try{
+          const good=booking.returnCondition==='good';
+          resolveRentalSecurityDeposit(id,{
+            status:good?'release_pending':'claim_pending',
+            resolution:good?'Grąžinimas patvirtintas kodu; užstato atlaisvinimas laukia mokėjimų patikros.':'Daikto būklė pažymėta kaip netinkama; užstato klausimą turi peržiūrėti administratorius.'
+          });
+        }catch(err){console.error('Deposit review update after verified return failed',id,err.message);}
       }
     }
     // Handover/return events are booking-bound and recorded even if notification delivery fails.
