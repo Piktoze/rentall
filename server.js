@@ -2321,15 +2321,24 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
 app.post('/api/rentals/bookings/:bookingId/transfer-code',
   simpleRateLimit({windowMs:60000,max:8,keyPrefix:'transfer-issue'}),(req,res)=>{
   const id=req.params.bookingId,booking=getRentalBookingById(id),user=sessionUser(req);
-  const customerAuthorized=!!booking&&(
+  if(!booking)return res.status(404).json({error:'Rezervacija nerasta.'});
+  const isSupplier=!!user&&user.role==='supplier'&&canSupplierManageBooking(user,id);
+  const isCustomer=!!(
     (user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
-    verifyBookingPaymentToken(id,req.body?.accessToken||''));
-  if(!customerAuthorized)return res.status(403).json({error:'Kodą gali gauti tik nuomininkas.'});
+    verifyBookingPaymentToken(id,req.body?.accessToken||'')
+  );
+  // Only the authenticated actual supplier or the customer/holder of the
+  // booking-specific guest token can request their OWN code.
+  const role=isSupplier?'supplier':isCustomer?'customer':null;
+  if(!role)return res.status(403).json({error:'Negalite gauti šios rezervacijos kodo.'});
   try{
-    const value=issueRentalTransferCode(id,req.body?.purpose);
+    const value=issueRentalTransferCode(id,req.body?.purpose,role);
     res.set('Cache-Control','no-store, private');
     res.json(value);
-  }catch(err){res.status(err.code==='TRANSFER_NOT_READY'||err.code==='TRANSFER_ALREADY_USED'?409:400).json({error:err.message,code:err.code||null});}
+  }catch(err){
+    const conflict=['TRANSFER_NOT_READY','TRANSFER_ALREADY_USED','OWN_AGREEMENT_REQUIRED'].includes(err.code);
+    res.status(conflict?409:400).json({error:err.message,code:err.code||null});
+  }
 });
 app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
   requireRole('supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'transfer-confirm'}),(req,res)=>{
@@ -2337,9 +2346,10 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
   if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
   try{
     const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code,{
+      supplierCode:req.body?.supplierCode,
       returnCondition:req.body?.returnCondition,returnNotes:req.body?.returnNotes
     });
-    if(!result.ok)return res.status(409).json({error:'Neteisingas kodas.',code:result.reason});
+    if(!result.ok)return res.status(409).json({error:'Neteisingas vienos iš šalių kodas.',code:result.reason});
     const booking=result.booking;
     const listing=booking?getRentalListing(booking.listingId):null;
     const purpose=req.body?.purpose;
