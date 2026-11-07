@@ -6328,6 +6328,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           '\\n\\nSutartis sudaroma tarp nuomininko ir nuomotojo. RentInOrbit teikia tarpininkavimo paslaugą.\\n\\nAr sutinkate?'))return;
         await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true,accessToken})});
         showResult('Nuomos sutartis patvirtinta.');
+        const card=document.querySelector('.customer-booking-card[data-booking-id="'+bookingId.replace(/["\\]/g,'\\        showResult('Nuomos sutartis patvirtinta.');')+'"]');
+        if(card)await syncRenterTrustButton(card);
       }else{
         const result=await apiJson(transferEndpoint(bookingId)+'/transfer-code',{
           method:'POST',body:JSON.stringify({purpose,accessToken})
@@ -6411,32 +6413,53 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       });
     };
   }
-  function addCustomerTrustControls(){
-    document.querySelectorAll('.customer-booking-card[data-booking-id]').forEach(card=>{
-      if(card.querySelector('.rio-renter-trust'))return;
-      const actions=card.querySelector('.customer-booking-actions');
-      if(!actions)return;
-      const id=card.dataset.bookingId;
-      const status=String(card.dataset.bookingStatus||'').toLowerCase();
-      const payment=String(card.dataset.paymentStatus||'').toLowerCase();
-      const buttons=[];
-      // Show only the action relevant to the current stage. Server always
-      // verifies each party's consent and the one-time transfer code.
-      if(['pending','confirmed'].includes(status)){
-        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="accept">Patvirtinti nuomos sutartį</button>');
-      }
-      if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
-        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="pickup">Gauti išdavimo kodą</button>');
-      }
-      if(status==='active'){
-        buttons.push('<button class="secondary" type="button" data-rio-trust-renter="return">Gauti grąžinimo kodą</button>');
-      }
-      if(!buttons.length)return;
+  // The server agreement is authoritative: payment alone cannot unlock pickup
+  // or cause two mutually exclusive next-action buttons to appear together.
+  async function syncRenterTrustButton(card){
+    const actions=card.querySelector('.customer-booking-actions');
+    if(!actions)return;
+    const id=card.dataset.bookingId;
+    const status=String(card.dataset.bookingStatus||'').toLowerCase();
+    const payment=String(card.dataset.paymentStatus||'').toLowerCase();
+    const existing=card.querySelector('.rio-renter-trust');
+    if(existing)existing.remove();
+    const create=(purpose,label)=>{
       const div=document.createElement('div');
       div.className='rio-renter-trust';
-      div.innerHTML=buttons.join('');
-      div.querySelectorAll('[data-rio-trust-renter]').forEach(btn=>btn.dataset.bookingId=id);
+      const button=document.createElement('button');
+      button.className='secondary';
+      button.type='button';
+      button.dataset.rioTrustRenter=purpose;
+      button.dataset.bookingId=id;
+      button.textContent=label;
+      div.appendChild(button);
       actions.appendChild(div);
+    };
+    if(status==='active'){
+      create('return','Gauti grąžinimo kodą');
+      return;
+    }
+    if(!['pending','confirmed'].includes(status))return;
+    const accessToken=typeof bookingAccessToken==='function'?bookingAccessToken(id):'';
+    try{
+      const data=await apiJson('/api/rentals/bookings/'+encodeURIComponent(id)+'/trust'+
+        (accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
+      if(!card.isConnected)return;
+      if(!data.agreement?.customerAcceptedAt){
+        create('accept','Patvirtinti nuomos sutartį');
+      }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
+        create('pickup','Gauti išdavimo kodą');
+      }
+    }catch{
+      // Fail closed: do not expose a pickup CTA without verified consent.
+      // "Peržiūrėti sutartį" remains available via Daugiau veiksmų.
+    }
+  }
+  function addCustomerTrustControls(){
+    document.querySelectorAll('.customer-booking-card[data-booking-id]').forEach(card=>{
+      if(card.dataset.rioTrustLoaded==='true')return;
+      card.dataset.rioTrustLoaded='true';
+      syncRenterTrustButton(card);
     });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{
