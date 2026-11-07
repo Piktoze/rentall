@@ -5581,8 +5581,9 @@ async function loadUnifiedCustomerBookings(){
 
   list.innerHTML=rows.map(({booking:b,timeline,guestAccess})=>{
     const canCancel=renterMayCancelBookingV197(b);
-    const canReview=['returned','completed'].includes(b.status);
-    const canDispute=['active','returned','completed','cancelled','declined'].includes(b.status);
+    const bookingStatus=String(b.status||'pending').toLowerCase();
+    const canReview=['returned','completed'].includes(bookingStatus);
+    const canDispute=['active','returned','completed','cancelled','canceled','declined'].includes(bookingStatus);
     return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">
       <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(uiText(b.status||'pending'))}</span></div>
       <div class="customer-booking-grid">
