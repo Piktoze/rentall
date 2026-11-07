@@ -4031,6 +4031,7 @@ let stripeClient=null;
 let stripeElements=null;
 let activePaymentToken=null;
 let activePaymentBookingId=null;
+let activePaymentPreauthorization=false;
 
 function demoPaymentCopy(){
   const lang=(document.documentElement.lang||'lt').slice(0,2);
@@ -4123,6 +4124,7 @@ async function prepareStripePayment(bookingId,paymentToken){
       body:JSON.stringify({bookingId,paymentToken})
     });
 
+    activePaymentPreauthorization=!!intent.preauthorization;
     if(intent.demo || config.demoPaymentsEnabled){
       const copy=demoPaymentCopy();
       const container=document.getElementById('stripePaymentElement');
@@ -4149,6 +4151,13 @@ async function prepareStripePayment(bookingId,paymentToken){
       return;
     }
 
+    if(intent.preauthorization && intent.status==='requires_capture'){
+      panel.hidden=false;
+      message.textContent='100 € jau rezervuota kortelėje. Mokestis bus automatiškai nuskaičiuotas tik nuomotojui patvirtinus rezervaciją.';
+      state.textContent='Laukiama nuomotojo atsakymo. Papildomai mokėti nereikia.';
+      document.getElementById('confirmStripePaymentBtn').hidden=true;
+      return;
+    }
     await loadStripeJs();
     if(!intent.stripeAccountId) throw new Error('Supplier Stripe account context is missing');
     stripeClient=Stripe(config.stripePublishableKey,{stripeAccount:intent.stripeAccountId});
@@ -4164,9 +4173,13 @@ async function prepareStripePayment(bookingId,paymentToken){
       <div><span>Platform fee</span><b>${money(intent.platformFee)}</b></div>
       <div><span>Supplier share</span><b>${money(intent.supplierAmount)}</b></div>`;
     panel.hidden=false;
-    message.textContent='Complete payment securely with Stripe.';
+    message.textContent=intent.preauthorization
+      ? 'Patvirtinkite kortelę dabar. Nuomos mokestis bus tik rezervuotas; nuskaičiavimas įvyks automatiškai nuomotojui patvirtinus.'
+      : 'Saugiai apmokėkite nuomą per Stripe.';
     state.textContent='';
-    document.getElementById('confirmStripePaymentBtn').hidden=false;
+    const paymentButton=document.getElementById('confirmStripePaymentBtn');
+    paymentButton.hidden=false;
+    paymentButton.textContent=intent.preauthorization?'Rezervuoti nuomos sumą kortelėje':'Apmokėti nuomą';
   }catch(err){
     panel.hidden=false;
     message.textContent='Booking created, but payment could not be initialized.';
@@ -4180,15 +4193,29 @@ document.getElementById('confirmStripePaymentBtn')?.addEventListener('click',asy
   const btn=document.getElementById('confirmStripePaymentBtn');
   const state=document.getElementById('stripePaymentState');
   btn.disabled=true;
-  state.textContent='Processing payment…';
+  state.textContent=activePaymentPreauthorization?'Rezervuojama suma kortelėje…':'Vykdomas mokėjimas…';
 
-  const {error}=await stripeClient.confirmPayment({
-    elements:stripeElements,
-    confirmParams:{return_url:window.location.href}
-  });
-
-  if(error){
-    state.textContent=error.message||'Payment failed.';
+  try{
+    const {error,paymentIntent}=await stripeClient.confirmPayment({
+      elements:stripeElements,
+      confirmParams:{return_url:window.location.href},
+      redirect:'if_required'
+    });
+    if(error){
+      state.textContent=error.message||'Mokėjimo patvirtinti nepavyko.';
+      btn.disabled=false;
+    }else if(activePaymentPreauthorization && paymentIntent?.status==='requires_capture'){
+      state.textContent='Suma rezervuota. Laukiama nuomotojo patvirtinimo. Daugiau mokėti nereikia.';
+      btn.hidden=true;
+    }else if(paymentIntent?.status==='succeeded'){
+      state.textContent='Nuomos mokestis sėkmingai apmokėtas.';
+      btn.hidden=true;
+    }else{
+      state.textContent='Mokėjimo patvirtinimas apdorojamas. Patikrinkite rezervacijos būseną.';
+      btn.disabled=false;
+    }
+  }catch(err){
+    state.textContent=err?.message||'Mokėjimo patvirtinti nepavyko.';
     btn.disabled=false;
   }
 });
@@ -4218,11 +4245,19 @@ async function waitForSupplierApprovalThenPay(bookingId,paymentToken){
   rentinorbitPaymentWatchers.set(bookingId,true);
   tick();
 }
-document.addEventListener('rentinorbit:booking-created',e=>{
+document.addEventListener('rentinorbit:booking-created',async e=>{
   const {bookingId,paymentToken,supplierResponseDueAt}=e.detail||{};
   if(!bookingId||!paymentToken)return;
-  if(supplierResponseDueAt) waitForSupplierApprovalThenPay(bookingId,paymentToken);
-  else prepareStripePayment(bookingId,paymentToken);
+  try{
+    const config=await apiJson('/api/config',{cache:'no-store'});
+    if(supplierResponseDueAt && !config.rentalPreauthEnabled){
+      waitForSupplierApprovalThenPay(bookingId,paymentToken);
+      return;
+    }
+    await prepareStripePayment(bookingId,paymentToken);
+  }catch(err){
+    console.warn('Unable to initialize booking authorization',err?.message||err);
+  }
 });
 
 // Patch the booking confirmation flow by observing the booking code/data from API.
