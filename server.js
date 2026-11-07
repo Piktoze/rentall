@@ -75,6 +75,10 @@ import {
   releaseBookingIdempotency,
   createRentalAgreement,
   getRentalAgreement,
+  rentalTransferStatus,
+  issueRentalTransferCode,
+  verifyAndConsumeRentalTransferCode,
+  rentalIdentityVerificationStatus,
   acceptRentalAgreement,
   createOrGetRentalConversation,
   getRentalConversation,
@@ -2025,6 +2029,8 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       return res.status(403).json({error:'Forbidden'});
     }
     const requestedStatus=req.body?.status || 'confirmed';
+    if(process.env.RENTINORBIT_STAGING==='true' && ['active','returned'].includes(requestedStatus))
+      return res.status(409).json({error:'Daikto išdavimui ir grąžinimui reikalingas vienkartinis nuomininko kodas.',code:'TRANSFER_CODE_REQUIRED'});
 
     // Refresh expired requests before an approval can capture any funds.
     if(requestedStatus==='confirmed') await processExpiredBookings();
@@ -2103,7 +2109,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       markSupplierResponded(req.params.bookingId);
       const responseListing=getRentalListing(booking.listingId);
       if(responseListing?.ownerEmail) resetSupplierMissedResponses(responseListing.ownerEmail);
-      try{acceptRentalAgreement(req.params.bookingId,'supplier')}catch{}
+      // Supplier must explicitly accept the rental agreement in the app.
       if(responseListing?.bookingMode==='request' && String(booking.paymentStatus||'unpaid')!=='paid'){
         const minutes=Math.max(10,Math.min(240,Number(process.env.POST_CONFIRM_PAYMENT_MINUTES||60)));
         const nowIso=new Date().toISOString();
@@ -2235,6 +2241,7 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
 
 app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admin'), simpleRateLimit({windowMs:60000,max:20,keyPrefix:'booking-return'}), (req,res)=>{
   try{
+    if(process.env.RENTINORBIT_STAGING==='true')return res.status(409).json({error:'Patvirtinkite grąžinimą nuomininko vienkartiniu kodu.',code:'TRANSFER_CODE_REQUIRED'});
     if(!canSupplierManageBooking(req.appUser,req.params.bookingId)){
       return res.status(403).json({error:'Forbidden'});
     }
@@ -2278,6 +2285,53 @@ app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admi
   }
 });
 
+
+// Staging-only, booking-bound acceptance and handover.
+// Identity check stays not_verified until a real ID-verification provider is integrated.
+app.get('/api/rentals/bookings/:bookingId/trust',simpleRateLimit({windowMs:60000,max:100,keyPrefix:'rental-trust'}),(req,res)=>{
+  const id=req.params.bookingId;
+  if(!bookingAccessAllowed(req,id))return res.status(403).json({error:'Prieiga prie rezervacijos draudžiama.'});
+  res.set('Cache-Control','no-store, private');
+  res.json({agreement:getRentalAgreement(id),transfer:rentalTransferStatus(id),identityVerification:rentalIdentityVerificationStatus(id)});
+});
+app.post('/api/rentals/bookings/:bookingId/agreement/accept',
+  simpleRateLimit({windowMs:60000,max:12,keyPrefix:'agreement-accept'}),(req,res)=>{
+  const id=req.params.bookingId,user=sessionUser(req),booking=getRentalBookingById(id);
+  if(!booking||!bookingAccessAllowed(req,id))return res.status(403).json({error:'Rezervacija nepasiekiama.'});
+  const supplier=canSupplierManageBooking(user,id);
+  const customer=!supplier && !!((user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
+    verifyBookingPaymentToken(id,req.body?.accessToken||''));
+  if(!supplier&&!customer)return res.status(403).json({error:'Negalite patvirtinti šios sutarties.'});
+  if(req.body?.accepted!==true)return res.status(400).json({error:'Būtinas aiškus sutarties patvirtinimas.'});
+  const agreement=getRentalAgreement(id);
+  if(!agreement)return res.status(404).json({error:'Sutartis nerasta.'});
+  res.set('Cache-Control','no-store, private');
+  res.json({agreement:acceptRentalAgreement(id,supplier?'supplier':'customer')});
+});
+app.post('/api/rentals/bookings/:bookingId/transfer-code',
+  simpleRateLimit({windowMs:60000,max:8,keyPrefix:'transfer-issue'}),(req,res)=>{
+  const id=req.params.bookingId,booking=getRentalBookingById(id),user=sessionUser(req);
+  const customerAuthorized=!!booking&&(
+    (user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
+    verifyBookingPaymentToken(id,req.body?.accessToken||''));
+  if(!customerAuthorized)return res.status(403).json({error:'Kodą gali gauti tik nuomininkas.'});
+  try{
+    const value=issueRentalTransferCode(id,req.body?.purpose);
+    res.set('Cache-Control','no-store, private');
+    res.json(value);
+  }catch(err){res.status(err.code==='TRANSFER_NOT_READY'||err.code==='TRANSFER_ALREADY_USED'?409:400).json({error:err.message,code:err.code||null});}
+});
+app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
+  requireRole('supplier','admin'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'transfer-confirm'}),(req,res)=>{
+  const id=req.params.bookingId;
+  if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
+  try{
+    const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code);
+    if(!result.ok)return res.status(409).json({error:'Neteisingas kodas.',code:result.reason});
+    res.set('Cache-Control','no-store, private');
+    res.json(result);
+  }catch(err){res.status(err.code==='TRANSFER_CODE_EXPIRED'||err.code==='TRANSFER_NOT_READY'||err.code==='AGREEMENT_REQUIRED'?409:400).json({error:err.message,code:err.code||null});}
+});
 
 app.get('/api/rentals/bookings/:bookingId/agreement',(req,res)=>{
   try{
