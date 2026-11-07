@@ -2401,7 +2401,7 @@ app.post('/api/conversations/:conversationId/messages',requireRole('customer','s
     if(!conversationParticipant(req.appUser,conversation))return res.status(403).json({error:'Forbidden'});
     const body=String(req.body?.body||'').trim();
     const booking=conversation.bookingId?getRentalBookingById(conversation.bookingId):null;
-    const contactAllowed=booking&&['confirmed','active','returned','completed'].includes(booking.status);
+    const contactAllowed=booking&&booking.paymentStatus==='paid'&&['confirmed','active','returned','completed'].includes(booking.status);
     if(!contactAllowed&&containsOffPlatformContact(body))return res.status(400).json({error:'Contact details can be shared after the booking is confirmed',code:'CONTACT_DETAILS_BLOCKED'});
     const message=addRentalMessage({conversationId:conversation.conversationId,senderEmail:req.appUser.email,senderRole:req.appUser.role,body});
     const recipient=String(req.appUser.email).toLowerCase()===String(conversation.customerEmail).toLowerCase()?conversation.supplierEmail:conversation.customerEmail;
