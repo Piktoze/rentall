@@ -369,3 +369,28 @@ body.theme-aurora .hero .hero-intro .hero-copy{
   body.theme-aurora .hero .hero-brand-mark img{width:58px;height:58px}
   body.theme-aurora .hero .hero-intro h1{font-size:clamp(33px,8vw,45px)!important}
 }
+
+/* V220: exactly the header's horizontal logo, at 3x its 248px desktop width. */
+body.theme-aurora .hero .hero-brand-mark.hero-brand-logo{
+  width:min(744px,100%)!important;
+  max-width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0 auto 12px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+body.theme-aurora .hero .hero-brand-mark.hero-brand-logo::before{display:none!important}
+body.theme-aurora .hero .hero-brand-mark.hero-brand-logo img{
+  display:block!important;
+  width:min(744px,100%)!important;
+  height:auto!important;
+  max-width:100%!important;
+  object-fit:contain!important;
+  filter:none!important;
+}
+@media(max-width:620px){
+  body.theme-aurora .hero .hero-brand-mark.hero-brand-logo{width:100%!important;margin-bottom:10px!important}
+  body.theme-aurora .hero .hero-brand-mark.hero-brand-logo img{width:min(100%,480px)!important;height:auto!important}
+}
