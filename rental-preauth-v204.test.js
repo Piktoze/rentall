@@ -37,11 +37,13 @@ await cancelDirectChargePaymentIntent(stripe,{
 assert.equal(calls[2].op,'cancel');
 const server=fs.readFileSync('./server.js','utf8');
 const frontend=fs.readFileSync('./app.js','utf8');
-assert.match(server,/rentalPreauthEnabled=process\.env\.RENTINORBIT_STAGING==='true' && !demoPaymentsEnabled && \/\^sk_test_\//,'TEST and staging isolation');
+assert.match(server,/const rentalPreauthEnabled=false;/,'preauthorization must be disabled in all environments');
+assert.match(server,/const preauthorizeRequest=false;/,'pending booking cannot request authorization');
+assert.match(server,/listing\?\.bookingMode==='request' && booking\.status!=='confirmed'/,'supplier approval required before checkout');
 assert.match(server,/validateRentalPaymentIntentBinding\(pi,before,connection\.stripeAccountId\)/,'bound authorization');
 assert.match(server,/pi\.status==='requires_capture'/,'capture only an authorized payment');
 assert.match(server,/CUSTOMER_AUTHORIZATION_REQUIRED/,'block approval before authorization');
 assert.match(server,/idempotencyKey:`booking:\$\{before\.bookingId\}:approval-capture`/,'idempotent capture');
 assert.match(frontend,/config\.rentalPreauthEnabled/,'front-end feature flags');
 assert.match(frontend,/activePaymentPreauthorization/,'authorization checkout copy');
-console.log('PASS rental preauthorization TEST mode, supplier binding and idempotency');
+console.log('PASS preauthorization disabled; payment requires supplier approval; legacy helpers isolated');
