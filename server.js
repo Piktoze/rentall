@@ -2338,8 +2338,33 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
       returnCondition:req.body?.returnCondition,returnNotes:req.body?.returnNotes
     });
     if(!result.ok)return res.status(409).json({error:'Neteisingas kodas.',code:result.reason});
+    const booking=result.booking;
+    const listing=booking?getRentalListing(booking.listingId):null;
+    const purpose=req.body?.purpose;
+    if(purpose==='return'&&booking){
+      const amount=Math.max(0,Number(booking.securityDepositAmount||0));
+      if(amount>0){
+        const good=booking.returnCondition==='good';
+        resolveRentalSecurityDeposit(id,{
+          status:good?'release_pending':'claim_pending',
+          resolution:good?'Grąžinimas patvirtintas kodu; užstato atlaisvinimas laukia mokėjimų patikros.':'Daikto būklė pažymėta kaip netinkama; užstato klausimą turi peržiūrėti administratorius.'
+        });
+      }
+    }
+    // Handover/return events are booking-bound and recorded even if notification delivery fails.
+    try{
+      const label=purpose==='pickup'?'Daiktas išduotas':'Daiktas grąžintas';
+      if(booking?.customerEmail)createRentalNotification({
+        uniqueKey:`transfer:${id}:${purpose}:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId:id,
+        type:`booking.${purpose}`,title:label,message:'Perdavimas patvirtintas vienkartiniu kodu.'
+      });
+      if(listing?.ownerEmail)createRentalNotification({
+        uniqueKey:`transfer:${id}:${purpose}:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId:id,
+        type:`booking.${purpose}`,title:label,message:'Perdavimas patvirtintas vienkartiniu kodu.'
+      });
+    }catch(err){console.warn('Could not notify verified transfer',id,err.message);}
     res.set('Cache-Control','no-store, private');
-    res.json(result);
+    res.json({...result,booking:getRentalBookingById(id)});
   }catch(err){res.status(err.code==='TRANSFER_CODE_EXPIRED'||err.code==='TRANSFER_NOT_READY'||err.code==='AGREEMENT_REQUIRED'?409:400).json({error:err.message,code:err.code||null});}
 });
 
