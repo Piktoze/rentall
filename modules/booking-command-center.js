@@ -32,6 +32,9 @@
   }else if(status==='returned'){
     text('v140NextAction','Item returned — waiting for completion.');
     text('v140NextHint','Check this booking for the latest status.');
+  }else if(status==='active'){
+    text('v140NextAction','Rental in progress — keep the item safe until return.');
+    text('v140NextHint','Check this booking for the latest status.');
   }else if(payment==='processing'){
     text('v140NextAction','Wait for payment confirmation');
     text('v140NextHint','Do not pay again while the payment is processing.');
@@ -39,7 +42,7 @@
     text('v140NextAction','Wait for supplier confirmation');
     text('v140NextHint','Payment becomes available only after supplier approval.');
   }else if(payment==='refunded'||payment==='partially_refunded'){
-    text('v140NextAction','Check this booking for the latest status.');
+    text('v140NextAction',payment==='refunded'?'Payment refunded':'Partially refunded');
     text('v140NextHint','Check this booking for the latest status.');
   }else if(payment!=='paid'){
     text('v140NextAction','Complete payment');
