@@ -14,7 +14,11 @@ assert.ok(html.includes('rio-next-step-only')&&!html.includes('Everything you ne
 assert.ok(html.includes('id="v140NextAction"')&&html.includes('id="v140NextHint"'),'Next-step text remains functional');
 assert.ok(!html.includes('class="v140-command-grid"'),'Remove repeated status tiles');
 assert.ok(app.includes('rio-extra-booking-actions')&&app.includes('rio-extra-actions-inner'),'Secondary customer buttons hidden behind disclosure');
-assert.ok(app.includes("status==='confirmed' && ['paid','succeeded'].includes(payment)"),'Pickup button must be stage-bound');
+assert.ok(app.includes("data.agreement?.customerAcceptedAt"),'Agreement status must be verified before pickup');
+assert.ok(app.includes("else if(status==='confirmed' && ['paid','succeeded'].includes(payment))"),'Pickup button requires confirmed and paid booking');
+assert.ok(app.includes("if(!data.agreement?.customerAcceptedAt)"),'Unsigned renter must be asked to sign first');
+assert.ok(app.includes("syncRenterTrustButton(card)"),'Refresh visible action immediately after consent');
+assert.ok(app.includes("renterTrustLabels"),'Renter controls require multilingual labels');
 assert.ok(app.includes("if(status==='active')"),'Return button only during active rental');
 assert.ok(pro.includes('v144CalendarListingFilter')&&pro.includes("B().filter(x=>String(x.listingId||x.itemId||'')===selectedCalendarListing)"),'Calendar must isolate bookings per selected item');
 assert.ok(html.includes('modules/ux-focus-v212.js?v=212'),'New UI controller loaded');
