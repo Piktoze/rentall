@@ -6194,7 +6194,7 @@ async function injectSupplierFreshnessControl(){
   const section=document.getElementById('supplierDashboard')||document.getElementById('list-item');
   if(!section || document.getElementById('confirmSupplierListingsBtn')) return;
   const box=document.createElement('div'); box.className='v182-freshness-control';
-  box.innerHTML=`<div><strong>${escapeHtml(uiText('Keep your listings live'))}</strong><span>${escapeHtml(uiText('Confirm regularly that prices, quantities and availability are still correct.'))}</span></div><button class="primary" id="confirmSupplierListingsBtn" type="button">${escapeHtml(uiText('Confirm all listings are current'))}</button>`;
+  box.innerHTML=`<div><strong data-i18n-text="Keep your listings live">${escapeHtml(uiText('Keep your listings live'))}</strong><span data-i18n-text="Confirm regularly that prices, quantities and availability are still correct.">${escapeHtml(uiText('Confirm regularly that prices, quantities and availability are still correct.'))}</span></div><button class="primary" id="confirmSupplierListingsBtn" type="button" data-i18n-text="Confirm all listings are current">${escapeHtml(uiText('Confirm all listings are current'))}</button>`;
   section.prepend(box);
   box.querySelector('button').addEventListener('click',async()=>{try{const result=await apiJson('/api/supplier/listings/confirm-current',{method:'POST',body:'{}'});showToast(`${result.confirmed} listings confirmed and eligible to go live`,'success');await hydrateListingsFromServer();}catch(err){showToast(err.message,'error');}});
 }
