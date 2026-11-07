@@ -10,7 +10,7 @@ import {spawn} from 'node:child_process';
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
 const dbPath=path.join(folder,'integration.sqlite');
 const env={...process.env,DB_PATH:dbPath,NODE_ENV:'test',RENTINORBIT_STAGING:'true',
-  RENTINORBIT_DEMO_PAYMENTS:'false',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
+  RENTINORBIT_DEMO_PAYMENTS:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
   RENTALL_SEED_DEMO_USERS:'false'};
 for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
   'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
@@ -31,6 +31,13 @@ createRentalBookingAtomic({bookingId:id,listingId:'api-e2e-listing',startDate:'2
 setBookingPaymentDetails({bookingId:id,paymentIntentId:'pi_test_mock_not_stripe',paymentStatus:'paid',
   paymentProvider:'mock',platformFeeAmount:15,supplierAmount:85});
 createRentalAgreement({bookingId:id,termsVersion:'e2e-v1',snapshot:{listingTitle:'Temporary API test item',total:100}});
+const payId='api-e2e-payment';
+createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
+  startDate:'2099-06-05',endDate:'2099-06-06',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'API Renter',orderValue:100});
+setBookingPaymentDetails({bookingId:payId,paymentIntentId:'demo_pi_prepared_e2e',
+  paymentStatus:'requires_payment_method',paymentProvider:'demo',platformFeeAmount:15,supplierAmount:85});
+
 db.close();
 Object.keys(process.env).forEach(k=>delete process.env[k]);
 Object.assign(process.env,previous);
@@ -70,6 +77,25 @@ try{
  assert.ok(ready,'Temporary server startup failed: '+logs.slice(-2500));
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
+ // Demo is strictly local: verify authorization and terminal state do not regress.
+ const payRoute='/api/payments/demo/confirm';
+ status(await api(payRoute,{method:'POST',cookie:outsiderCookie,
+   data:{bookingId:payId,outcome:'succeeded'}}),403,'Outsider cannot pay somebody else booking');
+ status(await api(payRoute,{method:'POST',cookie:renterCookie,
+   data:{bookingId:payId,outcome:'not_a_real_outcome'}}),400,'Unexpected payment result denied');
+ const paid=await api(payRoute,{method:'POST',cookie:renterCookie,
+   data:{bookingId:payId,outcome:'succeeded'}});
+ status(paid,200,'Demo payment first success');
+ assert.equal(paid.body.booking.paymentStatus,'paid');
+ const twice=await api(payRoute,{method:'POST',cookie:renterCookie,
+   data:{bookingId:payId,outcome:'succeeded'}});
+ status(twice,409,'Repeat payment confirmation blocked');
+ assert.equal(twice.body.code,'BOOKING_PAYMENT_FINAL');
+ const downgrade=await api(payRoute,{method:'POST',cookie:renterCookie,
+   data:{bookingId:payId,outcome:'failed'}});
+ status(downgrade,409,'Paid booking cannot be downgraded to failed');
+ assert.equal(downgrade.body.code,'BOOKING_PAYMENT_FINAL');
+
  const route='/api/rentals/bookings/'+id;
  status(await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'pickup'}}),
    409,'Unsigned renter must not receive PIN');
