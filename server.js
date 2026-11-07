@@ -2326,7 +2326,9 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
   const id=req.params.bookingId;
   if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
   try{
-    const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code);
+    const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code,{
+      returnCondition:req.body?.returnCondition,returnNotes:req.body?.returnNotes
+    });
     if(!result.ok)return res.status(409).json({error:'Neteisingas kodas.',code:result.reason});
     res.set('Cache-Control','no-store, private');
     res.json(result);
