@@ -121,6 +121,7 @@ import {
   createExpressLoginLink,
   createDirectChargePaymentIntent,
   retrieveDirectChargePaymentIntent,
+  captureDirectChargePaymentIntent,
   cancelDirectChargePaymentIntent,
   refundDirectCharge,
   createDirectSecurityDepositIntent,
@@ -248,6 +249,8 @@ const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const demoPaymentsEnabled=String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
+// Authorization/capture experiment is isolated to staging and a Stripe TEST secret.
+const rentalPreauthEnabled=process.env.RENTINORBIT_STAGING==='true' && /^sk_test_/.test(stripeKey) && process.env.RENTINORBIT_PREAUTH_ENABLED!=='false';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1581,7 +1584,10 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     }
 
     const listing=getRentalListing(booking.listingId);
-    if(listing?.bookingMode==='request' && booking.status!=='confirmed'){
+    // In staging TEST, request bookings authorize funds before supplier approval.
+    // Legacy/non-test flows retain pay-after-confirmation behavior.
+    const preauthorizeRequest=rentalPreauthEnabled && listing?.bookingMode==='request' && booking.status==='pending';
+    if(listing?.bookingMode==='request' && booking.status!=='confirmed' && !preauthorizeRequest){
       return res.status(409).json({error:'Supplier confirmation is required before payment.',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
     }
     const amount=Math.round(Number(booking.orderValue||0)*100);
@@ -1612,6 +1618,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
         return res.status(409).json({error:'Stored payment intent does not match this booking'});
       }
       if(intent.status==='canceled') return res.status(409).json({error:'Payment intent was cancelled; create a new booking payment attempt'});
+      if(preauthorizeRequest && intent.capture_method!=='manual') return res.status(409).json({error:'Existing payment intent is not an authorization',code:'PREAUTH_INTENT_MISMATCH'});
     }else{
       intent=await createDirectChargePaymentIntent(stripe,{
         accountId:connection.stripeAccountId,
@@ -1619,7 +1626,8 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
         applicationFeeCents:platformFee,
         currency:'eur',
         idempotencyKey:`booking:${booking.bookingId}:rental-payment`,
-        metadata:{bookingId:booking.bookingId,listingId:booking.listingId,purpose:'rental_payment',supplierEmail:String(listing?.ownerEmail||'')}
+        manualCapture:preauthorizeRequest,
+        metadata:{bookingId:booking.bookingId,listingId:booking.listingId,purpose:'rental_payment',supplierEmail:String(listing?.ownerEmail||''),paymentFlow:preauthorizeRequest?'preauthorize_then_capture':'pay_after_confirmation'}
       });
       setBookingPaymentDetails({bookingId:booking.bookingId,paymentIntentId:intent.id,paymentStatus:intent.status,platformFeeAmount:platformFee/100,supplierAmount:supplierAmount/100,paymentProvider:'stripe'});
     }
@@ -1628,6 +1636,8 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
       clientSecret:intent.client_secret,
       paymentIntentId:intent.id,
       stripeAccountId:connection.stripeAccountId,
+      captureMethod:intent.capture_method,
+      preauthorization:preauthorizeRequest || (intent.capture_method==='manual' && intent.metadata?.paymentFlow==='preauthorize_then_capture'),
       status:intent.status,
       amount:amount/100,
       platformFee:platformFee/100,
@@ -2032,6 +2042,38 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
         queueBookingStatusEmail(booking,'declined',{message:req.body?.reason||'Declined by supplier'});
       }catch(err){ console.warn('Could not queue booking declined email',err.message); }
       return res.json({booking,availability,refundAmount:cancelled.refundAmount});
+    }
+
+    // Capture the customer's previously authorized rental amount only when
+    // the supplier confirms. Never capture a mismatched, expired or terminal intent.
+    if(requestedStatus==='confirmed' && rentalPreauthEnabled){
+      const before=getRentalBookingById(req.params.bookingId);
+      const listing=before?getRentalListing(before.listingId):null;
+      if(before && listing?.bookingMode==='request' && before.stripePaymentIntentId && !before.stripePaymentIntentId.startsWith('demo_pi_')){
+        const connection=getDirectMerchantConnectionByEmail(db,listing.ownerEmail);
+        if(!stripe || !connection?.stripeAccountId) return res.status(409).json({error:'Supplier TEST Stripe is not ready',code:'SUPPLIER_STRIPE_NOT_READY'});
+        const pi=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:before.stripePaymentIntentId});
+        if(pi.capture_method==='manual' && pi.metadata?.paymentFlow==='preauthorize_then_capture'){
+          const bound=validateRentalPaymentIntentBinding(pi,before,connection.stripeAccountId);
+          if(!bound.ok) return res.status(409).json({error:'Authorization does not match this rental',code:'PREAUTH_BINDING_INVALID'});
+          if(!['pending','confirmed'].includes(before.status)) return res.status(409).json({error:'Rental is not eligible for capture',code:'BOOKING_NOT_PAYABLE'});
+          let captured=pi;
+          if(pi.status==='requires_capture'){
+            captured=await captureDirectChargePaymentIntent(stripe,{
+              accountId:connection.stripeAccountId,paymentIntentId:pi.id,
+              idempotencyKey:`booking:${before.bookingId}:approval-capture`
+            });
+          }else if(pi.status!=='succeeded'){
+            return res.status(409).json({error:'Nuomininko mokėjimo rezervacija dar nepatvirtinta. Palaukite kortelės autorizacijos.',code:'CUSTOMER_AUTHORIZATION_REQUIRED'});
+          }
+          if(captured.status!=='succeeded') return res.status(409).json({error:'Nepavyko nuskaičiuoti rezervuotos nuomos sumos.',code:'CAPTURE_INCOMPLETE'});
+          setBookingPaymentDetails({
+            bookingId:before.bookingId,paymentIntentId:captured.id,paymentStatus:'paid',
+            platformFeeAmount:Number(before.platformFeeAmount||0),
+            supplierAmount:Number(before.supplierAmount||0),paymentProvider:'stripe'
+          });
+        }
+      }
     }
 
     const booking = updateRentalBookingStatus(
