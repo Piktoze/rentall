@@ -642,8 +642,8 @@
       </div></div>
       <div class="v111-form-section"><h3 data-i18n-text="Photos &amp; description">Photos & description</h3><p data-i18n-text="Clear photos and an accurate description help customers book confidently.">Clear photos and an accurate description help customers book confidently.</p><div class="form-grid two">
 <label class="full"><span data-i18n-text="Photos">Photos</span>
-  <input id="listingPhotos" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-  <small data-i18n-text="Upload up to 6 photos. First photo becomes the cover image.">Upload up to 6 photos. First photo becomes the cover image.</small>
+  <input id="listingPhotos" type="file" accept="image/png,image/jpeg,image/webp" multiple required aria-describedby="listingPhotoHelp">
+  <small id="listingPhotoHelp" data-i18n-text="Upload 2 to 5 photos. First photo becomes the cover image.">Upload 2 to 5 photos. First photo becomes the cover image.</small>
 </label>
 <div class="full listing-photo-preview" id="listingPhotoPreview"></div>
 
