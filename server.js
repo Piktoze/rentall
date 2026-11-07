@@ -1302,7 +1302,7 @@ function validateSupplierListingInput(listing){
   if(photos.length<2||photos.length>5)
     throw Object.assign(new Error('Skelbimui reikia nuo 2 iki 5 nuotraukų.'),{code:'LISTING_PHOTOS_REQUIRED'});
   for(const photo of photos){
-    if(typeof photo!=='string' || !/^\\/uploads\\/[a-zA-Z0-9_-]+\\.(?:png|jpe?g|webp)$/.test(photo))
+    if(typeof photo!=='string' || !/^\/uploads\/[a-zA-Z0-9_-]+\.(?:png|jpe?g|webp)$/.test(photo))
       throw Object.assign(new Error('Nuotrauka turi būti įkelta per saugų failų įkėlimą.'),{code:'LISTING_PHOTO_INVALID'});
   }
   if(listing.coverPhoto && listing.coverPhoto!==photos[0])
