@@ -47,23 +47,20 @@
   }
   function closeDrawer(){const drawer=$('supplierActionDrawer');if(!drawer)return;drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');document.body.classList.remove('supplier-drawer-open');}
 
-  function createHub(){
+  // There is no separate supplier landing page: the main header provides
+  // "Įkelti skelbimą" and the supplier drawer provides all operational tools.
+  // Keep only a lightweight heading for the currently selected workspace.
+  function createFeatureHeading(){
     const container=document.querySelector('#supplier-dashboard>.container');
-    if(!container||$('supplierSimpleHub'))return;
-    const hub=document.createElement('section');hub.id='supplierSimpleHub';hub.className='supplier-simple-hub';
-    hub.innerHTML=`<div class="supplier-simple-copy"><div class="eyebrow">RentInOrbit</div><h2></h2><p></p></div><div class="supplier-simple-actions"><button type="button" class="supplier-upload-hero" data-v178-hub="add"><span>+</span><b></b><small></small></button><button type="button" class="secondary supplier-menu-button" data-v178-hub="menu">☰ <span></span></button></div><div id="supplierFeatureTitle" class="supplier-feature-title" hidden><button class="secondary" type="button" data-v178-hub="back">← <span></span></button><h3></h3></div>`;
-    container.prepend(hub);
-    hub.addEventListener('click',e=>{const action=e.target.closest('[data-v178-hub]')?.dataset.v178Hub;if(action==='add')handleAction('add');if(action==='menu')openDrawer();if(action==='back')showSupplierHome();});
-    localizeHub();
+    if(!container||$('supplierFeatureTitle'))return;
+    const heading=document.createElement('div');
+    heading.id='supplierFeatureTitle';
+    heading.className='supplier-feature-title';
+    heading.hidden=true;
+    heading.innerHTML='<h3></h3>';
+    container.prepend(heading);
   }
-  function localizeHub(){
-    const hub=$('supplierSimpleHub');if(!hub)return;
-    hub.querySelector('h2').textContent=t('center');hub.querySelector('.supplier-simple-copy p').textContent=t('intro');
-    hub.querySelector('.supplier-upload-hero b').textContent=t('add').replace(/^\+\s*/, '');
-    hub.querySelector('.supplier-upload-hero small').textContent=t('intro');
-    hub.querySelector('.supplier-menu-button span').textContent=t('menu');
-    hub.querySelector('[data-v178-hub="back"] span').textContent=t('back');
-  }
+
 
   function dashboardDirectChildFor(node){
     const container=document.querySelector('#supplier-dashboard>.container');if(!container||!node)return null;
@@ -77,7 +74,7 @@
     document.body.classList.remove('supplier-v178-feature-mode');
     const ft=$('supplierFeatureTitle');if(ft){ft.hidden=true;ft.querySelector('h3').textContent='';}
   }
-  function showSupplierHome(){clearFeature();$('supplierSimpleHub')?.scrollIntoView({behavior:'smooth',block:'start'});}
+
   function showFeature(targetId,titleKey){
     const dashboard=$('supplier-dashboard');if(!dashboard)return;
     dashboard.classList.add('unlocked');document.body.classList.add('supplier-authenticated','supplier-v178-feature-mode');
@@ -160,7 +157,7 @@
   }
 
   function sync(){
-    createDrawer();createHub();interceptAccountButton();upgradeModalBehavior();improveMessages();localizeDrawer();localizeHub();localizeSupplierRoots();
+    createDrawer();createFeatureHeading();interceptAccountButton();upgradeModalBehavior();improveMessages();localizeDrawer();localizeSupplierRoots();
     document.body.classList.toggle('supplier-authenticated',isSupplier());
     const auth=$('supplierAuthBtn');
     if(auth&&isSupplier()){
@@ -179,7 +176,7 @@
       auth.setAttribute('data-i18n-text','Log in');
     }
   }
-  document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeHub();localizeSupplierRoots();sync();},0));
+  document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeSupplierRoots();sync();},0));
   const authObserver=new MutationObserver(()=>sync());const auth=$('supplierAuthBtn');if(auth)authObserver.observe(auth,{childList:true,subtree:true,characterData:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();
