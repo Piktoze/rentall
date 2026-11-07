@@ -2384,7 +2384,7 @@ populateBookingCityFilter = function(){
   if(!select) return;
   const current=select.value||'all';
   const cities=[...new Set(demoBookings.map(b=>b.delivery).filter(Boolean))].sort();
-  select.innerHTML='<option value="all">All cities</option>'+
+  select.innerHTML=`<option value="all">${escapeHtml(uiText('All cities'))}</option>`+
     cities.map(c=>`<option value="${c}">${c}</option>`).join('');
   if(cities.includes(current)) select.value=current;
 }
