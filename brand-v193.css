@@ -394,3 +394,173 @@ body.theme-aurora .hero .hero-brand-mark.hero-brand-logo img{
   body.theme-aurora .hero .hero-brand-mark.hero-brand-logo{width:100%!important;margin-bottom:10px!important}
   body.theme-aurora .hero .hero-brand-mark.hero-brand-logo img{width:min(100%,480px)!important;height:auto!important}
 }
+
+/* V221: unified RentInOrbit blue/indigo design language.
+   Purely visual: keep warning/error/danger semantics and interaction logic intact. */
+body.theme-aurora{
+  --ink:#10244a!important;
+  --ink-strong:#10244a!important;
+  --ink-body:#344766!important;
+  --ink-muted:#687995!important;
+  --v56-brand:#0878ef!important;
+  --surface-cream:#f7f9ff!important;
+  --surface-sage:#edf4ff!important;
+  --surface-sage-2:#e5efff!important;
+  --surface-muted:#f8faff!important;
+  --accent-dark:#123e8c!important;
+  --accent-2:#37b9f5!important;
+  --accent-3:#6848e6!important;
+  --line-strong:#bbd0ee!important;
+  --border:#dbe4f3!important;
+}
+body.theme-aurora main,
+body.theme-aurora .section.editorial-accent-section,
+body.theme-aurora .editorial-accent-section{
+  background:#f7f9ff!important;
+}
+body.theme-aurora .chip,
+body.theme-aurora .quick-category,
+body.theme-aurora .category-chip,
+body.theme-aurora .filter-chip,
+body.theme-aurora .browse-tools>summary,
+body.theme-aurora .results-view-controls button{
+  color:#20385e!important;
+  background:#fff!important;
+  border-color:#d8e4f5!important;
+}
+body.theme-aurora .chip.active,
+body.theme-aurora .quick-category.active,
+body.theme-aurora .category-chip.active,
+body.theme-aurora .filter-chip.active,
+body.theme-aurora .results-view-controls button.active,
+body.theme-aurora .results-view-controls .active,
+body.theme-aurora .supplier-view-switch button.active{
+  color:#fff!important;
+  background:#1269d9!important;
+  border-color:#1269d9!important;
+  box-shadow:0 5px 15px rgba(8,120,239,.14)!important;
+}
+body.theme-aurora .quick-category-icon,
+body.theme-aurora .quick-category.active .quick-category-icon{
+  background:#e7f1ff!important;
+  color:#1167ce!important;
+}
+body.theme-aurora .chip:hover,
+body.theme-aurora .quick-category:hover,
+body.theme-aurora .filter-chip:hover{
+  border-color:#8fbaf2!important;
+}
+body.theme-aurora .listing-card,
+body.theme-aurora .product,
+body.theme-aurora .card,
+body.theme-aurora .listing-detail-panel,
+body.theme-aurora .price-preview-box,
+body.theme-aurora .checkout-price-breakdown,
+body.theme-aurora .browse-tools,
+body.theme-aurora .supplier-dashboard-control,
+body.theme-aurora .supplier-refresh-box{
+  background:#fff!important;
+  border-color:#dbe5f4!important;
+  color:#213654!important;
+}
+body.theme-aurora .listing-card h3,
+body.theme-aurora .listing-card h4,
+body.theme-aurora .listing-card b,
+body.theme-aurora .listing-card strong,
+body.theme-aurora .listing-meta,
+body.theme-aurora .product h3,
+body.theme-aurora .product h4,
+body.theme-aurora .browse-tools>summary{
+  color:#10244a!important;
+}
+body.theme-aurora .listing-card p,
+body.theme-aurora .listing-card small,
+body.theme-aurora .listing-card .muted,
+body.theme-aurora .product p,
+body.theme-aurora .listing-detail-panel .muted{
+  color:#64748f!important;
+}
+body.theme-aurora .listing-card .secondary,
+body.theme-aurora .product .secondary,
+body.theme-aurora .browse-tools .secondary,
+body.theme-aurora .saved-search-toolbar button,
+body.theme-aurora .results-view-controls button{
+  color:#0b5fc1!important;
+  background:#fff!important;
+  border-color:#cddff4!important;
+}
+body.theme-aurora .listing-card .primary,
+body.theme-aurora .product .primary,
+body.theme-aurora .supplier-drawer-primary,
+body.theme-aurora .supplier-upload-hero,
+body.theme-aurora .supplier-dashboard-control button.primary,
+body.theme-aurora .supplier-refresh-box button.primary{
+  background:linear-gradient(115deg,#0878ef,#244ecb 77%,#5638db)!important;
+  color:#fff!important;
+  border-color:transparent!important;
+}
+body.theme-aurora .distance-pill,
+body.theme-aurora .listing-card .pill,
+body.theme-aurora .status.confirmed,
+body.theme-aurora .status.available,
+body.theme-aurora .status.active,
+body.theme-aurora .health-ok,
+body.theme-aurora .auth-role-badge,
+body.theme-aurora .notification-badge{
+  background:#e9f3ff!important;
+  color:#0b5fbe!important;
+  border-color:#cde2fb!important;
+}
+body.theme-aurora .booking-summary,
+body.theme-aurora .delivery-info-box,
+body.theme-aurora .delivery-rule-note,
+body.theme-aurora .renter-response-info,
+body.theme-aurora .agreement-status-grid>div,
+body.theme-aurora .supplier-calendar-empty,
+body.theme-aurora .message-bubble{
+  background:#eff5ff!important;
+  color:#283f63!important;
+  border-color:#d5e5f9!important;
+}
+body.theme-aurora .message-bubble.mine{background:#e1eeff!important;color:#0c397c!important}
+body.theme-aurora .renter-response-info strong,
+body.theme-aurora .renter-response-info a,
+body.theme-aurora .renter-response-deadline b,
+body.theme-aurora .plan .commission,
+body.theme-aurora .legal-page h1,
+body.theme-aurora .legal-page h2,
+body.theme-aurora .legal-brand,
+body.theme-aurora .faq-item summary{
+  color:#103b79!important;
+}
+body.theme-aurora .legal-shell{background:#f7f9ff!important;color:#263b5c!important}
+body.theme-aurora .legal-lang.active,
+body.theme-aurora .help-jump a,
+body.theme-aurora .faq-item summary::after{
+  background:#e5f0ff!important;
+  color:#0b5fc1!important;
+  border-color:#cce0fa!important;
+}
+body.theme-aurora .supplier-drawer-head,
+body.theme-aurora .supplier-drawer-nav button,
+body.theme-aurora .supplier-drawer-logout,
+body.theme-aurora .supplier-view-switch button{
+  color:#263b5b!important;
+  border-color:#dbe5f4!important;
+}
+body.theme-aurora .supplier-drawer-close,
+body.theme-aurora .close-modal{
+  background:#edf4ff!important;
+  color:#123f83!important;
+  border-color:#d2e2f6!important;
+}
+body.theme-aurora .search-card,
+body.theme-aurora .search-mode-wrap .search-card{
+  background:#eaf2ff!important;
+  border-color:#d6e4f6!important;
+}
+body.theme-aurora .search-card label{background:#fff!important;border-color:#dce7f5!important}
+body.theme-aurora .search-mode-tab.active{background:#fff!important;color:#0c62c5!important}
+body.theme-aurora .hero #list-item.hero-supplier-cta{background:#fff!important;border-color:#dbe5f4!important}
+body.theme-aurora .hero #list-item.hero-supplier-cta .subcopy{color:#667793!important}
+/* The alert and error colors intentionally retain their semantic significance. */
