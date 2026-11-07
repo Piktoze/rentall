@@ -5643,21 +5643,21 @@ async function loadUnifiedCustomerBookings(){
     const bookingId=btn.dataset.id;
     const reason=prompt(uiText('What went wrong?'),uiText('Item damaged / missing / payment / service issue'));
     if(!reason?.trim()) return;
-    const details=prompt('Add details (optional):','')||null;
+    const details=prompt(uiText('Add details (optional):'),'')||null;
     btn.disabled=true;
     try{
       await apiJson('/api/rentals/disputes',{
         method:'POST',
         body:JSON.stringify({bookingId,openedBy:'customer',reason:reason.trim(),details,accessToken:bookingAccessToken(bookingId)})
       });
-      showToast('Problem reported. RentInOrbit support can now review the case.','success',2200);
-      btn.textContent='Problem reported';
+      showToast(uiText('Problem reported. RentInOrbit support can now review the case.'),'success',2200);
+      btn.textContent=uiText('Problem reported');
       btn.disabled=true;
     }catch(err){
-      const message=String(err.message||'Unable to report problem');
+      const message=String(err.message||uiText('Unable to report problem'));
       if(/already open|DISPUTE_ALREADY_OPEN/i.test(message)){
-        showToast('A dispute is already open for this booking.','error',2200);
-        btn.textContent='Problem already reported';
+        showToast(uiText('A dispute is already open for this booking.'),'error',2200);
+        btn.textContent=uiText('Problem already reported');
         btn.disabled=true;
       }else{
         showToast(message,'error',2400);
