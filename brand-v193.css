@@ -81,6 +81,13 @@ body.rio-supplier:not(.supplier-dashboard-expanded) #supplierNotificationSection
 body.rio-supplier:not(.supplier-dashboard-expanded) #supplierAvailabilitySection{display:none!important}
 body.rio-supplier.supplier-dashboard-expanded #supplierNotificationSection,
 body.rio-supplier.supplier-dashboard-expanded #supplierAvailabilitySection{display:block!important}
+/* Explicit supplier calendar action overrides collapsed dashboard hiding.
+   The V178 drawer and inventory button both add this class. */
+body.rio-supplier #supplierAvailabilitySection.supplier-v178-external-visible{
+  display:block!important;
+  visibility:visible!important;
+}
+
 body:not(.rio-authenticated) #moreNotificationsBtn{display:none!important}
 
 /* Guest users should see a clean public site, not a locked supplier dashboard block. */
