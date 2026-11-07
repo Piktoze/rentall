@@ -35,6 +35,7 @@ import {
   saveFullRentalListing,
   listPublicRentalListings,
   listOwnerRentalListings,
+  archiveOwnerRentalListing,
   deleteOwnerRentalListing,
   saveStripeConnection,
   updateStripeConnectionCapability,
@@ -1329,6 +1330,15 @@ app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
     });
     res.json({listing});
   }catch(err){res.status(400).json({error:err.message});}
+});
+
+// Retain booking/payment audit history and remove only the public listing.
+app.post('/api/supplier/listings/:listingId/archive', requireRole('supplier','admin'), (req,res)=>{
+  try{
+    const listing=archiveOwnerRentalListing(req.params.listingId,req.appUser.email);
+    if(!listing)return res.status(404).json({error:'Skelbimas nerastas arba nepriklauso šiai paskyrai.'});
+    res.json({ok:true,listingId:listing.id,archived:true});
+  }catch(err){res.status(400).json({error:'Nepavyko pašalinti skelbimo iš viešos paieškos.'});}
 });
 
 app.delete('/api/supplier/listings/:listingId', requireRole('supplier','admin'), (req,res)=>{
