@@ -6351,9 +6351,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       pane.style.marginTop='14px';
       const state=String(b.status||'');
       pane.innerHTML='<h3>Nuomos sutartis ir daikto perdavimas</h3>'+
-        '<p class="muted">Prieš perduodant daiktą patvirtinkite sutartį. Nuomininkas pateikia trumpalaikį kodą tik atvykęs.</p>'+
+        '<p class="muted">Kiekviena šalis gauna savo kodą tik patvirtinusi savo sutartį. Kitos šalies parašo gauti kodui nereikia. Perdavimui būtini abu kodai ir abu patvirtinimai.</p>'+
         '<p class="muted">Tapatybės patikra: neatlikta. Kodo turėjimas savaime nepatvirtina asmens tapatybės.</p>'+
         '<button class="secondary rio-supplier-agreement" type="button">Patvirtinti nuomos sutartį</button> '+
+        (['confirmed','active'].includes(state)?'<button class="secondary rio-supplier-own-code" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">Gauti savo perdavimo kodą</button> ':'')+
         (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Patvirtinti išdavimą pagal kodą':'Patvirtinti grąžinimą pagal kodą')+'</button>':'');
       actions.appendChild(pane);
       pane.querySelector('.rio-supplier-agreement')?.addEventListener('click',async function(){
@@ -6372,9 +6373,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           showResult('Nuomos sutartis patvirtinta.');
         }catch(err){showResult(err.message,true)}finally{this.disabled=false;}
       });
+      pane.querySelector('.rio-supplier-own-code')?.addEventListener('click',async function(){
+        this.disabled=true;
+        try{
+          const result=await apiJson(transferEndpoint(bookingId)+'/transfer-code',{
+            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose})
+          });
+          window.alert('NUOMOTOJO KODAS: '+result.code+'\\nGalioja 15 minučių. Gali būti sugeneruotas tik po jūsų sutarties patvirtinimo. Saugokite iki perdavimo.');
+        }catch(err){showResult(err.message||'Nepavyko gauti kodo.',true)}
+        finally{this.disabled=false;}
+      });
       pane.querySelector('.rio-supplier-transfer')?.addEventListener('click',async function(){
-        const code=window.prompt('Įveskite šešių skaitmenų kodą, kurį nuomininkas pateikia susitikimo metu:','');
+        const code=window.prompt('Įveskite šešių skaitmenų NUOMININKO kodą:','');
         if(code===null)return;
+        const supplierCode=window.prompt('Įveskite šešių skaitmenų SAVO (NUOMOTOJO) kodą:','');
+        if(supplierCode===null)return;
         this.disabled=true;
         try{
           let returnCondition=null,returnNotes=null;
@@ -6386,7 +6399,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
             if(returnCondition!=='good')returnNotes=window.prompt('Aprašykite daikto būklę ir žalą (jei yra):','')||'';
           }
           await apiJson(transferEndpoint(bookingId)+'/transfer-confirm',{
-            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code,returnCondition,returnNotes})
+            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code,supplierCode,returnCondition,returnNotes})
           });
           showResult(this.dataset.purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas.');
           await refreshLiveSupplierBookings();
