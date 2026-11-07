@@ -2040,7 +2040,7 @@ export function issueRentalTransferCode(bookingId,purpose){
 export function verifyAndConsumeRentalTransferCode(bookingId,purpose,code){
   if(!['pickup','return'].includes(purpose))throw Error('Invalid transfer purpose');
   const input=String(code||'').trim();
-  if(!/^\\d{6}$/.test(input))throw Object.assign(new Error('Įveskite šešių skaitmenų kodą.'),{code:'INVALID_TRANSFER_CODE'});
+  if(!/^\d{6}$/.test(input))throw Object.assign(new Error('Įveskite šešių skaitmenų kodą.'),{code:'INVALID_TRANSFER_CODE'});
   return db.transaction(()=>{
     const row=db.prepare('SELECT * FROM rental_transfer_codes WHERE booking_id=? AND purpose=?').get(String(bookingId),purpose);
     if(!row||row.consumed_at||Date.parse(row.expires_at)<=Date.now()||row.failed_attempts>=5)
