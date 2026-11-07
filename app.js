@@ -2852,7 +2852,7 @@ async function renderSupplierAvailability(){
   const c=SUPPLIER_CALENDAR_COPY[language]||SUPPLIER_CALENDAR_COPY.lt;
   const request=++supplierCalendarRequestSequence;
   if(!listingId){grid.innerHTML='<p>'+escapeHtml(c.noListings)+'</p>';summary.textContent='';return;}
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(from||'')||!/^\\d{4}-\\d{2}-\\d{2}$/.test(to||'')||from>=to){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from||'')||!/^\d{4}-\d{2}-\d{2}$/.test(to||'')||from>=to){
     grid.innerHTML='<p>'+escapeHtml(c.invalid)+'</p>';summary.textContent='';return;
   }
   grid.innerHTML='<p class="supplier-calendar-loading">'+escapeHtml(c.loading)+'</p>';
