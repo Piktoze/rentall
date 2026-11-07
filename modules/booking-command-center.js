@@ -40,7 +40,7 @@
     text('v140NextHint','Payment becomes available only after supplier approval.');
   }else if(payment==='refunded'||payment==='partially_refunded'){
     text('v140NextAction','Check this booking for the latest status.');
-    text('v140NextHint','No successful rental payment is recorded yet.');
+    text('v140NextHint','Check this booking for the latest status.');
   }else if(payment!=='paid'){
     text('v140NextAction','Complete payment');
     text('v140NextHint','Use the secure payment action on this booking.');
