@@ -1032,3 +1032,10 @@ body.modal-open{overflow:hidden!important}
   .topbar .brand-logo{max-width:170px!important}
   .topbar .brand-logo img{height:36px;max-width:170px}
 }
+
+
+/* V218: no duplicate supplier landing page; header and supplier drawer are the navigation. */
+body.supplier-authenticated:not(.supplier-v178-feature-mode) #supplier-dashboard{display:none!important}
+#supplierFeatureTitle[hidden]{display:none!important}
+body.supplier-v178-feature-mode #supplier-dashboard{display:block!important}
+body.supplier-v178-feature-mode #supplierFeatureTitle:not([hidden]){display:flex!important}
