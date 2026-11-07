@@ -18,6 +18,7 @@ for(const suite of [
   'ux-focus-v212.test.js',
   'supplier-calendar-isolation-v213.test.js',
   'supplier-ux-navigation-v214.test.js',
+  'localization-and-photos-v215.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
