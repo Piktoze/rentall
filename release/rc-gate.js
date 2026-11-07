@@ -5,6 +5,16 @@ import {execFileSync} from 'node:child_process';
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['supplier-i18n-v203.test.mjs'],{stdio:'inherit'});
 
+ // Source-only regression suites: safe during build, no Stripe or database mutations.
+for(const suite of [
+  'payment-race.test.js',
+  'webhook-ordering.test.js',
+  'refund-accounting-v107.test.js',
+  'booking-idempotency.test.js'
+]){
+  execFileSync(process.execPath,[suite],{stdio:'inherit'});
+}
+
 const server=fs.readFileSync('./server.js','utf8');
 const app=fs.readFileSync('./app.js','utf8');
 const hub=fs.readFileSync('./modules/customer-booking-hub.js','utf8');
