@@ -1915,8 +1915,10 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     });
     const agreement=createRentalAgreement({
       bookingId,
-      termsVersion:'rentinorbit-rental-v1',
-      customerAcceptedAt:new Date().toISOString(),
+      termsVersion:'rentinorbit-rental-v2',
+      // Agreeing to platform checkout terms does not replace signing the
+      // booking-specific rental agreement. Each party accepts explicitly.
+      customerAcceptedAt:null,
       snapshot:{
         platform:'RentInOrbit',bookingId,listingId,listingTitle:listingForBooking.title,
         supplierEmail:listingForBooking.ownerEmail||null,customerName:effectiveCustomerName||null,customerEmail:effectiveCustomerEmail||null,
