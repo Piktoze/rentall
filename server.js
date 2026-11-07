@@ -1924,7 +1924,12 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
         total:authoritativePrice.total,securityDeposit:authoritativePrice.securityDeposit,
         cancellationPolicy:result.booking.cancellationPolicySnapshot||listingForBooking.cancellationPolicy||'moderate',
         cancellationPolicyVersion:result.booking.cancellationPolicyVersion,
-        terms:['Use the item only for its intended purpose.','Return the item on time in the condition received, allowing for normal wear.','Damage, loss, cancellation and deposit handling follow the listing and RentInOrbit terms.']
+        terms:[
+          'Nuomotojas išnuomoja daiktą, o nuomininkas įsipareigoja jį naudoti tik pagal paskirtį.',
+          'Daiktas turi būti grąžintas sutartu laiku, atsižvelgiant į įprastą nusidėvėjimą.',
+          'Žalos, negrąžinimo, atšaukimo ir užstato klausimai sprendžiami pagal skelbimo bei RentInOrbit sąlygas.',
+          'Šios per RentInOrbit pateiktos rezervacijos mokėjimai, keitimai ir pratęsimai vykdomi per platformą.'
+        ]
       }
     });
 
