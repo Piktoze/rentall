@@ -31,7 +31,7 @@ assert.ok(html.includes('id="listingPhotos"')&&html.includes('multiple required'
 assert.ok(html.includes('Upload 2 to 5 photos.'),'Customer-facing photo rule');
 assert.ok(app.includes("if(selected.length<2||selected.length>5)"),'Reject fewer than 2 or more than 5 photo files');
 assert.ok(app.includes('photos:[...pendingListingPhotoUrls]'),'Attach uploaded photos before saving');
-assert.ok(app.includes("event.stopImmediatePropagation()"),'Invalid submission must never call listing persistence');
+assert.ok(app.includes("e.stopImmediatePropagation()"),'Invalid submission must stop later persistence handlers');
 assert.ok(server.includes('if(photos.length<2||photos.length>5)'),'Server must reject missing, one or six photos');
 assert.ok(server.includes('LISTING_PHOTOS_REQUIRED'),'Stable photo validation error');
 assert.ok(translator.includes('window.Translator')&&translator.includes('window.LanguageDetector'),'Use built-in language API, never fake translation');
