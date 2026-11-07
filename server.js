@@ -1672,8 +1672,19 @@ app.post('/api/payments/demo/confirm', simpleRateLimit({windowMs:60000,max:30,ke
     const booking=getRentalBookingById(bookingId);
     if(!booking) return res.status(404).json({error:'Booking not found'});
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
-    const guestOwner=!!verifyBookingPaymentToken(bookingId,paymentToken);
+    const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,paymentToken);
     if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'});
+    if(!['pending','confirmed'].includes(booking.status))
+      return res.status(409).json({error:'Booking is no longer payable',code:'BOOKING_PAYMENT_FINAL'});
+    if(['paid','succeeded','refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase())||booking.stripeRefundId)
+      return res.status(409).json({error:'Payment was already completed or refunded',code:'BOOKING_PAYMENT_FINAL'});
+    const listingForPayment=getRentalListing(booking.listingId);
+    if(listingForPayment?.bookingMode==='request'&&booking.status!=='confirmed')
+      return res.status(409).json({error:'Supplier confirmation required before payment',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
+    if(booking.paymentProvider!=='demo'||!String(booking.stripePaymentIntentId||'').startsWith('demo_pi_'))
+      return res.status(409).json({error:'Demo checkout must be initiated before confirmation',code:'PAYMENT_INTENT_REQUIRED'});
+    if(!['failed','succeeded'].includes(outcome))
+      return res.status(400).json({error:'Invalid demo payment result',code:'INVALID_PAYMENT_OUTCOME'});
     if(outcome==='failed'){
       const failed=setBookingPaymentDetails({bookingId,paymentIntentId:booking.stripePaymentIntentId||`demo_pi_${crypto.randomUUID()}`,paymentStatus:'failed',platformFeeAmount:booking.platformFeeAmount||0,supplierAmount:booking.supplierAmount||0,paymentProvider:'demo'});
       return res.status(402).json({provider:'demo',status:'failed',error:'Demo card was declined.',booking:failed});
