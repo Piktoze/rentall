@@ -1303,10 +1303,20 @@ document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
 });
 document.getElementById('closeListingModal')?.addEventListener('click',closeListingModalAccessible);
 listingModal?.addEventListener('keydown',e=>{
-  if(e.key==='Escape' && listingModal.classList.contains('open')){
+  if(!listingModal.classList.contains('open')) return;
+  if(e.key==='Escape'){
     e.preventDefault();
     closeListingModalAccessible();
+    return;
   }
+  // Keep keyboard navigation inside the open listing dialog.
+  if(e.key!=='Tab') return;
+  const focusable=[...listingModal.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(el=>el.getClientRects().length>0 && getComputedStyle(el).visibility!=='hidden');
+  if(!focusable.length){e.preventDefault();return;}
+  const first=focusable[0],last=focusable[focusable.length-1];
+  if(e.shiftKey && (document.activeElement===first || !listingModal.contains(document.activeElement))){e.preventDefault();last.focus();}
+  else if(!e.shiftKey && (document.activeElement===last || !listingModal.contains(document.activeElement))){e.preventDefault();first.focus();}
 });
 
 document.getElementById('listingForm')?.addEventListener('submit',e=>{
