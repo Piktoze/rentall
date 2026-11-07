@@ -25,7 +25,7 @@ const modulePaths=['modules/marketplace-trust-v172.js','modules/supplier-command
   'modules/supplier-finance.js','modules/supplier-operations.js'];
 const moduleKeys=[...new Set(modulePaths.flatMap(path=>{
   const src=fs.readFileSync(path,'utf8');
-  return [...src.matchAll(/(?:\\btr|\\buiText|i18n\\.t)\\(\\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
+  return [...src.matchAll(/(?:\btr|\buiText|i18n\.t)\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
 }))];
 for(const lang of ['lt','en','es','de','ru']){
  for(const key of explicit)assert.ok(lang==='en'||typeof d[lang]?.[key]==='string','Missing '+lang+' static: '+key);
