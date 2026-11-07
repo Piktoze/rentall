@@ -1340,7 +1340,10 @@ document.getElementById('listingForm')?.addEventListener('submit',e=>{
     supplierResponseHours:Number(document.getElementById('listingResponseHours')?.value||4),
     supplierTimezone:(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch{return ''}})(),
     ownerType:s.accountType||'individual',
-    ownerEmail:s.email
+    ownerEmail:s.email,
+    // Attach validated uploaded media before any persistence handler runs.
+    photos:[...pendingListingPhotoUrls],
+    coverPhoto:pendingListingPhotoUrls[0]||''
   };
   items.unshift(listing);
   saveUniversalListings(items);
@@ -3709,7 +3712,9 @@ async function fileToDataUrl(file){
 }
 
 async function uploadListingPhotos(files){
-  const selected=[...files].slice(0,6);
+  const selected=[...files];
+  if(selected.length<2||selected.length>5)
+    throw new Error('Privaloma pasirinkti nuo 2 iki 5 nuotraukų.');
   const urls=[];
   for(const file of selected){
     const dataUrl=await fileToDataUrl(file);
@@ -3724,33 +3729,46 @@ async function uploadListingPhotos(files){
 
 document.getElementById('listingPhotos')?.addEventListener('change',async e=>{
   const preview=document.getElementById('listingPhotoPreview');
-  preview.innerHTML='<small>Uploading…</small>';
+  pendingListingPhotoUrls=[];
+  preview.textContent=window.RentInOrbitI18n?.t?.('Uploading photos…')||'Įkeliamos nuotraukos…';
+  e.target.dataset.uploading='true';
   try{
     pendingListingPhotoUrls=await uploadListingPhotos(e.target.files);
-    preview.innerHTML=pendingListingPhotoUrls.map(url=>`<img src="${url}" alt="">`).join('');
+    preview.innerHTML=pendingListingPhotoUrls.map(url=>`<img src="${escapeHtml(url)}" alt="">`).join('');
   }catch(err){
     pendingListingPhotoUrls=[];
-    preview.innerHTML=`<small>${escapeHtml(err.message||'Upload failed')}</small>`;
+    preview.textContent=err.message||'Nuotraukų įkelti nepavyko.';
+  }finally{
+    e.target.dataset.uploading='false';
   }
 });
 
 document.getElementById('listingForm')?.addEventListener('submit',()=>{
+  // Photos were added to the listing synchronously before saving it.
   setTimeout(()=>{
-    if(!pendingListingPhotoUrls.length) return;
-    const listings=loadUniversalListings();
-    const latest=listings[0];
-    if(!latest) return;
-    latest.photos=[...pendingListingPhotoUrls];
-    latest.coverPhoto=pendingListingPhotoUrls[0];
-    localStorage.setItem('rentinorbit_listings',JSON.stringify(listings));
     pendingListingPhotoUrls=[];
     const input=document.getElementById('listingPhotos');
-    if(input) input.value='';
+    if(input)input.value='';
     const preview=document.getElementById('listingPhotoPreview');
-    if(preview) preview.innerHTML='';
-    renderUniversalListings();
-  },80);
+    if(preview)preview.innerHTML='';
+  },300);
 }, true);
+
+// Capture before every existing listing submit handler; invalid photo sets
+// must never create either local or server-side published listings.
+document.getElementById('listingForm')?.addEventListener('submit',event=>{
+  const photoInput=document.getElementById('listingPhotos');
+  if(photoInput?.dataset.uploading==='true' || pendingListingPhotoUrls.length<2 ||
+     pendingListingPhotoUrls.length>5){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const message=photoInput?.dataset.uploading==='true'?
+      'Pirmiausia užbaik nuotraukų įkėlimą.':'Skelbimui būtinos 2–5 nuotraukos.';
+    const preview=document.getElementById('listingPhotoPreview');
+    if(preview)preview.textContent=message;
+    photoInput?.focus();
+  }
+},true);
 
 function favoriteIds(){
   try{return JSON.parse(localStorage.getItem('rentinorbit_favorites')||'[]');}
