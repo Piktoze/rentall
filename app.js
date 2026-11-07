@@ -6367,8 +6367,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         if(code===null)return;
         this.disabled=true;
         try{
+          let returnCondition=null,returnNotes=null;
+          if(this.dataset.purpose==='return'){
+            const condition=window.prompt('Grąžinto daikto būklė: įrašykite good (gera), damaged (apgadinta) arba missing (trūksta).','good');
+            if(condition===null)return;
+            returnCondition=String(condition).toLowerCase().trim();
+            if(!['good','damaged','missing'].includes(returnCondition))throw Error('Neteisinga būklė. Įveskite good, damaged arba missing.');
+            if(returnCondition!=='good')returnNotes=window.prompt('Aprašykite daikto būklę ir žalą (jei yra):','')||'';
+          }
           await apiJson(transferEndpoint(bookingId)+'/transfer-confirm',{
-            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code})
+            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code,returnCondition,returnNotes})
           });
           showResult(this.dataset.purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas.');
           await refreshLiveSupplierBookings();
