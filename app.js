@@ -67,8 +67,8 @@ document.getElementById('partnerLead')?.addEventListener('submit',e=>{
 const translations = {
   en:{
     nav_browse:'Browse',nav_how:'How it works',nav_partners:'Rent out',
-    eyebrow:'Anything. Anywhere. In one orbit.',
-    accent_orbit:'Keep things in orbit.',accent_have:'Put your things back in orbit.',
+    eyebrow:'Put your things back in orbit.',
+    accent_orbit:'Keep things in orbit.',accent_have:'Anything. Anywhere. In one orbit.',
     hero_title:'Rent what you need. <span>Earn from what you own.</span>',
     hero_copy:'A dress for one night, chairs for a party, a drill for the weekend or travel gear — rent it or list what you already own.',
     location:'Where do you need it?',from:'From',to:'To',search:'Find rentals',
@@ -82,8 +82,8 @@ const translations = {
   },
   es:{
     nav_browse:'Explorar',nav_how:'Cómo funciona',nav_partners:'Pon en alquiler',
-    eyebrow:'Cualquier cosa. En cualquier lugar. En una sola órbita.',
-    accent_orbit:'Mantén las cosas en órbita.',accent_have:'Pon tus cosas de nuevo en órbita.',
+    eyebrow:'Pon tus cosas de nuevo en órbita.',
+    accent_orbit:'Mantén las cosas en órbita.',accent_have:'Cualquier cosa. En cualquier lugar. En una sola órbita.',
     hero_title:'Alquila lo que necesitas. <span>Gana con lo que ya tienes.</span>',
     hero_copy:'Un vestido para una noche, sillas para una fiesta, un taladro para el fin de semana o equipo de viaje — alquílalo o publica lo que ya tienes.',
     location:'¿Dónde lo necesitas?',from:'Desde',to:'Hasta',search:'Buscar alquileres',
@@ -1153,8 +1153,8 @@ Object.assign(translations, {
   },
   lt:{
     nav_browse:'Naršyti',nav_how:'Kaip veikia',nav_partners:'Tiekėjams',
-    eyebrow:'Bet kas. Bet kur. Vienoje orbitoje.',
-    accent_orbit:'Leisk daiktams likti apyvartoje.',accent_have:'Sugrąžink savo daiktus į orbitą.',
+    eyebrow:'Sugrąžink savo daiktus į orbitą.',
+    accent_orbit:'Leisk daiktams likti apyvartoje.',accent_have:'Bet kas. Bet kur. Vienoje orbitoje.',
     hero_title:'Išsinuomok, ko reikia. <span>Uždirbk iš to, ką turi.</span>',
     hero_copy:'Suknelė vakarui, kėdės šventei, gręžtuvas savaitgaliui ar daiktai kelionei — nuomokis arba išnuomok tai, ką jau turi.',
     country:'Šalis',city:'Miestas / kurortas',from:'Nuo',to:'Iki',search:'Rasti laisvą įrangą',
