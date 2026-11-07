@@ -649,7 +649,7 @@ app.post('/api/stripe/webhook',
               try{
                 paidBooking=updateRentalBookingStatus(bookingId,'confirmed');
                 markSupplierResponded(bookingId);
-                acceptRentalAgreement(bookingId,'supplier');
+                // Instant booking approval is not a supplier signature.
                 queueBookingStatusEmail(paidBooking,'confirmed',{message:'Instant Book confirmed automatically after payment.'});
               }catch(err){console.warn('Instant Book auto-confirm failed',bookingId,err.message);}
             }
@@ -1691,7 +1691,7 @@ app.post('/api/payments/demo/confirm', simpleRateLimit({windowMs:60000,max:30,ke
     if(listing?.bookingMode==='instant' && getRentalBookingById(bookingId)?.status==='pending'){
       const confirmed=updateRentalBookingStatus(bookingId,'confirmed');
       markSupplierResponded(bookingId);
-      try{acceptRentalAgreement(bookingId,'supplier')}catch{}
+      // Instant booking approval is not a supplier signature.
       try{queueBookingStatusEmail(confirmed,'confirmed',{message:'Instant Book confirmed automatically after payment.'})}catch{}
     }
     if(listing?.ownerEmail) createRentalNotification({uniqueKey:`demo-payment:${bookingId}:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId,type:'payment.succeeded',title:listing.bookingMode==='instant'?'Instant booking confirmed':'Test payment received',message:listing.bookingMode==='instant'?`Booking ${bookingId} was confirmed automatically.`:`Booking ${bookingId} is paid in demo mode and ready for confirmation.`});
