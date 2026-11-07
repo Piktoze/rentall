@@ -6414,6 +6414,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       });
     };
   }
+  const renterTrustLabels={
+    lt:{accept:'Patvirtinti nuomos sutartį',pickup:'Gauti išdavimo kodą',return:'Gauti grąžinimo kodą'},
+    en:{accept:'Accept rental agreement',pickup:'Get pickup code',return:'Get return code'},
+    es:{accept:'Aceptar contrato de alquiler',pickup:'Obtener código de entrega',return:'Obtener código de devolución'},
+    de:{accept:'Mietvertrag bestätigen',pickup:'Abholcode erhalten',return:'Rückgabecode erhalten'},
+    ru:{accept:'Подтвердить договор аренды',pickup:'Получить код выдачи',return:'Получить код возврата'}
+  };
+  const renterTrustLabel=purpose=>{
+    const lang=window.RentInOrbitI18n?.getLanguage?.()||'lt';
+    return (renterTrustLabels[lang]||renterTrustLabels.lt)[purpose];
+  };
   // The server agreement is authoritative: payment alone cannot unlock pickup
   // or cause two mutually exclusive next-action buttons to appear together.
   async function syncRenterTrustButton(card){
@@ -6437,7 +6448,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       actions.appendChild(div);
     };
     if(status==='active'){
-      create('return','Gauti grąžinimo kodą');
+      create('return',renterTrustLabel('return'));
       return;
     }
     if(!['pending','confirmed'].includes(status))return;
@@ -6447,15 +6458,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         (accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
       if(!card.isConnected)return;
       if(!data.agreement?.customerAcceptedAt){
-        create('accept','Patvirtinti nuomos sutartį');
+        create('accept',renterTrustLabel('accept'));
       }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
-        create('pickup','Gauti išdavimo kodą');
+        create('pickup',renterTrustLabel('pickup'));
       }
     }catch{
       // Fail closed: do not expose a pickup CTA without verified consent.
       // "Peržiūrėti sutartį" remains available via Daugiau veiksmų.
     }
   }
+  document.addEventListener('rentinorbit:language-changed',()=>{
+    document.querySelectorAll('[data-rio-trust-renter]').forEach(button=>{
+      button.textContent=renterTrustLabel(button.dataset.rioTrustRenter);
+    });
+  });
   function addCustomerTrustControls(){
     document.querySelectorAll('.customer-booking-card[data-booking-id]').forEach(card=>{
       if(card.dataset.rioTrustLoaded==='true')return;
