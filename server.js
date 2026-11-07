@@ -2031,6 +2031,9 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     const requestedStatus=req.body?.status || 'confirmed';
     if(process.env.RENTINORBIT_STAGING==='true' && ['active','returned'].includes(requestedStatus))
       return res.status(409).json({error:'Daikto išdavimui ir grąžinimui reikalingas vienkartinis nuomininko kodas.',code:'TRANSFER_CODE_REQUIRED'});
+    if(process.env.RENTINORBIT_STAGING==='true' && requestedStatus==='completed' &&
+      getRentalBookingById(req.params.bookingId)?.status==='active')
+      return res.status(409).json({error:'Prieš užbaigdami nuomą patvirtinkite daikto grąžinimą vienkartiniu kodu.',code:'RETURN_CODE_REQUIRED'});
 
     // Refresh expired requests before an approval can capture any funds.
     if(requestedStatus==='confirmed') await processExpiredBookings();
