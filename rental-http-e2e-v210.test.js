@@ -36,7 +36,7 @@ createRentalBookingAtomic({bookingId:pendingId,listingId:'api-e2e-listing',
   startDate:'2099-07-01',endDate:'2099-07-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'API Renter',orderValue:100});
 const payId='api-e2e-payment';
-createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
+const payFixture=createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
   startDate:'2099-06-05',endDate:'2099-06-06',quantity:1,status:'confirmed',
   customerEmail:renter,customerName:'API Renter',orderValue:100});
 setBookingPaymentDetails({bookingId:payId,paymentIntentId:'demo_pi_prepared_e2e',
@@ -99,6 +99,13 @@ try{
    data:{bookingId:pendingId,outcome:'succeeded'}});
  status(pendingPaid,200,'Confirmed rental can complete demo payment');
  assert.equal(pendingPaid.body.booking.paymentStatus,'paid');
+ // Guest tokens work only without a different authenticated account.
+ const impersonated=await api('/api/payments/create-intent',{method:'POST',cookie:outsiderCookie,
+   data:{bookingId:payId,paymentToken:payFixture.paymentToken}});
+ status(impersonated,403,'Foreign logged-in account cannot use valid guest payment token');
+ const validGuest=await api('/api/payments/create-intent',{method:'POST',
+   data:{bookingId:payId,paymentToken:payFixture.paymentToken}});
+ status(validGuest,200,'Unauthenticated genuine guest can use booking token');
  const payRoute='/api/payments/demo/confirm';
  status(await api(payRoute,{method:'POST',cookie:outsiderCookie,
    data:{bookingId:payId,outcome:'succeeded'}}),403,'Outsider cannot pay somebody else booking');
