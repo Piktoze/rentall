@@ -250,7 +250,7 @@ const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',
 const demoPaymentsEnabled=String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
 // Authorization/capture experiment is isolated to staging and a Stripe TEST secret.
-const rentalPreauthEnabled=process.env.RENTINORBIT_STAGING==='true' && /^sk_test_/.test(stripeKey) && process.env.RENTINORBIT_PREAUTH_ENABLED!=='false';
+const rentalPreauthEnabled=process.env.RENTINORBIT_STAGING==='true' && !demoPaymentsEnabled && /^sk_test_/.test(stripeKey) && process.env.RENTINORBIT_PREAUTH_ENABLED!=='false';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
