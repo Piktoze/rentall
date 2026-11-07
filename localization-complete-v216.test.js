@@ -21,12 +21,20 @@ const explicit=[...new Set([...html.matchAll(/data-i18n-(?:text|placeholder|aria
  .map(m=>m[1].replaceAll('&amp;','&').replaceAll('&quot;','"').replaceAll('&#39;',"'")))];
 const alias=[...new Set([...html.matchAll(/\bdata-i18n="([^"]+)"/g)].map(m=>m[1]))];
 const dynamic=[...new Set([...app.matchAll(/uiText\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]))];
+const modulePaths=['modules/marketplace-trust-v172.js','modules/supplier-command-v143.js',
+  'modules/supplier-finance.js','modules/supplier-operations.js'];
+const moduleKeys=[...new Set(modulePaths.flatMap(path=>{
+  const src=fs.readFileSync(path,'utf8');
+  return [...src.matchAll(/(?:\\btr|\\buiText|i18n\\.t)\\(\\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
+}))];
 for(const lang of ['lt','en','es','de','ru']){
  for(const key of explicit)assert.ok(lang==='en'||typeof d[lang]?.[key]==='string','Missing '+lang+' static: '+key);
  for(const key of alias)assert.ok(typeof k[lang]?.[key]==='string','Missing '+lang+' markup key: '+key);
  for(const key of dynamic)assert.ok(lang==='en'||typeof d[lang]?.[key]==='string'||typeof k[lang]?.[key]==='string',
   'Missing '+lang+' dynamic app text: '+key);
+ for(const key of moduleKeys)assert.ok(lang==='en'||typeof d[lang]?.[key]==='string'||typeof k[lang]?.[key]==='string',
+  'Missing '+lang+' supplier/marketplace module text: '+key);
 }
 assert.ok(app.includes('data-i18n-text="Keep your listings live"'),
  'Supplier listing freshness label must retranslate on language change');
-console.log('PASS 5-locale coverage: '+explicit.length+' static, '+alias.length+' section, '+dynamic.length+' runtime keys');
+console.log('PASS 5-locale coverage: '+explicit.length+' static, '+alias.length+' section, '+dynamic.length+' runtime keys and '+moduleKeys.length+' module keys');
