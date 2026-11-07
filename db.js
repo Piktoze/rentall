@@ -2037,7 +2037,7 @@ export function issueRentalTransferCode(bookingId,purpose){
     .run(String(bookingId),purpose,digest,salt,expiry.toISOString(),now.toISOString());
   return {code,purpose,expiresAt:expiry.toISOString()};
 }
-export function verifyAndConsumeRentalTransferCode(bookingId,purpose,code){
+export function verifyAndConsumeRentalTransferCode(bookingId,purpose,code,{returnCondition=null,returnNotes=null}={}){
   if(!['pickup','return'].includes(purpose))throw Error('Invalid transfer purpose');
   const input=String(code||'').trim();
   if(!/^\d{6}$/.test(input))throw Object.assign(new Error('Įveskite šešių skaitmenų kodą.'),{code:'INVALID_TRANSFER_CODE'});
@@ -2062,7 +2062,12 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,code){
     const changed=db.prepare('UPDATE rental_transfer_codes SET consumed_at=? WHERE booking_id=? AND purpose=? AND consumed_at IS NULL')
       .run(new Date().toISOString(),String(bookingId),purpose);
     if(changed.changes!==1)throw Error('Transfer code was already used');
-    const updated=updateRentalBookingStatus(bookingId,purpose==='pickup'?'active':'returned');
+    if(purpose==='return'&&!['good','damaged','missing'].includes(String(returnCondition||''))){
+      throw Object.assign(new Error('Būtina nurodyti grąžinto daikto būklę.'),{code:'RETURN_CONDITION_REQUIRED'});
+    }
+    const updated=purpose==='pickup'
+      ? updateRentalBookingStatus(bookingId,'active')
+      : markRentalReturned(bookingId,returnCondition,returnNotes);
     return {ok:true,booking:updated};
   })();
 }
