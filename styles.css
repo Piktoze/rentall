@@ -1848,7 +1848,6 @@ html.rentinorbit-route-loading::after{
 #how{scroll-margin-top:140px}
 
 /* V214: one supplier CTA per working area; actual listing modal trigger stays in DOM. */
-body.rio-authenticated #list-item,
 body.rio-authenticated #partnerForm { display:none!important; }
 /* V214: closed drawers cannot cover content or block document scroll. */
 #supplierActionDrawer[aria-hidden="true"] {pointer-events:none!important;}
@@ -1881,4 +1880,33 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
     align-self:stretch;
     width:100%;
   }
+}
+
+/* V216: two equal-intent entry points above the fold: search left, list right. */
+.hero .hero-grid{grid-template-columns:minmax(0,1.65fr) minmax(290px,.85fr);gap:36px;align-items:center}
+.hero .hero-grid>div:first-child{min-width:0}
+.hero-supplier-cta.listing-section{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:16px;
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:24px;
+  background:#fff;
+  box-shadow:0 18px 44px rgba(16,45,34,.09);
+  min-width:0;
+  scroll-margin-top:145px;
+}
+.hero-supplier-cta .eyebrow{margin:0}
+.hero-supplier-cta h2{font-size:clamp(28px,3vw,38px);line-height:1.12;margin:0}
+.hero-supplier-cta .subcopy{margin:0;line-height:1.5}
+.hero-supplier-cta #openListingFormBtn{width:100%;min-height:52px;margin-top:8px}
+@media(max-width:1000px){
+  .hero .hero-grid{grid-template-columns:1fr;gap:24px}
+  .hero-supplier-cta.listing-section{padding:24px;max-width:none}
+}
+@media(max-width:620px){
+  .hero-supplier-cta.listing-section{padding:20px;gap:12px}
 }
