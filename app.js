@@ -1341,6 +1341,7 @@ document.getElementById('listingForm')?.addEventListener('submit',e=>{
     supplierTimezone:(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch{return ''}})(),
     ownerType:s.accountType||'individual',
     ownerEmail:s.email,
+    sourceLanguage:window.RentInOrbitI18n?.getLanguage?.()||'lt',
     // Attach validated uploaded media before any persistence handler runs.
     photos:[...pendingListingPhotoUrls],
     coverPhoto:pendingListingPhotoUrls[0]||''
@@ -4910,7 +4911,7 @@ renderUniversalListings=function(items=loadUniversalListings()){
       : uiText('Calculated at checkout');
 
     return `
-      <div class="listing-card" data-listing-id="${escapeHtml(l.id)}">
+      <div class="listing-card" data-listing-id="${escapeHtml(l.id)}" data-source-lang="${escapeHtml(l.sourceLanguage||'')}">
         ${cover?`<img class="listing-card-cover" src="${cover}" alt="${escapeHtml(l.title)}">`:''}
         <button class="favorite-btn ${favorite?'active':''}" type="button" data-favorite-id="${escapeHtml(l.id)}" aria-pressed="${favorite?'true':'false'}" aria-label="${escapeHtml(uiText(favorite?'Remove from favorites':'Save to favorites'))}">${favorite?'♥':'♡'}</button>
         <small>${escapeHtml(ownerLabel)} · ${escapeHtml(l.city||'')}</small>
