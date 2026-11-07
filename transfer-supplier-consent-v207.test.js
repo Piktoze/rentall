@@ -6,7 +6,7 @@ const server=fs.readFileSync('./server.js','utf8');
 const route=server.split("app.post('/api/rentals/bookings/:bookingId/agreement/accept'")[1]
   ?.split("app.post('/api/rentals/bookings/:bookingId/transfer-code'")[0]||'';
 assert.ok(route.includes("req.body?.accepted!==true"),'Explicit agreement consent must be required');
-assert.ok(route.includes("acceptRentalAgreement(id,supplier?'supplier':'customer')"),'Only the explicit consent endpoint signs');
+assert.ok(route.includes("acceptRentalAgreement(id,supplier?'supplier':'customer',"),'Only the explicit consent endpoint signs');
 const occurrences=[...server.matchAll(/acceptRentalAgreement\(/g)];
 assert.equal(occurrences.length,1,'No implicit supplier signature in webhook or instant payment flows');
 assert.ok(server.includes("if(!agreement?.customerAcceptedAt||!agreement?.supplierAcceptedAt)")===false ||
