@@ -2301,7 +2301,7 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   simpleRateLimit({windowMs:60000,max:12,keyPrefix:'agreement-accept'}),(req,res)=>{
   const id=req.params.bookingId,user=sessionUser(req),booking=getRentalBookingById(id);
   if(!booking||!bookingAccessAllowed(req,id))return res.status(403).json({error:'Rezervacija nepasiekiama.'});
-  const supplier=canSupplierManageBooking(user,id);
+  const supplier=user?.role==='supplier'&&canSupplierManageBooking(user,id);
   const customer=!supplier && !!((user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase())||
     verifyBookingPaymentToken(id,req.body?.accessToken||''));
   if(!supplier&&!customer)return res.status(403).json({error:'Negalite patvirtinti šios sutarties.'});
@@ -2325,7 +2325,7 @@ app.post('/api/rentals/bookings/:bookingId/transfer-code',
   }catch(err){res.status(err.code==='TRANSFER_NOT_READY'||err.code==='TRANSFER_ALREADY_USED'?409:400).json({error:err.message,code:err.code||null});}
 });
 app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
-  requireRole('supplier','admin'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'transfer-confirm'}),(req,res)=>{
+  requireRole('supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'transfer-confirm'}),(req,res)=>{
   const id=req.params.bookingId;
   if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
   try{
