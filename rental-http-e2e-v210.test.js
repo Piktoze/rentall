@@ -10,7 +10,7 @@ import {spawn} from 'node:child_process';
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
 const dbPath=path.join(folder,'integration.sqlite');
 const env={...process.env,DB_PATH:dbPath,NODE_ENV:'test',RENTINORBIT_STAGING:'true',
-  RENTINORBIT_DEMO_PAYMENTS:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
+  RENTINORBIT_DEMO_PAYMENTS:'true',RENTINORBIT_PREAUTH_ENABLED:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
   RENTALL_SEED_DEMO_USERS:'false'};
 for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
   'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
@@ -31,6 +31,10 @@ createRentalBookingAtomic({bookingId:id,listingId:'api-e2e-listing',startDate:'2
 setBookingPaymentDetails({bookingId:id,paymentIntentId:'pi_test_mock_not_stripe',paymentStatus:'paid',
   paymentProvider:'mock',platformFeeAmount:15,supplierAmount:85});
 createRentalAgreement({bookingId:id,termsVersion:'e2e-v1',snapshot:{listingTitle:'Temporary API test item',total:100}});
+const pendingId='api-e2e-pending';
+createRentalBookingAtomic({bookingId:pendingId,listingId:'api-e2e-listing',
+  startDate:'2099-07-01',endDate:'2099-07-02',quantity:1,status:'pending',
+  customerEmail:renter,customerName:'API Renter',orderValue:100});
 const payId='api-e2e-payment';
 createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
   startDate:'2099-06-05',endDate:'2099-06-06',quantity:1,status:'confirmed',
@@ -78,6 +82,23 @@ try{
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
  // Demo is strictly local: verify authorization and terminal state do not regress.
+ // Pending request must never create a TEST or demo payment intent until
+ // the supplier has accepted the booking, even if preauth flag is requested.
+ const pendingCheckout=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
+   data:{bookingId:pendingId}});
+ status(pendingCheckout,409,'Pending request checkout must be blocked');
+ assert.equal(pendingCheckout.body.code,'SUPPLIER_CONFIRMATION_REQUIRED');
+ const approved=await api('/api/rentals/bookings/'+pendingId+'/status',{method:'POST',
+   cookie:supplierCookie,data:{status:'confirmed'}});
+ status(approved,200,'Supplier approval without prior card authorization');
+ const unlocked=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
+   data:{bookingId:pendingId}});
+ status(unlocked,200,'Payment intent only after supplier approval');
+ assert.ok(unlocked.body.paymentIntentId?.startsWith('demo_pi_'));
+ const pendingPaid=await api('/api/payments/demo/confirm',{method:'POST',cookie:renterCookie,
+   data:{bookingId:pendingId,outcome:'succeeded'}});
+ status(pendingPaid,200,'Confirmed rental can complete demo payment');
+ assert.equal(pendingPaid.body.booking.paymentStatus,'paid');
  const payRoute='/api/payments/demo/confirm';
  status(await api(payRoute,{method:'POST',cookie:outsiderCookie,
    data:{bookingId:payId,outcome:'succeeded'}}),403,'Outsider cannot pay somebody else booking');
