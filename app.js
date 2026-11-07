@@ -2832,42 +2832,65 @@ function populateSupplierCalendarListings(){
   if(listings.some(l=>String(l.id)===String(current))) select.value=current;
 }
 
+const SUPPLIER_CALENDAR_COPY={
+  lt:{loading:'Įkeliamas kalendorius…',booked:'Rezervuota',free:'Laisva',total:'Iš viso vienetų',min:'Mažiausiai laisvų per laikotarpį',empty:'Šiam laikotarpiui datų nėra.',noListings:'Pasirinkite skelbimą.',invalid:'Pasirinkite tinkamą datų intervalą.',week:['Pr','An','Tr','Kt','Pn','Št','Sk'],end:'Nuomos pabaigos diena yra grąžinimo data ir paprastai nelaikoma užimta.'},
+  en:{loading:'Loading calendar…',booked:'Booked',free:'Available',total:'Total units',min:'Lowest availability in period',empty:'No dates in selected period.',noListings:'Select a listing.',invalid:'Select a valid date range.',week:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],end:'The rental end date is the return date and is normally not counted as occupied.'},
+  es:{loading:'Cargando calendario…',booked:'Reservado',free:'Disponible',total:'Unidades totales',min:'Mínimo disponible',empty:'No hay fechas.',noListings:'Selecciona un anuncio.',invalid:'Elige un intervalo válido.',week:['Lu','Ma','Mi','Ju','Vi','Sá','Do'],end:'La fecha final de alquiler corresponde a la devolución.'},
+  de:{loading:'Kalender wird geladen…',booked:'Gebucht',free:'Verfügbar',total:'Gesamtbestand',min:'Mindestens verfügbar',empty:'Keine Tage im Zeitraum.',noListings:'Inserat auswählen.',invalid:'Gültigen Zeitraum wählen.',week:['Mo','Di','Mi','Do','Fr','Sa','So'],end:'Das Mietende ist der Rückgabetag und gilt normalerweise nicht als belegt.'},
+  ru:{loading:'Загрузка календаря…',booked:'Занято',free:'Свободно',total:'Всего единиц',min:'Минимум свободных',empty:'Нет дат.',noListings:'Выберите объявление.',invalid:'Выберите верные даты.',week:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],end:'Дата окончания аренды — день возврата и обычно не считается занятой.'}
+};
+let supplierCalendarRequestSequence=0;
 async function renderSupplierAvailability(){
   const grid=document.getElementById('supplierCalendarGrid');
   const summary=document.getElementById('supplierCalendarSummary');
   const listingId=document.getElementById('supplierCalendarListing')?.value;
   const from=document.getElementById('supplierCalendarFrom')?.value;
   const to=document.getElementById('supplierCalendarTo')?.value;
-  if(!grid||!from||!to) return;
-  if(!listingId){
-    grid.innerHTML=`<div class="supplier-calendar-empty">${escapeHtml(window.RentInOrbitI18n?.t?.('No listings yet. Add your first listing to use the calendar.')||'No listings yet. Add your first listing to use the calendar.')}</div>`;
-    if(summary) summary.textContent='';
-    return;
+  if(!grid||!summary)return;
+  const language=window.RentInOrbitI18n?.getLanguage?.()||'lt';
+  const locale={lt:'lt-LT',en:'en-GB',es:'es-ES',de:'de-DE',ru:'ru-RU'}[language]||'lt-LT';
+  const c=SUPPLIER_CALENDAR_COPY[language]||SUPPLIER_CALENDAR_COPY.lt;
+  const request=++supplierCalendarRequestSequence;
+  if(!listingId){grid.innerHTML='<p>'+escapeHtml(c.noListings)+'</p>';summary.textContent='';return;}
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(from||'')||!/^\\d{4}-\\d{2}-\\d{2}$/.test(to||'')||from>=to){
+    grid.innerHTML='<p>'+escapeHtml(c.invalid)+'</p>';summary.textContent='';return;
   }
-
-  grid.innerHTML='<div>Loading…</div>';
+  grid.innerHTML='<p class="supplier-calendar-loading">'+escapeHtml(c.loading)+'</p>';
   try{
-    await syncListingsToServer();
-    const data=await apiJson(`/api/rentals/calendar?listingId=${encodeURIComponent(listingId)}&fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}`);
-    grid.innerHTML=data.days.map(day=>{
+    const data=await apiJson(`/api/rentals/calendar?listingId=${encodeURIComponent(listingId)}&fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}`,{cache:'no-store'});
+    if(request!==supplierCalendarRequestSequence)return;
+    const days=Array.isArray(data.days)?data.days:[];
+    if(!days.length){grid.innerHTML='<p>'+escapeHtml(c.empty)+'</p>';summary.textContent='';return;}
+    const firstDate=new Date(days[0].date+'T12:00:00Z');
+    const gap=(firstDate.getUTCDay()+6)%7;
+    const weekday=c.week.map((name,i)=>`<div class="supplier-calendar-weekday" role="columnheader" data-day="${i}">${escapeHtml(name)}</div>`).join('');
+    const spaces=Array.from({length:gap},()=>'<div class="supplier-calendar-spacer" aria-hidden="true"></div>').join('');
+    const fmt=new Intl.DateTimeFormat(locale,{day:'numeric',month:'short',timeZone:'UTC'});
+    const cards=days.map(day=>{
+      const date=new Date(day.date+'T12:00:00Z');
+      const occupied=Number(day.bookedQuantity||0),remaining=Number(day.remainingQuantity||0),total=Number(day.totalQuantity||0);
       const cls=availabilityClass(day);
-      return `<div class="supplier-cal-day ${cls}">
-        <b>${day.date}</b>
-        <small>Booked: ${day.bookedQuantity}</small>
-        <small>Available: ${day.remainingQuantity} / ${day.totalQuantity}</small>
+      const display=fmt.format(date);
+      return `<div class="supplier-cal-day ${cls}" role="gridcell" aria-label="${escapeHtml(display)}: ${escapeHtml(c.booked)} ${occupied}; ${escapeHtml(c.free)} ${remaining}">
+        <b>${escapeHtml(display)}</b>
+        <span class="supplier-calendar-status">${occupied>0?escapeHtml(c.booked)+': '+occupied:escapeHtml(c.free)+': '+remaining}</span>
+        <small>${escapeHtml(c.free)}: ${remaining} / ${total}</small>
       </div>`;
     }).join('');
-
-    const lowest=data.days.reduce((m,d)=>Math.min(m,d.remainingQuantity),Infinity);
-    const total=data.days[0]?.totalQuantity ?? 0;
-    summary.textContent=data.days.length
-      ? `Total inventory: ${total} · Lowest remaining quantity in selected period: ${lowest}`
-      : 'No dates in selected period.';
+    grid.innerHTML=weekday+spaces+cards;
+    const lowest=Math.min(...days.map(d=>Number(d.remainingQuantity||0)));
+    const total=Number(days[0]?.totalQuantity||0);
+    summary.textContent=`${c.total}: ${total} · ${c.min}: ${lowest}. ${c.end}`;
   }catch(err){
-    grid.innerHTML=`<div class="webhook-error">${escapeHtml(err.message||"Unknown error")}</div>`;
+    if(request!==supplierCalendarRequestSequence)return;
+    grid.innerHTML=`<p class="webhook-error">${escapeHtml(err.message||c.empty)}</p>`;
     summary.textContent='';
   }
 }
+document.addEventListener('rentinorbit:language-changed',()=>{
+  const section=document.getElementById('supplierAvailabilitySection');
+  if(section?.classList.contains('supplier-v178-external-visible'))renderSupplierAvailability();
+});
 
 function initSupplierAvailability(){
   initSupplierCalendarDates();
