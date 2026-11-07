@@ -8,6 +8,7 @@ execFileSync(process.execPath,['supplier-i18n-v203.test.mjs'],{stdio:'inherit'})
  // Source-only regression suites: safe during build, no Stripe or database mutations.
 for(const suite of [
   'payment-race.test.js',
+  'rental-preauth-v204.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
