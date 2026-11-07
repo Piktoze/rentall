@@ -2016,6 +2016,9 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     }
     const requestedStatus=req.body?.status || 'confirmed';
 
+    // Refresh expired requests before an approval can capture any funds.
+    if(requestedStatus==='confirmed') await processExpiredBookings();
+
     if(requestedStatus==='declined'){
       markSupplierResponded(req.params.bookingId);
       const responseListing=getRentalListing(getRentalBookingById(req.params.bookingId)?.listingId);
@@ -2050,6 +2053,9 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     if(requestedStatus==='confirmed' && rentalPreauthEnabled){
       const before=getRentalBookingById(req.params.bookingId);
       const listing=before?getRentalListing(before.listingId):null;
+      if(before && listing?.bookingMode==='request' && before.status==='pending' && !before.stripePaymentIntentId){
+        return res.status(409).json({error:'Nuomininkas dar neautorizavo nuomos mokesčio kortelėje.',code:'CUSTOMER_AUTHORIZATION_REQUIRED'});
+      }
       if(before && listing?.bookingMode==='request' && before.stripePaymentIntentId && !before.stripePaymentIntentId.startsWith('demo_pi_')){
         const connection=getDirectMerchantConnectionByEmail(db,listing.ownerEmail);
         if(!stripe || !connection?.stripeAccountId) return res.status(409).json({error:'Supplier TEST Stripe is not ready',code:'SUPPLIER_STRIPE_NOT_READY'});
