@@ -10,6 +10,7 @@ for(const suite of [
   'payment-race.test.js',
   'rental-preauth-v204.test.js',
   'transfer-signature-v206.test.js',
+  'transfer-supplier-consent-v207.test.js',
   'webhook-ordering.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
