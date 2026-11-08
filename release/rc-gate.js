@@ -33,6 +33,7 @@ for(const suite of [
   'customer-pay-resume-v232.test.js',
   'stripe-booking-binding-v234.test.js',
   'stripe-pricing-resume-v236.test.mjs',
+  'stripe-delayed-webhook-cancel-v237.test.mjs',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
