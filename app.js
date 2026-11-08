@@ -487,7 +487,7 @@ function refreshPaymentsPanel(){
   // Live Stripe status is supplied by the authenticated server endpoint below.
   const stripeBadge=document.getElementById('stripeStatusBadge');
   const bankBadge=document.getElementById('bankStatusBadge');
-  stripeBadge.textContent=uiText('Checking Stripe status');
+  stripeBadge.textContent=uiText('Pending verification');
   stripeBadge.className='status pending';
   bankBadge.textContent=uiText('Pending verification');
   bankBadge.className='status pending';
