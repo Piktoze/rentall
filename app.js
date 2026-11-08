@@ -5884,13 +5884,26 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
     const summary=document.createElement('button');
     summary.type='button';
     summary.className='v56-mobile-summary';
-    summary.textContent='Filters · location · dates · quantity';
+    const filterLabels={
+      lt:['Filtrai · vieta · datos · kiekis','Uždaryti filtrus'],
+      en:['Filters · location · dates · quantity','Close filters'],
+      es:['Filtros · lugar · fechas · cantidad','Cerrar filtros'],
+      de:['Filter · Ort · Daten · Menge','Filter schließen'],
+      ru:['Фильтры · место · даты · количество','Закрыть фильтры']
+    };
+    const updateLabel=()=>{
+      const lang=String(document.documentElement.lang||'en').toLowerCase().split('-')[0];
+      const labels=filterLabels[lang]||filterLabels.en;
+      summary.textContent=filters.classList.contains('v56-mobile-open')?labels[1]:labels[0];
+    };
     summary.setAttribute('aria-expanded','false');
+    updateLabel();
     summary.onclick=()=>{
       const open=filters.classList.toggle('v56-mobile-open');
       summary.setAttribute('aria-expanded',String(open));
-      summary.textContent=open?'Close filters':'Filters · location · dates · quantity';
+      updateLabel();
     };
+    document.addEventListener('rentinorbit:language-changed',updateLabel);
     filters.parentNode.insertBefore(summary,filters);
   }
 
