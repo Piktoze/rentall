@@ -40,6 +40,12 @@ try{
  assert.match(getRentalAgreementAcceptanceAudit(id)[0].snapshotSha256,/^[a-f0-9]{64}$/);
  const customer=issueRentalTransferCode(id,'pickup','customer');
  assert.match(customer.code,/^\d{6}$/);
+ assert.equal(customer.validUntilUsed,true,'PIN must not expire after 15 minutes');
+ assert.equal(customer.expiresAt,null,'UI must not receive an expiry timer');
+ const sameCustomerPin=issueRentalTransferCode(id,'pickup','customer');
+ assert.equal(sameCustomerPin.code,customer.code,'Opening renter booking again must not rotate unused PIN');
+ const customerRow=db.prepare("SELECT expires_at FROM rental_party_transfer_codes WHERE booking_id=? AND purpose='pickup' AND party='customer'").get(id);
+ assert.ok(Date.parse(customerRow.expires_at)>Date.parse('2099-01-01'),'PIN persists without a short timeout');
  assert.equal(getRentalAgreement(id).supplierAcceptedAt,null,'supplier signature is independently required');
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
  // Even a valid renter PIN cannot transfer an item before supplier signs.
