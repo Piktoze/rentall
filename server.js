@@ -2487,6 +2487,8 @@ app.post('/api/rentals/bookings/:bookingId/transfer-code',
   if(isSupplier||(!isAccountCustomer&&!isGuestCustomer))
     return res.status(403).json({error:'Tik nuomininkas gali gauti šios rezervacijos kodą.'});
   try{
+    if(req.body?.purpose==='return')
+      return res.status(409).json({error:'Grąžinimą patvirtina nuomotojas be papildomo kodo.',code:'RETURN_PIN_NOT_REQUIRED'});
     const value=issueRentalTransferCode(id,req.body?.purpose,'customer');
     res.set('Cache-Control','no-store, private');
     res.json(value);
@@ -2534,6 +2536,55 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
     res.set('Cache-Control','no-store, private');
     res.json({...result,booking:getRentalBookingById(id)});
   }catch(err){res.status(err.code==='TRANSFER_CODE_EXPIRED'||err.code==='TRANSFER_NOT_READY'||err.code==='AGREEMENT_REQUIRED'?409:400).json({error:err.message,code:err.code||null});}
+});
+
+// Supplier records physical return; no second renter PIN is required.
+// A return condition is mandatory, and a damage claim never auto-captures a deposit.
+app.post('/api/rentals/bookings/:bookingId/return-confirm',
+  requireRole('supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'return-confirm'}),(req,res)=>{
+  const id=req.params.bookingId;
+  if(!canSupplierManageBooking(req.appUser,id))
+    return res.status(403).json({error:'Tik šio daikto nuomotojas gali patvirtinti grąžinimą.'});
+  const condition=String(req.body?.returnCondition||'').trim().toLowerCase();
+  const notes=String(req.body?.returnNotes||'').trim();
+  if(!['good','damaged','missing'].includes(condition))
+    return res.status(400).json({error:'Privaloma nurodyti daikto būklę.',code:'RETURN_CONDITION_REQUIRED'});
+  if(condition!=='good'&&!notes)
+    return res.status(400).json({error:'Nurodykite pastebėtus pažeidimus ar trūkumus.',code:'RETURN_NOTES_REQUIRED'});
+  try{
+    const current=getRentalBookingById(id);
+    if(!current||current.status!=='active')
+      return res.status(409).json({error:'Grąžinimą galima patvirtinti tik aktyviai nuomai.',code:'TRANSFER_NOT_READY'});
+    const booking=markRentalReturned(id,condition,notes||null);
+    const listing=getRentalListing(booking.listingId);
+    if(Math.max(0,Number(booking.securityDepositAmount||0))>0){
+      try{
+        resolveRentalSecurityDeposit(id,{
+          status:condition==='good'?'release_pending':'claim_pending',
+          resolution:condition==='good'
+            ?'Nuomotojas patvirtino grąžinimą; užstato atlaisvinimas laukia mokėjimų patikros.'
+            :'Nuomotojas nurodė pažeidimus ar trūkumus; užstato klausimas laukia peržiūros.'
+        });
+      }catch(err){console.error('Return deposit review failed',id,err.message);}
+    }
+    try{
+      if(booking.customerEmail)createRentalNotification({
+        uniqueKey:`return-confirm:${id}:customer`,audience:'customer',
+        userEmail:booking.customerEmail,bookingId:id,type:'booking.return',
+        title:'Nuomotojas patvirtino grąžinimą',
+        message:condition==='good'
+          ?'Daiktas pažymėtas kaip grąžintas tvarkingas. Jei nesutinkate, galite pradėti ginčą.'
+          :'Daiktas pažymėtas kaip grąžintas su pastabomis dėl būklės. Galite peržiūrėti užsakymą ir pradėti ginčą.'
+      });
+      if(listing?.ownerEmail)createRentalNotification({
+        uniqueKey:`return-confirm:${id}:supplier`,audience:'supplier',
+        userEmail:listing.ownerEmail,bookingId:id,type:'booking.return',
+        title:'Grąžinimas užfiksuotas',message:'Daikto grąžinimo būklė įrašyta į užsakymą.'
+      });
+    }catch(err){console.warn('Return notification failed',id,err.message);}
+    res.set('Cache-Control','no-store, private');
+    res.json({ok:true,booking:getRentalBookingById(id)});
+  }catch(err){res.status(err.code==='INVALID_TRANSITION'?409:400).json({error:err.message,code:err.code||null});}
 });
 
 app.get('/api/rentals/bookings/:bookingId/agreement',(req,res)=>{
