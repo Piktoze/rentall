@@ -963,6 +963,7 @@ function databaseBackupStatus(){
     restoreVerified=proof.ok===true&&proof.integrity==='ok'&&
       proof.backupKey===evidence.backupKey&&proof.backupFile===evidence.backupFile&&
       proof.storage===evidence.storage&&Number(proof.bytes)===Number(evidence.bytes)&&
+      /^[a-f0-9]{64}$/.test(String(evidence.sha256||''))&&proof.sha256===evidence.sha256&&
       Number.isFinite(restoreTs)&&restoreTs>=ts&&restoreTs<=Date.now()&&
       Number(proof.tableCount)>=1&&Number(proof.migrationVersion)>=1;
   }catch{}
