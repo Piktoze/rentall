@@ -130,6 +130,67 @@ function fillCheckout(){
   document.getElementById('payBtn').textContent = `Pay ${money(rental+delivery)}`;
 }
 
+// Use only the authenticated server account for booking contact defaults.
+// Do not read an unrelated previous visitor's contact details from localStorage.
+let bookingProfileAccountId = null;
+function prefillBookingFromAccount(){
+  const user = currentServerUser;
+  const fields = ['firstName','lastName','email','phone','whatsapp'];
+  if(!user?.userId){
+    if(bookingProfileAccountId !== null){
+      fields.forEach(id=>{
+        const input=document.getElementById(id);
+        if(input?.dataset.rioProfileFilled==='true') input.value='';
+        if(input) delete input.dataset.rioProfileFilled;
+      });
+      bookingProfileAccountId=null;
+    }
+    return false;
+  }
+  const accountId=String(user.userId);
+  if(bookingProfileAccountId!==accountId){
+    fields.forEach(id=>{
+      const input=document.getElementById(id);
+      if(input && (bookingProfileAccountId!==null || input.dataset.rioProfileFilled==='true')){
+        input.value='';
+      }
+      if(input) delete input.dataset.rioProfileFilled;
+    });
+    bookingProfileAccountId=accountId;
+  }
+  const displayName=String(user.displayName||'').trim().replace(/\\s+/g,' ');
+  const parts=displayName.split(' ').filter(Boolean);
+  const defaults={
+    firstName:user.firstName||parts[0]||'',
+    lastName:user.lastName||parts.slice(1).join(' ')||'',
+    email:user.email||'',
+    phone:user.phone||'',
+    whatsapp:user.whatsapp||''
+  };
+  Object.entries(defaults).forEach(([id,value])=>{
+    const input=document.getElementById(id);
+    if(!input || !value) return;
+    if(!input.value.trim() || input.dataset.rioProfileFilled==='true'){
+      input.value=String(value);
+      input.dataset.rioProfileFilled='true';
+    }
+  });
+  const language=document.getElementById('preferredLanguage');
+  if(language && !language.dataset.rioLanguageEdited){
+    const preferred=String(user.preferredLanguage||document.documentElement.lang||'').toLowerCase();
+    const names={lt:'Lietuvių',en:'English',es:'Español',de:'Deutsch',ru:'Русский'};
+    const option=names[preferred.split('-')[0]];
+    if(option && [...language.options].some(o=>o.value===option)) language.value=option;
+  }
+  return ['firstName','lastName','email','phone'].every(id=>{
+    const input=document.getElementById(id);
+    return !!input?.value.trim() && input.checkValidity();
+  });
+}
+document.getElementById('preferredLanguage')?.addEventListener('change',e=>{
+  e.currentTarget.dataset.rioLanguageEdited='true';
+});
+
 function showStep(n){
   bookingStep=n;
   document.querySelectorAll('.checkout-step').forEach(s=>s.classList.toggle('active', Number(s.dataset.step)===n));
@@ -3907,6 +3968,7 @@ async function refreshServerUser(){
     serverUser=null;
   }
   currentServerUser=serverUser;
+  prefillBookingFromAccount();
 
   document.body.classList.toggle('is-admin',serverUser?.role==='admin');
   const activeUser=serverUser||currentServerUser||null;
@@ -4432,6 +4494,7 @@ function wireAuthoritativeCheckout(){
     cleanCheckout.addEventListener('click',()=>{
       if(!cart.length) return;
       fillCheckout();
+      prefillBookingFromAccount();
       document.getElementById('bookingSuccess')?.classList.remove('show');
       liveBookingForm.style.display='block';
       showStep(1);
@@ -4458,7 +4521,9 @@ function wireAuthoritativeCheckout(){
         }finally{btn.disabled=false;}
       }
       if(bookingStep===4) renderReview();
-      showStep(Number(btn.dataset.next));
+      // Skip redundant contact step only when every required field is valid.
+      const nextStep=(bookingStep===2 && prefillBookingFromAccount())?4:Number(btn.dataset.next);
+      showStep(nextStep);
     });
   });
 
