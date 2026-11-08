@@ -1795,7 +1795,7 @@ document.addEventListener('rentinorbit:language-changed',()=>{if(document.getEle
 function refreshCheckoutTotals(){
   const choice=document.getElementById('rioCheckoutHandoverMethod');
   const step2Method=document.getElementById('accommodationType');
-  const note=document.getElementById('rioCheckoutHandoverNote');
+  const handoverNote=document.getElementById('rioCheckoutHandoverNote');
   const listing=activeCheckoutListing;
   const canDeliver=Boolean(listing && listing.delivery!=='Pickup only' &&
     (listing.accommodationDelivery==='yes'||listing.accommodationDelivery===true));
@@ -1812,7 +1812,7 @@ function refreshCheckoutTotals(){
       choice.value='Pickup from owner';
       if(step2Method)step2Method.value='Pickup from owner';
     }
-    if(note)note.textContent=canDeliver
+    if(handoverNote)handoverNote.textContent=canDeliver
       ? 'Pristatymas galimas tiekėjo aptarnaujamoje teritorijoje. Galutinė suma perskaičiuojama prieš rezervaciją.'
       : 'Šio daikto tiekėjas siūlo tik atsiėmimą.';
   }
