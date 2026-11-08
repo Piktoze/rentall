@@ -13,17 +13,22 @@ function backupPaths(){
   return {dbPath,backupDir};
 }
 
-function assertSeparateBackupPath(){
+export function assertSeparateBackupPath(){
   const {dbPath,backupDir}=backupPaths();
   const databaseDir=path.dirname(dbPath);
-  if(backupDir===databaseDir || backupDir.startsWith(databaseDir+path.sep)){
-    const error=new Error('BACKUP_DIR must be on storage separate from the primary database directory');
-    error.code='BACKUP_STORAGE_NOT_SEPARATE';
-    throw error;
-  }
-  if(process.env.RAILWAY_ENVIRONMENT_ID && String(process.env.BACKUP_S3_ENABLED||'').toLowerCase()!=='true'){
+  const remoteEnabled=String(process.env.BACKUP_S3_ENABLED||'').toLowerCase()==='true';
+  // In Railway, the durable backup is in S3. The local directory is only
+  // temporary staging space, even when it is under the database volume.
+  if(process.env.RAILWAY_ENVIRONMENT_ID && !remoteEnabled){
     const error=new Error('Railway backups require separate S3-compatible storage');
     error.code='BACKUP_REMOTE_STORAGE_REQUIRED';
+    throw error;
+  }
+  // Without remote storage, a local copy within the database directory is
+  // not an independent backup and must never be accepted by the scheduler.
+  if(!remoteEnabled && (backupDir===databaseDir || backupDir.startsWith(databaseDir+path.sep))){
+    const error=new Error('BACKUP_DIR must be on storage separate from the primary database directory');
+    error.code='BACKUP_STORAGE_NOT_SEPARATE';
     throw error;
   }
   return {dbPath,backupDir};
