@@ -6636,12 +6636,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       pane.className='supplier-order-card';
       pane.style.marginTop='14px';
       const state=String(b.status||'');
-      pane.innerHTML='<h3>Nuomos sutartis ir daikto perdavimas</h3>'+
-        '<p class="muted">Kodą gauna tik nuomininkas, pasirašęs sutartį. Nuomotojas gali įvesti kodą tik abiem šalims patvirtinus sutartį.</p>'+
+      pane.innerHTML='<h3>Nuomotojo valdymas · sutartis ir daikto perdavimas</h3>'+
+        '<p class="muted"><strong>Čia kodas neišduodamas.</strong> Nuomininkas savo paskyroje atidaro „Mano užsakymai“ ir gauna išdavimo kodą prie konkretaus užsakymo po sutarties patvirtinimo ir sėkmingo apmokėjimo. Šiame nuomotojo lange kodas tik įvedamas perduodant daiktą.</p>'+
         '<p class="muted">Tapatybės patikra: neatlikta. Kodo turėjimas savaime nepatvirtina asmens tapatybės.</p>'+
         '<div class="rio-supplier-agreement-status" role="status" aria-live="polite"></div>'+
         '<button class="secondary rio-supplier-agreement" type="button" disabled>Patvirtinti nuomos sutartį</button> '+
-        (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Patvirtinti išdavimą pagal kodą':'Patvirtinti grąžinimą pagal kodą')+'</button>':'');
+        (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Įvesti nuomininko išdavimo kodą':'Įvesti nuomininko grąžinimo kodą')+'</button>':'');
       actions.appendChild(pane);
       const agreementButton=pane.querySelector('.rio-supplier-agreement');
       const agreementStatus=pane.querySelector('.rio-supplier-agreement-status');
