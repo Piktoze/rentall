@@ -948,14 +948,25 @@ function databaseBackupStatus(){
   const maxAgeHours=Math.max(1,Math.min(168,Number(process.env.DB_BACKUP_MAX_AGE_HOURS)||30));
   const defaultEvidence=path.join(path.dirname(runtimeConfig.database.path),'backups','last-verified-backup.json');
   const evidencePath=String(process.env.DB_BACKUP_EVIDENCE_PATH||defaultEvidence);
-  let verifiedAt=null,integrity=null,ageHours=null,evidenceValid=false;
+  let verifiedAt=null,integrity=null,ageHours=null,evidenceValid=false,restoreVerified=false,restoreVerifiedAt=null;
   try{
     const evidence=JSON.parse(fs.readFileSync(evidencePath,'utf8'));
     verifiedAt=String(evidence.verifiedAt||'');integrity=String(evidence.integrity||'');
     const ts=new Date(verifiedAt).getTime();
-    if(Number.isFinite(ts)){ageHours=(Date.now()-ts)/3600000;evidenceValid=integrity==='ok'&&ageHours>=0&&ageHours<=maxAgeHours;}
+    if(Number.isFinite(ts)){ageHours=(Date.now()-ts)/3600000;evidenceValid=evidence.ok===true&&integrity==='ok'&&ageHours>=0&&ageHours<=maxAgeHours;}
+    // Proof is published only after the downloaded backup passes an isolated
+    // SQLite restore. It must match this exact backup, not an older one.
+    const proofPath=path.join(path.dirname(path.resolve(evidencePath)),'last-restored-backup.json');
+    const proof=JSON.parse(fs.readFileSync(proofPath,'utf8'));
+    restoreVerifiedAt=String(proof.restoreVerifiedAt||'');
+    const restoreTs=new Date(restoreVerifiedAt).getTime();
+    restoreVerified=proof.ok===true&&proof.integrity==='ok'&&
+      proof.backupKey===evidence.backupKey&&proof.backupFile===evidence.backupFile&&
+      proof.storage===evidence.storage&&Number(proof.bytes)===Number(evidence.bytes)&&
+      Number.isFinite(restoreTs)&&restoreTs>=ts&&restoreTs<=Date.now()&&
+      Number(proof.tableCount)>=1&&Number(proof.migrationVersion)>=1;
   }catch{}
-  return {required,enabled,evidenceValid,verifiedAt:verifiedAt||null,ageHours:ageHours==null?null:Number(ageHours.toFixed(2)),maxAgeHours};
+  return {required,enabled,evidenceValid,restoreVerified,restoreVerifiedAt:restoreVerifiedAt||null,verifiedAt:verifiedAt||null,ageHours:ageHours==null?null:Number(ageHours.toFixed(2)),maxAgeHours};
 }
 
 function launchGate(){
@@ -963,7 +974,7 @@ function launchGate(){
   const storage=productionStorageReport();
   const database=checkDatabase();
   const backup=databaseBackupStatus();
-  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),...storage.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=REQUIRED_SCHEMA_VERSION},{id:'database_backup_enabled',required:backup.required,ready:backup.enabled},{id:'database_backup_recent_verified',required:backup.required,ready:backup.enabled&&backup.evidenceValid},{id:'accepting_traffic',required:true,ready:!shuttingDown}];
+  const checks=[...report.checks.map(({id,required,ready})=>({id,required,ready})),...storage.checks.map(({id,required,ready})=>({id,required,ready})),{id:'database_connection',required:true,ready:database.ok},{id:'database_migration',required:true,ready:database.migrationVersion>=REQUIRED_SCHEMA_VERSION},{id:'database_backup_enabled',required:backup.required,ready:backup.enabled},{id:'database_backup_recent_verified',required:backup.required,ready:backup.enabled&&backup.evidenceValid},{id:'database_backup_restore_verified',required:backup.required,ready:backup.enabled&&backup.evidenceValid&&backup.restoreVerified},{id:'accepting_traffic',required:true,ready:!shuttingDown}];
   const blocking=checks.filter(x=>x.required&&!x.ready).map(x=>x.id);
   return {ready:blocking.length===0,production:report.production,deployment:report.deployment,checks,blocking,database:{driver:database.driver,source:database.source,persistent:database.persistent,volumeConfigured:storage.database.volumeConfigured,migrationVersion:database.migrationVersion,backup},stripe:report.stripe,email:report.email,maps:report.maps,notifications:report.notifications};
 }
