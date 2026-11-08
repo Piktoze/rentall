@@ -5863,15 +5863,48 @@ async function loadUnifiedCustomerBookings(){
   });
   // A confirmed unpaid booking must remain payable when the customer returns
   // after supplier approval or reopens the page on another device.
+  // Resume payment in the selected renter booking; never navigate away and
+  // race the legacy deep-link handlers which clear ?pay= before Stripe mounts.
   list.querySelectorAll('.v231-pay-booking').forEach(button=>{
-    button.addEventListener('click',()=>{
+    button.addEventListener('click',async event=>{
+      event.preventDefault();
+      if(button.disabled)return;
       const bookingId=String(button.dataset.id||'');
-      if(!bookingId)return;
-      const url=new URL(window.location.href);
-      url.searchParams.set('view','my-bookings');
-      url.searchParams.set('booking',bookingId);
-      url.searchParams.set('pay','1');
-      window.location.assign(url.pathname+url.search+url.hash);
+      const card=button.closest('.customer-booking-card');
+      const panel=document.getElementById('securePaymentPanel');
+      if(!bookingId||!card||!panel)return;
+      button.disabled=true;
+      const originalLabel=button.textContent;
+      button.textContent='Ruošiamas mokėjimas…';
+      try{
+        // One shared Stripe payment panel belongs to the active booking card.
+        if(panel.parentElement!==card)card.appendChild(panel);
+        panel.classList.add('staging-deeplink-payment-inline');
+        panel.style.display='';
+        panel.hidden=false;
+        panel.setAttribute('aria-hidden','false');
+        const notice=document.getElementById('securePaymentMessage');
+        if(notice)notice.textContent='Tikrinamas užsakymas ir ruošiamas saugus mokėjimas…';
+        const state=document.getElementById('stripePaymentState');
+        if(state)state.textContent='';
+        const accessToken=typeof bookingAccessToken==='function'?bookingAccessToken(bookingId)||'':'';
+        await prepareStripePayment(bookingId,accessToken);
+        if(!panel.hidden){
+          panel.style.display='';
+          panel.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+      }catch(error){
+        panel.hidden=false;
+        panel.style.display='';
+        const state=document.getElementById('stripePaymentState');
+        const notice=document.getElementById('securePaymentMessage');
+        if(notice)notice.textContent='Mokėjimo atidaryti nepavyko.';
+        if(state)state.textContent=String(error?.message||'Nepavyko gauti mokėjimo formos.');
+        panel.scrollIntoView({behavior:'smooth',block:'center'});
+      }finally{
+        button.disabled=false;
+        button.textContent=originalLabel;
+      }
     });
   });
   selectBookingForCommand(rows.some(x=>String(x.booking.bookingId)===window.rentinorbitSelectedBookingId)
