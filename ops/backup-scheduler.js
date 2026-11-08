@@ -1,11 +1,14 @@
 import {spawn} from 'node:child_process';
 import path from 'node:path';
+import {resolveDatabaseConfig} from '../config.js';
 
 let running=false;
 let timer=null;
 
 function backupPaths(){
-  const dbPath=path.resolve(process.env.RENTINORBIT_DB_PATH||process.env.DB_PATH||'rentinorbit.sqlite');
+  const dbConfig=resolveDatabaseConfig();
+  if(!dbConfig.ok || !dbConfig.path || dbConfig.path===':memory:') throw new Error('Cannot resolve persistent SQLite database for backup');
+  const dbPath=path.resolve(dbConfig.path);
   const backupDir=path.resolve(process.env.BACKUP_DIR||path.join(path.dirname(dbPath),'backups'));
   return {dbPath,backupDir};
 }
