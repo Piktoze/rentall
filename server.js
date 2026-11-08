@@ -1696,7 +1696,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
       intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId});
       const intentBookingId=String(intent.metadata?.bookingId||'');
       const intentPurpose=String(intent.metadata?.purpose||'');
-      if(intentBookingId!==String(booking.bookingId) || Number(intent.amount)!==amount || String(intent.currency||'').toLowerCase()!=='eur' || intentPurpose!=='rental_payment'){
+      if(intentBookingId!==String(booking.bookingId) || Number(intent.amount)!==amount || String(intent.currency||'').toLowerCase()!=='eur' || intentPurpose!=='rental_payment' || Number(intent.application_fee_amount)!==platformFee){
         return res.status(409).json({error:'Stored payment intent does not match this booking'});
       }
       if(intent.status==='canceled') return res.status(409).json({error:'Payment intent was cancelled; create a new booking payment attempt'});
