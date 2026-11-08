@@ -50,6 +50,7 @@ const paymentSafetyChecks=[
   ['paid/refunded booking cannot restart checkout',paymentRoute.includes("code:'BOOKING_PAYMENT_FINAL'")&&paymentRoute.includes("'partially_refunded'")],
   ['Stripe payment intent uses booking idempotency key',paymentRoute.includes('idempotencyKey:`booking:${booking.bookingId}:rental-payment`')],
   ['reused Stripe payment intent verifies the original application fee',paymentRoute.includes('Number(intent.application_fee_amount)!==platformFee')],
+  ['pricing snapshot is not persisted before checking an existing Stripe intent',(()=>{const feeCheck=paymentRoute.indexOf('Number(intent.application_fee_amount)!==platformFee');const firstSave=paymentRoute.indexOf('saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing})');const conditional=paymentRoute.indexOf('if(booking.stripePaymentIntentId){');return conditional>=0&&feeCheck>conditional&&firstSave>feeCheck})()],
   ['cancellation refund uses booking idempotency key',server.includes('idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`')]
 ];
 const checks=[
