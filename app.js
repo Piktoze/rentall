@@ -5837,7 +5837,10 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
   function enhanceSearch(){
     const search=qs('#searchInput, input[type="search"], input[name="q"]');
     if(search){
-      search.setAttribute('aria-label', search.getAttribute('aria-label') || 'Search rentals');
+      if(!search.hasAttribute('aria-label')){
+        search.setAttribute('aria-label',uiText('Search rentals'));
+        search.dataset.v56LocalizedAria='true';
+      }
       search.setAttribute('autocomplete','off');
       search.setAttribute('enterkeyhint','search');
       if(!search.placeholder) search.placeholder='What do you need to rent?';
@@ -5914,7 +5917,11 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
 
   function init(){
     enhanceSearch(); addCustomerPromise(); enhanceCards(); mobileFilterSummary(); observeResults();
-    document.addEventListener('rentinorbit:language-changed',updateCustomerPromise);
+    document.addEventListener('rentinorbit:language-changed',()=>{
+      updateCustomerPromise();
+      const search=qs('#searchInput, input[type="search"], input[name="q"]');
+      if(search?.dataset.v56LocalizedAria==='true') search.setAttribute('aria-label',uiText('Search rentals'));
+    });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
