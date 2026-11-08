@@ -5,7 +5,12 @@ import {execFileSync} from 'node:child_process';
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['supplier-i18n-v203.test.mjs'],{stdio:'inherit'});
 
- // Source-only regression suites: safe during build, no Stripe or database mutations.
+ // Verify backup and isolated restoration scripts have valid syntax before deploying.
+for(const script of ['ops/backup-scheduler.js','ops/backup-and-verify.js','ops/test-backup-restore.js','ops/backup-s3.js']){
+  execFileSync(process.execPath,['--check',script],{stdio:'inherit'});
+}
+
+// Source-only regression suites: safe during build, no Stripe or database mutations.
 for(const suite of [
   'payment-race.test.js',
   'rental-preauth-v204.test.js',
