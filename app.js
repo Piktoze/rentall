@@ -4401,13 +4401,20 @@ async function refreshRenterBookingAfterPayment(bookingId,token){
         if(card){
           card.scrollIntoView({behavior:'smooth',block:'center'});
           // The renter must personally accept their contract before any code is issued.
-          await new Promise(resolve=>setTimeout(resolve,120));
+          if(typeof syncRenterTrustButton==='function')await syncRenterTrustButton(card);
+          await new Promise(resolve=>setTimeout(resolve,150));
           const accept=card.querySelector('[data-rio-trust-renter="accept"]');
           const pickup=card.querySelector('[data-rio-trust-renter="pickup"]');
-          if(state)state.textContent=accept
+          const nextAction=accept
             ? 'Mokėjimas atliktas. Patvirtinkite nuomos sutartį savo užsakyme, kad galėtumėte gauti išdavimo kodą.'
             : pickup?'Mokėjimas atliktas. Spauskite „Gauti išdavimo kodą“ prie savo užsakymo.'
             : 'Mokėjimas atliktas. Jei kodo veiksmo nematote, patikrinkite sutarties būseną.';
+          const notification=document.createElement('p');
+          notification.className='rio-renter-postpayment-notice';
+          notification.setAttribute('role','status');
+          notification.textContent=nextAction;
+          (card.querySelector('.customer-booking-actions')||card).prepend(notification);
+          if(state)state.textContent=nextAction;
         }
         return;
       }
