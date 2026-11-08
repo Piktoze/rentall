@@ -60,6 +60,7 @@ const checks=[
   ['browser RC spec',fs.existsSync('./e2e/release-candidate.spec.js')],
   ['full 1.0 RC browser suite exists',fs.existsSync('./e2e/rentinorbit-1.0-rc.spec.js')],
   ['supplier payments use authoritative Stripe server status',app.includes("refreshLiveStripeStatus();")&&!app.includes('const connected=!!s.stripeConnected')&&!app.includes('accounts[idx].stripeConnected=true')],
+  ['legacy Connect migration is clearly shown and cannot trigger new onboarding',app.includes("state==='migration_required'")&&app.includes('connectButton.disabled=legacyMigration')&&app.includes('legacyCopy[locale]')],
   ['supplier workspace module exists',fs.existsSync('./modules/supplier-workspace.js')],
   ['integration readiness module exists',fs.existsSync('./modules/integration-readiness.js')],
   ['validated startup exists',fs.existsSync('./ops/start.js')],
