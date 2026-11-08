@@ -2501,6 +2501,8 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
   requireRole('supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'transfer-confirm'}),(req,res)=>{
   const id=req.params.bookingId;
   if(!canSupplierManageBooking(req.appUser,id))return res.status(403).json({error:'Rezervacija nepriklauso šiam nuomotojui.'});
+  if(req.body?.purpose==='return')
+    return res.status(409).json({error:'Grąžinimą nuomotojas patvirtina be kodo.',code:'RETURN_PIN_NOT_REQUIRED'});
   try{
     const result=verifyAndConsumeRentalTransferCode(id,req.body?.purpose,req.body?.code,{
       returnCondition:req.body?.returnCondition,returnNotes:req.body?.returnNotes
