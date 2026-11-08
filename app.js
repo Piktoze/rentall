@@ -158,7 +158,7 @@ function prefillBookingFromAccount(){
     });
     bookingProfileAccountId=accountId;
   }
-  const displayName=String(user.displayName||'').trim().replace(/\\s+/g,' ');
+  const displayName=String(user.displayName||'').trim().replace(/\s+/g,' ');
   const parts=displayName.split(' ').filter(Boolean);
   const defaults={
     firstName:user.firstName||parts[0]||'',
