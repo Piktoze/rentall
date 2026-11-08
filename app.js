@@ -6726,11 +6726,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       pane.style.marginTop='14px';
       const state=String(b.status||'');
       pane.innerHTML='<h3>Nuomotojo valdymas · sutartis ir daikto perdavimas</h3>'+
-        '<p class="muted"><strong>Čia kodas neišduodamas.</strong> Nuomininkas savo paskyroje atidaro „Mano užsakymai“ ir gauna išdavimo kodą prie konkretaus užsakymo po sutarties patvirtinimo ir sėkmingo apmokėjimo. Šiame nuomotojo lange kodas tik įvedamas perduodant daiktą.</p>'+
+        '<p class="muted"><strong>Išdavimui naudojamas nuomininko kodas.</strong> Grąžinimą nuomotojas patvirtina be antro kodo, nurodydamas daikto būklę. Nuomininkas apie tai informuojamas.</p>'+
         '<p class="muted">Tapatybės patikra: neatlikta. Kodo turėjimas savaime nepatvirtina asmens tapatybės.</p>'+
         '<div class="rio-supplier-agreement-status" role="status" aria-live="polite"></div>'+
         '<button class="secondary rio-supplier-agreement" type="button" disabled>Patvirtinti nuomos sutartį</button> '+
-        (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Įvesti nuomininko išdavimo kodą':'Įvesti nuomininko grąžinimo kodą')+'</button>':'');
+        (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Įvesti nuomininko išdavimo kodą':'Patvirtinti grąžinimą')+'</button>':'');
       actions.appendChild(pane);
       const agreementButton=pane.querySelector('.rio-supplier-agreement');
       const agreementStatus=pane.querySelector('.rio-supplier-agreement-status');
@@ -6803,22 +6803,35 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         }
       });
       pane.querySelector('.rio-supplier-transfer')?.addEventListener('click',async function(){
-        const code=window.prompt('Įveskite šešių skaitmenų NUOMININKO kodą:','');
-        if(code===null)return;
+        const purpose=this.dataset.purpose;
+        let code=null,returnCondition=null,returnNotes=null;
+        if(purpose==='pickup'){
+          code=window.prompt('Įveskite šešių skaitmenų NUOMININKO išdavimo kodą:','');
+          if(code===null)return;
+        }else{
+          const condition=window.prompt('Grąžinto daikto būklė: good (tvarkingas), damaged (apgadintas) arba missing (trūksta dalių).','good');
+          if(condition===null)return;
+          returnCondition=String(condition).toLowerCase().trim();
+          if(!['good','damaged','missing'].includes(returnCondition)){
+            showResult('Pasirinkite good, damaged arba missing.',true);return;
+          }
+          if(returnCondition!=='good'){
+            const notes=window.prompt('Aprašykite pastebėtus pažeidimus ar trūkumus:','');
+            if(notes===null)return;
+            if(!notes.trim()){showResult('Būtina aprašyti pažeidimus arba trūkumus.',true);return;}
+            returnNotes=notes.trim();
+          }
+          if(!window.confirm('Patvirtinti, kad daiktą fiziškai gavote atgal? Nuomininkui bus išsiųstas pranešimas, o kilus nesutarimui jis galės pradėti ginčą.'))return;
+        }
         this.disabled=true;
         try{
-          let returnCondition=null,returnNotes=null;
-          if(this.dataset.purpose==='return'){
-            const condition=window.prompt('Grąžinto daikto būklė: įrašykite good (gera), damaged (apgadinta) arba missing (trūksta).','good');
-            if(condition===null)return;
-            returnCondition=String(condition).toLowerCase().trim();
-            if(!['good','damaged','missing'].includes(returnCondition))throw Error('Neteisinga būklė. Įveskite good, damaged arba missing.');
-            if(returnCondition!=='good')returnNotes=window.prompt('Aprašykite daikto būklę ir žalą (jei yra):','')||'';
-          }
-          await apiJson(transferEndpoint(bookingId)+'/transfer-confirm',{
-            method:'POST',body:JSON.stringify({purpose:this.dataset.purpose,code,returnCondition,returnNotes})
+          await apiJson(transferEndpoint(bookingId)+(purpose==='return'?'/return-confirm':'/transfer-confirm'),{
+            method:'POST',
+            body:JSON.stringify(purpose==='return'
+              ? {returnCondition,returnNotes}
+              : {purpose:'pickup',code})
           });
-          showResult(this.dataset.purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas.');
+          showResult(purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas. Nuomininkui išsiųstas pranešimas.');
           await refreshLiveSupplierBookings();
           await renderBookings();
           openLiveSupplierOrder(bookingId);
@@ -6870,7 +6883,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       actions.appendChild(div);
     };
     if(status==='active'){
-      create('return',renterTrustLabel('return'));
+      const hint=document.createElement('p');
+      hint.className='muted rio-renter-transfer-hint';
+      hint.textContent='Grąžinimą užfiksuos nuomotojas priėmęs daiktą. Papildomo kodo nereikia. Jei nesutinkate su būklės įvertinimu, galite pradėti ginčą.';
+      const wrap=document.createElement('div');
+      wrap.className='rio-renter-trust';
+      wrap.appendChild(hint);
+      actions.appendChild(wrap);
       return;
     }
     if(!['pending','confirmed'].includes(status))return;
