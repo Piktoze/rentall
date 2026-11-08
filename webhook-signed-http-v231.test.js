@@ -10,7 +10,7 @@ import Database from 'better-sqlite3';
 const webhookSource=fs.readFileSync('./server.js','utf8');
 assert.match(webhookSource,/process\.env\.STRIPE_CONNECT_WEBHOOK_SECRET/,
  'Separate Connect webhook signing secret must be supported');
-assert.match(webhookSource,/if\(!signingSecrets\.length\)/,
+assert.match(webhookSource,/if\s*\(!signingSecrets\.length\)/,
  'Missing both webhook signing secrets must fail closed');
 assert.doesNotMatch(webhookSource,/event = JSON\.parse\(req\.body\.toString\('utf8'\)\)/,
  'Unsigned webhook JSON fallback is prohibited');
