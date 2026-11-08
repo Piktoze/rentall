@@ -62,6 +62,7 @@ const checks=[
   ['full 1.0 RC browser suite exists',fs.existsSync('./e2e/rentinorbit-1.0-rc.spec.js')],
   ['supplier payments use authoritative Stripe server status',app.includes("refreshLiveStripeStatus();")&&!app.includes('const connected=!!s.stripeConnected')&&!app.includes('accounts[idx].stripeConnected=true')],
   ['legacy Connect migration is clearly shown and cannot trigger new onboarding',app.includes("state==='migration_required'")&&app.includes('connectButton.disabled=legacyMigration')&&app.includes('legacyCopy[locale]')],
+  ['Stripe capability sync uses server-side Stripe retrieval, not caller supplied account data',(() => {const route=server.split("app.post('/api/admin/stripe/connect/v2-capability-sync'")[1]?.split("app.post(")[0]||'';return route.includes('await retrieveDirectMerchantAccountV2(stripe,existing.stripeAccountId)')&&route.includes("process.env.RENTINORBIT_STAGING!=='true'")&&!route.includes('const {userId,account}=req.body')} )()],
   ['supplier workspace module exists',fs.existsSync('./modules/supplier-workspace.js')],
   ['integration readiness module exists',fs.existsSync('./modules/integration-readiness.js')],
   ['validated startup exists',fs.existsSync('./ops/start.js')],
