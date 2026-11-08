@@ -6409,6 +6409,24 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const transferEndpoint=id=>'/api/rentals/bookings/'+encodeURIComponent(id);
   const t=(text)=>window.RentInOrbitI18n?.getLanguage?.()==='lt'?text:text;
   const safeId=id=>String(id||'').trim();
+
+  // Display-only translations for historical English contract snapshots.
+  // Never change the saved agreement or silently replace unknown legal clauses.
+  const historicalTermsLt=new Map([
+    ['Use the item only for its intended purpose.','Naudoti daiktą tik pagal paskirtį.'],
+    ['Return the item on time in the condition received, allowing for normal wear.','Grąžinti daiktą laiku ir tokios būklės, kokios jis buvo gautas, atsižvelgiant į įprastą nusidėvėjimą.'],
+    ['Damage, loss, cancellation and deposit handling follow the listing and RentInOrbit terms.','Žalai, praradimui, atšaukimui ir užstatui taikomos skelbimo bei RentInOrbit sąlygos.']
+  ]);
+  function agreementTermsForDisplay(snapshot){
+    const terms=Array.isArray(snapshot?.terms)?snapshot.terms:[];
+    if(window.RentInOrbitI18n?.getLanguage?.()!=='lt')return terms;
+    return terms.map(term=>historicalTermsLt.get(String(term).trim())||String(term));
+  }
+  function agreementCancellationLabel(value){
+    if(window.RentInOrbitI18n?.getLanguage?.()!=='lt')return String(value||'pagal skelbimą');
+    return ({moderate:'Vidutinės',flexible:'Lanksčios',strict:'Griežtos'})[String(value||'')]||String(value||'pagal skelbimą');
+  }
+
   function showResult(message,error=false){
     if(typeof showToast==='function')showToast(message,error?'error':'success',4000);
     else window.alert(message);
@@ -6426,11 +6444,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const data=await apiJson(transferEndpoint(bookingId)+'/trust'+(accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
         const ag=data.agreement;
         if(!ag)throw Error('Nuomos sutartis nerasta.');
-        const terms=Array.isArray(ag.snapshot?.terms)?ag.snapshot.terms:[];
+        if(ag.customerAcceptedAt){
+          const card=button.closest('.customer-booking-card');
+          if(card)await syncRenterTrustButton(card);
+          showResult('Jūs jau patvirtinote šią sutartį.');
+          return;
+        }
+        const terms=agreementTermsForDisplay(ag.snapshot);
         if(!window.confirm('NUOMOS SUTARTIES PATVIRTINIMAS\\n\\nDaiktas: '+String(ag.snapshot?.listingTitle||'daiktas')+
           '\\nLaikotarpis: '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+
           '\\nGalutinė suma: €'+Number(ag.snapshot?.total||0).toFixed(2)+
-          '\\nAtšaukimo sąlygos: '+String(ag.snapshot?.cancellationPolicy||'pagal skelbimą')+
+          '\\nAtšaukimo sąlygos: '+agreementCancellationLabel(ag.snapshot?.cancellationPolicy)+
           '\\n\\n'+terms.map((term,i)=>(i+1)+'. '+term).join('\\n')+
           '\\n\\nSutartis sudaroma tarp nuomininko ir nuomotojo. RentInOrbit teikia tarpininkavimo paslaugą.\\n\\nAr sutinkate?'))return;
         await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true,accessToken})});
@@ -6465,38 +6489,72 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       pane.innerHTML='<h3>Nuomos sutartis ir daikto perdavimas</h3>'+
         '<p class="muted">Kodą gauna tik nuomininkas, pasirašęs sutartį. Nuomotojas gali įvesti kodą tik abiem šalims patvirtinus sutartį.</p>'+
         '<p class="muted">Tapatybės patikra: neatlikta. Kodo turėjimas savaime nepatvirtina asmens tapatybės.</p>'+
-        '<button class="secondary rio-supplier-agreement" type="button">Patvirtinti nuomos sutartį</button> '+
+        '<div class="rio-supplier-agreement-status" role="status" aria-live="polite"></div>'+
+        '<button class="secondary rio-supplier-agreement" type="button" disabled>Patvirtinti nuomos sutartį</button> '+
         (['confirmed','active'].includes(state)?'<button class="primary rio-supplier-transfer" type="button" data-purpose="'+(state==='confirmed'?'pickup':'return')+'">'+(state==='confirmed'?'Patvirtinti išdavimą pagal kodą':'Patvirtinti grąžinimą pagal kodą')+'</button>':'');
       actions.appendChild(pane);
-      pane.querySelector('.rio-supplier-agreement')?.addEventListener('click',async function(){
+      const agreementButton=pane.querySelector('.rio-supplier-agreement');
+      const agreementStatus=pane.querySelector('.rio-supplier-agreement-status');
+      const transferButton=pane.querySelector('.rio-supplier-transfer');
+      if(transferButton)transferButton.disabled=true;
+      const applySupplierAgreementState=agreement=>{
+        if(!pane.isConnected)return;
+        const supplierAccepted=Boolean(agreement?.supplierAcceptedAt);
+        const customerAccepted=Boolean(agreement?.customerAcceptedAt);
+        agreementButton.hidden=supplierAccepted;
+        agreementButton.disabled=supplierAccepted;
+        agreementStatus.textContent=supplierAccepted
+          ? (customerAccepted?'Sutartis patvirtinta abiejų šalių.':'Jūs patvirtinote sutartį. Laukiama nuomininko patvirtinimo.')
+          : 'Sutartis dar nepatvirtinta jūsų pusėje.';
+        if(transferButton){
+          transferButton.disabled=!(supplierAccepted&&customerAccepted);
+          transferButton.title=transferButton.disabled?'Abi šalys turi patvirtinti sutartį.':'';
+        }
+      };
+      const refreshSupplierAgreementState=async()=>{
+        const data=await apiJson(transferEndpoint(bookingId)+'/trust');
+        if(!data.agreement)throw Error('Sutartis nerasta.');
+        applySupplierAgreementState(data.agreement);
+        return data.agreement;
+      };
+      refreshSupplierAgreementState().then(agreement=>{
+        if(pane.isConnected&&!agreement.supplierAcceptedAt)agreementButton.disabled=false;
+      }).catch(()=>{
+        if(!pane.isConnected)return;
+        agreementButton.disabled=true;
+        if(transferButton)transferButton.disabled=true;
+        agreementStatus.textContent='Nepavyko patikrinti sutarties būsenos. Atnaujinkite užsakymą.';
+      });
+      agreementButton.addEventListener('click',async function(){
         this.disabled=true;
         try{
-          const data=await apiJson(transferEndpoint(bookingId)+'/trust');
-          const ag=data.agreement;
-          if(!ag)throw Error('Sutartis nerasta.');
-          if(!window.confirm('NUOMOTOJO SUTARTIES PATVIRTINIMAS\\n\\nDaiktas: '+
+          const ag=await refreshSupplierAgreementState();
+          if(ag.supplierAcceptedAt){
+            showResult('Jūs jau patvirtinote šią sutartį.');
+            return;
+          }
+          const terms=agreementTermsForDisplay(ag.snapshot);
+          if(!window.confirm('NUOMOTOJO SUTARTIES PATVIRTINIMAS\n\nDaiktas: '+
             String(ag.snapshot?.listingTitle||b.title||'daiktas')+
-            '\\nNuoma: '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+
-            '\\nGalutinė suma: €'+Number(ag.snapshot?.total||0).toFixed(2)+
-            '\\n\\n'+(Array.isArray(ag.snapshot?.terms)?ag.snapshot.terms.map((term,i)=>(i+1)+'. '+term).join('\\n'):'')+
-            '\\n\\nAr patvirtinate šią sutartį su nuomininku?'))return;
-          await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{method:'POST',body:JSON.stringify({accepted:true})});
+            '\nNuoma: '+String(ag.snapshot?.startDate||'')+' – '+String(ag.snapshot?.endDate||'')+
+            '\nGalutinė suma: €'+Number(ag.snapshot?.total||0).toFixed(2)+
+            '\n\n'+terms.map((term,i)=>(i+1)+'. '+term).join('\n')+
+            '\n\nAr patvirtinate šią sutartį su nuomininku?'))return;
+          const result=await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{
+            method:'POST',body:JSON.stringify({accepted:true})
+          });
+          applySupplierAgreementState(result.agreement);
           showResult('Nuomos sutartis patvirtinta.');
-        }catch(err){showResult(err.message,true)}finally{this.disabled=false;}
+        }catch(err){showResult(err.message,true)}
+        finally{
+          if(pane.isConnected){
+            try{
+              const ag=await refreshSupplierAgreementState();
+              agreementButton.disabled=Boolean(ag.supplierAcceptedAt);
+            }catch{agreementButton.disabled=true;}
+          }
+        }
       });
-      const transferButton=pane.querySelector('.rio-supplier-transfer');
-      if(transferButton){
-        transferButton.disabled=true;
-        const refreshSignatureGate=async()=>{
-          try{
-            const data=await apiJson(transferEndpoint(bookingId)+'/trust');
-            transferButton.disabled=!(data.agreement?.customerAcceptedAt&&data.agreement?.supplierAcceptedAt);
-            transferButton.title=transferButton.disabled?'Abi šalys turi patvirtinti sutartį.':'';
-          }catch{transferButton.disabled=true;}
-        };
-        refreshSignatureGate();
-        pane.querySelector('.rio-supplier-agreement')?.addEventListener('click',()=>setTimeout(refreshSignatureGate,400));
-      }
       pane.querySelector('.rio-supplier-transfer')?.addEventListener('click',async function(){
         const code=window.prompt('Įveskite šešių skaitmenų NUOMININKO kodą:','');
         if(code===null)return;
