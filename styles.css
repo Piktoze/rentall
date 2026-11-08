@@ -2020,3 +2020,41 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
   .hero .hero-search-column .search-card label.wide,
   .hero .hero-search-column .search-card button.primary{grid-column:1}
 }
+
+
+/* V240: blue-neutral rental order details and agreement acceptance. */
+#supplierOrderModal .supplier-order-summary > .supplier-order-card,
+#supplierOrderModal .supplier-order-summary > div,
+#supplierOrderModal .supplier-order-card,
+#supplierOrderModal #supplierOrderActions > .supplier-order-card{
+  background:#f8faff!important;
+  border-color:#d7e3f8!important;
+  color:#102448;
+}
+#supplierOrderModal .supplier-order-summary .supplier-order-card:nth-child(even),
+#supplierOrderModal .supplier-order-summary > div:nth-child(even){background:#f3f7ff!important}
+#supplierOrderModal .rio-supplier-agreement-status{
+  display:block;
+  margin:12px 0;
+  padding:10px 12px;
+  background:#edf4ff;
+  border:1px solid #cbdbfa;
+  border-radius:10px;
+  font-size:14px;
+  line-height:1.4;
+  font-weight:650;
+  color:#17477e;
+}
+#supplierOrderModal .rio-supplier-agreement-status:empty{display:none}
+#supplierOrderActions .rio-supplier-agreement[hidden]{display:none!important}
+#supplierOrderModal .supplier-order-card .muted{color:#5f7190}
+#supplierOrderModal .lifecycle-note{color:#667794}
+/* Replace decorative legacy green tints, without recoloring meaningful success/error states. */
+.section.soft{background:#f2f6ff}
+.delivery-choice,.delivery-rule-note{background:#eef5ff}
+.renter-response-info,.renter-booking-statusbar{background:#f4f7ff;border-color:#d8e3f7;color:#20365d}
+.renter-response-info .renter-response-deadline{border-color:#d8e3f7}
+.renter-alternatives{background:#f8faff;border-color:#d8e3f7}
+.v92-trust-row>div,.v92-facts>div,.v92-safe-note{background:#f8faff}
+.v144-day.busy{background:#eff4ff}
+.v144-day span{background:#e4edfc}
