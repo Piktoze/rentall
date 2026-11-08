@@ -29,6 +29,7 @@ for(const suite of [
   'supplier-hub-removal-v218.test.js',
   'webhook-ordering.test.js',
   'webhook-signed-http-v231.test.js',
+  'customer-pay-resume-v232.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
