@@ -6591,7 +6591,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const data=await apiJson(transferEndpoint(bookingId)+'/trust'+(accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
         const ag=data.agreement;
         if(!ag)throw Error('Nuomos sutartis nerasta.');
-        if(ag.customerAcceptedAt){
+        if(ag.customerAcceptedAt && data.acceptanceEvidence?.customer?.verified===true){
           const card=button.closest('.customer-booking-card');
           if(card)await syncRenterTrustButton(card);
           showResult('Jūs jau patvirtinote šią sutartį.');
@@ -6653,8 +6653,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const customerAccepted=Boolean(agreement?.customerAcceptedAt);
         const supplierVerified=supplierAccepted && evidence?.supplier?.verified===true;
         const customerVerified=customerAccepted && evidence?.customer?.verified===true;
-        agreementButton.hidden=supplierAccepted;
-        agreementButton.disabled=supplierAccepted;
+        agreementButton.hidden=supplierVerified;
+        agreementButton.disabled=supplierVerified;
+        agreementButton.textContent=supplierAccepted && !supplierVerified?'Pakartotinai patvirtinti nuomotojo sutartį':'Patvirtinti nuomos sutartį';
         const describe=(party,accepted,verified,at)=>
           party+': '+(!accepted?'nepatvirtinta':verified
             ? 'patvirtinta '+new Date(at).toLocaleString('lt-LT')
@@ -6675,7 +6676,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         return data.agreement;
       };
       refreshSupplierAgreementState().then(agreement=>{
-        if(pane.isConnected&&!agreement.supplierAcceptedAt)agreementButton.disabled=false;
+        if(pane.isConnected&&!agreementButton.hidden)agreementButton.disabled=false;
       }).catch(()=>{
         if(!pane.isConnected)return;
         agreementButton.disabled=true;
@@ -6686,7 +6687,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         this.disabled=true;
         try{
           const ag=await refreshSupplierAgreementState();
-          if(ag.supplierAcceptedAt){
+          if(ag.supplierAcceptedAt && agreementButton.hidden){
             showResult('Jūs jau patvirtinote šią sutartį.');
             return;
           }
@@ -6700,14 +6701,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           const result=await apiJson(transferEndpoint(bookingId)+'/agreement/accept',{
             method:'POST',body:JSON.stringify({accepted:true})
           });
-          applySupplierAgreementState(result.agreement);
+          await refreshSupplierAgreementState();
           showResult('Nuomos sutartis patvirtinta.');
         }catch(err){showResult(err.message,true)}
         finally{
           if(pane.isConnected){
             try{
               const ag=await refreshSupplierAgreementState();
-              agreementButton.disabled=Boolean(ag.supplierAcceptedAt);
+              agreementButton.disabled=agreementButton.hidden;
             }catch{agreementButton.disabled=true;}
           }
         }
@@ -6789,7 +6790,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const data=await apiJson('/api/rentals/bookings/'+encodeURIComponent(id)+'/trust'+
         (accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
       if(!card.isConnected)return;
-      if(!data.agreement?.customerAcceptedAt){
+      if(!data.agreement?.customerAcceptedAt || data.acceptanceEvidence?.customer?.verified!==true){
         create('accept',renterTrustLabel('accept'));
       }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
         create('pickup',renterTrustLabel('pickup'));
