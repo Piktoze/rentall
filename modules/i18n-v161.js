@@ -184,6 +184,15 @@
     applying=false;
     document.dispatchEvent(new CustomEvent('rentinorbit:language-changed',{detail:{lang}}));
   }
+  // Required registration consent: keep linked legal text clear in every locale.
+  const registrationLegalCopy={
+    lt:{'platform terms':'platformos taisyklėmis','and confirm that my account information is correct.':'ir patvirtinu, kad mano paskyros duomenys teisingi.'},
+    en:{'platform terms':'platform terms','and confirm that my account information is correct.':'and confirm that my account information is correct.'},
+    es:{'platform terms':'términos de la plataforma','and confirm that my account information is correct.':'y confirmo que los datos de mi cuenta son correctos.'},
+    de:{'platform terms':'Plattformbedingungen','and confirm that my account information is correct.':'und bestätige, dass meine Kontodaten korrekt sind.'},
+    ru:{'platform terms':'условия платформы','and confirm that my account information is correct.':'и подтверждаю правильность данных моей учётной записи.'}
+  };
+  for(const [language,copy] of Object.entries(registrationLegalCopy)) Object.assign(dictionaries[language],copy);
   function t(key,vars){
     const lang=current(); let out=dictionaries[lang]?.[key]||keyTranslations[lang]?.[key]||(lang==='en'?key:null)||key;
     if(vars) for(const [k,v] of Object.entries(vars)) out=out.replaceAll(`{${k}}`,String(v));
