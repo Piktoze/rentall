@@ -1895,6 +1895,7 @@ fillCheckout = function(){
   if(!document.getElementById('deliveryArea')?.value && activeCheckoutListing?.city){
     document.getElementById('deliveryArea').value=String(activeCheckoutListing.city);
   }
+  refreshLithuaniaHandoverFields();
   refreshCheckoutTotals();
 };
 
@@ -1911,10 +1912,23 @@ document.getElementById('rioCheckoutHandoverMethod')?.addEventListener('change',
   }
   refreshCheckoutTotals();
 });
+function refreshLithuaniaHandoverFields(){
+  const pickup=/pickup/i.test(document.getElementById('accommodationType')?.value||'');
+  const address=document.getElementById('deliveryAddress');
+  const field=document.getElementById('rioDeliveryAddressField');
+  if(field)field.hidden=pickup;
+  if(address){
+    address.required=!pickup;
+    address.setCustomValidity('');
+    if(pickup)address.value='';
+  }
+}
+document.getElementById('rioCheckoutHandoverMethod')?.addEventListener('change',refreshLithuaniaHandoverFields);
 document.getElementById('accommodationType')?.addEventListener('change',event=>{
   const choice=document.getElementById('rioCheckoutHandoverMethod');
   const isPickup=/pickup/i.test(String(event.target.value||''));
   if(choice)choice.value=isPickup?'Pickup from owner':'Delivery to my address';
+  refreshLithuaniaHandoverFields();
   refreshCheckoutTotals();
 });
 
@@ -2161,18 +2175,14 @@ function loadDeliveryFormData(){
 
   const trip=getTripContext();
 
-  if(document.getElementById('hotelName') && !document.getElementById('hotelName').value){
-    document.getElementById('hotelName').value=saved?.accommodationName || trip?.accommodation || '';
-  }
+  // Hotel-specific fields are intentionally not part of Lithuania-first checkout.
+  // Do not restore old hotel data into hidden compatibility fields.
+  if(document.getElementById('hotelName'))document.getElementById('hotelName').value='';
   if(document.getElementById('deliveryAddress') && !document.getElementById('deliveryAddress').value){
     document.getElementById('deliveryAddress').value=saved?.address || '';
   }
-  if(document.getElementById('hotelBookingName') && !document.getElementById('hotelBookingName').value){
-    document.getElementById('hotelBookingName').value=saved?.bookingName || '';
-  }
-  if(document.getElementById('roomNumber') && !document.getElementById('roomNumber').value){
-    document.getElementById('roomNumber').value=saved?.roomNumber || '';
-  }
+  if(document.getElementById('hotelBookingName'))document.getElementById('hotelBookingName').value='';
+  if(document.getElementById('roomNumber'))document.getElementById('roomNumber').value='';
   if(document.getElementById('deliveryInstructions') && !document.getElementById('deliveryInstructions').value){
     document.getElementById('deliveryInstructions').value=saved?.instructions || '';
   }
@@ -2218,71 +2228,37 @@ document.querySelectorAll('.next-step').forEach(btn=>{
   btn.addEventListener('click',(e)=>{
     if(bookingStep===2){
       const addr=document.getElementById('deliveryAddress');
-      if(addr && !addr.value.trim()){
+      const delivering=!/pickup/i.test(document.getElementById('accommodationType')?.value||'');
+      if(delivering && addr && !addr.value.trim()){
         e.preventDefault();
         e.stopImmediatePropagation();
+        addr.setCustomValidity('Nurodykite pristatymo adresą.');
         addr.reportValidity();
-      }
+      }else if(addr){addr.setCustomValidity('');}
     }
   }, true);
 });
 
 
-// --- V18: richer delivery summary in booking review ---
+// --- V242: Lithuania-first checkout review without hospitality terminology. ---
 renderReview = function(){
   const price=refreshCheckoutTotals();
-  const names = cart.map(i=>i.name).join(', ') || activeCheckoutListing?.title || 'Rental item';
+  const rentalName=cart.map(i=>i.name).join(', ')||activeCheckoutListing?.title||'Nuomojamas daiktas';
   const delivery=getDeliveryFormData();
-
-  const html = `
-    <h3>${names}</h3>
-
-    <div class="review-row">
-      <span>${escapeHtml(uiText('Rental period'))}</span>
-      <b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b>
-    </div>
-
-    <div class="delivery-summary-card">
-      <h4>${escapeHtml(uiText('Delivery details'))}</h4>
-      <div class="delivery-summary-grid">
-        <div>
-          <span>${escapeHtml(uiText('Hotel / apartment'))}</span>
-          <b>${delivery.accommodationName || '—'}</b>
-        </div>
-        <div>
-          <span>${escapeHtml(uiText('City / area'))}</span>
-          <b>${document.getElementById('deliveryArea').value || '—'}</b>
-        </div>
-        <div>
-          <span>${escapeHtml(uiText('Address'))}</span>
-          <b>${delivery.address || '—'}</b>
-        </div>
-        <div>
-          <span>${escapeHtml(uiText('Room / apartment number'))}</span>
-          <b>${delivery.roomNumber || uiText('Not provided')}</b>
-        </div>
-        <div>
-          <span>${escapeHtml(uiText('Contact person'))}</span>
-          <b>${delivery.bookingName || '—'}</b>
-        </div>
-        <div>
-          <span>${escapeHtml(uiText('Delivery window'))}</span>
-          <b>${activeCheckoutListing?.deliveryWindow || document.getElementById('deliveryWindow').value || '—'}</b>
-        </div>
-        <div class="delivery-summary-instructions">
-          <span>${escapeHtml(uiText('Delivery instructions'))}</span>
-          <b>${delivery.instructions || uiText('No special instructions')}</b>
-        </div>
-      </div>
-    </div>
-
-    <div class="review-row"><span>${escapeHtml(uiText('Rental'))}</span><b>${money(price.rental)}</b></div>
-    <div class="review-row"><span>${escapeHtml(uiText('Delivery'))}</span><b>${price.deliveryRule.eligible ? money(price.delivery) : uiText('Not available')}</b></div>
-    <div class="review-row total"><span>${escapeHtml(uiText('Total'))}</span><b>${money(price.total)}</b></div>`;
-
-  document.getElementById('reviewCard').innerHTML=html;
+  const isPickup=/pickup/i.test(document.getElementById('accommodationType')?.value||'');
+  const city=document.getElementById('deliveryArea')?.value||'';
+  const info=delivery.instructions||'Nenurodyta';
+  document.getElementById('reviewCard').innerHTML=`
+    <h3>${escapeHtml(rentalName)}</h3>
+    <div class="review-row"><span>Nuomos laikotarpis</span><b>${escapeHtml(document.getElementById('rentalStart').value||'—')} → ${escapeHtml(document.getElementById('rentalEnd').value||'—')}</b></div>
+    <div class="review-row"><span>Perdavimo būdas</span><b>${isPickup?'Atsiimsiu iš nuomotojo':'Pristatymas mano adresu'}</b></div>
+    <div class="review-row"><span>Miestas</span><b>${escapeHtml(city||'—')}</b></div>
+    ${isPickup?'':`<div class="review-row"><span>Pristatymo adresas</span><b>${escapeHtml(delivery.address||'—')}</b></div>`}
+    <div class="delivery-summary-instructions"><span>Papildoma informacija nuomotojui</span><b>${escapeHtml(info)}</b></div>
+    <div class="review-row"><span>Nuoma</span><b>${money(price.rental)}</b></div>
+    <div class="review-row"><span>Pristatymas</span><b>${price.deliveryRule.eligible?money(price.delivery):'Negalimas'}</b></div>
+    <div class="review-row total"><span>Iš viso</span><b>${money(price.total)}</b></div>`;
 };
-
 
 // --- V19: supplier booking detail view with delivery information ---
 // Booking delivery details are always read from the live booking record.
