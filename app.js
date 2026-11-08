@@ -6614,24 +6614,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const agreementStatus=pane.querySelector('.rio-supplier-agreement-status');
       const transferButton=pane.querySelector('.rio-supplier-transfer');
       if(transferButton)transferButton.disabled=true;
-      const applySupplierAgreementState=agreement=>{
+      const applySupplierAgreementState=(agreement,evidence)=>{
         if(!pane.isConnected)return;
         const supplierAccepted=Boolean(agreement?.supplierAcceptedAt);
         const customerAccepted=Boolean(agreement?.customerAcceptedAt);
+        const supplierVerified=supplierAccepted && evidence?.supplier?.verified===true;
+        const customerVerified=customerAccepted && evidence?.customer?.verified===true;
         agreementButton.hidden=supplierAccepted;
         agreementButton.disabled=supplierAccepted;
-        agreementStatus.textContent=supplierAccepted
-          ? (customerAccepted?'Sutartis patvirtinta abiejų šalių.':'Jūs patvirtinote sutartį. Laukiama nuomininko patvirtinimo.')
-          : 'Sutartis dar nepatvirtinta jūsų pusėje.';
+        const describe=(party,accepted,verified,at)=>
+          party+': '+(!accepted?'nepatvirtinta':verified
+            ? 'patvirtinta '+new Date(at).toLocaleString('lt-LT')
+            : 'patvirtinimo įrodymas nepatikrintas');
+        agreementStatus.textContent=[
+          describe('Nuomotojo sutartis',supplierAccepted,supplierVerified,agreement?.supplierAcceptedAt),
+          describe('Nuomininko sutartis',customerAccepted,customerVerified,agreement?.customerAcceptedAt)
+        ].join(' | ');
         if(transferButton){
-          transferButton.disabled=!(supplierAccepted&&customerAccepted);
-          transferButton.title=transferButton.disabled?'Abi šalys turi patvirtinti sutartį.':'';
+          transferButton.disabled=!(supplierVerified&&customerVerified);
+          transferButton.title=transferButton.disabled?'Reikia abiejų šalių atskirų patvirtinimų su patikrinamais įrašais.':'';
         }
       };
       const refreshSupplierAgreementState=async()=>{
         const data=await apiJson(transferEndpoint(bookingId)+'/trust');
         if(!data.agreement)throw Error('Sutartis nerasta.');
-        applySupplierAgreementState(data.agreement);
+        applySupplierAgreementState(data.agreement,data.acceptanceEvidence);
         return data.agreement;
       };
       refreshSupplierAgreementState().then(agreement=>{
@@ -6743,6 +6750,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         create('accept',renterTrustLabel('accept'));
       }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
         create('pickup',renterTrustLabel('pickup'));
+      }else if(data.agreement?.customerAcceptedAt){
+        const notice=document.createElement('p');
+        notice.className='muted rio-renter-transfer-hint';
+        notice.textContent=status==='pending'
+          ? 'Išdavimo kodą galėsite gauti čia, kai nuomotojas patvirtins užsakymą ir bus atliktas apmokėjimas.'
+          : 'Išdavimo kodą galėsite gauti čia po sėkmingo apmokėjimo.';
+        const wrapper=document.createElement('div');
+        wrapper.className='rio-renter-trust';
+        wrapper.appendChild(notice);
+        actions.appendChild(wrapper);
       }
     }catch{
       // Fail closed: do not expose a pickup CTA without verified consent.
