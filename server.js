@@ -2645,6 +2645,7 @@ app.get('/api/supplier/activation/:token', simpleRateLimit({windowMs:60000,max:6
 });
 app.post('/api/supplier/activation', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'supplier-activation'}), (req,res)=>{
   try{
+    if(req.body?.termsAccepted!==true) return res.status(400).json({error:'Platform terms must be accepted before supplier activation',code:'TERMS_ACCEPTANCE_REQUIRED'});
     const result=activateSupplierInvite(req.body?.token,{password:req.body?.password});
     const session=createAppSession(result.user.userId); setSessionCookie(res,session.token);
     res.json(result);
