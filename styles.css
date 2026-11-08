@@ -2065,3 +2065,6 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 .rio-checkout-handover-choice label{display:block;margin:0 0 9px;font-weight:750;color:#11284d}
 .rio-checkout-handover-choice select{width:100%;min-height:48px;border:1px solid #cedbf1;border-radius:10px;padding:10px 12px;background:white;color:#142c53}
 .rio-checkout-handover-choice p{margin:9px 0 0;color:#5e7290;font-size:13px;line-height:1.45}
+
+/* Lithuania-first rental: hide delivery-only address when renter picks up. */
+#rioDeliveryAddressField[hidden]{display:none!important}
