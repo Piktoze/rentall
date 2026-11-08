@@ -46,8 +46,27 @@ export async function runScheduledBackup(){
         try{resolve(JSON.parse(stdout.trim().split('\n').at(-1)))}catch(error){reject(error)}
       });
     });
-    console.log(JSON.stringify({type:'database_backup',ok:true,backupDir:paths.backupDir,bytes:result.bytes,integrity:result.integrity}));
-    return result;
+    // Prove remote backup can actually be downloaded and opened; never replace live /data.
+    const restore=await new Promise((resolve,reject)=>{
+      const child=spawn(process.execPath,['ops/test-backup-restore.js'],{
+        cwd:path.resolve('.'),env:process.env,stdio:['ignore','pipe','pipe']
+      });
+      let stdout='',stderr='';
+      child.stdout.on('data',chunk=>{stdout+=chunk});
+      child.stderr.on('data',chunk=>{stderr+=chunk});
+      child.on('error',reject);
+      child.on('close',code=>{
+        if(code!==0) return reject(new Error(`Backup restore verification failed (${code}): ${stderr.trim().slice(-500)}`));
+        try {
+          const verified=JSON.parse(stdout.trim().split('\n').at(-1));
+          if(!verified.ok||verified.integrity!=='ok'||verified.bytes!==result.bytes) throw new Error('Backup restore verification incomplete');
+          resolve(verified);
+        } catch(error){reject(error)}
+      });
+    });
+    console.log(JSON.stringify({type:'database_backup_restore_check',ok:true,storage:restore.storage,bytes:restore.bytes,integrity:restore.integrity,tableCount:restore.tableCount,migrationVersion:restore.migrationVersion}));
+    console.log(JSON.stringify({type:'database_backup',ok:true,backupDir:paths.backupDir,bytes:result.bytes,integrity:result.integrity,restoreVerified:true}));
+    return {...result,restoreVerified:true};
   }finally{
     running=false;
   }
