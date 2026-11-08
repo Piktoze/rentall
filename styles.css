@@ -2068,3 +2068,32 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 
 /* Lithuania-first rental: hide delivery-only address when renter picks up. */
 #rioDeliveryAddressField[hidden]{display:none!important}
+
+/* Booking dialog: stay above the sticky site navigation and always expose its top.
+   Scroll the panel, not the page, including on short laptop viewports. */
+#checkoutModal.open{
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  overflow:hidden;
+  padding:16px;
+}
+#checkoutModal.open > .checkout-panel,
+#checkoutModal.open:has(.booking-success.show) > .checkout-panel{
+  margin:0 auto;
+  max-height:calc(100dvh - 32px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-padding-top:12px;
+}
+@media(max-width:620px){
+  #checkoutModal.open{padding:8px;align-items:flex-start;}
+  #checkoutModal.open > .checkout-panel,
+  #checkoutModal.open:has(.booking-success.show) > .checkout-panel{
+    max-height:calc(100dvh - 16px);
+    border-radius:18px;
+  }
+}
