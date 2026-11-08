@@ -36,6 +36,7 @@ for(const suite of [
   'stripe-delayed-webhook-cancel-v237.test.mjs',
   'stripe-terminal-payment-ui-v238.test.mjs',
   'supplier-order-actions-layout-v239.test.mjs',
+  'agreement-localization-state-v240.test.mjs',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
