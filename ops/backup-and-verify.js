@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {resolveDatabaseConfig} from '../config.js';
 import Database from 'better-sqlite3';
 import {createBackupS3,pruneBackupObjects,s3BackupEnabled,uploadBackupObject} from './backup-s3.js';
-const dbPath=path.resolve(process.env.RENTINORBIT_DB_PATH||process.env[['RENT','ALL','_DB_PATH'].join('')]||process.env.DB_PATH||'rentinorbit.sqlite');
+const dbConfig=resolveDatabaseConfig();
+if(!dbConfig.ok || !dbConfig.path || dbConfig.path===':memory:') throw new Error('Cannot resolve persistent SQLite database for backup');
+const dbPath=path.resolve(dbConfig.path);
 const backupDir=path.resolve(process.env.BACKUP_DIR||path.join(path.dirname(dbPath),'backups'));
 if(!fs.existsSync(dbPath))throw new Error(`Database not found: ${dbPath}`);
 fs.mkdirSync(backupDir,{recursive:true});
