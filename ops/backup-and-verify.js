@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {resolveDatabaseConfig} from '../config.js';
@@ -14,7 +15,8 @@ const source=new Database(dbPath,{readonly:true,fileMustExist:true});try{await s
 const verify=new Database(output,{readonly:true,fileMustExist:true});let integrity;try{integrity=verify.pragma('integrity_check',{simple:true});}finally{verify.close();}
 if(String(integrity).toLowerCase()!=='ok')throw new Error(`SQLite integrity_check failed: ${integrity}`);
 const stat=fs.statSync(output),backupFile=path.basename(output),backupKey=`sqlite/${backupFile}`;
-const evidence={ok:true,verifiedAt:new Date().toISOString(),backupFile,backupKey,bytes:stat.size,integrity:'ok',storage:s3BackupEnabled()?'s3':'filesystem'};
+const sha256=crypto.createHash('sha256').update(fs.readFileSync(output)).digest('hex');
+const evidence={ok:true,verifiedAt:new Date().toISOString(),backupFile,backupKey,bytes:stat.size,sha256,integrity:'ok',storage:s3BackupEnabled()?'s3':'filesystem'};
 // Publish verified evidence only AFTER the remote backup and its metadata succeed.
 // A failed S3 upload must leave the previous verified evidence untouched.
 const evidencePath=path.resolve(process.env.DB_BACKUP_EVIDENCE_PATH||path.join(backupDir,'last-verified-backup.json'));
@@ -44,4 +46,4 @@ if(s3BackupEnabled()){
   fs.writeFileSync(tempEvidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});
   fs.renameSync(tempEvidencePath,evidencePath);
 }
-console.log(JSON.stringify({ok:true,backup:backupFile,backupKey,storage:evidence.storage,bytes:stat.size,integrity:'ok',retention,retained:remote?Math.min(remote.listed,retention):Math.min(backups.length,retention)}));
+console.log(JSON.stringify({ok:true,backup:backupFile,backupKey,storage:evidence.storage,bytes:stat.size,sha256,integrity:'ok',retention,retained:remote?Math.min(remote.listed,retention):Math.min(backups.length,retention)}));
