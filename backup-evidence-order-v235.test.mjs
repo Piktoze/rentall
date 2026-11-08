@@ -43,7 +43,7 @@ try{
  assert.ok(fs.existsSync(volumeEvidence),'Volume backup evidence must match application DB path');
  const volumeRestore=spawnSync(process.execPath,['ops/test-backup-restore.js'],{env:volumeEnv,encoding:'utf8',timeout:15000});
  assert.equal(volumeRestore.status,0,'Volume-path restore must succeed: '+volumeRestore.stderr);
- const verifiedVolume=JSON.parse(volumeRestore.stdout.trim().split('\\n').at(-1));
+ const verifiedVolume=JSON.parse(volumeRestore.stdout.trim().split('\n').at(-1));
  assert.equal(verifiedVolume.integrity,'ok');
  assert.equal(verifiedVolume.migrationVersion,1);
  // A failed remote upload must never replace an earlier verified checkpoint.
