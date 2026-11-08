@@ -483,27 +483,27 @@ function refreshPaymentsPanel(){
   document.getElementById('paymentsScheduleSelect').value=s.payoutSchedule||'Weekly';
   document.getElementById('payoutScheduleBadge').textContent=s.payoutSchedule||'Weekly';
 
-  const connected=!!s.stripeConnected;
+  // Never infer Stripe account readiness from legacy localStorage fields.
+  // Live Stripe status is supplied by the authenticated server endpoint below.
   const stripeBadge=document.getElementById('stripeStatusBadge');
   const bankBadge=document.getElementById('bankStatusBadge');
-  stripeBadge.textContent=connected?'Connected':'Not connected';
-  stripeBadge.className='status '+(connected?'confirmed':'pending');
-  bankBadge.textContent=connected&&s.iban?'Verified':(s.iban?'Added':'Pending');
-  bankBadge.className='status '+(connected&&s.iban?'confirmed':'pending');
-
-  document.getElementById('stripeIdentityText').textContent=connected?'Verified':'Not started';
-  document.getElementById('stripeBankText').textContent=connected&&s.iban?'Verified':(s.iban?'Added':'Not connected');
-  document.getElementById('stripePayoutText').textContent=connected?'Enabled':'Pending';
-  document.getElementById('stripeStepIdentity').classList.toggle('done',connected);
-  document.getElementById('stripeStepBank').classList.toggle('done',connected&&!!s.iban);
-  document.getElementById('stripeStepPayout').classList.toggle('done',connected);
-  document.getElementById('connectStripeBtn').textContent=connected?'Stripe Connect ready ✓':'Start Stripe Connect setup';
-
+  stripeBadge.textContent=uiText('Checking Stripe status');
+  stripeBadge.className='status pending';
+  bankBadge.textContent=uiText('Pending verification');
+  bankBadge.className='status pending';
+  document.getElementById('stripeIdentityText').textContent=uiText('Pending verification');
+  document.getElementById('stripeBankText').textContent=uiText('Pending verification');
+  document.getElementById('stripePayoutText').textContent=uiText('Pending verification');
+  document.getElementById('stripeStepIdentity').classList.remove('done');
+  document.getElementById('stripeStepBank').classList.remove('done');
+  document.getElementById('stripeStepPayout').classList.remove('done');
+  document.getElementById('openStripeDashboardBtn').disabled=true;
   renderPaymentHistory();
 }
 
 document.getElementById('supplierPaymentsBtn').addEventListener('click',()=>{
   refreshPaymentsPanel();
+  refreshLiveStripeStatus();
   document.getElementById('supplierPaymentsPanel').classList.add('open');
   document.getElementById('supplierPaymentsPanel').scrollIntoView({behavior:'smooth',block:'start'});
 });
@@ -512,17 +512,8 @@ document.getElementById('closePaymentsPanel').addEventListener('click',()=>{
 });
 document.getElementById('paymentHistoryFilter').addEventListener('change',renderPaymentHistory);
 
-document.getElementById('connectStripeBtn').addEventListener('click',()=>{
-  const email=getSession();
-  const accounts=loadAccounts();
-  const idx=accounts.findIndex(a=>a.email===email);
-  if(idx<0) return;
-  accounts[idx].stripeConnected=true;
-  if(!accounts[idx].payoutName) accounts[idx].payoutName=accounts[idx].businessName;
-  if(!accounts[idx].payoutCountry) accounts[idx].payoutCountry='';
-  saveAccounts(accounts);
-  refreshPaymentsPanel();
-});
+// V229: the legacy localStorage-only "connect" simulation was removed.
+// Secure Connect onboarding is handled below using the authenticated API.
 
 document.getElementById('paymentsScheduleSelect').addEventListener('change',(e)=>{
   const email=getSession();
