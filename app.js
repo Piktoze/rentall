@@ -6552,7 +6552,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   // alert or supplier view. Keep only in this tab's memory until expiry/reload.
   const renterVisiblePins=new Map();
   function showRenterCode(card,bookingId,purpose,result){
-    if(!card || !card.isConnected || !/^\\d{6}$/.test(String(result?.code||'')))return;
+    if(!card || !card.isConnected || !/^\d{6}$/.test(String(result?.code||'')))return;
     const expires=Date.parse(result.expiresAt||'');
     if(!Number.isFinite(expires)||expires<=Date.now())return;
     const old=card.querySelector('.rio-renter-code');
