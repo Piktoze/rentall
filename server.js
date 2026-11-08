@@ -390,8 +390,30 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
     throw err;
   }
   const listing=getRentalListing(booking.listingId);
-  const collectedPayment=new Set(['paid','partially_refunded','refunded'])
+  let collectedPayment=new Set(['paid','partially_refunded','refunded'])
     .has(String(booking.paymentStatus||'unpaid').toLowerCase());
+  // A succeeded Stripe Direct Charge may reach us before its webhook updates
+  // the booking. Never silently treat that charged booking as unpaid when
+  // calculating the customer's cancellation refund.
+  if(!collectedPayment && booking.stripePaymentIntentId &&
+     booking.paymentProvider!=='demo' && !String(booking.stripePaymentIntentId).startsWith('demo_pi_')){
+    if(!stripe) throw new Error('Cannot verify Stripe payment before cancellation');
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+    if(!connection?.stripeAccountId || String(connection.connectApi||'')!=='v2_merchant_direct'){
+      throw new Error('Supplier Stripe connection unavailable for cancellation payment verification');
+    }
+    const stripeIntent=await retrieveDirectChargePaymentIntent(stripe,{
+      accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId
+    });
+    if(stripeIntent.status==='succeeded'){
+      if(String(stripeIntent.metadata?.bookingId||'')!==String(booking.bookingId) ||
+         Number(stripeIntent.amount)!==Math.round(Number(booking.orderValue||0)*100) ||
+         String(stripeIntent.currency||'').toLowerCase()!=='eur'){
+        throw new Error('Stripe charge does not match this booking; cancellation requires review');
+      }
+      collectedPayment=true;
+    }
+  }
   const refundAmount=collectedPayment
     ? (forceFullRefund
       ? Number(booking.orderValue||0)
