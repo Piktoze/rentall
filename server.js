@@ -1069,6 +1069,9 @@ app.get('/api/config', (req,res)=>{
 app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-register'}), (req,res)=>{
   try{
     const {email,password,displayName=null,businessName=null,country=null,city=null,role='supplier'}=req.body||{};
+    if(req.body?.termsAccepted!==true){
+      return res.status(400).json({error:'Platform terms must be accepted before registration',code:'TERMS_ACCEPTANCE_REQUIRED'});
+    }
     if(String(password||'').length<8){
       return res.status(400).json({error:'Password must contain at least 8 characters'});
     }
