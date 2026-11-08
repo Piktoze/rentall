@@ -39,13 +39,29 @@
     try{
       const data=await call('/api/conversations');
       const rows=data.conversations||[];
-      list.innerHTML=rows.length?rows.map(c=>{
+      const existingBookingIds=new Set(rows.filter(c=>c.bookingId).map(c=>String(c.bookingId)));
+      const candidates=(data.bookingCandidates||[]).filter(b=>!existingBookingIds.has(String(b.bookingId)));
+      list.innerHTML=rows.map(c=>{
         const counterpart=String(user.email||'').toLowerCase()===String(c.customerEmail||'').toLowerCase()?c.supplierEmail:c.customerEmail;
         return `<button type="button" class="conversation-row ${String(c.conversationId)===String(selectId||activeConversationId)?'active':''}" data-conversation-id="${esc(c.conversationId)}"><b>${esc(c.listingTitle||tr('Rental'))}</b><span>${esc(counterpart||tr('RentInOrbit user'))}</span><small>${esc(c.lastMessage||tr('No messages yet'))}</small></button>`;
-      }).join(''):`<p class="muted">${esc(tr('No conversations yet. Open a listing and choose “Message supplier”.'))}</p>`;
+      }).join('')+candidates.map(b=>
+        `<button type="button" class="conversation-row" data-start-booking-chat="${esc(b.bookingId)}" data-listing-id="${esc(b.listingId)}"><b>${esc(b.title)}</b><span>${esc(b.counterparty)}</span><small>${esc(b.side==='supplier'?'Rašyti nuomininkui':'Rašyti nuomotojui')} · ${esc(b.bookingId)}</small></button>`
+      ).join('')+(!rows.length&&!candidates.length
+        ?`<p class="muted">${esc(tr('No conversations yet. Open a listing and choose “Message supplier”.'))}</p>`:'');
       list.querySelectorAll('[data-conversation-id]').forEach(btn=>btn.addEventListener('click',()=>openConversation(btn.dataset.conversationId)));
+      list.querySelectorAll('[data-start-booking-chat]').forEach(btn=>btn.addEventListener('click',()=>{
+        startConversation(btn.dataset.listingId,btn.dataset.startBookingChat);
+      }));
       const desired=selectId||activeConversationId;
       if(desired&&rows.some(c=>String(c.conversationId)===String(desired)))await openConversation(desired,false);
+      else if(rows.length)await openConversation(rows[0].conversationId,false);
+      else {
+        activeConversationId=null;activeConversation=null;
+        const title=$('conversationTitle'),form=$('messageForm'),messages=$('messageList');
+        if(title)title.textContent='Pasirinkite užsakymą ir pradėkite pokalbį';
+        if(form)form.hidden=true;
+        if(messages)messages.innerHTML='<p class="muted">Norėdami parašyti žinutę, kairėje pasirinkite nuomininką arba nuomotoją.</p>';
+      }
     }catch(err){list.innerHTML=`<p class="muted">${esc(err.message)}</p>`;}
   }
 
@@ -83,7 +99,10 @@
     }catch(err){toast(err.message,'error');}
   }
 
-  async function openMessages(){openModal('messagesModal');await loadConversations();}
+  async function openMessages(){
+    openModal('messagesModal');
+    await loadConversations();
+  }
   window.RentInOrbitMessages={open:openMessages,close:()=>closeModal('messagesModal'),reload:loadConversations};
   $('messagesBtn')?.addEventListener('click',openMessages);
   $('closeMessagesModal')?.addEventListener('click',()=>closeModal('messagesModal'));
