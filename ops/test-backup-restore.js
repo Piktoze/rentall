@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,6 +31,10 @@ try {
   if(!Number.isSafeInteger(sourceBytes)||sourceBytes<=0||restoredBytes!==sourceBytes) {
     throw new Error(`Restored backup size mismatch: expected ${sourceBytes}, received ${restoredBytes}`);
   }
+  const expectedSha256=String(evidence.sha256||'');
+  if(!/^[a-f0-9]{64}$/.test(expectedSha256)) throw new Error('Backup SHA-256 evidence is missing or invalid');
+  const restoredSha256=crypto.createHash('sha256').update(fs.readFileSync(restored)).digest('hex');
+  if(restoredSha256!==expectedSha256) throw new Error('Restored backup SHA-256 mismatch');
   const db=new Database(restored,{readonly:true,fileMustExist:true});
   let integrity,tableCount,migrationVersion;
   try {
@@ -40,7 +45,7 @@ try {
   if(String(integrity).toLowerCase()!=='ok'||tableCount<1||migrationVersion<1) {
     throw new Error(`Restored SQLite invalid: integrity=${integrity}, tables=${tableCount}, migration=${migrationVersion}`);
   }
-  console.log(JSON.stringify({ok:true,source:remote?evidence.backupKey:path.basename(source),storage:remote?'s3':'filesystem',bytes:restoredBytes,integrity:'ok',tableCount,migrationVersion,verifiedAt:new Date().toISOString()}));
+  console.log(JSON.stringify({ok:true,source:remote?evidence.backupKey:path.basename(source),storage:remote?'s3':'filesystem',bytes:restoredBytes,sha256:restoredSha256,integrity:'ok',tableCount,migrationVersion,verifiedAt:new Date().toISOString()}));
 } finally {
   fs.rmSync(restoreDir,{recursive:true,force:true});
 }
