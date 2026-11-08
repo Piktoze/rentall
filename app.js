@@ -6548,6 +6548,36 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(typeof showToast==='function')showToast(message,error?'error':'success',4000);
     else window.alert(message);
   }
+  // The one-time PIN is shown in the renter's own booking card, never in a modal
+  // alert or supplier view. Keep only in this tab's memory until expiry/reload.
+  const renterVisiblePins=new Map();
+  function showRenterCode(card,bookingId,purpose,result){
+    if(!card || !card.isConnected || !/^\\d{6}$/.test(String(result?.code||'')))return;
+    const expires=Date.parse(result.expiresAt||'');
+    if(!Number.isFinite(expires)||expires<=Date.now())return;
+    const old=card.querySelector('.rio-renter-code');
+    if(old)old.remove();
+    const box=document.createElement('section');
+    box.className='rio-renter-code';
+    box.setAttribute('aria-label',purpose==='pickup'?'Daikto išdavimo kodas':'Daikto grąžinimo kodas');
+    const heading=document.createElement('strong');
+    heading.textContent=purpose==='pickup'?'Daikto išdavimo kodas':'Daikto grąžinimo kodas';
+    const number=document.createElement('output');
+    number.className='rio-renter-code-value';
+    number.textContent=String(result.code);
+    const note=document.createElement('small');
+    note.textContent='Vienkartinis kodas. Galioja iki '+new Date(expires).toLocaleString('lt-LT')+'. Išsisaugokite jį prieš vykdami pas nuomotoją.';
+    const copy=document.createElement('button');
+    copy.type='button';
+    copy.className='secondary';
+    copy.textContent='Kopijuoti kodą';
+    copy.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(String(result.code));copy.textContent='Nukopijuota';}
+      catch{copy.textContent='Pažymėkite ir nukopijuokite kodą';}
+    });
+    box.append(heading,number,note,copy);
+    (card.querySelector('.customer-booking-actions')||card).appendChild(box);
+  }
   // Customer actions are delegated: the customer list is frequently re-rendered.
   document.addEventListener('click',async e=>{
     const button=e.target.closest('[data-rio-trust-renter]');
@@ -6583,8 +6613,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const result=await apiJson(transferEndpoint(bookingId)+'/transfer-code',{
           method:'POST',body:JSON.stringify({purpose,accessToken})
         });
-        const action=purpose==='pickup'?'IŠDAVIMO':'GRĄŽINIMO';
-        window.alert(action+' KODAS: '+result.code+'\\nGalioja 15 minučių. Parodykite tik susitikę su nuomotoju. Nekelkite kodo į žinutes.');
+        const card=[...document.querySelectorAll('.customer-booking-card[data-booking-id]')]
+          .find(el=>el.dataset.bookingId===bookingId);
+        if(!card)throw Error('Atnaujinkite užsakymų sąrašą, kad būtų galima parodyti kodą.');
+        renterVisiblePins.set(bookingId+':'+purpose,result);
+        showRenterCode(card,bookingId,purpose,result);
       }
     }catch(err){showResult(err.message||'Veiksmas nepavyko.',true)}
     finally{button.disabled=false;}
@@ -6724,6 +6757,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const payment=String(card.dataset.paymentStatus||'').toLowerCase();
     const existing=card.querySelector('.rio-renter-trust');
     if(existing)existing.remove();
+    const oldCode=card.querySelector('.rio-renter-code');
+    if(oldCode)oldCode.remove();
+    const cachedPurpose=status==='active'?'return':'pickup';
+    const cached=renterVisiblePins.get(id+':'+cachedPurpose);
+    if(cached && Date.parse(cached.expiresAt||'')>Date.now() &&
+       ((cachedPurpose==='pickup'&&status==='confirmed')||(cachedPurpose==='return'&&status==='active'))){
+      showRenterCode(card,id,cachedPurpose,cached);
+    }else if(cached){
+      renterVisiblePins.delete(id+':'+cachedPurpose);
+    }
     const create=(purpose,label)=>{
       const div=document.createElement('div');
       div.className='rio-renter-trust';
