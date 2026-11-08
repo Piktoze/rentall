@@ -57,6 +57,7 @@ const checks=[
   ['payment processing warning',(app+hub).includes('Do not pay again while Stripe is processing')],
   ['browser RC spec',fs.existsSync('./e2e/release-candidate.spec.js')],
   ['full 1.0 RC browser suite exists',fs.existsSync('./e2e/rentinorbit-1.0-rc.spec.js')],
+  ['supplier payments use authoritative Stripe server status',app.includes("refreshLiveStripeStatus();")&&!app.includes('const connected=!!s.stripeConnected')&&!app.includes('accounts[idx].stripeConnected=true')],
   ['supplier workspace module exists',fs.existsSync('./modules/supplier-workspace.js')],
   ['integration readiness module exists',fs.existsSync('./modules/integration-readiness.js')],
   ['validated startup exists',fs.existsSync('./ops/start.js')],
