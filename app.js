@@ -3960,8 +3960,8 @@ async function initializeSupplierInvitation(){
     const form=document.getElementById('supplierActivationForm');
     form?.addEventListener('submit',async e=>{
       e.preventDefault(); const msg=document.getElementById('supplierActivationMsg');
-      try{const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({token,password:document.getElementById('supplierActivationPassword').value})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent=uiText('Account activated. Now confirm that your prepared listings are still available.');await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
-    },{once:true});
+      try{const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({token,password:document.getElementById('supplierActivationPassword').value,termsAccepted:document.getElementById('supplierActivationTerms')?.checked===true})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent=uiText('Account activated. Now confirm that your prepared listings are still available.');await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
+    });
   }catch(err){if(summary) summary.textContent=err.message;modal?.classList.add('open');}
 }
 setTimeout(()=>initializeSupplierInvitation(),100);
