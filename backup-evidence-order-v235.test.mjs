@@ -30,6 +30,17 @@ try{
  const restored=JSON.parse(defaultRestore.stdout.trim().split('\n').at(-1));
  assert.equal(restored.integrity,'ok');
  assert.equal(restored.migrationVersion,1);
+ // The server's configured DB_BACKUP_EVIDENCE_PATH must also be where the
+ // backup command publishes evidence, including when outside BACKUP_DIR.
+ const customEvidence=path.join(root,'ops-evidence','latest.json');
+ const customEnv={...env,DB_BACKUP_EVIDENCE_PATH:customEvidence};
+ const customBackup=spawnSync(process.execPath,['ops/backup-and-verify.js'],{env:customEnv,encoding:'utf8',timeout:15000});
+ assert.equal(customBackup.status,0,'Custom evidence backup must succeed: '+customBackup.stderr);
+ assert.ok(fs.existsSync(customEvidence),'Custom backup evidence must be written at configured path');
+ const customRestore=spawnSync(process.execPath,['ops/test-backup-restore.js'],{env:customEnv,encoding:'utf8',timeout:15000});
+ assert.equal(customRestore.status,0,'Custom evidence restore must succeed: '+customRestore.stderr);
+ const customRestored=JSON.parse(customRestore.stdout.trim().split('\n').at(-1));
+ assert.equal(customRestored.integrity,'ok');
  // Real deployments may resolve DB through RAILWAY_VOLUME_MOUNT_PATH alone.
  // Backups and restore must use that same database, never a working-directory DB.
  const volumeRoot=path.join(root,'volume');
