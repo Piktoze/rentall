@@ -30,6 +30,7 @@ for(const suite of [
   'webhook-ordering.test.js',
   'webhook-signed-http-v231.test.js',
   'customer-pay-resume-v232.test.js',
+  'stripe-booking-binding-v234.test.js',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
