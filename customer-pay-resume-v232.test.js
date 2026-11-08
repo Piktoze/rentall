@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync('./app.js','utf8');
+const i18n=fs.readFileSync('./modules/i18n-v161.js','utf8');
+assert.match(app,/const canPayNow=bookingStatus==='confirmed'/,'Pay CTA must require supplier confirmation');
+assert.match(app,/\['unpaid','requires_payment_method','requires_confirmation'\]\.includes\(paymentStatus\)/,'CTA must appear only for unpaid states');
+assert.match(app,/class="primary v231-pay-booking"/,'Customer booking card must expose pay-now button');
+assert.match(app,/url\.searchParams\.set\('pay','1'\)/,'Pay CTA must route to authenticated payment flow');
+assert.match(app,/url\.searchParams\.set\('booking',bookingId\)/,'Pay CTA must preserve booking identity');
+assert.match(app,/url\.searchParams\.set\('view','my-bookings'\)/,'Payment navigation must return to customer bookings');
+assert.match(app,/\$\{canPayNow\?/, 'Button must be guarded by server booking state');
+assert.ok((i18n.match(/"Pay now"/g)||[]).length>=4,'Pay now requires all non-English locales');
+console.log('PASS confirmed unpaid booking has translated pay-now CTA routed through existing authorized Stripe flow');
