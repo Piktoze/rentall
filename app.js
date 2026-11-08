@@ -6419,11 +6419,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   ]);
   function agreementTermsForDisplay(snapshot){
     const terms=Array.isArray(snapshot?.terms)?snapshot.terms:[];
-    if(window.RentInOrbitI18n?.getLanguage?.()!=='lt')return terms;
+    const language=window.RentInOrbitI18n?.getLanguage?.()||document.documentElement.lang||'lt';
+    if(String(language).toLowerCase().split('-')[0]!=='lt')return terms;
     return terms.map(term=>historicalTermsLt.get(String(term).trim())||String(term));
   }
   function agreementCancellationLabel(value){
-    if(window.RentInOrbitI18n?.getLanguage?.()!=='lt')return String(value||'pagal skelbimą');
+    const language=window.RentInOrbitI18n?.getLanguage?.()||document.documentElement.lang||'lt';
+    if(String(language).toLowerCase().split('-')[0]!=='lt')return String(value||'pagal skelbimą');
     return ({moderate:'Vidutinės',flexible:'Lanksčios',strict:'Griežtos'})[String(value||'')]||String(value||'pagal skelbimą');
   }
 
