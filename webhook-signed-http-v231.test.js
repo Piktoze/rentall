@@ -8,8 +8,10 @@ import net from 'node:net';
 import {spawn} from 'node:child_process';
 import Database from 'better-sqlite3';
 const webhookSource=fs.readFileSync('./server.js','utf8');
-assert.match(webhookSource,/if \(!process\.env\.STRIPE_WEBHOOK_SECRET\) \{/,
- 'Missing webhook signing secret must fail closed');
+assert.match(webhookSource,/process\.env\.STRIPE_CONNECT_WEBHOOK_SECRET/,
+ 'Separate Connect webhook signing secret must be supported');
+assert.match(webhookSource,/if\(!signingSecrets\.length\)/,
+ 'Missing both webhook signing secrets must fail closed');
 assert.doesNotMatch(webhookSource,/event = JSON\.parse\(req\.body\.toString\('utf8'\)\)/,
  'Unsigned webhook JSON fallback is prohibited');
 
@@ -20,11 +22,12 @@ const bookingId='webhook-e2e-booking';
 const accountId='acct_test_webhook_e2e';
 const paymentIntentId='pi_test_webhook_e2e';
 const secret='whsec_webhook_e2e_fake_local_only';
+const connectSecret='whsec_connect_webhook_e2e_fake_local_only';
 const env={...process.env,DB_PATH:dbPath,UPLOADS_DIR:path.join(folder,'uploads'),
  NODE_ENV:'test',RENTINORBIT_STAGING:'true',RENTINORBIT_DEMO_PAYMENTS:'false',
  EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
  RENTALL_SEED_DEMO_USERS:'false',STRIPE_SECRET_KEY:'sk_test_local_webhook_fixture',
- STRIPE_WEBHOOK_SECRET:secret,STRIPE_MODE:'test'};
+ STRIPE_WEBHOOK_SECRET:secret,STRIPE_CONNECT_WEBHOOK_SECRET:connectSecret,STRIPE_MODE:'test'};
 for(const key of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
  'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
  'STRIPE_PUBLISHABLE_KEY','RESEND_API_KEY','APP_URL','PUBLIC_BASE_URL','PORT','HOST'])
@@ -70,9 +73,9 @@ const read=()=>{
   events:database.prepare("SELECT event_id,status FROM webhook_events WHERE event_id LIKE 'evt_webhook_e2e_%' ORDER BY event_id").all()}}
  finally{database.close()}
 };
-async function post(evt,{badSignature=false}={}){
+async function post(evt,{badSignature=false,connect=false}={}){
  const payload=JSON.stringify(evt),t=Math.floor(Date.now()/1000);
- const hash=crypto.createHmac('sha256',secret).update(t+'.'+payload).digest('hex');
+ const hash=crypto.createHmac('sha256',connect?connectSecret:secret).update(t+'.'+payload).digest('hex');
  const response=await fetch(base+'/api/stripe/webhook',{method:'POST',
  headers:{'content-type':'application/json','stripe-signature':`t=${t},v1=${badSignature?'0'.repeat(64):hash}`},
  body:payload});
@@ -93,7 +96,7 @@ try{
  assert.equal(wrong.status,200,'Wrong-account event is accepted but ignored');
  assert.equal(read().booking.payment_status,'requires_payment_method','Wrong connected account cannot pay booking');
  const valid=event('evt_webhook_e2e_valid',accountId);
- const good=await post(valid);assert.equal(good.status,200,'Valid signed event');
+ const good=await post(valid,{connect:true});assert.equal(good.status,200,'Valid Connect-signed event');
  assert.equal(read().booking.payment_status,'paid','Valid account-bound signed event pays booking');
  const duplicate=await post(valid);assert.equal(duplicate.status,200);
  assert.equal(JSON.parse(duplicate.body).duplicate,true,'Webhook replay is idempotent');
