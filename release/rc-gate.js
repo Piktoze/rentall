@@ -35,6 +35,7 @@ for(const suite of [
   'stripe-pricing-resume-v236.test.mjs',
   'stripe-delayed-webhook-cancel-v237.test.mjs',
   'stripe-terminal-payment-ui-v238.test.mjs',
+  'supplier-order-actions-layout-v239.test.mjs',
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
