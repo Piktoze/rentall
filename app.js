@@ -213,19 +213,39 @@ function validateStep(n){
   return true;
 }
 
+// Checkout-specific fallback for labels generated dynamically after initial i18n pass.
+function bookingLabel(key){
+  if((document.getElementById('lang')?.value||document.documentElement.lang||'').toLowerCase().startsWith('lt')){
+    const lt={
+      'Rental period':'Nuomos laikotarpis',
+      'Rental start time (supplier local)':'Nuomos pradžios laikas',
+      'Delivery':'Pristatymas',
+      'Delivery window':'Pristatymo laikas',
+      'Customer':'Nuomininkas',
+      'Rental':'Nuoma',
+      'Total':'Iš viso',
+      'Booking status':'Užsakymo būsena',
+      'Pending supplier confirmation':'Laukiama nuomotojo patvirtinimo',
+      'Remaining quantity':'Likęs kiekis'
+    };
+    if(lt[key]) return lt[key];
+  }
+  return typeof uiText==='function' ? uiText(key) : key;
+}
+
 function renderReview(){
   const rental = cartSubtotal(), delivery = 10, total = rental+delivery;
   const names = cart.map(i=>i.name).join(', ');
   const html = `
     <h3>${names}</h3>
-    <div class="review-row"><span>Rental period</span><b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b></div>
-    <div class="review-row"><span>Rental start time (supplier local)</span><b>${escapeHtml(document.getElementById('rentalStartTime')?.value||'—')}</b></div>
-    <div class="review-row"><span>Delivery</span><b>${document.getElementById('hotelName').value || '—'}, ${document.getElementById('deliveryArea').value || '—'}</b></div>
-    <div class="review-row"><span>Delivery window</span><b>${document.getElementById('deliveryWindow').value || '—'}</b></div>
-    <div class="review-row"><span>Customer</span><b>${document.getElementById('firstName').value || ''} ${document.getElementById('lastName').value || ''}</b></div>
-    <div class="review-row"><span>Rental</span><b>${money(rental)}</b></div>
-    <div class="review-row"><span>Delivery</span><b>${money(delivery)}</b></div>
-    <div class="review-row total"><span>Total</span><b>${money(total)}</b></div>`;
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Rental period'))}</span><b>${document.getElementById('rentalStart').value || '—'} → ${document.getElementById('rentalEnd').value || '—'}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Rental start time (supplier local)'))}</span><b>${escapeHtml(document.getElementById('rentalStartTime')?.value||'—')}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Delivery'))}</span><b>${document.getElementById('hotelName').value || '—'}, ${document.getElementById('deliveryArea').value || '—'}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Delivery window'))}</span><b>${document.getElementById('deliveryWindow').value || '—'}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Customer'))}</span><b>${document.getElementById('firstName').value || ''} ${document.getElementById('lastName').value || ''}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Rental'))}</span><b>${money(rental)}</b></div>
+    <div class="review-row"><span>${escapeHtml(bookingLabel('Delivery'))}</span><b>${money(delivery)}</b></div>
+    <div class="review-row total"><span>${escapeHtml(bookingLabel('Total'))}</span><b>${money(total)}</b></div>`;
   document.getElementById('reviewCard').innerHTML=html;
 }
 
@@ -4598,8 +4618,8 @@ function wireAuthoritativeCheckout(){
       renderReview();
       document.getElementById('successSummary').innerHTML=
         document.getElementById('reviewCard').innerHTML+
-        `<div class="review-row"><span>Booking status</span><b>Pending supplier confirmation</b></div>`+
-        `<div class="review-row"><span>Remaining quantity</span><b>${result.availabilityAfter?.remainingQuantity ?? '—'}</b></div>`;
+        `<div class="review-row"><span>${escapeHtml(bookingLabel('Booking status'))}</span><b>${escapeHtml(bookingLabel('Pending supplier confirmation'))}</b></div>`+
+        `<div class="review-row"><span>${escapeHtml(bookingLabel('Remaining quantity'))}</span><b>${result.availabilityAfter?.remainingQuantity ?? '—'}</b></div>`;
 
       liveBookingForm.style.display='none';
       document.getElementById('bookingSuccess')?.classList.add('show');
