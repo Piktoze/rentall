@@ -202,6 +202,25 @@ try{
  status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
    data:{returnCondition:'good'}}),409,'Return cannot be repeated');
  assert.equal(returned.body.booking.status,'returned');
+ // Supplier can discover an existing booking in Messages before a conversation exists.
+ const supplierChats=await api('/api/conversations',{cookie:supplierCookie});
+ status(supplierChats,200,'Supplier booking chat candidates');
+ assert.ok(supplierChats.body.bookingCandidates.some(b=>b.bookingId===id&&b.side==='supplier'),
+   'Messages must offer the booking renter as an available recipient');
+ const outsiderChats=await api('/api/conversations',{cookie:outsiderCookie});
+ status(outsiderChats,200,'Outsider messages list');
+ assert.ok(!outsiderChats.body.bookingCandidates.some(b=>b.bookingId===id),
+   'Unrelated accounts must never see booking chat candidates');
+ const conversation=await api('/api/conversations',{method:'POST',cookie:supplierCookie,
+   data:{listingId:'api-e2e-listing',bookingId:id}});
+ status(conversation,200,'Supplier starts the renter conversation');
+ const conversationId=conversation.body.conversation.conversationId;
+ const sent=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
+   method:'POST',cookie:supplierCookie,data:{body:'Sveiki, daiktas jau paruoštas.'}});
+ status(sent,200,'Supplier can send a booking message');
+ const inbox=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{cookie:renterCookie});
+ status(inbox,200,'Renter receives the supplier conversation');
+ assert.ok(inbox.body.messages.some(m=>m.body==='Sveiki, daiktas jau paruoštas.'));
  outcome=true;
  console.log('PASS real HTTP two-account pickup PIN and supplier-only return without PIN: consent, role enforcement and replay protection');
 }finally{
