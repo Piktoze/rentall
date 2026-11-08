@@ -1121,6 +1121,14 @@
           <label><span data-i18n-text="Rental end date">Rental end date</span><input type="date" id="rentalEnd" required></label>
         </div>
 
+        <div class="rio-checkout-handover-choice">
+          <label for="rioCheckoutHandoverMethod">Kaip norite gauti daiktą?</label>
+          <select id="rioCheckoutHandoverMethod" aria-describedby="rioCheckoutHandoverNote">
+            <option value="Pickup from owner">Atsiimsiu pats – 0 €</option>
+            <option value="Delivery to my address">Pristatymas nurodytu adresu</option>
+          </select>
+          <p id="rioCheckoutHandoverNote" aria-live="polite">Pristatymo kaina priklauso nuo tiekėjo nustatytų sąlygų.</p>
+        </div>
         <div class="checkout-summary">
           <div><span data-i18n-text="Rental subtotal">Rental subtotal</span><b id="rentalSubtotal">€0.00</b></div>
           <div><span data-i18n-text="Delivery">Delivery</span><b id="deliveryPreview">€0.00</b></div>
