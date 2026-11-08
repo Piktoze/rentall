@@ -405,6 +405,11 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
     const stripeIntent=await retrieveDirectChargePaymentIntent(stripe,{
       accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId
     });
+    if(stripeIntent.status==='processing'){
+      const error=new Error('Payment is still processing; try cancellation again after Stripe settles the charge');
+      error.code='PAYMENT_STILL_PROCESSING';
+      throw error;
+    }
     if(stripeIntent.status==='succeeded'){
       if(String(stripeIntent.metadata?.bookingId||'')!==String(booking.bookingId) ||
          Number(stripeIntent.amount)!==Math.round(Number(booking.orderValue||0)*100) ||
