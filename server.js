@@ -2644,7 +2644,10 @@ app.get('/api/conversations',requireRole('customer','supplier','admin'),(req,res
 app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleRateLimit({windowMs:60000,max:30,keyPrefix:'conversation-create'}),(req,res)=>{
   try{
     const listingId=String(req.body?.listingId||'');
-    const listing=getFullRentalListing(listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
+    // Historical confirmed bookings may reference listings without data_json.
+    // Always use the persisted owner record, not a publicly visible catalog requirement.
+    const listing=getFullRentalListing(listingId)||getRentalListing(listingId);
+    if(!listing)return res.status(404).json({error:'Listing not found'});
     let customerEmail=null,supplierEmail=String(listing.ownerEmail||'').toLowerCase(),bookingId=req.body?.bookingId?String(req.body.bookingId):null;
     const actorEmail=String(req.appUser.email||'').toLowerCase();
     const actorOwnsListing=supplierEmail===actorEmail;
