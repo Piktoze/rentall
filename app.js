@@ -5845,10 +5845,8 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
       search.setAttribute('enterkeyhint','search');
       if(!search.placeholder) search.placeholder='What do you need to rent?';
     }
-    qsa('input[type="date"]').forEach(el=>{
-      const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-      if(!el.min) el.min=tomorrow;
-    });
+    // Do not impose a global tomorrow minimum on every date field.
+    // Search, booking and return flows own their individual date constraints.
   }
 
   function updateCustomerPromise(){
