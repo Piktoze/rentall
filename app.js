@@ -6790,7 +6790,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const data=await apiJson('/api/rentals/bookings/'+encodeURIComponent(id)+'/trust'+
         (accessToken?'?accessToken='+encodeURIComponent(accessToken):''));
       if(!card.isConnected)return;
-      if(!data.agreement?.customerAcceptedAt || data.acceptanceEvidence?.customer?.verified!==true){
+      if(!data.agreement?.customerAcceptedAt){
+        create('accept',renterTrustLabel('accept'));
+      }else if(data.acceptanceEvidence?.customer?.verified!==true){
         create('accept',renterTrustLabel('accept'));
       }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
         create('pickup',renterTrustLabel('pickup'));
