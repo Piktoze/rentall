@@ -70,6 +70,31 @@ try{
  const localProbe=spawnSync(process.execPath,['--input-type=module','-e',schedulerProbe],{env:{...stagingEnv,BACKUP_S3_ENABLED:'false',RAILWAY_ENVIRONMENT_ID:''},encoding:'utf8',timeout:15000});
  assert.equal(localProbe.status,2,'Local-only backup on DB volume must be rejected');
  assert.match(localProbe.stderr,/BACKUP_STORAGE_NOT_SEPARATE/);
+ // Scheduler must publish independent restore proof only for the same tested backup.
+ const schedulerRoot=path.join(root,'scheduler-isolated');
+ const schedulerData=path.join(schedulerRoot,'data');
+ const schedulerBackup=path.join(schedulerRoot,'backup');
+ fs.mkdirSync(schedulerData,{recursive:true});
+ const schedulerDb=path.join(schedulerData,'test.sqlite');
+ fs.copyFileSync(dbPath,schedulerDb);
+ const scheduledEnv={...env,RENTINORBIT_DB_PATH:schedulerDb,DB_PATH:schedulerDb,
+   BACKUP_DIR:schedulerBackup,DB_BACKUP_EVIDENCE_PATH:path.join(schedulerBackup,'last-verified-backup.json'),
+   BACKUP_S3_ENABLED:'false',RAILWAY_ENVIRONMENT_ID:''};
+ const scheduled=spawnSync(process.execPath,['--input-type=module','-e',
+   "import {runScheduledBackup} from './ops/backup-scheduler.js';await runScheduledBackup();"],{
+     env:scheduledEnv,encoding:'utf8',timeout:20000});
+ assert.equal(scheduled.status,0,'Isolated scheduled backup and restore must succeed: '+scheduled.stderr);
+ const uploadedProof=JSON.parse(fs.readFileSync(path.join(schedulerBackup,'last-verified-backup.json'),'utf8'));
+ const restoreProof=JSON.parse(fs.readFileSync(path.join(schedulerBackup,'last-restored-backup.json'),'utf8'));
+ assert.equal(restoreProof.ok,true);
+ assert.equal(restoreProof.backupKey,uploadedProof.backupKey);
+ assert.equal(restoreProof.backupFile,uploadedProof.backupFile);
+ assert.equal(restoreProof.bytes,uploadedProof.bytes);
+ assert.ok(Date.parse(restoreProof.restoreVerifiedAt)>=Date.parse(uploadedProof.verifiedAt));
+ // The launch gate must reject evidence without corresponding restore proof.
+ const serverSource=fs.readFileSync('./server.js','utf8');
+ assert.ok(serverSource.includes("id:'database_backup_restore_verified'")&&
+   serverSource.includes('backup.evidenceValid&&backup.restoreVerified'));
  const oldEvidence=fs.readFileSync(evidencePath,'utf8');
  const failingEnv={...env,BACKUP_S3_ENABLED:'true',BACKUP_S3_ACCESS_KEY_ID:'',BACKUP_S3_SECRET_ACCESS_KEY:'',BACKUP_S3_BUCKET:'',BACKUP_S3_ENDPOINT:'',BACKUP_S3_REGION:''};
  const failure=spawnSync(process.execPath,['ops/backup-and-verify.js'],{env:failingEnv,encoding:'utf8',timeout:15000});
