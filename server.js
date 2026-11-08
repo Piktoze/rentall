@@ -115,6 +115,7 @@ import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
 import {
   calculateBookingPricingForSupplier,
+  getBookingPricingSnapshot,
   saveBookingPricingSnapshot
 } from './modules/pricing-store-v194.js';
 import {
@@ -1687,7 +1688,19 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const amount=Math.round(Number(booking.orderValue||0)*100);
     if(amount<50) return res.status(400).json({error:'Booking amount is too small'});
 
-    const pricing=calculateBookingPricingForSupplier(db,{supplierEmail:listing?.ownerEmail,bookingAmountCents:amount});
+    // An existing Stripe intent must retain the commission agreed when it
+    // was created. A supplier plan change must not invalidate an in-flight
+    // customer payment or rewrite its original accounting.
+    const storedPricing=booking.stripePaymentIntentId?getBookingPricingSnapshot(db,booking.bookingId):null;
+    const currentPricing=calculateBookingPricingForSupplier(db,{supplierEmail:listing?.ownerEmail,bookingAmountCents:amount});
+    const pricing=storedPricing||currentPricing;
+    if(storedPricing && (
+      Number(storedPricing.bookingAmountCents)!==amount ||
+      Number(storedPricing.commissionAmountCents)<0 ||
+      !Number.isSafeInteger(Number(storedPricing.commissionAmountCents)) ||
+      Number(storedPricing.supplierAmountCents)!==amount-Number(storedPricing.commissionAmountCents) ||
+      String(storedPricing.currency||'').toLowerCase()!=='eur'
+    )) return res.status(409).json({error:'Stored booking pricing does not match the booking',code:'BOOKING_PRICING_MISMATCH'});
     const platformFee=pricing.commissionAmountCents;
     const supplierAmount=pricing.supplierAmountCents;
     if(demoPaymentsEnabled){
