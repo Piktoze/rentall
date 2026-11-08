@@ -12,7 +12,7 @@ try{
  const db=new Database(dbPath);
  db.exec('CREATE TABLE source_records (value TEXT); INSERT INTO source_records(value) VALUES (\'safe-backup\'); CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY); INSERT INTO schema_migrations(version) VALUES(1)');
  db.close();
- const env={...process.env,RENTINORBIT_DB_PATH:dbPath,DB_PATH:dbPath,BACKUP_DIR:backupDir,BACKUP_S3_ENABLED:'false'};
+ const env={...process.env,RENTINORBIT_DB_PATH:dbPath,DB_PATH:dbPath,BACKUP_DIR:backupDir,DB_BACKUP_EVIDENCE_PATH:path.join(backupDir,'last-verified-backup.json'),BACKUP_S3_ENABLED:'false'};
  const ok=spawnSync(process.execPath,['ops/backup-and-verify.js'],{env,encoding:'utf8',timeout:15000});
  assert.equal(ok.status,0,'Local backup must succeed: '+ok.stderr);
  const evidencePath=path.join(backupDir,'last-verified-backup.json');
