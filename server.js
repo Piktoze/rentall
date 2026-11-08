@@ -1324,6 +1324,14 @@ function calculateAuthoritativeBookingTotal(listing,input){
   if(deliveryRequested){
     if(listing?.delivery==='Pickup only' || !(listing?.accommodationDelivery==='yes' || listing?.accommodationDelivery===true))
       throw new Error('Delivery is not available for this listing');
+    const city=String(input.deliveryCity||'').trim().toLocaleLowerCase('lt');
+    const serviceCities=Array.isArray(listing?.deliveryZones)
+      ?listing.deliveryZones
+      :String(listing?.deliveryZones||'').split(',');
+    const allowedCities=serviceCities.map(value=>String(value||'').trim().toLocaleLowerCase('lt')).filter(Boolean);
+    if(!allowedCities.length && listing?.city)allowedCities.push(String(listing.city).trim().toLocaleLowerCase('lt'));
+    if(!city || !allowedCities.includes(city))throw new Error('Delivery is not available in the selected city');
+    if(!String(input.deliveryAddress||'').trim())throw new Error('Delivery address is required');
     const minOrder=Math.max(0,Number(listing?.minOrder||0));
     if(price.rental<minOrder) throw new Error(`Minimum rental subtotal for delivery is €${minOrder.toFixed(2)}`);
     delivery=Math.max(0,Number(listing?.hotelDeliveryFee||0));
