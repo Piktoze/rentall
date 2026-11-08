@@ -476,7 +476,13 @@ function renderPaymentHistory(){
   document.getElementById('paymentHistoryBody').innerHTML=rows||'<tr><td colspan="7">No payment activity yet.</td></tr>';
 }
 function refreshPaymentsPanel(){
-  const s=currentSupplier(); if(!s) return;
+  const legacySupplier=currentSupplier();
+  // Legacy payout fields may be shown only if they belong to the same
+  // authenticated account; never show another browser profile's bank data.
+  const signedIn=currentServerUser;
+  const sameUser=!!(signedIn?.email&&legacySupplier?.email&&
+    String(signedIn.email).toLowerCase()===String(legacySupplier.email).toLowerCase());
+  const s=sameUser?legacySupplier:{};
   document.getElementById('bankHolderDisplay').textContent=s.payoutName||s.businessName||'Not set';
   document.getElementById('bankIbanDisplay').textContent=maskIban(s.iban);
   document.getElementById('bankCountryDisplay').textContent=s.payoutCountry||'Not set';
@@ -769,14 +775,23 @@ async function ensureStripeAccount(){
 }
 
 async function refreshLiveStripeStatus(){
-  const supplierId=supplierStableId();
-  if(!supplierId) return;
+  // The server session is authoritative. Legacy browser-only supplier records
+  // must not prevent a signed-in supplier from checking real Stripe status.
+  // The endpoint itself enforces supplier/admin authorization.
   try{
     const st=await apiJson('/api/stripe/connect/status');
     applyStripeLiveStatus(st);
   }catch(err){
-    document.getElementById('stripeLiveMessage').textContent=
-      `Live Stripe unavailable: ${err.message}`;
+    supplierPayoutVerified=false;
+    syncInstantBookEligibility();
+    const badge=document.getElementById('stripeStatusBadge');
+    const openBtn=document.getElementById('openStripeDashboardBtn');
+    const connectBtn=document.getElementById('connectStripeBtn');
+    if(badge){badge.textContent=uiText('Pending');badge.className='status pending';}
+    if(openBtn)openBtn.disabled=true;
+    if(connectBtn)connectBtn.disabled=true;
+    const message=document.getElementById('stripeLiveMessage');
+    if(message)message.textContent=String(err?.message||'Stripe status unavailable');
   }
 }
 
