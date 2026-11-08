@@ -70,7 +70,9 @@ const event=(id,account)=>({
 const read=()=>{
  const database=new Database(dbPath,{readonly:true,fileMustExist:true});
  try{return {booking:database.prepare('SELECT payment_status, stripe_payment_intent_id FROM rental_bookings WHERE booking_id=?').get(bookingId),
-  events:database.prepare("SELECT event_id,status FROM webhook_events WHERE event_id LIKE 'evt_webhook_e2e_%' ORDER BY event_id").all()}}
+  events:database.prepare("SELECT event_id,status FROM webhook_events WHERE event_id LIKE 'evt_webhook_e2e_%' ORDER BY event_id").all(),
+  notifications:database.prepare("SELECT audience,type,unique_key FROM rental_notifications WHERE booking_id=? ORDER BY audience,type").all(bookingId),
+  outbox:database.prepare("SELECT template_key,dedupe_key FROM email_outbox WHERE dedupe_key LIKE ?").all('%'+paymentIntentId+'%')}}
  finally{database.close()}
 };
 async function post(evt,{badSignature=false,connect=false}={}){
@@ -101,9 +103,20 @@ try{
  const duplicate=await post(valid);assert.equal(duplicate.status,200);
  assert.equal(JSON.parse(duplicate.body).duplicate,true,'Webhook replay is idempotent');
  assert.equal(read().booking.payment_status,'paid');
+ // Stripe can deliver the same underlying charge through multiple endpoints
+ // with distinct event IDs: business effects must stay deduplicated by PI.
+ const beforeSecondDelivery=read();
+ assert.equal(beforeSecondDelivery.notifications.length,2,'Customer and supplier receive one notice each');
+ assert.equal(beforeSecondDelivery.outbox.length,2,'Customer and supplier receive one email each');
+ const secondDelivery=await post(event('evt_webhook_e2e_other_endpoint',accountId),{connect:true});
+ assert.equal(secondDelivery.status,200,'Distinct Stripe event for same PaymentIntent should be accepted');
+ const afterSecondDelivery=read();
+ assert.equal(afterSecondDelivery.booking.payment_status,'paid');
+ assert.equal(afterSecondDelivery.notifications.length,beforeSecondDelivery.notifications.length,'No duplicate booking notifications');
+ assert.equal(afterSecondDelivery.outbox.length,beforeSecondDelivery.outbox.length,'No duplicate payment emails');
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
- console.log('PASS signed webhook HTTP E2E: bad signature denied, account binding enforced, paid booking persisted, replay idempotent');
+ console.log('PASS signed webhook HTTP E2E: bad signature denied, account binding enforced, paid booking persisted, replay and cross-endpoint delivery deduplicated');
 }finally{
  child.kill('SIGTERM');
  await new Promise(resolve=>{if(child.exitCode!==null)return resolve();child.once('exit',resolve);setTimeout(resolve,3000).unref()});
