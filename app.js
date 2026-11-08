@@ -5873,10 +5873,8 @@ if(registerPasswordV52) registerPasswordV52.autocomplete='new-password';
       card.dataset.v56Enhanced='1';
       card.setAttribute('tabindex', card.getAttribute('tabindex') || '0');
       card.setAttribute('role', card.getAttribute('role') || 'group');
-      const price=card.querySelector('.price,[data-price]');
-      if(price && !/day|hour|week/i.test(price.textContent)) {
-        price.setAttribute('aria-label','Rental price');
-      }
+      // Preserve the visible, localized price as the accessible name.
+      // A generic "Rental price" aria-label previously hid its amount.
     });
   }
 
