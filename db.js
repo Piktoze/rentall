@@ -2065,21 +2065,43 @@ export function issueRentalTransferCode(bookingId,purpose,party='customer'){
     throw Object.assign(new Error('Rezervacija turi būti patvirtinta ir apmokėta.'),{code:'TRANSFER_NOT_READY'});
   if(purpose==='return' && booking.status!=='active')
     throw Object.assign(new Error('Grąžinti galima tik išduotą daiktą.'),{code:'TRANSFER_NOT_READY'});
-  const existing=db.prepare('SELECT consumed_at FROM rental_party_transfer_codes WHERE booking_id=? AND purpose=? AND party=?')
+  const existing=db.prepare('SELECT * FROM rental_party_transfer_codes WHERE booking_id=? AND purpose=? AND party=?')
     .get(String(bookingId),purpose,party);
   if(existing?.consumed_at)
     throw Object.assign(new Error('Šis kodas jau panaudotas.'),{code:'TRANSFER_ALREADY_USED'});
-  const code=String(crypto.randomInt(0,1_000_000)).padStart(6,'0');
-  const salt=crypto.randomBytes(16).toString('hex');
+  // A keyed, booking-specific six-digit PIN can be shown again to the same
+  // authenticated renter without storing it in plaintext or rotating on refresh.
+  // A locked PIN may be regenerated with a fresh salt by its legitimate renter.
+  const key=process.env.SESSION_SECRET ||
+    (process.env.NODE_ENV==='production' ? null : 'local-test-transfer-secret-do-not-deploy');
+  if(!key)throw Object.assign(new Error('Perdavimo kodų apsauga nesukonfigūruota.'),{code:'TRANSFER_CONFIG_MISSING'});
+  const derivedCode=salt=>String(crypto.createHmac('sha256',key)
+    .update('rentinorbit-rental-transfer-v2:'+bookingId+':'+purpose+':'+party+':'+salt)
+    .digest().readUInt32BE(0)%1_000_000).padStart(6,'0');
+  const matches=row=>{
+    if(!row||!row.salt)return false;
+    const derived=derivedCode(row.salt);
+    const check=crypto.createHash('sha256').update(row.salt+':'+derived).digest('hex');
+    return check===row.code_digest;
+  };
+  const reuse=existing && existing.failed_attempts<5 && matches(existing);
+  const salt=reuse?existing.salt:crypto.randomBytes(16).toString('hex');
+  const code=derivedCode(salt);
   const digest=crypto.createHash('sha256').update(salt+':'+code).digest('hex');
-  const now=new Date(),expiry=new Date(now.getTime()+15*60*1000);
-  db.prepare(`INSERT INTO rental_party_transfer_codes(booking_id,purpose,party,code_digest,salt,expires_at,failed_attempts,consumed_at,created_at)
-    VALUES(?,?,?,?,?,?,0,NULL,?)
-    ON CONFLICT(booking_id,purpose,party) DO UPDATE SET code_digest=excluded.code_digest,salt=excluded.salt,expires_at=excluded.expires_at,
-      failed_attempts=0,consumed_at=NULL,created_at=excluded.created_at
-    WHERE rental_party_transfer_codes.consumed_at IS NULL`)
-    .run(String(bookingId),purpose,party,digest,salt,expiry.toISOString(),now.toISOString());
-  return {code,purpose,party,expiresAt:expiry.toISOString()};
+  // The schema keeps expires_at NOT NULL for legacy compatibility. This
+  // sentinel represents "until used" and is not a 15-minute timeout.
+  const untilUsed='9999-12-31T23:59:59.999Z';
+  if(!reuse){
+    const now=new Date().toISOString();
+    db.prepare(`INSERT INTO rental_party_transfer_codes(booking_id,purpose,party,code_digest,salt,expires_at,failed_attempts,consumed_at,created_at)
+      VALUES(?,?,?,?,?,?,0,NULL,?)
+      ON CONFLICT(booking_id,purpose,party) DO UPDATE SET
+        code_digest=excluded.code_digest,salt=excluded.salt,expires_at=excluded.expires_at,
+        failed_attempts=0,consumed_at=NULL,created_at=excluded.created_at
+      WHERE rental_party_transfer_codes.consumed_at IS NULL`)
+      .run(String(bookingId),purpose,party,digest,salt,untilUsed,now);
+  }
+  return {code,purpose,party,expiresAt:null,validUntilUsed:true};
 }
 export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCode,{
   supplierCode=null,returnCondition=null,returnNotes=null
