@@ -6634,8 +6634,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const renterVisiblePins=new Map();
   function showRenterCode(card,bookingId,purpose,result){
     if(!card || !card.isConnected || !/^\d{6}$/.test(String(result?.code||'')))return;
-    const expires=Date.parse(result.expiresAt||'');
-    if(!Number.isFinite(expires)||expires<=Date.now())return;
+    const untilUsed=result.validUntilUsed===true || result.expiresAt===null;
+    const expires=untilUsed?null:Date.parse(result.expiresAt||'');
+    if(!untilUsed && (!Number.isFinite(expires)||expires<=Date.now()))return;
     const old=card.querySelector('.rio-renter-code');
     if(old)old.remove();
     const box=document.createElement('section');
@@ -6647,7 +6648,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     number.className='rio-renter-code-value';
     number.textContent=String(result.code);
     const note=document.createElement('small');
-    note.textContent='Vienkartinis kodas. Galioja iki '+new Date(expires).toLocaleString('lt-LT')+'. Išsisaugokite jį prieš vykdami pas nuomotoją.';
+    note.textContent=untilUsed
+      ? 'Vienkartinis kodas galioja iki panaudojimo. Atšaukus užsakymą jis nebegalios. Galite išsisaugoti prieš vykdami pas nuomotoją.'
+      : 'Vienkartinis kodas. Galioja iki '+new Date(expires).toLocaleString('lt-LT')+'. Išsisaugokite jį prieš vykdami pas nuomotoją.';
     const copy=document.createElement('button');
     copy.type='button';
     copy.className='secondary';
@@ -6843,7 +6846,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(oldCode)oldCode.remove();
     const cachedPurpose=status==='active'?'return':'pickup';
     const cached=renterVisiblePins.get(id+':'+cachedPurpose);
-    if(cached && Date.parse(cached.expiresAt||'')>Date.now() &&
+    if(cached && (cached.validUntilUsed===true || Date.parse(cached.expiresAt||'')>Date.now()) &&
        ((cachedPurpose==='pickup'&&status==='confirmed')||(cachedPurpose==='return'&&status==='active'))){
       showRenterCode(card,id,cachedPurpose,cached);
     }else if(cached){
