@@ -107,6 +107,7 @@ export function productionConfigReport(env=process.env){
   const detectedStripeMode=stripeModeFor(stripeSecret);
   const publishable=String(env.STRIPE_PUBLISHABLE_KEY||'').trim();
   const webhookSecret=String(env.STRIPE_WEBHOOK_SECRET||'').trim();
+  const connectWebhookSecret=String(env.STRIPE_CONNECT_WEBHOOK_SECRET||'').trim();
   const emailProvider=String(env.EMAIL_PROVIDER||'').trim().toLowerCase();
   const emailFrom=fromAddress(env.EMAIL_FROM);
   const mapsProvider=String(env.MAPS_PROVIDER||'stub').trim().toLowerCase();
@@ -130,6 +131,7 @@ export function productionConfigReport(env=process.env){
     {id:'stripe_secret',required:integrationRequired,ready:/^[sr]k_(?:test|live)_[A-Za-z0-9_\-]{12,}$/.test(stripeSecret)&&detectedStripeMode===stripeMode},
     {id:'stripe_publishable',required:integrationRequired,ready:new RegExp(`^pk_${stripeMode}_[A-Za-z0-9_\\-]{12,}$`).test(publishable)},
     {id:'stripe_webhook',required:integrationRequired,ready:/^whsec_[A-Za-z0-9_\-]{12,}$/.test(webhookSecret)},
+    {id:'stripe_connect_webhook',required:integrationRequired,ready:/^whsec_[A-Za-z0-9_\-]{12,}$/.test(connectWebhookSecret)},
     {id:'connect_v2',required:integrationRequired,ready:String(env.STRIPE_CONNECT_V2_PROVISIONING||'')==='true'},
     {id:'email_provider',required:integrationRequired,ready:emailProvider==='resend'},
     {id:'email_from',required:integrationRequired,ready:validEmail(emailFrom)},
@@ -147,7 +149,7 @@ export function productionConfigReport(env=process.env){
     ready:blocking.length===0,production,deployment,staging,railway,checks,blocking,
     database:{driver:dbConfig.driver,source:dbConfig.source,persistent:dbConfig.source!=='default-local',volumeConfigured:Boolean(dbConfig.volumeRoot)},
     uploads:{source:uploadsConfig.source,persistent:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
-    stripe:{configured:Boolean(stripeSecret),mode:stripeMode||'unset',keyType:stripeSecret.startsWith('rk_')?'restricted':stripeSecret.startsWith('sk_')?'secret':'unset',webhookConfigured:Boolean(webhookSecret)},
+    stripe:{configured:Boolean(stripeSecret),mode:stripeMode||'unset',keyType:stripeSecret.startsWith('rk_')?'restricted':stripeSecret.startsWith('sk_')?'secret':'unset',webhookConfigured:Boolean(webhookSecret),connectWebhookConfigured:Boolean(connectWebhookSecret)},
     email:{provider:emailProvider||'unset',workerEnabled:enabled('EMAIL_WORKER_ENABLED',env),fromConfigured:validEmail(emailFrom)},
     maps:{provider:mapsProvider,configured:mapsProvider!=='stub'},
     notifications:{sms:smsProvider,push:pushProvider}
