@@ -58,6 +58,7 @@ const checks=[
   ['webhook verification',server.includes('stripe.webhooks.constructEvent')],
   ['supplier direct-charge gate',server.includes('requireSupplierDirectChargeCapability')],
   ['guest token protection',server.includes('verifyBookingPaymentToken')],
+  ['invited supplier activation requires explicit terms consent',(()=>{const route=server.split("app.post('/api/supplier/activation'")[1]?.split("app.get('/api/supplier/listings/confirm-current'")[0]||'';const html=fs.readFileSync('./index.html','utf8');return route.includes('req.body?.termsAccepted!==true')&&route.includes("code:'TERMS_ACCEPTANCE_REQUIRED'")&&html.includes('id="supplierActivationTerms" required')&&app.includes("termsAccepted:document.getElementById('supplierActivationTerms')?.checked===true")})()],
   ['readiness',server.includes("app.get('/api/readiness'")],
   ['health probe',server.includes("app.get('/healthz'")],
   ['payment processing warning',(app+hub).includes('Do not pay again while Stripe is processing')],
