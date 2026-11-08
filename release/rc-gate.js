@@ -34,6 +34,7 @@ for(const suite of [
   'refund-accounting-v107.test.js',
   'booking-idempotency.test.js'
 ]){
+  console.log(`RUN release suite: ${suite}`);
   execFileSync(process.execPath,[suite],{stdio:'inherit'});
 }
 
