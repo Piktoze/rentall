@@ -1793,6 +1793,29 @@ function renderCheckoutPriceBreakdown({rental,delivery,total,securityDeposit=0})
 
 document.addEventListener('rentinorbit:language-changed',()=>{if(document.getElementById('checkoutPriceBreakdown'))refreshCheckoutTotals();});
 function refreshCheckoutTotals(){
+  const choice=document.getElementById('rioCheckoutHandoverMethod');
+  const step2Method=document.getElementById('accommodationType');
+  const note=document.getElementById('rioCheckoutHandoverNote');
+  const listing=activeCheckoutListing;
+  const canDeliver=Boolean(listing && listing.delivery!=='Pickup only' &&
+    (listing.accommodationDelivery==='yes'||listing.accommodationDelivery===true));
+  if(choice){
+    const option=choice.querySelector('option[value="Delivery to my address"]');
+    const supplierFee=Math.max(0,Number(listing?.hotelDeliveryFee||0));
+    if(option){
+      option.disabled=!canDeliver;
+      option.textContent=canDeliver
+        ? 'Pristatymas nurodytu adresu · +€'+supplierFee.toFixed(2)
+        : 'Pristatymas nesiūlomas';
+    }
+    if(!canDeliver && choice.value==='Delivery to my address'){
+      choice.value='Pickup from owner';
+      if(step2Method)step2Method.value='Pickup from owner';
+    }
+    if(note)note.textContent=canDeliver
+      ? 'Pristatymas galimas tiekėjo aptarnaujamoje teritorijoje. Galutinė suma perskaičiuojama prieš rezervaciją.'
+      : 'Šio daikto tiekėjas siūlo tik atsiėmimą.';
+  }
   const rental=getCheckoutRentalSubtotal();
   const deliveryRule=resolveDeliveryPricing();
   const delivery=deliveryRule.eligible ? deliveryRule.fee : 0;
@@ -1852,6 +1875,13 @@ fillCheckout = function(){
   items.innerHTML = cart.map(i=>`<div class="checkout-item"><div><b>${i.name}</b><small>Rental item</small></div><b>${money(i.price)}</b></div>`).join('');
 
   activeCheckoutListing=inferCheckoutListing();
+  const step1Choice=document.getElementById('rioCheckoutHandoverMethod');
+  const step2Method=document.getElementById('accommodationType');
+  if(step1Choice){
+    // A new checkout must not inherit a previous customer's delivery choice.
+    step1Choice.value='Pickup from owner';
+    if(step2Method)step2Method.value='Pickup from owner';
+  }
 
   const trip=getTripContext();
   if(trip){
@@ -1861,8 +1891,32 @@ fillCheckout = function(){
     if(document.getElementById('rentalEnd')) document.getElementById('rentalEnd').value=trip.to||'';
   }
 
+  // The first-step total reflects the same handover method sent at booking.
+  if(!document.getElementById('deliveryArea')?.value && activeCheckoutListing?.city){
+    document.getElementById('deliveryArea').value=String(activeCheckoutListing.city);
+  }
   refreshCheckoutTotals();
 };
+
+document.getElementById('rioCheckoutHandoverMethod')?.addEventListener('change',event=>{
+  const method=event.target.value;
+  const next=document.getElementById('accommodationType');
+  if(next)next.value=method;
+  if(method==='Pickup from owner'){
+    // Clear stale delivery-only fields so a pickup cannot be priced as delivery.
+    for(const id of ['hotelName','deliveryAddress','roomNumber']){
+      const field=document.getElementById(id);
+      if(field)field.value='';
+    }
+  }
+  refreshCheckoutTotals();
+});
+document.getElementById('accommodationType')?.addEventListener('change',event=>{
+  const choice=document.getElementById('rioCheckoutHandoverMethod');
+  const isPickup=/pickup/i.test(String(event.target.value||''));
+  if(choice)choice.value=isPickup?'Pickup from owner':'Delivery to my address';
+  refreshCheckoutTotals();
+});
 
 ['deliveryArea','hotelName','rentalStart','rentalEnd'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',refreshCheckoutTotals);
