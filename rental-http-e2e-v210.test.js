@@ -79,6 +79,15 @@ try{
    await new Promise(done=>setTimeout(done,100));
  }
  assert.ok(ready,'Temporary server startup failed: '+logs.slice(-2500));
+ // Direct API callers must not bypass legally required account consent.
+ const registration={email:'consent-http-e2e@example.invalid',password:'Testing12345!',role:'customer'};
+ const rejected=await api('/api/auth/register',{method:'POST',data:registration});
+ status(rejected,400,'Account registration without explicit terms acceptance denied');
+ assert.equal(rejected.body.code,'TERMS_ACCEPTANCE_REQUIRED');
+ const registered=await api('/api/auth/register',{method:'POST',data:{...registration,termsAccepted:true}});
+ status(registered,200,'Account registration with explicit terms acceptance succeeds');
+ assert.equal(registered.body.user.email,registration.email);
+ console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
  // New public listing must have two to five real uploaded photo files.
