@@ -4383,6 +4383,46 @@ async function prepareStripePayment(bookingId,paymentToken){
   }
 }
 
+// Stripe may report succeeded before the asynchronous booking webhook is saved.
+// Refresh the renter's card from the server; never infer paid solely from Stripe.js.
+async function refreshRenterBookingAfterPayment(bookingId,token){
+  const state=document.getElementById('stripePaymentState');
+  const cardSelector='.customer-booking-card[data-booking-id]';
+  const fromServer='/api/customer/bookings/'+encodeURIComponent(bookingId)+(token?'?accessToken='+encodeURIComponent(token):'');
+  for(let attempt=0;attempt<12;attempt++){
+    try{
+      const data=await apiJson(fromServer,{cache:'no-store'});
+      const b=data?.booking||{};
+      const payment=String(b.paymentStatus||b.payment_status||'').toLowerCase();
+      if(payment==='paid'||payment==='succeeded'){
+        if(state)state.textContent='Mokėjimas patvirtintas. Tikrinama nuomos sutartis ir išdavimo kodas…';
+        await loadUnifiedCustomerBookings();
+        const card=[...document.querySelectorAll(cardSelector)].find(el=>el.dataset.bookingId===bookingId);
+        if(card){
+          card.scrollIntoView({behavior:'smooth',block:'center'});
+          // The renter must personally accept their contract before any code is issued.
+          await new Promise(resolve=>setTimeout(resolve,120));
+          const accept=card.querySelector('[data-rio-trust-renter="accept"]');
+          const pickup=card.querySelector('[data-rio-trust-renter="pickup"]');
+          if(state)state.textContent=accept
+            ? 'Mokėjimas atliktas. Patvirtinkite nuomos sutartį savo užsakyme, kad galėtumėte gauti išdavimo kodą.'
+            : pickup?'Mokėjimas atliktas. Spauskite „Gauti išdavimo kodą“ prie savo užsakymo.'
+            : 'Mokėjimas atliktas. Jei kodo veiksmo nematote, patikrinkite sutarties būseną.';
+        }
+        return;
+      }
+      if(['failed','refunded','cancelled'].includes(payment)){
+        if(state)state.textContent='Mokėjimo būsena serveryje: '+payment+'. Nevykdykite pakartotinio mokėjimo nepatikrinę užsakymo.';
+        return;
+      }
+    }catch(err){
+      if(attempt===11&&state)state.textContent='Stripe pranešė apie mokėjimo patvirtinimą, tačiau užsakymo duomenų nepavyko patikrinti. Dar kartą nemokėkite.';
+    }
+    await new Promise(resolve=>setTimeout(resolve,1500));
+  }
+  if(state)state.textContent='Stripe patvirtino mokėjimą. Laukiama, kol serveris atnaujins užsakymą. Dar kartą nemokėkite; patikrinkite užsakymą vėliau.';
+}
+
 document.getElementById('confirmStripePaymentBtn')?.addEventListener('click',async()=>{
   if(!stripeClient||!stripeElements) return;
   const btn=document.getElementById('confirmStripePaymentBtn');
@@ -4403,8 +4443,9 @@ document.getElementById('confirmStripePaymentBtn')?.addEventListener('click',asy
       state.textContent='Suma rezervuota. Laukiama nuomotojo patvirtinimo. Daugiau mokėti nereikia.';
       btn.hidden=true;
     }else if(paymentIntent?.status==='succeeded'){
-      state.textContent='Nuomos mokestis sėkmingai apmokėtas.';
+      state.textContent='Stripe patvirtino mokėjimą. Atnaujinami užsakymo duomenys…';
       btn.hidden=true;
+      await refreshRenterBookingAfterPayment(activePaymentBookingId,activePaymentToken);
     }else{
       state.textContent='Mokėjimo patvirtinimas apdorojamas. Patikrinkite rezervacijos būseną.';
       btn.disabled=false;
