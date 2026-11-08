@@ -2614,7 +2614,32 @@ function containsOffPlatformContact(text){
   return /(?:\+?\d[\s().-]*){7,}/.test(withoutDates);
 }
 app.get('/api/conversations',requireRole('customer','supplier','admin'),(req,res)=>{
-  res.json({conversations:listRentalConversationsForUser(req.appUser.email)});
+  try{
+    const email=String(req.appUser.email||'').toLowerCase();
+    const conversations=listRentalConversationsForUser(email);
+    // Show booking-specific starters in Messages even if neither party has
+    // initiated a conversation yet. Limit results to the logged-in member.
+    const supplierBookings=req.appUser.role==='supplier'
+      ? listRentalBookings({ownerEmail:email}) : [];
+    const customerBookings=listCustomerRentalBookings(email);
+    const seen=new Set();
+    const bookingCandidates=[...supplierBookings.map(b=>({...b,side:'supplier'})),
+      ...customerBookings.map(b=>({...b,side:'customer'}))]
+      .filter(b=>{
+        if(!b.bookingId||!b.listingId||seen.has(String(b.bookingId)))return false;
+        seen.add(String(b.bookingId));return true;
+      })
+      .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
+      .slice(0,80)
+      .map(b=>({
+        bookingId:String(b.bookingId),listingId:String(b.listingId),
+        title:String(getRentalListing(b.listingId)?.title||'Nuomojamas daiktas'),
+        counterparty:b.side==='supplier'?String(b.customerName||'Nuomininkas'):'Nuomotojas',
+        side:b.side,status:String(b.status||'')
+      }));
+    res.set('Cache-Control','no-store, private');
+    res.json({conversations,bookingCandidates});
+  }catch(err){res.status(400).json({error:err.message});}
 });
 app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleRateLimit({windowMs:60000,max:30,keyPrefix:'conversation-create'}),(req,res)=>{
   try{
