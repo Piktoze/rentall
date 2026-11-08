@@ -4,7 +4,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import {createBackupS3,downloadBackupObject,readBackupEvidence,s3BackupEnabled} from './backup-s3.js';
 
-const backupDir=path.resolve(process.env.BACKUP_DIR||'backups');
+const dbPath=path.resolve(process.env.RENTINORBIT_DB_PATH||process.env.DB_PATH||'rentinorbit.sqlite');
+const backupDir=path.resolve(process.env.BACKUP_DIR||path.join(path.dirname(dbPath),'backups'));
 const evidencePath=path.resolve(process.env.DB_BACKUP_EVIDENCE_PATH||path.join(backupDir,'last-verified-backup.json'));
 const remote=s3BackupEnabled();
 const s3=remote?createBackupS3():null;
