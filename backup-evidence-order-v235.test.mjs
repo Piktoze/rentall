@@ -47,6 +47,18 @@ try{
  assert.equal(verifiedVolume.integrity,'ok');
  assert.equal(verifiedVolume.migrationVersion,1);
  // A failed remote upload must never replace an earlier verified checkpoint.
+ // Railway S3 backup must permit a temporary staging path on the DB volume.
+ // Without S3 the same path must be rejected as not independently durable.
+ const schedulerProbe="import {assertSeparateBackupPath} from './ops/backup-scheduler.js';try{assertSeparateBackupPath();console.log('ALLOWED')}catch(e){console.error(e.code);process.exit(2)}";
+ const stagingEnv={...volumeEnv,RAILWAY_ENVIRONMENT_ID:'staging-isolated',BACKUP_S3_ENABLED:'true'};
+ const remoteProbe=spawnSync(process.execPath,['--input-type=module','-e',schedulerProbe],{env:stagingEnv,encoding:'utf8',timeout:15000});
+ assert.equal(remoteProbe.status,0,'Remote S3 scheduler must accept local temporary staging folder: '+remoteProbe.stderr);
+ const noRemoteProbe=spawnSync(process.execPath,['--input-type=module','-e',schedulerProbe],{env:{...stagingEnv,BACKUP_S3_ENABLED:'false'},encoding:'utf8',timeout:15000});
+ assert.equal(noRemoteProbe.status,2,'Railway without remote S3 must refuse backup scheduler');
+ assert.match(noRemoteProbe.stderr,/BACKUP_REMOTE_STORAGE_REQUIRED/);
+ const localProbe=spawnSync(process.execPath,['--input-type=module','-e',schedulerProbe],{env:{...stagingEnv,BACKUP_S3_ENABLED:'false',RAILWAY_ENVIRONMENT_ID:''},encoding:'utf8',timeout:15000});
+ assert.equal(localProbe.status,2,'Local-only backup on DB volume must be rejected');
+ assert.match(localProbe.stderr,/BACKUP_STORAGE_NOT_SEPARATE/);
  const oldEvidence=fs.readFileSync(evidencePath,'utf8');
  const failingEnv={...env,BACKUP_S3_ENABLED:'true',BACKUP_S3_ACCESS_KEY_ID:'',BACKUP_S3_SECRET_ACCESS_KEY:'',BACKUP_S3_BUCKET:'',BACKUP_S3_ENDPOINT:'',BACKUP_S3_REGION:''};
  const failure=spawnSync(process.execPath,['ops/backup-and-verify.js'],{env:failingEnv,encoding:'utf8',timeout:15000});
