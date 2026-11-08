@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const css=fs.readFileSync('./styles.css','utf8');
+const app=fs.readFileSync('./app.js','utf8');
+const html=fs.readFileSync('./index.html','utf8');
+assert.match(css,/\.supplier-order-actions\{display:flex;flex-direction:column;align-items:stretch;/,'Supplier order actions must stack vertically');
+assert.match(css,/#supplierOrderActions > \.supplier-order-card\{width:100%;min-width:0;/,'Trust/transfer section must occupy full width');
+assert.match(css,/#supplierOrderActions \.lifecycle-actions\{display:flex;flex-wrap:wrap;align-items:center;/,'Independent action buttons must wrap rather than stretch');
+assert.match(css,/#supplierOrderActions \.supplier-order-card \.rio-supplier-transfer\{margin-top:8px\}/,'Transfer button must have vertical clearance');
+assert.match(css,/@media\(max-width:620px\)\{\s*#supplierOrderActions \.lifecycle-actions\{flex-direction:column;align-items:stretch\}/,'Small screens must use full-width stacked buttons');
+assert.match(app,/pane\.className='supplier-order-card'/,'Existing transfer and agreement handlers preserved');
+assert.match(html,/id="supplierOrderActions"/,'Existing order action host remains');
+console.log('PASS responsive supplier order actions maintain readable full-width layout and event hooks');
