@@ -18,6 +18,17 @@ try{
  const evidencePath=path.join(backupDir,'last-verified-backup.json');
  const evidence=JSON.parse(fs.readFileSync(evidencePath,'utf8'));
  assert.equal(evidence.integrity,'ok');
+ assert.match(evidence.sha256,/^[a-f0-9]{64}$/);
+ // A different SQLite file can have identical byte length and pass SQLite integrity.
+ // It must still fail restoration against the original backup hash.
+ const alteredFile=path.join(backupDir,evidence.backupFile);
+ const alteredDb=new Database(alteredFile);
+ alteredDb.exec("UPDATE source_records SET value='different!!' WHERE value='safe-backup'");
+ alteredDb.close();
+ const alteredRestore=spawnSync(process.execPath,['ops/test-backup-restore.js'],{env,encoding:'utf8',timeout:15000});
+ assert.notEqual(alteredRestore.status,0,'Modified backup must fail restore integrity fingerprint');
+ assert.match(alteredRestore.stderr,/SHA-256 mismatch/);
+
  assert.ok(fs.existsSync(path.join(backupDir,evidence.backupFile)));
  // Verify the remote/local backup restore path resolves alongside the source database
  // when BACKUP_DIR is omitted (the production scripts must agree).
@@ -90,6 +101,8 @@ try{
  assert.equal(restoreProof.backupKey,uploadedProof.backupKey);
  assert.equal(restoreProof.backupFile,uploadedProof.backupFile);
  assert.equal(restoreProof.bytes,uploadedProof.bytes);
+ assert.equal(restoreProof.sha256,uploadedProof.sha256);
+ assert.match(restoreProof.sha256,/^[a-f0-9]{64}$/);
  assert.ok(Date.parse(restoreProof.restoreVerifiedAt)>=Date.parse(uploadedProof.verifiedAt));
  // The launch gate must reject evidence without corresponding restore proof.
  const serverSource=fs.readFileSync('./server.js','utf8');
