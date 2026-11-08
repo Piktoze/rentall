@@ -5848,11 +5848,16 @@ async function loadUnifiedCustomerBookings(){
     }catch{}
   }
 
-  for(const [bookingId,token] of Object.entries(bookingAccessMap())){
-    try{
-      const data=await apiJson(`/api/customer/bookings/${encodeURIComponent(bookingId)}?accessToken=${encodeURIComponent(token)}`);
-      if(data.booking) records.set(bookingId,{booking:data.booking,timeline:data.timeline||[],guestAccess:data.guestAccess||null});
-    }catch{}
+  // Guest access belongs to the unauthenticated renter session, not to every
+  // signed-in account sharing this browser's localStorage. A supplier must
+  // never inherit renter actions from a previous guest/session.
+  if(!currentServerUser){
+    for(const [bookingId,token] of Object.entries(bookingAccessMap())){
+      try{
+        const data=await apiJson(`/api/customer/bookings/${encodeURIComponent(bookingId)}?accessToken=${encodeURIComponent(token)}`);
+        if(data.booking) records.set(bookingId,{booking:data.booking,timeline:data.timeline||[],guestAccess:data.guestAccess||null});
+      }catch{}
+    }
   }
 
   const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} ${uiText('of')} ${allRows.length}`;
@@ -5869,7 +5874,7 @@ async function loadUnifiedCustomerBookings(){
     const canDispute=['active','returned','completed','cancelled','canceled','declined'].includes(bookingStatus);
     const paymentStatus=String(b.paymentStatus||b.payment_status||'unpaid').toLowerCase();
     const canPayNow=bookingStatus==='confirmed' && ['unpaid','requires_payment_method','requires_confirmation'].includes(paymentStatus);
-    return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-booking-status="${escapeHtml(bookingStatus)}" data-payment-status="${escapeHtml(String(b.paymentStatus||'').toLowerCase())}" data-listing-id="${escapeHtml(b.listingId||'')}">
+    return `<div class="customer-booking-card" data-rio-authenticated-customer-booking="${currentServerUser?'true':'false'}" data-booking-id="${escapeHtml(b.bookingId)}" data-booking-status="${escapeHtml(bookingStatus)}" data-payment-status="${escapeHtml(String(b.paymentStatus||'').toLowerCase())}" data-listing-id="${escapeHtml(b.listingId||'')}">
       <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(uiText(b.status||'pending'))}</span></div>
       <div class="customer-booking-grid">
         <div><span>${escapeHtml(uiText('Rental dates'))}</span><b>${escapeHtml(b.startDate||'—')} → ${escapeHtml(b.endDate||'—')}</b></div>
@@ -6869,6 +6874,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       return;
     }
     if(!['pending','confirmed'].includes(status))return;
+    // Only the renter who owns the booking can request a renter PIN.
+    // For signed-in users the list is populated from their server-owned bookings.
+    if(currentServerUser && card.dataset.rioAuthenticatedCustomerBooking!=='true')return;
     const accessToken=typeof bookingAccessToken==='function'?bookingAccessToken(id):'';
     try{
       const data=await apiJson('/api/rentals/bookings/'+encodeURIComponent(id)+'/trust'+
