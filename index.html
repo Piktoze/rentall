@@ -1142,46 +1142,32 @@
       </section>
 
       <section class="checkout-step" data-step="2">
-        <div class="eyebrow" data-i18n-text="Handover">Handover</div>
-        <h2 data-i18n-text="Delivery details">Delivery details</h2>
-
+        <div class="eyebrow">Perdavimas</div>
+        <h2>Kaip gausite daiktą?</h2>
+        <p class="muted">Pasirinkite atsiėmimą arba pristatymą. Susitarimo detales galėsite nurodyti papildomoje informacijoje.</p>
         <div class="form-grid two">
-          <label><span data-i18n-text="Handover method">Handover method</span>
+          <label><span>Perdavimo būdas</span>
             <select id="accommodationType" required>
-              <option value="" data-i18n-text="Select">Select</option>
-              <option value="Pickup from owner" data-i18n-text="Pickup from owner">Pickup from owner</option>
-              <option value="Delivery to my address" data-i18n-text="Delivery to my address">Delivery to my address</option>
-              <option value="Meet at agreed location" data-i18n-text="Meet at agreed location">Meet at agreed location</option>
+              <option value="Pickup from owner">Atsiimsiu iš nuomotojo</option>
+              <option value="Delivery to my address">Pristatyti mano adresu</option>
             </select>
           </label>
-          <label><span data-i18n-text="City / area">City / area</span>
-            <input id="deliveryArea" required placeholder="e.g. Klaipėda">
+          <label><span>Miestas</span>
+            <input id="deliveryArea" placeholder="Pvz., Vilnius" required>
           </label>
-          <label class="full"><span data-i18n-text="Hotel / apartment name">Hotel / apartment name</span>
-            <input id="hotelName" placeholder="e.g. Hotel name or apartment name" data-i18n-placeholder="e.g. Hotel name or apartment name" required>
+          <label class="full" id="rioDeliveryAddressField"><span>Pristatymo adresas (tik pasirinkus pristatymą)</span>
+            <input id="deliveryAddress" placeholder="Gatvė, namo numeris, miestas">
           </label>
-          <label class="full"><span data-i18n-text="Hotel / apartment address">Hotel / apartment address</span>
-            <input id="deliveryAddress" placeholder="Street, number, postcode, city" data-i18n-placeholder="Street, number, postcode, city" required>
+          <label class="full"><span>Papildoma informacija nuomotojui</span>
+            <textarea id="deliveryInstructions" rows="4" placeholder="Kur norėtumėte gauti daiktą, kaip jį atsiimsite, kur susitikti, kokie papildomi pageidavimai."></textarea>
           </label>
-          <label><span data-i18n-text="Guest / booking name">Guest / booking name</span>
-            <input id="hotelBookingName" placeholder="e.g. Anna Smith">
-          </label>
-          <label><span data-i18n-text="Room / apartment number">Room / apartment number</span>
-            <input id="roomNumber" placeholder="Optional" data-i18n-placeholder="Optional">
-          </label>
-          <label class="full"><span data-i18n-text="Delivery instructions">Delivery instructions</span>
-            <textarea id="deliveryInstructions" rows="3" placeholder="e.g. Leave with reception, call on arrival, meet in lobby, gate code..." data-i18n-placeholder="e.g. Leave with reception, call on arrival, meet in lobby, gate code..."></textarea>
-          </label>
-          <label><span data-i18n-text="Preferred delivery window">Preferred delivery window</span>
-            <select id="deliveryWindow">
-              <option>08:00–12:00</option>
-              <option>12:00–16:00</option>
-              <option>16:00–20:00</option>
-            </select>
-          </label>
-          <label><span data-i18n-text="Flight number">Flight number</span><input id="flightNumber" placeholder="Optional" data-i18n-placeholder="Optional"></label>
         </div>
-
+        <!-- Legacy compatibility: no hotels, rooms or flights in the Lithuania-first booking flow. -->
+        <input type="hidden" id="hotelName" value="">
+        <input type="hidden" id="hotelBookingName" value="">
+        <input type="hidden" id="roomNumber" value="">
+        <input type="hidden" id="flightNumber" value="">
+        <input type="hidden" id="deliveryWindow" value="">
         <div class="step-actions">
           <button type="button" class="secondary prev-step" data-prev="1" data-i18n-text="Back">Back</button>
           <button type="button" class="primary next-step" data-next="3" data-i18n-text="Continue">Continue</button>
