@@ -12,7 +12,10 @@ const verify=new Database(output,{readonly:true,fileMustExist:true});let integri
 if(String(integrity).toLowerCase()!=='ok')throw new Error(`SQLite integrity_check failed: ${integrity}`);
 const stat=fs.statSync(output),backupFile=path.basename(output),backupKey=`sqlite/${backupFile}`;
 const evidence={ok:true,verifiedAt:new Date().toISOString(),backupFile,backupKey,bytes:stat.size,integrity:'ok',storage:s3BackupEnabled()?'s3':'filesystem'};
-fs.writeFileSync(path.join(backupDir,'last-verified-backup.json'),JSON.stringify(evidence,null,2));
+// Publish verified evidence only AFTER the remote backup and its metadata succeed.
+// A failed S3 upload must leave the previous verified evidence untouched.
+const evidencePath=path.join(backupDir,'last-verified-backup.json');
+const tempEvidencePath=path.join(backupDir,`last-verified-backup-${process.pid}-${stamp}.tmp`);
 const retention=Math.max(2,Math.min(365,Number(process.env.BACKUP_RETENTION_COUNT)||28));
 const backups=fs.readdirSync(backupDir)
   .filter(name=>/^rentinorbit-.*\.db$/.test(name))
@@ -23,8 +26,18 @@ let remote=null;
 if(s3BackupEnabled()){
   const {client,bucket}=createBackupS3();
   await uploadBackupObject(client,bucket,backupKey,output,'application/vnd.sqlite3');
-  await uploadBackupObject(client,bucket,'metadata/last-verified-backup.json',path.join(backupDir,'last-verified-backup.json'),'application/json');
+  // Clean old remote files before publishing the new verified pointer.
   remote=await pruneBackupObjects(client,bucket,'sqlite/',retention);
+  fs.writeFileSync(tempEvidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});
+  try {
+    await uploadBackupObject(client,bucket,'metadata/last-verified-backup.json',tempEvidencePath,'application/json');
+    fs.renameSync(tempEvidencePath,evidencePath);
+  } finally {
+    if(fs.existsSync(tempEvidencePath))fs.unlinkSync(tempEvidencePath);
+  }
   fs.unlinkSync(output);
+}else{
+  fs.writeFileSync(tempEvidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});
+  fs.renameSync(tempEvidencePath,evidencePath);
 }
 console.log(JSON.stringify({ok:true,backup:backupFile,backupKey,storage:evidence.storage,bytes:stat.size,integrity:'ok',retention,retained:remote?Math.min(remote.listed,retention):Math.min(backups.length,retention)}));
