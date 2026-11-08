@@ -2058,3 +2058,10 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 .v92-trust-row>div,.v92-facts>div,.v92-safe-note{background:#f8faff}
 .v144-day.busy{background:#eff4ff}
 .v144-day span{background:#e4edfc}
+
+
+/* V241: choose handover early, with an explicit supplier delivery price. */
+.rio-checkout-handover-choice{margin:18px 0 12px;padding:16px;border:1px solid #d7e3f8;border-radius:14px;background:#f8faff}
+.rio-checkout-handover-choice label{display:block;margin:0 0 9px;font-weight:750;color:#11284d}
+.rio-checkout-handover-choice select{width:100%;min-height:48px;border:1px solid #cedbf1;border-radius:10px;padding:10px 12px;background:white;color:#142c53}
+.rio-checkout-handover-choice p{margin:9px 0 0;color:#5e7290;font-size:13px;line-height:1.45}
