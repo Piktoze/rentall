@@ -1562,32 +1562,6 @@ app.get('/api/stripe/connect/booking-binding/:bookingId', requireRole('supplier'
   });
 });
 
-// Temporary, staging-only, read-only audit of the known €100 TEST booking.
-// Emits no email, user ID, Stripe account ID, payment credentials, or token.
-// The temporary audit is removed after its verified runtime result is collected.
-if(process.env.RENTINORBIT_STAGING==='true'){
-  try{
-    const testBookingId='RB-1793990438974-nfe2k6';
-    const testBooking=getRentalBookingById(testBookingId);
-    const testListing=testBooking?getRentalListing(testBooking.listingId):null;
-    const ownerConnection=testListing?getDirectMerchantConnectionByEmail(db,testListing.ownerEmail):null;
-    console.log(JSON.stringify({
-      type:'staging_payment_binding_audit_v1',
-      bookingFound:Boolean(testBooking),
-      listingFound:Boolean(testListing),
-      bookingConfirmed:testBooking?.status==='confirmed',
-      paymentStatus:testBooking?.paymentStatus||null,
-      bookingHasPaymentIntent:Boolean(testBooking?.stripePaymentIntentId),
-      ownerConnectionFound:Boolean(ownerConnection),
-      ownerConnectApi:ownerConnection?.connectApi||null,
-      ownerDirectChargeReady:directMerchantReady(ownerConnection),
-      ownerStripeAccountLast4:ownerConnection?.stripeAccountId?.slice(-4)||null
-    }));
-  }catch(error){
-    console.warn(JSON.stringify({type:'staging_payment_binding_audit_v1',error:safeOperationalError(error)}));
-  }
-}
-
 // Admin-only provider-state bridge for test fixtures and recovery tooling.
 // Only an authoritative, server-side Stripe response may change capabilities.
 // Never accept a caller-supplied account object as proof that payments are active.
