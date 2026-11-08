@@ -4219,10 +4219,25 @@ async function prepareStripePayment(bookingId,paymentToken){
       return;
     }
 
+    // Do not remount Stripe PaymentElement for an already succeeded or
+    // processing intent: the customer must never be prompted to pay twice.
+    if(intent.status==='succeeded' || intent.status==='processing'){
+      panel.hidden=false;
+      message.textContent=intent.status==='succeeded'
+        ? 'Stripe patvirtino, kad nuomos mokėjimas atliktas.'
+        : 'Stripe vis dar apdoroja mokėjimą.';
+      state.textContent=intent.status==='succeeded'
+        ? 'Papildomai mokėti nereikia. Užsakymo būsena bus atnaujinta.'
+        : 'Dar kartą nemokėkite. Patikrinkite užsakymo būseną vėliau.';
+      const container=document.getElementById('stripePaymentElement');
+      if(container)container.innerHTML='';
+      document.getElementById('confirmStripePaymentBtn').hidden=true;
+      return;
+    }
     if(intent.preauthorization && intent.status==='requires_capture'){
       panel.hidden=false;
-      message.textContent='100 € jau rezervuota kortelėje. Mokestis bus automatiškai nuskaičiuotas tik nuomotojui patvirtinus rezervaciją.';
-      state.textContent='Laukiama nuomotojo atsakymo. Papildomai mokėti nereikia.';
+      message.textContent='Mokėjimo suma rezervuota kortelėje. Toliau laukiama nuomotojo patvirtinimo.';
+      state.textContent='Papildomai mokėti nereikia.';
       document.getElementById('confirmStripePaymentBtn').hidden=true;
       return;
     }
