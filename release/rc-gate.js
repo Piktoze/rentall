@@ -12,6 +12,7 @@ for(const script of ['ops/backup-scheduler.js','ops/backup-and-verify.js','ops/t
 
 // Source-only regression suites: safe during build, no Stripe or database mutations.
 for(const suite of [
+  'backup-evidence-order-v235.test.mjs',
   'payment-race.test.js',
   'rental-preauth-v204.test.js',
   'transfer-signature-v206.test.js',
