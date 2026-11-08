@@ -2097,3 +2097,10 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
     border-radius:18px;
   }
 }
+
+/* Confirmation already contains its own status timeline; hide the now-irrelevant checkout steps. */
+#checkoutModal:has(.booking-success.show) .checkout-progress,
+#checkoutModal:has(.booking-success.show) .v137-mobile-checkout-status{display:none!important;}
+#checkoutModal .review-row{column-gap:14px;}
+#checkoutModal .review-row > span{min-width:0;}
+#checkoutModal .review-row > b{overflow-wrap:anywhere;text-align:right;}
