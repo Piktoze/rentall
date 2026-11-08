@@ -4565,7 +4565,8 @@ function wireAuthoritativeAuth(){
           email,password,role,
           displayName:contactName,businessName:role==='supplier'?profileName:null,
           country:document.getElementById('regCountry')?.value||null,
-          city:document.getElementById('regArea')?.value?.trim()||null
+          city:document.getElementById('regArea')?.value?.trim()||null,
+          termsAccepted:document.getElementById('regTerms')?.checked===true
         });
         closeAuth();
         await hydrateListingsFromServer();
