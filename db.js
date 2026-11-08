@@ -2223,7 +2223,10 @@ export function acceptRentalAgreement(bookingId,role,evidence=null){
     const agreement=agreementByBookingStmt.get(String(bookingId));
     if(!agreement)throw Object.assign(new Error('Sutartis nerasta.'),{code:'AGREEMENT_NOT_FOUND'});
     const existing=agreement[role==='customer'?'customerAcceptedAt':'supplierAcceptedAt'];
-    if(existing)return publicAgreement(agreement);
+    // Existing legacy timestamps without matching audit evidence cannot be
+    // treated as consent. An authorized actor may explicitly re-accept.
+    if(existing && verifiedRentalAgreementAcceptance(bookingId,role,publicAgreement(agreement)))
+      return publicAgreement(agreement);
     const now=new Date().toISOString();
     const actorEmail=String(evidence?.actorEmail||'').trim().toLowerCase();
     const authMethod=String(evidence?.authMethod||'');
@@ -2232,12 +2235,16 @@ export function acceptRentalAgreement(bookingId,role,evidence=null){
     const safeActor=actorEmail||'legacy-unattributed';
     const safeMethod=['session','booking_guest_token'].includes(authMethod)?authMethod:'session';
     const digest=crypto.createHash('sha256').update(String(agreement.termsVersion)+'\\n'+String(agreement.snapshotJson||'')).digest('hex');
-    const changed=db.prepare(`UPDATE rental_agreements SET ${field}=?,updated_at=? WHERE booking_id=? AND ${field} IS NULL`)
+    const changed=db.prepare(`UPDATE rental_agreements SET ${field}=?,updated_at=? WHERE booking_id=?`)
       .run(now,now,String(bookingId)).changes;
     if(changed===1){
       db.prepare(`INSERT INTO rental_agreement_acceptance_audit
         (booking_id,party,actor_email,auth_method,terms_version,snapshot_sha256,accepted_at)
-        VALUES(?,?,?,?,?,?,?)`).run(String(bookingId),role,safeActor,safeMethod,agreement.termsVersion,digest,now);
+        VALUES(?,?,?,?,?,?,?)
+        ON CONFLICT(booking_id,party) DO UPDATE SET
+          actor_email=excluded.actor_email,auth_method=excluded.auth_method,
+          terms_version=excluded.terms_version,snapshot_sha256=excluded.snapshot_sha256,
+          accepted_at=excluded.accepted_at`).run(String(bookingId),role,safeActor,safeMethod,agreement.termsVersion,digest,now);
     }
     return getRentalAgreement(bookingId);
   })();
