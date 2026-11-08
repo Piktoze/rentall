@@ -22,13 +22,13 @@ assert.equal(fn({terms:['Unrecognized contractual clause']} )[0],'Unrecognized c
 const supplier=app.slice(app.indexOf("pane.className='supplier-order-card'"),app.indexOf("pane.querySelector('.rio-supplier-transfer')?.addEventListener('click'"));
 assert.ok(supplier.includes('agreement?.supplierAcceptedAt'),'Supplier button state must use server signature timestamp');
 assert.ok(supplier.includes('agreement?.customerAcceptedAt'),'Both-party status must come from server');
-assert.ok(supplier.includes('agreementButton.hidden=supplierAccepted'),'Accepted supplier cannot see active accept button');
-assert.ok(supplier.includes('if(ag.supplierAcceptedAt)'),'Repeated submission must check authoritative state');
-assert.ok(supplier.includes('applySupplierAgreementState(result.agreement)'),'Successful POST must immediately refresh button state');
+assert.ok(supplier.includes('agreementButton.hidden=supplierVerified'),'Only verified supplier acceptance can hide the reattestation control');
+assert.ok(supplier.includes('if(ag.supplierAcceptedAt && agreementButton.hidden)'),'Verified acceptance prevents duplicate consent and legacy evidence gaps remain re-signable');
+assert.ok(supplier.includes('await refreshSupplierAgreementState()'),'Successful POST must re-fetch server audit evidence before hiding the button');
 assert.ok(supplier.includes("const terms=agreementTermsForDisplay(ag.snapshot)"),'Supplier confirmation must localize historic terms');
 assert.ok(supplier.includes("'NUOMOTOJO SUTARTIES PATVIRTINIMAS\\n\\nDaiktas:"),'Supplier confirm must use real newline escapes');
 assert.ok(!supplier.includes("'NUOMOTOJO SUTARTIES PATVIRTINIMAS\\\\n"),'Do not print literal backslash-n in confirmation');
-assert.ok(app.includes('if(ag.customerAcceptedAt)'),'Already-signed renter cannot reopen accept confirmation');
+assert.ok(app.includes('if(ag.customerAcceptedAt && data.acceptanceEvidence?.customer?.verified===true)'),'Only an audit-verified renter acceptance can prevent explicit re-consent');
 assert.ok(css.includes('#supplierOrderActions .rio-supplier-agreement[hidden]{display:none!important}'),'CSS must honor hidden accepted button');
 assert.ok(css.includes('#supplierOrderModal .rio-supplier-agreement-status'),'Acceptance status needs styled accessible display');
 assert.ok(css.includes('.section.soft{background:#f2f6ff}'),'Legacy green neutral sections must be blue');
