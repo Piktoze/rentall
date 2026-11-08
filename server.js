@@ -1678,10 +1678,9 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const pricing=calculateBookingPricingForSupplier(db,{supplierEmail:listing?.ownerEmail,bookingAmountCents:amount});
     const platformFee=pricing.commissionAmountCents;
     const supplierAmount=pricing.supplierAmountCents;
-    saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing});
-
     if(demoPaymentsEnabled){
       const paymentIntentId=booking.stripePaymentIntentId?.startsWith('demo_pi_')?booking.stripePaymentIntentId:`demo_pi_${crypto.randomUUID()}`;
+      saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing});
       const updated=setBookingPaymentDetails({bookingId:booking.bookingId,paymentIntentId,paymentStatus:'requires_payment_method',platformFeeAmount:platformFee/100,supplierAmount:supplierAmount/100,paymentProvider:'demo'});
       setBookingPayoutDetails(booking.bookingId,{status:'pending',amount:supplierAmount/100,reference:`demo_po_${booking.bookingId}`});
       return res.json({provider:'demo',demo:true,paymentIntentId,status:updated.paymentStatus,amount:amount/100,platformFee:platformFee/100,supplierAmount:supplierAmount/100,securityDeposit:Number(booking.securityDepositAmount||0)});
@@ -1701,6 +1700,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
       }
       if(intent.status==='canceled') return res.status(409).json({error:'Payment intent was cancelled; create a new booking payment attempt'});
       if(preauthorizeRequest && intent.capture_method!=='manual') return res.status(409).json({error:'Existing payment intent is not an authorization',code:'PREAUTH_INTENT_MISMATCH'});
+      saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing});
     }else{
       intent=await createDirectChargePaymentIntent(stripe,{
         accountId:connection.stripeAccountId,
@@ -1711,6 +1711,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
         manualCapture:preauthorizeRequest,
         metadata:{bookingId:booking.bookingId,listingId:booking.listingId,purpose:'rental_payment',supplierEmail:String(listing?.ownerEmail||''),paymentFlow:preauthorizeRequest?'preauthorize_then_capture':'pay_after_confirmation'}
       });
+      saveBookingPricingSnapshot(db,{bookingId:booking.bookingId,pricing});
       setBookingPaymentDetails({bookingId:booking.bookingId,paymentIntentId:intent.id,paymentStatus:intent.status,platformFeeAmount:platformFee/100,supplierAmount:supplierAmount/100,paymentProvider:'stripe'});
     }
 
