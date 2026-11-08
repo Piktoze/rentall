@@ -692,8 +692,23 @@ function applyStripeLiveStatus(st){
   const state=st.state||'not_created';
   const connected=state==='active';
   const submitted=!!st.detailsSubmitted;
+  const legacyMigration=state==='migration_required';
+  const legacyCopy={
+    lt:'Reikalinga Stripe paskyros migracija. Šios senos paskyros negalima automatiškai prijungti prie Direct Charges. Kreipkitės į administratorių.',
+    en:'Stripe account migration required. This legacy account cannot automatically join Direct Charges. Contact the administrator.',
+    es:'Se requiere migrar la cuenta de Stripe. Esta cuenta antigua no puede conectarse automáticamente a Direct Charges. Contacta con administración.',
+    de:'Die Stripe-Kontomigration ist erforderlich. Dieses ältere Konto kann nicht automatisch mit Direct Charges verbunden werden. Administrator kontaktieren.',
+    ru:'Требуется перенос аккаунта Stripe. Старый аккаунт нельзя автоматически подключить к Direct Charges. Обратитесь к администратору.'
+  };
+  const legacyLabel={
+    lt:'Reikalinga migracija',en:'Migration required',es:'Se requiere migración',de:'Migration erforderlich',ru:'Требуется перенос'
+  };
+  const supplierLocale=String(window.RentInOrbitI18n?.getLanguage?.()||'lt').toLowerCase();
+  const locale=Object.hasOwn(legacyCopy,supplierLocale)?supplierLocale:'en';
+  const connectButton=document.getElementById('connectStripeBtn');
+  if(connectButton)connectButton.disabled=legacyMigration;
 
-  badge.textContent = uiText(connected ? 'Connected' :
+  badge.textContent = legacyMigration?legacyLabel[locale]:uiText(connected ? 'Connected' :
     state==='needs_information' ? 'Needs information' :
     state==='restricted' ? 'Restricted' :
     submitted ? 'Submitted' :
@@ -715,7 +730,7 @@ function applyStripeLiveStatus(st){
   document.getElementById('stripeStepPayout').classList.toggle('done', !!st.payoutsEnabled);
 
   openBtn.disabled=!submitted;
-  message.textContent = st.currentlyDue?.length
+  message.textContent = legacyMigration ? legacyCopy[locale] : st.currentlyDue?.length
     ? `${uiText('Stripe still requires:')} ${st.currentlyDue.join(', ')}`
     : connected && st.payoutsEnabled ? uiText('Stripe onboarding complete. Payouts are enabled.')
     : connected ? uiText('Stripe account connected. Payouts are not yet enabled.')
