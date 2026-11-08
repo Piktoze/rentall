@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import {spawn} from 'node:child_process';
 import path from 'node:path';
 import {resolveDatabaseConfig} from '../config.js';
@@ -72,6 +73,25 @@ export async function runScheduledBackup(){
         } catch(error){reject(error)}
       });
     });
+    const expectedSource=result.storage==='s3'?result.backupKey:result.backup;
+    if(!restore.ok || restore.integrity!=='ok' || restore.storage!==result.storage ||
+       restore.source!==expectedSource || restore.bytes!==result.bytes){
+      throw new Error('Restored backup does not match the newly created backup');
+    }
+    // Keep restore proof separate from the upload proof; readiness requires both
+    // to identify the same backup, so an upload alone can never imply restorable.
+    const evidenceDir=path.dirname(path.resolve(process.env.DB_BACKUP_EVIDENCE_PATH||path.join(paths.backupDir,'last-verified-backup.json')));
+    const proofPath=path.join(evidenceDir,'last-restored-backup.json');
+    const tempProofPath=path.join(evidenceDir,`last-restored-backup-${process.pid}-${Date.now()}.tmp`);
+    const proof={ok:true,restoreVerifiedAt:new Date().toISOString(),backupKey:result.backupKey,backupFile:result.backup,
+      storage:restore.storage,bytes:restore.bytes,integrity:restore.integrity,tableCount:restore.tableCount,migrationVersion:restore.migrationVersion};
+    fs.mkdirSync(evidenceDir,{recursive:true});
+    try{
+      fs.writeFileSync(tempProofPath,JSON.stringify(proof,null,2),{flag:'wx'});
+      fs.renameSync(tempProofPath,proofPath);
+    }finally{
+      if(fs.existsSync(tempProofPath))fs.unlinkSync(tempProofPath);
+    }
     console.log(JSON.stringify({type:'database_backup_restore_check',ok:true,storage:restore.storage,bytes:restore.bytes,integrity:restore.integrity,tableCount:restore.tableCount,migrationVersion:restore.migrationVersion}));
     console.log(JSON.stringify({type:'database_backup',ok:true,backupDir:paths.backupDir,bytes:result.bytes,integrity:result.integrity,restoreVerified:true}));
     return {...result,restoreVerified:true};
