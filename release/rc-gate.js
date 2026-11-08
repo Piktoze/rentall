@@ -49,6 +49,7 @@ const paymentSafetyChecks=[
   ['supplier approval required for request bookings',paymentRoute.includes("booking.status!=='confirmed'")&&paymentRoute.includes("code:'SUPPLIER_CONFIRMATION_REQUIRED'")],
   ['paid/refunded booking cannot restart checkout',paymentRoute.includes("code:'BOOKING_PAYMENT_FINAL'")&&paymentRoute.includes("'partially_refunded'")],
   ['Stripe payment intent uses booking idempotency key',paymentRoute.includes('idempotencyKey:`booking:${booking.bookingId}:rental-payment`')],
+  ['reused Stripe payment intent verifies the original application fee',paymentRoute.includes('Number(intent.application_fee_amount)!==platformFee')],
   ['cancellation refund uses booking idempotency key',server.includes('idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`')]
 ];
 const checks=[
