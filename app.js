@@ -5658,6 +5658,8 @@ async function loadUnifiedCustomerBookings(){
     const bookingStatus=String(b.status||'pending').toLowerCase();
     const canReview=['returned','completed'].includes(bookingStatus);
     const canDispute=['active','returned','completed','cancelled','canceled','declined'].includes(bookingStatus);
+    const paymentStatus=String(b.paymentStatus||b.payment_status||'unpaid').toLowerCase();
+    const canPayNow=bookingStatus==='confirmed' && ['unpaid','requires_payment_method','requires_confirmation'].includes(paymentStatus);
     return `<div class="customer-booking-card" data-booking-id="${escapeHtml(b.bookingId)}" data-booking-status="${escapeHtml(bookingStatus)}" data-payment-status="${escapeHtml(String(b.paymentStatus||'').toLowerCase())}" data-listing-id="${escapeHtml(b.listingId||'')}">
       <div class="customer-booking-head"><div><small>${escapeHtml(b.bookingId)}</small><h3>${escapeHtml(b.title||b.listingTitle||'Rental item')} × ${Number(b.quantity||1)}</h3></div><span class="status ${escapeHtml(b.status||'pending')}">${escapeHtml(uiText(b.status||'pending'))}</span></div>
       <div class="customer-booking-grid">
@@ -5671,6 +5673,7 @@ async function loadUnifiedCustomerBookings(){
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
         <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View details'))}</button>
+        ${canPayNow?`<button class="primary v231-pay-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Pay now'))}</button>`:''}
         <details class="rio-extra-booking-actions"><summary>${escapeHtml(uiText('More actions'))}</summary><div class="rio-extra-actions-inner">
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
@@ -5696,6 +5699,19 @@ async function loadUnifiedCustomerBookings(){
   };
   list.querySelectorAll('.v203-select-booking').forEach(button=>{
     button.addEventListener('click',()=>selectBookingForCommand(button.dataset.id,true));
+  });
+  // A confirmed unpaid booking must remain payable when the customer returns
+  // after supplier approval or reopens the page on another device.
+  list.querySelectorAll('.v231-pay-booking').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const bookingId=String(button.dataset.id||'');
+      if(!bookingId)return;
+      const url=new URL(window.location.href);
+      url.searchParams.set('view','my-bookings');
+      url.searchParams.set('booking',bookingId);
+      url.searchParams.set('pay','1');
+      window.location.assign(url.pathname+url.search+url.hash);
+    });
   });
   selectBookingForCommand(rows.some(x=>String(x.booking.bookingId)===window.rentinorbitSelectedBookingId)
     ?window.rentinorbitSelectedBookingId:rows[0].booking.bookingId);
