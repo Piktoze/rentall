@@ -186,16 +186,24 @@ try{
    data:{purpose:'pickup',code:code.body.code}}),409,'Pickup replay blocked');
  status(await api(route+'/return',{method:'POST',cookie:supplierCookie,data:{condition:'good'}}),
    409,'Legacy return blocked');
- const ret=await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'return'}});
- status(ret,200,'New renter return PIN');
+ status(await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'return'}}),
+   409,'Renter must not need a return PIN');
+ status(await api(route+'/return-confirm',{method:'POST',cookie:outsiderCookie,
+   data:{returnCondition:'good'}}),403,'Outsider cannot confirm return');
  status(await api(route+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
-   data:{purpose:'return',code:ret.body.code}}),400,'Return condition required');
- const returned=await api(route+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
-   data:{purpose:'return',code:ret.body.code,returnCondition:'good',returnNotes:'No damage'}});
- status(returned,200,'Return verified');
+   data:{purpose:'return',code:code.body.code,returnCondition:'good'}}),409,'Legacy return PIN route disabled');
+ status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
+   data:{}}),400,'Return condition required');
+ status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
+   data:{returnCondition:'damaged'}}),400,'Damage notes required');
+ const returned=await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
+   data:{returnCondition:'good',returnNotes:'No damage'}});
+ status(returned,200,'Return verified without second PIN');
+ status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
+   data:{returnCondition:'good'}}),409,'Return cannot be repeated');
  assert.equal(returned.body.booking.status,'returned');
  outcome=true;
- console.log('PASS real HTTP two-account pickup and return: own signatures, one-time PIN, role enforcement, replay and legacy bypass');
+ console.log('PASS real HTTP two-account pickup PIN and supplier-only return without PIN: consent, role enforcement and replay protection');
 }finally{
  child.kill('SIGTERM');
  await Promise.race([new Promise(resolve=>child.once('exit',resolve)),new Promise(resolve=>setTimeout(resolve,2500))]);
