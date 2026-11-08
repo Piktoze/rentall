@@ -30,6 +30,22 @@ try{
  const restored=JSON.parse(defaultRestore.stdout.trim().split('\n').at(-1));
  assert.equal(restored.integrity,'ok');
  assert.equal(restored.migrationVersion,1);
+ // Real deployments may resolve DB through RAILWAY_VOLUME_MOUNT_PATH alone.
+ // Backups and restore must use that same database, never a working-directory DB.
+ const volumeRoot=path.join(root,'volume');
+ fs.mkdirSync(volumeRoot);
+ fs.copyFileSync(dbPath,path.join(volumeRoot,'rentinorbit.sqlite'));
+ const volumeEnv={...env,RAILWAY_VOLUME_MOUNT_PATH:volumeRoot};
+ for(const key of ['RENTINORBIT_DB_PATH','RENTALL_DB_PATH','DB_PATH','DATABASE_URL','PERSISTENT_DATA_DIR','BACKUP_DIR','DB_BACKUP_EVIDENCE_PATH'])delete volumeEnv[key];
+ const volumeBackup=spawnSync(process.execPath,['ops/backup-and-verify.js'],{env:volumeEnv,encoding:'utf8',timeout:15000});
+ assert.equal(volumeBackup.status,0,'Volume-path backup must succeed: '+volumeBackup.stderr);
+ const volumeEvidence=path.join(volumeRoot,'backups','last-verified-backup.json');
+ assert.ok(fs.existsSync(volumeEvidence),'Volume backup evidence must match application DB path');
+ const volumeRestore=spawnSync(process.execPath,['ops/test-backup-restore.js'],{env:volumeEnv,encoding:'utf8',timeout:15000});
+ assert.equal(volumeRestore.status,0,'Volume-path restore must succeed: '+volumeRestore.stderr);
+ const verifiedVolume=JSON.parse(volumeRestore.stdout.trim().split('\\n').at(-1));
+ assert.equal(verifiedVolume.integrity,'ok');
+ assert.equal(verifiedVolume.migrationVersion,1);
  // A failed remote upload must never replace an earlier verified checkpoint.
  const oldEvidence=fs.readFileSync(evidencePath,'utf8');
  const failingEnv={...env,BACKUP_S3_ENABLED:'true',BACKUP_S3_ACCESS_KEY_ID:'',BACKUP_S3_SECRET_ACCESS_KEY:'',BACKUP_S3_BUCKET:'',BACKUP_S3_ENDPOINT:'',BACKUP_S3_REGION:''};
