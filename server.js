@@ -517,18 +517,16 @@ app.post('/api/stripe/webhook',
     let event;
 
     try {
-      if (process.env.STRIPE_WEBHOOK_SECRET) {
-        event = stripe.webhooks.constructEvent(
-          req.body,
-          sig,
-          process.env.STRIPE_WEBHOOK_SECRET
-        );
-      } else {
-        if(process.env.NODE_ENV==='production'){
-          return res.status(503).send('Stripe webhook secret is not configured');
-        }
-        event = JSON.parse(req.body.toString('utf8'));
+      // All environments reject unsigned Stripe events. In particular, staging
+      // must never fall back to parsing unauthenticated JSON as a paid event.
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(503).send('Stripe webhook secret is not configured');
       }
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
     } catch (err) {
       // Signature / parse failures do not have a trustworthy Stripe event_id.
       const syntheticId = `evt_invalid_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
