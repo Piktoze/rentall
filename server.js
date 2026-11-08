@@ -1531,6 +1531,37 @@ app.get('/api/stripe/connect/status', requireRole('supplier','admin'), async (re
   }catch(err){res.status(500).json({error:process.env.NODE_ENV==='production'?'Unable to retrieve Stripe account status':err.message});}
 });
 
+// Staging-only, read-only supplier/Stripe binding audit. No email, token,
+// credentials, database mutation or third-party Stripe request.
+app.get('/api/stripe/connect/booking-binding/:bookingId', requireRole('supplier','admin'), (req,res)=>{
+  if(process.env.RENTINORBIT_STAGING!=='true') return res.status(404).json({error:'Not found'});
+  const bookingId=String(req.params.bookingId||'');
+  if(!canSupplierManageBooking(req.appUser,bookingId)) return res.status(404).json({error:'Booking not found'});
+  const booking=getRentalBookingById(bookingId);
+  const listing=booking?getRentalListing(booking.listingId):null;
+  if(!booking||!listing) return res.status(404).json({error:'Booking not found'});
+  const ownerConnection=getDirectMerchantConnectionByEmail(db,listing.ownerEmail);
+  const loggedInConnection=getDirectMerchantConnectionByUserId(db,req.appUser.userId);
+  const supplierOwnsListing=String(req.appUser.email||'').toLowerCase()===String(listing.ownerEmail||'').toLowerCase();
+  const sameConnection=!!ownerConnection&&!!loggedInConnection&&
+    ownerConnection.userId===loggedInConnection.userId&&
+    ownerConnection.stripeAccountId===loggedInConnection.stripeAccountId;
+  res.setHeader('Cache-Control','private, no-store');
+  res.json({
+    bookingId,
+    bookingStatus:booking.status,
+    paymentStatus:booking.paymentStatus,
+    bookingHasPaymentIntent:Boolean(booking.stripePaymentIntentId),
+    supplierOwnsListing,
+    hasOwnerStripeConnection:Boolean(ownerConnection),
+    ownerStripeAccountLast4:ownerConnection?.stripeAccountId?.slice(-4)||null,
+    ownerConnectApi:ownerConnection?.connectApi||null,
+    ownerDirectChargeReady:directMerchantReady(ownerConnection),
+    loggedInStripeConnectionMatchesOwner:supplierOwnsListing?sameConnection:null,
+    note:'This report uses current staging database bindings, not a live Stripe capability query.'
+  });
+});
+
 // Admin-only provider-state bridge for test fixtures and recovery tooling.
 app.post('/api/admin/stripe/connect/v2-capability-sync', requireRole('admin'), (req,res)=>{
   try{
