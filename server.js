@@ -1563,17 +1563,27 @@ app.get('/api/stripe/connect/booking-binding/:bookingId', requireRole('supplier'
 });
 
 // Admin-only provider-state bridge for test fixtures and recovery tooling.
-app.post('/api/admin/stripe/connect/v2-capability-sync', requireRole('admin'), (req,res)=>{
+// Only an authoritative, server-side Stripe response may change capabilities.
+// Never accept a caller-supplied account object as proof that payments are active.
+app.post('/api/admin/stripe/connect/v2-capability-sync', requireRole('admin'), async (req,res)=>{
   try{
-    const {userId,account}=req.body||{};
-    if(!userId||!account?.id) return res.status(400).json({error:'userId and Accounts v2 account object are required'});
-    const existing=getDirectMerchantConnectionByUserId(db,String(userId));
+    if(process.env.RENTINORBIT_STAGING!=='true') return res.status(404).json({error:'Not found'});
+    if(!stripe) return res.status(503).json({error:'Stripe is not configured'});
+    const userId=String(req.body?.userId||'').trim();
+    if(!userId) return res.status(400).json({error:'userId is required'});
+    const existing=getDirectMerchantConnectionByUserId(db,userId);
     if(!existing) return res.status(404).json({error:'Stripe connection not found'});
-    if(String(existing.stripeAccountId)!==String(account.id)) return res.status(409).json({error:'Stripe account does not match supplier'});
+    if(String(existing.connectApi)!=='v2_merchant_direct') return res.status(409).json({error:'Legacy account cannot be automatically converted'});
+    const account=await retrieveDirectMerchantAccountV2(stripe,existing.stripeAccountId);
+    if(String(account?.id||'')!==String(existing.stripeAccountId)) return res.status(409).json({error:'Stripe account does not match supplier'});
     const status=directMerchantCapabilityStatus(account);
-    const saved=saveDirectMerchantMetadata(db,{userId:String(userId),accountId:existing.stripeAccountId,merchantCapabilityStatus:status.merchantCapabilityStatus,dashboard:status.dashboard,feesCollector:status.feesCollector,lossesCollector:status.lossesCollector,onboardingStatus:status.state==='active'?'complete':'pending',requirements:status.requirements});
+    const saved=saveDirectMerchantMetadata(db,{userId,accountId:existing.stripeAccountId,merchantCapabilityStatus:status.merchantCapabilityStatus,dashboard:status.dashboard,feesCollector:status.feesCollector,lossesCollector:status.lossesCollector,onboardingStatus:status.state==='active'?'complete':'pending',requirements:status.requirements});
+    res.setHeader('Cache-Control','no-store, private');
     res.json({ok:true,status,saved:{userId:saved?.userId,accountId:saved?.stripeAccountId,connectApi:saved?.connectApi,merchantCapabilityStatus:saved?.merchantCapabilityStatus}});
-  }catch(err){res.status(400).json({error:err.message});}
+  }catch(err){
+    console.warn('Stripe account capability sync failed',safeOperationalError(err));
+    res.status(502).json({error:'Could not verify supplier capability with Stripe'});
+  }
 });
 
 app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,keyPrefix:'deposit-payment'}), requireStripe, async (req,res)=>{
