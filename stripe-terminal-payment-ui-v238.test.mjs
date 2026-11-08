@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync('./app.js','utf8');
+const start=app.indexOf('async function prepareStripePayment(bookingId,paymentToken)');
+const end=app.indexOf("document.getElementById('confirmStripePaymentBtn')?.addEventListener",start);
+assert.ok(start>=0&&end>start,'Customer payment setup function must exist');
+const scope=app.slice(start,end);
+const terminal=scope.indexOf("if(intent.status==='succeeded' || intent.status==='processing')");
+const load=scope.indexOf('await loadStripeJs()',terminal);
+assert.ok(terminal>=0&&load>terminal,'Already paid or processing payments must exit before Stripe payment form mounts');
+const guard=scope.slice(terminal,load);
+assert.ok(guard.includes("document.getElementById('confirmStripePaymentBtn').hidden=true"),'Payment button hidden for settled or processing intent');
+assert.ok(guard.includes("if(container)container.innerHTML=''"),'Old payment widget cleared');
+assert.ok(guard.includes('return;'),'Terminal Stripe state exits before form mounting');
+assert.ok(guard.includes('Papildomai mokėti nereikia')&&guard.includes('Dar kartą nemokėkite'),'Customer sees explicit no-double-payment guidance');
+console.log('PASS succeeded or processing Stripe intent never remounts payment form');
