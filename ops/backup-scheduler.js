@@ -68,14 +68,14 @@ export async function runScheduledBackup(){
         if(code!==0) return reject(new Error(`Backup restore verification failed (${code}): ${stderr.trim().slice(-500)}`));
         try {
           const verified=JSON.parse(stdout.trim().split('\n').at(-1));
-          if(!verified.ok||verified.integrity!=='ok'||verified.bytes!==result.bytes) throw new Error('Backup restore verification incomplete');
+          if(!verified.ok||verified.integrity!=='ok'||verified.bytes!==result.bytes||verified.sha256!==result.sha256) throw new Error('Backup restore verification incomplete');
           resolve(verified);
         } catch(error){reject(error)}
       });
     });
     const expectedSource=result.storage==='s3'?result.backupKey:result.backup;
     if(!restore.ok || restore.integrity!=='ok' || restore.storage!==result.storage ||
-       restore.source!==expectedSource || restore.bytes!==result.bytes){
+       restore.source!==expectedSource || restore.bytes!==result.bytes || restore.sha256!==result.sha256){
       throw new Error('Restored backup does not match the newly created backup');
     }
     // Keep restore proof separate from the upload proof; readiness requires both
@@ -84,7 +84,7 @@ export async function runScheduledBackup(){
     const proofPath=path.join(evidenceDir,'last-restored-backup.json');
     const tempProofPath=path.join(evidenceDir,`last-restored-backup-${process.pid}-${Date.now()}.tmp`);
     const proof={ok:true,restoreVerifiedAt:new Date().toISOString(),backupKey:result.backupKey,backupFile:result.backup,
-      storage:restore.storage,bytes:restore.bytes,integrity:restore.integrity,tableCount:restore.tableCount,migrationVersion:restore.migrationVersion};
+      storage:restore.storage,bytes:restore.bytes,sha256:restore.sha256,integrity:restore.integrity,tableCount:restore.tableCount,migrationVersion:restore.migrationVersion};
     fs.mkdirSync(evidenceDir,{recursive:true});
     try{
       fs.writeFileSync(tempProofPath,JSON.stringify(proof,null,2),{flag:'wx'});
