@@ -280,7 +280,20 @@ footer{padding:34px 0;background:#0d1914;color:#c9d4ce}.footer-grid{display:grid
 .supplier-order-grid span{display:block;color:var(--muted);font-size:11px;margin-bottom:2px}
 .supplier-order-grid b{display:block;color:var(--text);word-break:break-word}
 .supplier-order-instructions{grid-column:1/-1}
-.supplier-order-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.supplier-order-actions{display:flex;flex-direction:column;align-items:stretch;gap:16px;margin-top:18px}
+#supplierOrderActions > div{width:100%;min-width:0}
+#supplierOrderActions > .supplier-order-card{width:100%;min-width:0;margin-top:0!important}
+#supplierOrderActions .lifecycle-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px}
+#supplierOrderActions .lifecycle-actions button{height:auto;min-height:44px;max-width:100%;white-space:normal}
+#supplierOrderActions .supplier-order-card .rio-supplier-agreement,
+#supplierOrderActions .supplier-order-card .rio-supplier-transfer{display:inline-flex;align-items:center;justify-content:center;width:auto;max-width:100%;min-height:44px;height:auto;padding:11px 16px;white-space:normal;vertical-align:top}
+#supplierOrderActions .supplier-order-card .rio-supplier-transfer{margin-top:8px}
+@media(max-width:620px){
+ #supplierOrderActions .lifecycle-actions{flex-direction:column;align-items:stretch}
+ #supplierOrderActions .lifecycle-actions button,
+ #supplierOrderActions .supplier-order-card .rio-supplier-agreement,
+ #supplierOrderActions .supplier-order-card .rio-supplier-transfer{width:100%}
+}
 .return-booking-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
 .form-error{min-height:20px;color:#9c3434;font-size:13px}
 .view-order-btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
