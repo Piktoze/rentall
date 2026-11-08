@@ -2057,6 +2057,8 @@ export function issueRentalTransferCode(bookingId,purpose,party='customer'){
   const agreement=getRentalAgreement(bookingId);
   // Importantly, each participant's code depends ONLY on their own signature,
   // never on whether the opposite party has signed.
+  if(!agreement?.customerAcceptedAt)
+    throw Object.assign(new Error('Pirmiausia patvirtinkite savo nuomos sutartį.'),{code:'OWN_AGREEMENT_REQUIRED'});
   if(!verifiedRentalAgreementAcceptance(bookingId,'customer',agreement))
     throw Object.assign(new Error('Nuomininko sutarties patvirtinimas nepatikrintas. Patikrinkite savo užsakymą.'),{code:'AGREEMENT_AUDIT_REQUIRED'});
   if(purpose==='pickup' && (booking.status!=='confirmed'||booking.paymentStatus!=='paid'))
@@ -2093,6 +2095,8 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCod
     if(!booking||booking.status!==required||(purpose==='pickup'&&booking.paymentStatus!=='paid'))
       throw Object.assign(new Error('Rezervacijos būsena neleidžia perdavimo.'),{code:'TRANSFER_NOT_READY'});
     const agreement=getRentalAgreement(bookingId);
+    if(!agreement?.customerAcceptedAt||!agreement?.supplierAcceptedAt)
+      throw Object.assign(new Error('Abi šalys turi patvirtinti sutartį prieš perdavimą.'),{code:'AGREEMENT_REQUIRED'});
     if(!verifiedRentalAgreementAcceptance(bookingId,'customer',agreement) ||
        !verifiedRentalAgreementAcceptance(bookingId,'supplier',agreement))
       throw Object.assign(new Error('Prieš perdavimą būtini atskirai patikrinti abiejų šalių sutarties patvirtinimai.'),{code:'AGREEMENT_AUDIT_REQUIRED'});
