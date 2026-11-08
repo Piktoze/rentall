@@ -487,13 +487,13 @@ function refreshPaymentsPanel(){
   // Live Stripe status is supplied by the authenticated server endpoint below.
   const stripeBadge=document.getElementById('stripeStatusBadge');
   const bankBadge=document.getElementById('bankStatusBadge');
-  stripeBadge.textContent=uiText('Pending verification');
+  stripeBadge.textContent=uiText('Pending');
   stripeBadge.className='status pending';
-  bankBadge.textContent=uiText('Pending verification');
+  bankBadge.textContent=uiText('Pending');
   bankBadge.className='status pending';
-  document.getElementById('stripeIdentityText').textContent=uiText('Pending verification');
-  document.getElementById('stripeBankText').textContent=uiText('Pending verification');
-  document.getElementById('stripePayoutText').textContent=uiText('Pending verification');
+  document.getElementById('stripeIdentityText').textContent=uiText('Pending');
+  document.getElementById('stripeBankText').textContent=uiText('Pending');
+  document.getElementById('stripePayoutText').textContent=uiText('Pending');
   document.getElementById('stripeStepIdentity').classList.remove('done');
   document.getElementById('stripeStepBank').classList.remove('done');
   document.getElementById('stripeStepPayout').classList.remove('done');
