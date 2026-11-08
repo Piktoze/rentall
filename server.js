@@ -2870,7 +2870,9 @@ app.get('/api/customer/bookings/:bookingId', (req,res)=>{
     if(user?.email){
       booking=listCustomerRentalBookings(user.email).find(b=>b.bookingId===req.params.bookingId)||null;
     }
-    if(!booking){
+    // A guest link cannot impersonate a different renter in an authenticated
+    // supplier/customer session; sign out before opening a guest booking.
+    if(!booking && !user){
       booking=getCustomerBookingByAccessToken(req.params.bookingId,req.query.accessToken||'');
     }
     if(!booking) return res.status(403).json({error:'Booking access denied'});
@@ -2892,7 +2894,9 @@ app.get('/api/customer/bookings/:bookingId/alternatives', (req,res)=>{
     if(user?.email){
       booking=listCustomerRentalBookings(user.email).find(b=>b.bookingId===req.params.bookingId)||null;
     }
-    if(!booking){
+    // A guest link cannot impersonate a different renter in an authenticated
+    // supplier/customer session; sign out before opening a guest booking.
+    if(!booking && !user){
       booking=getCustomerBookingByAccessToken(req.params.bookingId,req.query.accessToken||'');
     }
     if(!booking) return res.status(403).json({error:'Booking access denied'});
