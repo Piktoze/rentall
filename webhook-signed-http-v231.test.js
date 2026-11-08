@@ -7,6 +7,11 @@ import path from 'node:path';
 import net from 'node:net';
 import {spawn} from 'node:child_process';
 import Database from 'better-sqlite3';
+const webhookSource=fs.readFileSync('./server.js','utf8');
+assert.match(webhookSource,/if \(!process\.env\.STRIPE_WEBHOOK_SECRET\) \{/,
+ 'Missing webhook signing secret must fail closed');
+assert.doesNotMatch(webhookSource,/event = JSON\.parse\(req\.body\.toString\('utf8'\)\)/,
+ 'Unsigned webhook JSON fallback is prohibited');
 
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rio-webhook-e2e-'));
 const dbPath=path.join(folder,'fixture.sqlite');
