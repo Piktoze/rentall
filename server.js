@@ -75,6 +75,7 @@ import {
   releaseBookingIdempotency,
   createRentalAgreement,
   getRentalAgreement,
+  getRentalAgreementAcceptanceAudit,
   rentalTransferStatus,
   issueRentalTransferCode,
   verifyAndConsumeRentalTransferCode,
@@ -2441,7 +2442,18 @@ app.get('/api/rentals/bookings/:bookingId/trust',simpleRateLimit({windowMs:60000
   const id=req.params.bookingId;
   if(!bookingAccessAllowed(req,id))return res.status(403).json({error:'Prieiga prie rezervacijos draudžiama.'});
   res.set('Cache-Control','no-store, private');
-  res.json({agreement:getRentalAgreement(id),transfer:rentalTransferStatus(id),identityVerification:rentalIdentityVerificationStatus(id)});
+  const agreement=getRentalAgreement(id);
+  const acceptanceAudit=getRentalAgreementAcceptanceAudit(id);
+  // Independent acceptance evidence is separate from supplier order confirmation.
+  const partyEvidence=Object.fromEntries(['customer','supplier'].map(party=>{
+    const record=acceptanceAudit.find(row=>row.party===party);
+    const acceptedAt=party==='customer'?agreement?.customerAcceptedAt:agreement?.supplierAcceptedAt;
+    return [party,{
+      verified:!!record && !!acceptedAt && record.acceptedAt===acceptedAt,
+      acceptedAt:record?.acceptedAt||null
+    }];
+  }));
+  res.json({agreement,acceptanceEvidence:partyEvidence,transfer:rentalTransferStatus(id),identityVerification:rentalIdentityVerificationStatus(id)});
 });
 app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   simpleRateLimit({windowMs:60000,max:12,keyPrefix:'agreement-accept'}),(req,res)=>{
