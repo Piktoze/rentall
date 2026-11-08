@@ -2034,6 +2034,21 @@ export function rentalTransferStatus(bookingId){
     expiresAt:r.expires_at,consumedAt:r.consumed_at,attemptsRemaining:Math.max(0,5-r.failed_attempts)
   }]));
 }
+// An agreement timestamp alone cannot authorize transfer codes. Require the
+// independently recorded acceptance event for the correct booking participant.
+function verifiedRentalAgreementAcceptance(bookingId,party,agreement){
+  const acceptedAt=party==='customer'?agreement?.customerAcceptedAt:agreement?.supplierAcceptedAt;
+  if(!acceptedAt)return false;
+  const row=getRentalAgreementAcceptanceAudit(bookingId).find(item=>item.party===party);
+  if(!row || row.acceptedAt!==acceptedAt || row.termsVersion!==agreement?.termsVersion)return false;
+  const booking=getRentalBookingById(bookingId);
+  const listing=booking?getRentalListing(booking.listingId):null;
+  const expectedEmail=party==='customer'?booking?.customerEmail:listing?.ownerEmail;
+  if(!expectedEmail||String(row.actorEmail||'').toLowerCase()!==String(expectedEmail).toLowerCase())return false;
+  const snapshotHash=crypto.createHash('sha256')
+    .update(String(agreement.termsVersion)+'\\n'+JSON.stringify(agreement.snapshot||{})).digest('hex');
+  return row.snapshotSha256===snapshotHash;
+}
 export function issueRentalTransferCode(bookingId,purpose,party='customer'){
   if(!['pickup','return'].includes(purpose)||party!=='customer')
     throw Object.assign(new Error('Neteisingas kodo tipas.'),{code:'INVALID_TRANSFER_PURPOSE'});
@@ -2042,8 +2057,8 @@ export function issueRentalTransferCode(bookingId,purpose,party='customer'){
   const agreement=getRentalAgreement(bookingId);
   // Importantly, each participant's code depends ONLY on their own signature,
   // never on whether the opposite party has signed.
-  if(!agreement?.customerAcceptedAt)
-    throw Object.assign(new Error('Pirmiausia patvirtinkite savo nuomos sutartį.'),{code:'OWN_AGREEMENT_REQUIRED'});
+  if(!verifiedRentalAgreementAcceptance(bookingId,'customer',agreement))
+    throw Object.assign(new Error('Nuomininko sutarties patvirtinimas nepatikrintas. Patikrinkite savo užsakymą.'),{code:'AGREEMENT_AUDIT_REQUIRED'});
   if(purpose==='pickup' && (booking.status!=='confirmed'||booking.paymentStatus!=='paid'))
     throw Object.assign(new Error('Rezervacija turi būti patvirtinta ir apmokėta.'),{code:'TRANSFER_NOT_READY'});
   if(purpose==='return' && booking.status!=='active')
@@ -2078,8 +2093,9 @@ export function verifyAndConsumeRentalTransferCode(bookingId,purpose,customerCod
     if(!booking||booking.status!==required||(purpose==='pickup'&&booking.paymentStatus!=='paid'))
       throw Object.assign(new Error('Rezervacijos būsena neleidžia perdavimo.'),{code:'TRANSFER_NOT_READY'});
     const agreement=getRentalAgreement(bookingId);
-    if(!agreement?.customerAcceptedAt||!agreement?.supplierAcceptedAt)
-      throw Object.assign(new Error('Abi šalys turi patvirtinti sutartį prieš perdavimą.'),{code:'AGREEMENT_REQUIRED'});
+    if(!verifiedRentalAgreementAcceptance(bookingId,'customer',agreement) ||
+       !verifiedRentalAgreementAcceptance(bookingId,'supplier',agreement))
+      throw Object.assign(new Error('Prieš perdavimą būtini atskirai patikrinti abiejų šalių sutarties patvirtinimai.'),{code:'AGREEMENT_AUDIT_REQUIRED'});
     if(purpose==='return'&&!['good','damaged','missing'].includes(String(returnCondition||'')))
       throw Object.assign(new Error('Nurodykite grąžinto daikto būklę.'),{code:'RETURN_CONDITION_REQUIRED'});
     for(const party of ['customer']){
