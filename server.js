@@ -31,6 +31,8 @@ import {
   getMarketplaceTraderProfile,
   saveMarketplaceTraderProfile,
   getVerifiedMarketplaceTraderPublicProfile,
+  listMarketplaceTraderReviewQueue,
+  reviewMarketplaceTraderProfile,
   enableSupplierForUser,
   authenticateAppUser,
   createAppSession,
@@ -2823,6 +2825,32 @@ app.post('/api/rentals/reviews', simpleRateLimit({windowMs:60000,max:20,keyPrefi
 
 
 // V182 admin-controlled supplier pre-launch onboarding.
+// Manual review workflow; verification only after an authorized administrator
+// attests that external identity, contact, registry and payment checks occurred.
+app.get('/api/admin/trader-reviews',requireRole('admin'),(req,res)=>{
+ res.set('Cache-Control','no-store, private');
+ res.json({profiles:listMarketplaceTraderReviewQueue()});
+});
+app.post('/api/admin/trader-reviews/:userId',requireRole('admin'),
+ simpleRateLimit({windowMs:60000,max:15,keyPrefix:'admin-trader-review'}),(req,res)=>{
+ try{
+  const result=reviewMarketplaceTraderProfile({
+   userId:req.params.userId,reviewerUserId:req.appUser.userId,
+   decision:req.body?.decision,submittedAt:req.body?.submittedAt,
+   evidenceReference:req.body?.evidenceReference,reviewNote:req.body?.reviewNote,
+   identityChecked:req.body?.identityChecked,contactChecked:req.body?.contactChecked,
+   registryChecked:req.body?.registryChecked,
+   paymentAccountChecked:req.body?.paymentAccountChecked
+  });
+  res.set('Cache-Control','no-store, private');
+  res.json({review:result});
+ }catch(err){
+  res.status(['TRADER_PROFILE_CHANGED','TRADER_ALREADY_APPROVED'].includes(err.code)?409:400)
+   .json({error:'Nepavyko atlikti tiekėjo patikros: patikrinkite duomenis ir įrodymus.',
+          code:err.code||'TRADER_REVIEW_FAILED'});
+ }
+});
+
 app.get('/api/admin/suppliers', requireRole('admin'), (req,res)=>{
   res.json({suppliers:listSupplierOnboarding()});
 });
