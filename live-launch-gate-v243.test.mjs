@@ -18,7 +18,18 @@ const base={
  RESEND_API_KEY:'re_syntheticApiKey123',EMAIL_WORKER_ENABLED:'true',
  EMAIL_WORKER_TOKEN:'V4lid-Worker-Token-2026-RentInOrbit-ghijkl!',
  SUPPORT_EMAIL:'support@rentinorbit.example',
- MAPS_PROVIDER:'stub',SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled'
+ MAPS_PROVIDER:'stub',SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled',
+ LEGAL_OPERATOR_NAME:'Synthetic Operator for Tests',
+ LEGAL_OPERATOR_LEGAL_FORM:'synthetic-business-form',
+ LEGAL_OPERATOR_ADDRESS:'Synthetic registered address, EU',
+ LEGAL_SUPPORT_EMAIL:'support@example.invalid',
+ LEGAL_COMPLAINTS_EMAIL:'complaints@example.invalid',
+ LEGAL_PRIVACY_CONTACT:'privacy@example.invalid',
+ LEGAL_TRADER_STATUS_DISCLOSURE_READY:'true',
+ LEGAL_DSA_TRADER_VERIFICATION_READY:'true',
+ LEGAL_PRIVACY_RETENTION_SCHEDULE_READY:'true',
+ LEGAL_CONSUMER_ADR_INFO_READY:'true',
+ LEGAL_TEXTS_REVIEWED:'true'
 };
 const report=liveLaunchReadinessReport(base);
 assert.equal(report.ready,true,'Synthetic complete LIVE configuration passes local checks');
