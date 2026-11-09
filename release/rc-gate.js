@@ -10,6 +10,10 @@ for(const script of ['ops/backup-scheduler.js','ops/backup-and-verify.js','ops/t
   execFileSync(process.execPath,['--check',script],{stdio:'inherit'});
 }
 
+// Browser suite syntax is checked at build time; execute with npm run test:e2e:privacy
+// in an isolated test environment with Playwright Chromium installed.
+execFileSync(process.execPath,['--check','e2e/privacy-requests-v261.spec.js'],{stdio:'inherit'});
+
 // Source-only regression suites: safe during build, no Stripe or database mutations.
 for(const suite of [
   'live-launch-gate-v243.test.mjs',
