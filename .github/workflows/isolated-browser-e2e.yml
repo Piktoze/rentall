@@ -34,8 +34,6 @@ jobs:
       APP_URL: http://127.0.0.1:3000
       PUBLIC_BASE_URL: http://127.0.0.1:3000
       PORT: "3000"
-      DB_PATH: ${{ runner.temp }}/rentinorbit-ci.sqlite
-      UPLOADS_DIR: ${{ runner.temp }}/rentinorbit-ci-uploads
       STRIPE_MODE: test
       STRIPE_SECRET_KEY: ""
       STRIPE_WEBHOOK_SECRET: ""
@@ -57,6 +55,10 @@ jobs:
         run: npm ci
       - name: Install Chromium and system dependencies
         run: npx playwright install --with-deps chromium
+      - name: Configure disposable runner storage
+        run: |
+          echo "DB_PATH=${RUNNER_TEMP}/rentinorbit-ci.sqlite" >> "${GITHUB_ENV}"
+          echo "UPLOADS_DIR=${RUNNER_TEMP}/rentinorbit-ci-uploads" >> "${GITHUB_ENV}"
       - name: Verify temporary database
         run: |
           test "${DB_PATH}" = "${RUNNER_TEMP}/rentinorbit-ci.sqlite"
