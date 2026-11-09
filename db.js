@@ -1235,6 +1235,76 @@ export function declareSupplierTraderStatus(userId,status){
   return getSupplierTraderDisclosure(db.prepare('SELECT email FROM app_users WHERE user_id=?').get(String(userId))?.email);
 }
 
+// Marketplace trader profile is distinct from Stripe identity verification.
+// Store no passport images, personal identity documents or bank details here.
+db.exec(`
+CREATE TABLE IF NOT EXISTS marketplace_trader_profiles (
+ user_id TEXT PRIMARY KEY REFERENCES app_users(user_id) ON DELETE CASCADE,
+ legal_name TEXT NOT NULL,
+ contact_address TEXT NOT NULL,
+ contact_phone TEXT NOT NULL,
+ contact_email TEXT NOT NULL,
+ register_name TEXT,
+ register_number TEXT,
+ eu_compliance_certified INTEGER NOT NULL DEFAULT 0,
+ submitted_at TEXT NOT NULL,
+ verified_at TEXT
+);
+`);
+const traderProfileByUserStmt=db.prepare(`SELECT legal_name AS legalName,
+ contact_address AS contactAddress,contact_phone AS contactPhone,
+ contact_email AS contactEmail,register_name AS registerName,
+ register_number AS registerNumber,eu_compliance_certified AS euComplianceCertified,
+ submitted_at AS submittedAt,verified_at AS verifiedAt
+ FROM marketplace_trader_profiles WHERE user_id=?`);
+export function getMarketplaceTraderProfile(userId){
+ const p=traderProfileByUserStmt.get(String(userId||''));
+ return p?{...p,euComplianceCertified:!!p.euComplianceCertified,verified:!!p.verifiedAt}:null;
+}
+export function saveMarketplaceTraderProfile(userId,data){
+ const id=String(userId||'');
+ const row=db.prepare('SELECT user_id,marketplace_trader_status FROM app_users WHERE user_id=?').get(id);
+ if(!row||row.marketplace_trader_status!=='trader')
+   throw Object.assign(new Error('Business supplier status required'),{code:'TRADER_STATUS_REQUIRED'});
+ const legalName=String(data?.legalName||'').trim().slice(0,180);
+ const contactAddress=String(data?.contactAddress||'').trim().slice(0,350);
+ const contactPhone=String(data?.contactPhone||'').trim().slice(0,50);
+ const contactEmail=String(data?.contactEmail||'').trim().toLowerCase().slice(0,180);
+ const registerName=String(data?.registerName||'').trim().slice(0,180);
+ const registerNumber=String(data?.registerNumber||'').trim().slice(0,90);
+ if(legalName.length<2||contactAddress.length<8||
+    !/^\\+?[0-9 ()-]{7,25}$/.test(contactPhone)||
+    !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contactEmail)||
+    (registerName&&!registerNumber)||(registerNumber&&!registerName)||
+    data?.euComplianceCertified!==true)
+   throw Object.assign(new Error('Incomplete trader traceability declaration'),{code:'TRADER_PROFILE_INCOMPLETE'});
+ const now=new Date().toISOString();
+ db.prepare(`INSERT INTO marketplace_trader_profiles
+ (user_id,legal_name,contact_address,contact_phone,contact_email,
+  register_name,register_number,eu_compliance_certified,submitted_at,verified_at)
+ VALUES(?,?,?,?,?,?,?,?,?,NULL)
+ ON CONFLICT(user_id) DO UPDATE SET
+ legal_name=excluded.legal_name,contact_address=excluded.contact_address,
+ contact_phone=excluded.contact_phone,contact_email=excluded.contact_email,
+ register_name=excluded.register_name,register_number=excluded.register_number,
+ eu_compliance_certified=excluded.eu_compliance_certified,
+ submitted_at=excluded.submitted_at,verified_at=NULL`).run(id,legalName,contactAddress,
+ contactPhone,contactEmail,registerName||null,registerNumber||null,1,now);
+ return getMarketplaceTraderProfile(id);
+}
+// Public listing data must not show submitted-but-unverified contact details.
+export function getVerifiedMarketplaceTraderPublicProfile(email){
+ const row=db.prepare(`SELECT p.legal_name AS legalName,p.contact_address AS contactAddress,
+ p.contact_phone AS contactPhone,p.contact_email AS contactEmail,
+ p.register_name AS registerName,p.register_number AS registerNumber,
+ p.eu_compliance_certified AS euComplianceCertified
+ FROM marketplace_trader_profiles p
+ JOIN app_users u ON u.user_id=p.user_id
+ WHERE u.email=? COLLATE NOCASE AND u.marketplace_trader_status='trader'
+ AND p.verified_at IS NOT NULL`).get(String(email||''));
+ return row?{...row,euComplianceCertified:!!row.euComplianceCertified}:null;
+}
+
 function publicUser(row){
   if(!row) return null;
   return {
