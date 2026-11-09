@@ -290,6 +290,8 @@ try{
    409,'Renter must not need a return PIN');
  status(await api(route+'/return-confirm',{method:'POST',cookie:outsiderCookie,
    data:{returnCondition:'good'}}),403,'Outsider cannot confirm return');
+ status(await api(route+'/return-confirm',{method:'POST',cookie:renterCookie,
+   data:{returnCondition:'good'}}),403,'Renter cannot confirm own return');
  status(await api(route+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
    data:{purpose:'return',code:code.body.code,returnCondition:'good'}}),409,'Legacy return PIN route disabled');
  status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
