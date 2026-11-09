@@ -69,7 +69,7 @@ test.describe('RentInOrbit customer journey',()=>{
    const email=`supplier-${Date.now()}@rentinorbit.test`;
    const password='demo12345';
    const registration=await request.post('/api/auth/register',{
-     data:{email,password,role:'supplier',displayName:'E2E Supplier',businessName:'E2E Rentals'}
+     data:{email,password,role:'supplier',displayName:'E2E Supplier',businessName:'E2E Rentals',termsAccepted:true}
    });
    expect(registration.ok()).toBeTruthy();
    await page.goto('/');
