@@ -64,6 +64,8 @@ jobs:
           npm run db:init
       - name: Test isolated privacy HTTP authorization and audit
         run: node privacy-requests-http-v255.test.mjs
+      - name: Verify full two-account booking lifecycle over real local HTTP
+        run: node rental-http-e2e-v210.test.js
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
       - name: Run real Chromium browser E2E, no live services
