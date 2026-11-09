@@ -105,6 +105,17 @@ try{
   assert.equal(r.status,200);assert.ok(r.body.requests.length>0);assert.equal(r.body.hasMore,false);
   r=await request('/api/admin/privacy/requests?offset=-1','admin');
   assert.equal(r.status,400);
+  // Malformed operator addresses must never be mistaken for configured delivery.
+  process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL='not-an-address';
+  r=await request('/api/admin/privacy/health','admin');
+  assert.equal(r.status,200);
+  assert.equal(r.body.notificationAddressConfigured,false);
+  assert.equal(r.body.automaticDeliveryReady,false);
+  const queuedBefore=queued.length;
+  r=await request('/api/privacy/requests','user-b',{type:'rectification',details:'Bandymo prašymas'},'POST');
+  assert.equal(r.status,201);
+  assert.equal(queued.length,queuedBefore);
+  process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL='privacy@example.test';
   console.log('PASS GDPR isolated HTTP: 401, 403, 400, 201, per-account privacy, due dates, operator outbox, admin audit, terminal 409');
 }finally{
   await new Promise(resolve=>server.close(resolve));db.close();
