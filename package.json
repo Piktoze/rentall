@@ -88,6 +88,7 @@
     "test:architecture-v112": "node architecture-v112.test.js",
     "test:e2e": "playwright test --config=e2e/playwright.config.js",
     "test:e2e:customer": "playwright test e2e/customer-journey.spec.js --config=e2e/playwright.config.js",
+    "test:e2e:privacy": "playwright test e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js",
     "test:browser-e2e-v113": "node browser-e2e-v113.test.js",
     "test:e2e:stripe": "playwright test e2e/stripe-lifecycle.spec.js --config=e2e/playwright.config.js",
     "test:launch-gate-v114": "node launch-gate-v114.test.js",
