@@ -92,3 +92,11 @@
 - Paleidimo komanda izoliuotoje kūrėjo/testų aplinkoje: `npm run test:e2e:privacy`. Tam reikia įdiegtų „Playwright Chromium“ naršyklės failų. Testą paleisti tik su izoliuota testų DB / serveriu; neprijungti prie tikros staging `/data`.
 - `release/rc-gate.js` tikrina naršyklės testo **JavaScript sintaksę**, bet build proceso metu pačios „Playwright“ naršyklės neatidaro. Nevadinti testo PASS be realaus paleidimo rezultatų.
 - ChatGPT naršyklės prieiga negalėjo perskaityti staging atviro skirtuko (trūko leidimo pasiekti šį hostą), todėl realus vizualinis E2E lieka **nepatvirtintas**.
+
+## V262 – privatumo laiškų tikros būklės matomumas
+- Administratoriaus `GET /api/admin/privacy/health` skaičiuoja `email_outbox` įrašus tik su `template_key='privacy_request_notify'`: `pending`, `sending`, `failed`, `sent`. Jų gavėjai ir turinys neatskleidžiami.
+- Sąsaja rodo perspėjimą, kai yra nepavykusių arba eilėje laukiančių BDAR pranešimų.
+- `emailProviderConfigured` bus `true` tik kai `EMAIL_PROVIDER=resend`, nustatyti `RESEND_API_KEY` ir `EMAIL_FROM`. Vien pavadinimo ar `console` konfigūracija nebelaikoma paruošta.
+- `automaticDeliveryReady` vis tiek reiškia tik būtinų nustatymų **požymius**, ne tikro pristatymo arba gavimo patvirtinimą.
+- Izoliuotas HTTP testas patikrina, kad į bendrus skaitiklius nepatenka kitų šablonų laiškai ir kad failed/pending skaičiai grąžinami tik administratoriui.
+- El. pašto gavėjo adreso staging paslaugoje vis dar nėra; nenaudoti spėjamo gavėjo. Prieš GO – paskirti atsakingą asmenį, sukonfigūruoti jo adresą ir užfiksuoti faktinio laiško pristatymo rezultatą.
