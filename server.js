@@ -590,7 +590,13 @@ app.post('/api/stripe/webhook',
       type: event.type,
       account: event.account || event.data?.object?.account || null,
       source: 'stripe',
-      payload: event
+      // Preserve event identity for audit and retries, not the full Stripe object
+      // (which can contain customer and payment-related personal information).
+      payload:{
+        id:event.id,type:event.type,account:event.account||null,
+        livemode:event.livemode===true,created:event.created||null,
+        objectId:event.data?.object?.id||null
+      }
     });
 
     if (started.duplicate) {
@@ -1851,6 +1857,7 @@ app.get('/api/stripe/webhook-events', requireRole('admin'), (req, res) => {
   const { limit = 50, type = null, status = null, from = null, to = null } = req.query;
   const safeLimit=Math.max(1,Math.min(200,Number(limit)||50));
   const events = listWebhookEvents({ limit:safeLimit, type, status, from, to });
+  res.set('Cache-Control','no-store, private');
   res.json({ events });
 });
 
