@@ -11,7 +11,7 @@ const tests=[
  ['authenticated GET',moduleSource.includes("app.get('/api/privacy/requests', requireAuth")],
  ['authenticated POST',moduleSource.includes("app.post('/api/privacy/requests', requireAuth")],
  ['user scoped list',moduleSource.includes('WHERE user_id = ? ORDER BY created_at DESC') && moduleSource.includes('req.appUser.userId')],
- ['server mounts route',server.includes('registerPrivacyRequestRoutes(app, db, requireAuth);')],
+ ['server mounts route',server.includes('registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail);')],
  ['no automated erasure',!moduleSource.includes('DELETE FROM app_users')],
  ['no free text on GET',!moduleSource.includes('details AS') && !moduleSource.includes('SELECT *')],
  ['rate limit',moduleSource.includes('PRIVACY_REQUEST_LIMIT')],
