@@ -21,9 +21,10 @@ for(const k of Object.keys(process.env)){if(!(k in env))delete process.env[k];}
 Object.assign(process.env,env);
 const {db,createAppUser,upsertRentalListing,createRentalBookingAtomic,
   setBookingPaymentDetails,createRentalAgreement}=await import('./db.js');
-const supplier='api-e2e-supplier@example.invalid',renter='api-e2e-renter@example.invalid',
+const administrator='api-e2e-admin@example.invalid',
+  supplier='api-e2e-supplier@example.invalid',renter='api-e2e-renter@example.invalid',
   outsider='api-e2e-outsider@example.invalid',otherSupplier='api-e2e-second-supplier@example.invalid',password='Testing12345!',id='api-e2e-1';
-for(const [email,role] of [[supplier,'supplier'],[otherSupplier,'supplier'],[renter,'customer'],[outsider,'customer']])
+for(const [email,role] of [[administrator,'admin'],[supplier,'supplier'],[otherSupplier,'supplier'],[renter,'customer'],[outsider,'customer']])
   createAppUser({email,password,role,displayName:'E2E Test'});
 upsertRentalListing({listingId:'api-e2e-listing',ownerEmail:supplier,title:'Temporary API test item',totalQuantity:1});
 createRentalBookingAtomic({bookingId:id,listingId:'api-e2e-listing',startDate:'2099-06-01',
@@ -97,7 +98,7 @@ try{
  assert.equal(registered.body.user.email,registration.email);
  console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
-   outsiderCookie=await signIn(outsider);
+   outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
  // Booking lists must be scoped to the account identity (not request parameters).
  // Financial audit is never exposed to renters, suppliers or guests.
  status(await api('/api/stripe/webhook-events',{cookie:renterCookie}),403,
@@ -193,6 +194,42 @@ try{
  assert.equal(publicListing.supplierTraderStatus,'trader');
  assert.equal(publicListing.supplierTraderVerified,false);
  assert.equal(publicListing.supplierPublicIdentity,null,'Unverified submitted trader contact data must stay private');
+
+ status(await api('/api/admin/trader-reviews',{cookie:supplierCookie}),403,
+   'Supplier cannot read admin trader evidence queue');
+ status(await api('/api/admin/trader-reviews',{cookie:renterCookie}),403,
+   'Customer cannot read admin trader evidence queue');
+ const queue=await api('/api/admin/trader-reviews',{cookie:adminCookie});
+ status(queue,200,'Admin can inspect submitted trader data');
+ const reviewRow=queue.body.profiles.find(p=>p.email===supplier);
+ assert.ok(reviewRow,'Supplier submitted profile is in admin review queue');
+ const reviewUrl='/api/admin/trader-reviews/'+encodeURIComponent(reviewRow.userId);
+ const reviewBase={decision:'approved',submittedAt:reviewRow.submittedAt,
+   evidenceReference:'TEST-ONLY-SYNTHETIC-EVIDENCE',reviewNote:'Synthetic external checks for isolated HTTP regression',
+   identityChecked:true,contactChecked:true,registryChecked:true,paymentAccountChecked:true};
+ status(await api(reviewUrl,{method:'POST',cookie:supplierCookie,data:reviewBase}),403,
+   'Supplier cannot self-approve trader identity');
+ status(await api(reviewUrl,{method:'POST',cookie:adminCookie,
+   data:{...reviewBase,identityChecked:false}}),400,
+   'Admin may not approve without all independent evidence attestations');
+ const approvedTrader=await api(reviewUrl,{method:'POST',cookie:adminCookie,data:reviewBase});
+ status(approvedTrader,200,'Admin approval with evidence succeeds');
+ assert.equal(approvedTrader.body.review.verified,true);
+ const afterReviewListing=await api('/api/listings');
+ const reviewedListing=afterReviewListing.body.listings.find(l=>l.id===listingBase.id);
+ assert.equal(reviewedListing.supplierTraderVerified,true);
+ assert.equal(reviewedListing.supplierPublicIdentity?.legalName,'Test Supplier');
+ status(await api(reviewUrl,{method:'POST',cookie:adminCookie,data:reviewBase}),409,
+   'Duplicate approval denied');
+ const rejectedTrader=await api(reviewUrl,{method:'POST',cookie:adminCookie,
+   data:{...reviewBase,decision:'rejected',reviewNote:'Synthetic dispute of verification evidence'}});
+ status(rejectedTrader,200,'Admin rejection revokes verified trader status');
+ assert.equal(rejectedTrader.body.review.verified,false);
+ const afterRejection=await api('/api/listings');
+ assert.equal(afterRejection.body.listings.find(l=>l.id===listingBase.id).supplierPublicIdentity,null,
+   'Revoked trader identity must be removed from public listing');
+ console.log('PASS HTTP admin trader review: role isolation, evidence, approval, replay guard, revocation');
+
  console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const anotherSupplierCookie=await signIn(otherSupplier);
  const attemptedTakeover=await api('/api/supplier/listings',{method:'POST',cookie:anotherSupplierCookie,
