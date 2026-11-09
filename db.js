@@ -1273,8 +1273,8 @@ export function saveMarketplaceTraderProfile(userId,data){
  const registerName=String(data?.registerName||'').trim().slice(0,180);
  const registerNumber=String(data?.registerNumber||'').trim().slice(0,90);
  if(legalName.length<2||contactAddress.length<8||
-    !/^\\+?[0-9 ()-]{7,25}$/.test(contactPhone)||
-    !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contactEmail)||
+    !/^\+?[0-9 ()-]{7,25}$/.test(contactPhone)||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||
     (registerName&&!registerNumber)||(registerNumber&&!registerName)||
     data?.euComplianceCertified!==true)
    throw Object.assign(new Error('Incomplete trader traceability declaration'),{code:'TRADER_PROFILE_INCOMPLETE'});
