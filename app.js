@@ -6944,3 +6944,112 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     addCustomerTrustControls();
   }
 })();
+
+
+
+// V248 — server-backed supplier trader declaration and traceability draft.
+// Status declaration is not Stripe KYC and does not verify business identity.
+(function initTraderTraceabilityV248(){
+ const panel=document.getElementById('rioTraderPanel');
+ const statusForm=document.getElementById('rioTraderDeclaration');
+ const profileForm=document.getElementById('rioTraderBusinessForm');
+ if(!panel||!statusForm||!profileForm)return;
+ const byId=id=>document.getElementById(id);
+ const message=byId('rioTraderMessage'),status=byId('rioTraderStatus');
+ const kind=byId('rioTraderKind'),saveStatus=byId('rioTraderSaveStatus');
+ const saveProfile=byId('rioTraderSaveProfile');
+ let currentKind='undeclared';
+ const showBusiness=()=>{profileForm.hidden=kind.value!=='trader';};
+ function clearProfile(){
+   for(const id of ['rioTraderLegalName','rioTraderPhone','rioTraderEmail','rioTraderRegister',
+     'rioTraderNumber','rioTraderAddress'])byId(id).value='';
+   byId('rioTraderCompliance').checked=false;
+ }
+ async function load(){
+   message.textContent='';
+   try{
+     const auth=await apiJson('/api/auth/me');
+     if(!['supplier','admin'].includes(auth?.user?.role)){
+       status.textContent='Prisijunkite prie tiekėjo paskyros, kad galėtumėte nurodyti statusą.';
+       statusForm.hidden=true;profileForm.hidden=true;return;
+     }
+     const [declared,details]=await Promise.all([
+       apiJson('/api/supplier/trader-status'),
+       apiJson('/api/supplier/trader-profile')
+     ]);
+     statusForm.hidden=false;
+     currentKind=declared.trader?.status||'undeclared';
+     kind.value=currentKind==='undeclared'?'':currentKind;
+     byId('rioTraderConfirm').checked=false;
+     showBusiness();
+     const profile=details.profile;
+     if(profile){
+       byId('rioTraderLegalName').value=profile.legalName||'';
+       byId('rioTraderPhone').value=profile.contactPhone||'';
+       byId('rioTraderEmail').value=profile.contactEmail||'';
+       byId('rioTraderRegister').value=profile.registerName||'';
+       byId('rioTraderNumber').value=profile.registerNumber||'';
+       byId('rioTraderAddress').value=profile.contactAddress||'';
+       byId('rioTraderCompliance').checked=!!profile.euComplianceCertified;
+     }else clearProfile();
+     const label=currentKind==='private'?'Privatus nuomotojas':
+       currentKind==='trader'?'Verslininkas':'Statusas nepasirinktas';
+     const verified=declared.trader?.verified===true&&profile?.verified===true;
+     status.textContent=label+' · '+(verified?'patikrinta':'nepatikrinta')+
+       (profile&&!verified?' · verslo duomenys pateikti':'');
+   }catch(err){
+     statusForm.hidden=true;profileForm.hidden=true;
+     status.textContent=err.status===403?'Prisijunkite prie tiekėjo paskyros.':
+       'Nepavyko įkelti duomenų. Paspauskite „Atnaujinti“.';
+   }
+ }
+ kind.addEventListener('change',()=>{
+   showBusiness();
+   byId('rioTraderConfirm').checked=false;
+   message.textContent=kind.value!==currentKind
+     ?'Prieš pateikdami duomenis pirmiausia išsaugokite statusą.':'';
+ });
+ statusForm.addEventListener('submit',async e=>{
+   e.preventDefault();
+   if(!kind.value||!byId('rioTraderConfirm').checked)return;
+   saveStatus.disabled=true;
+   try{
+     await apiJson('/api/supplier/trader-status',{
+       method:'POST',body:JSON.stringify({status:kind.value,confirmed:true})
+     });
+     await load();
+     message.textContent='Statusas išsaugotas. Tai dar nėra tapatybės patikra.';
+   }catch(err){message.textContent=err.message||'Nepavyko išsaugoti statuso.';}
+   finally{saveStatus.disabled=false;}
+ });
+ profileForm.addEventListener('submit',async e=>{
+   e.preventDefault();
+   if(currentKind!=='trader'){
+     message.textContent='Pirmiausia išsaugokite verslininko statusą.';return;
+   }
+   saveProfile.disabled=true;
+   try{
+     const payload={
+       legalName:byId('rioTraderLegalName').value.trim(),
+       contactPhone:byId('rioTraderPhone').value.trim(),
+       contactEmail:byId('rioTraderEmail').value.trim(),
+       registerName:byId('rioTraderRegister').value.trim(),
+       registerNumber:byId('rioTraderNumber').value.trim(),
+       contactAddress:byId('rioTraderAddress').value.trim(),
+       euComplianceCertified:byId('rioTraderCompliance').checked
+     };
+     const result=await apiJson('/api/supplier/trader-profile',{
+       method:'POST',body:JSON.stringify(payload)
+     });
+     status.textContent='Verslininkas · '+(result.profile?.verified
+       ?'patikrinta':'verslo duomenys pateikti, nepatikrinta');
+     message.textContent='Duomenys išsaugoti. Tapatybės patikra dar neatlikta.';
+   }catch(err){message.textContent=err.message||'Nepavyko išsaugoti duomenų.';}
+   finally{saveProfile.disabled=false;}
+ });
+ byId('rioTraderReload')?.addEventListener('click',load);
+ document.getElementById('supplierAccountBtn')?.addEventListener('click',()=>{load().catch(()=>{});});
+ window.addEventListener('rentinorbit:auth-changed',()=>{load().catch(()=>{});});
+ // Load once after app authentication is initialized, never persist drafts locally.
+ load().catch(()=>{});
+})();
