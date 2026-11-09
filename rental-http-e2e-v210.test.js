@@ -329,6 +329,11 @@ try{
    data:{bookingId:id,reason:'Unrelated account dispute'}}),403,
    'Outsider cannot open a dispute');
  console.log('PASS HTTP disputed return: participant identity, one open dispute, no post-handover refund');
+ // A foreign renter cannot attach a conversation to someone else's booking.
+ const forgedConversation=await api('/api/conversations',{method:'POST',cookie:outsiderCookie,
+   data:{listingId:'api-e2e-listing',bookingId:id}});
+ status(forgedConversation,403,'Unrelated account cannot create a booking-bound conversation');
+ assert.equal(forgedConversation.body.code,'BOOKING_ACCESS_DENIED');
  // Supplier can discover an existing booking in Messages before a conversation exists.
  const supplierChats=await api('/api/conversations',{cookie:supplierCookie});
  status(supplierChats,200,'Supplier booking chat candidates');
