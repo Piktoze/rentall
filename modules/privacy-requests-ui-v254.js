@@ -57,6 +57,25 @@
       heading.textContent=(r.accountEmail||r.userId)+' · '+(names[r.type]||r.type)+' · '+(statuses[r.status]||r.status)+' · iki '+String(r.dueAt||'').slice(0,10)+(r.overdue?' · TERMINAS PRAĖJĘS':'');
       box.appendChild(heading);
       if(r.details){const details=document.createElement('p');details.textContent=r.details;box.appendChild(details)}
+      const history=document.createElement('button');history.type='button';history.textContent='Peržiūrėti sprendimų istoriją';
+      const historyList=document.createElement('ul');historyList.hidden=true;
+      history.addEventListener('click',async()=>{
+        if(!historyList.hidden){historyList.hidden=true;history.textContent='Peržiūrėti sprendimų istoriją';return}
+        history.disabled=true;
+        try{
+          const data=await api('/api/admin/privacy/requests/'+encodeURIComponent(r.requestId)+'/audit');
+          historyList.replaceChildren();
+          if(!data.events.length)item(historyList,'Būsenos dar nekeistos.');
+          for(const event of data.events){
+            item(historyList,String(event.createdAt||'')+' · '+(statuses[event.previousStatus]||event.previousStatus||'—')+
+              ' → '+(statuses[event.nextStatus]||event.nextStatus||'—')+
+              ' · administratorius: '+String(event.actorUserId||'')+
+              (event.resolutionNote?' · įrašas: '+event.resolutionNote:''));
+          }
+          historyList.hidden=false;history.textContent='Slėpti sprendimų istoriją';
+        }catch(e){setMessage(e.message)}finally{history.disabled=false}
+      });
+      box.append(history,historyList);
       if(!['completed','rejected'].includes(r.status)){
         const select=document.createElement('select');
         ['in_review','awaiting_verification','completed','rejected'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=statuses[v];select.appendChild(o)});
@@ -85,7 +104,11 @@
     };
     await loadPage();
   }
-  btn.addEventListener('click',async()=>{dialog.showModal();setMessage('');try{await refresh()}catch(e){setMessage(e.message)}});
+  async function openPrivacyDialog(){dialog.showModal();setMessage('');try{await refresh()}catch(e){setMessage(e.message)}}
+  btn.addEventListener('click',openPrivacyDialog);
+  if(new URLSearchParams(location.search).get('privacy-requests')==='1'){
+    window.addEventListener('load',()=>openPrivacyDialog(),{once:true});
+  }
   $('rioPrivacyClose').addEventListener('click',()=>dialog.close());
   $('rioPrivacyForm').addEventListener('submit',async e=>{
     e.preventDefault();const submit=$('rioPrivacySubmit');submit.disabled=true;
