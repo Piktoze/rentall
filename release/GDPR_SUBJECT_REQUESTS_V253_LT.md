@@ -62,3 +62,10 @@
 - El. laiške numatyta `/?privacy-requests=1` nuoroda dabar atveria prašymų langą. Tai nėra automatinis tapatybės patvirtinimas; prisijungimas išlieka būtinas.
 - Testuotas prieigos ribojimas ir audito istorijos turinys izoliuotoje atminties DB.
 - **Apribojimai:** audito istorija neįrodo, kad duomenų kopija iš tikrųjų pateikta, prašymas įvykdytas ar klientas gavo atsakymą. Vis dar būtina dokumentuota išorinė procedūra ir tikras naršyklės/pašto pristatymo testas.
+
+## V259 – užbaigimo procesiniai saugikliai
+- Būsena `completed` leidžiama tik administratoriui, kuris papildomai patvirtino: `reviewConfirmed=true`, `responseSent=true`, `identityReviewed=true`, `actionPerformed=true`, ir įrašė 20–2000 ženklų sprendimo pastabą.
+- Būsenai `rejected` būtinas sprendimo pagrindas, peržiūros ir atsakymo išsiuntimo patvirtinimai. Tapatybės ir vykdymo žymos tokiu atveju nėra privalomos.
+- Administratoriaus sąsajoje šie patvirtinimai yra atskiri pažymimi laukai. Negali būti automatiškai pažymėti.
+- API atmeta bandymą užbaigti, jei nėra bent vieno būtino patvirtinimo; izoliuotas HTTP testas apima visus šiuos 400 atsakymų ir tik leistiną galutinį perėjimą.
+- **Riba:** žymos yra administratoriaus deklaracijos; jos neįrodo realaus asmens tapatybės patvirtinimo, prašymo įvykdymo ar atsakymo gavimo. Reikia realios procedūros ir dokumentinio audito pagal taikytiną teisę. Asmens dokumentų nekaupiame šiame modulyje.
