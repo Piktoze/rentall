@@ -71,8 +71,18 @@ try{
   r=await request('/api/admin/privacy/requests/'+id+'/audit','admin');assert.equal(r.status,200);
   assert.equal(r.body.requestId,id);assert.equal(r.body.events.length,2);
   assert.ok(r.body.events[1].resolutionNote.includes('REF-1234'));
+  assert.equal(r.body.events[0].reviewConfirmed,0);
+  assert.equal(r.body.events[1].reviewConfirmed,1);
+  assert.equal(r.body.events[1].responseSent,1);
+  assert.equal(r.body.events[1].identityReviewed,1);
+  assert.equal(r.body.events[1].actionPerformed,1);
     const audit=db.prepare('SELECT * FROM privacy_subject_request_audit ORDER BY created_at').all();
   assert.equal(audit.length,2);assert.ok(audit[1].resolution_note.includes('REF-1234'));
+  assert.equal(audit[0].response_sent,0);
+  assert.equal(audit[1].review_confirmed,1);
+  assert.equal(audit[1].response_sent,1);
+  assert.equal(audit[1].identity_reviewed,1);
+  assert.equal(audit[1].action_performed,1);
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'in_review'},'POST');
   assert.equal(r.status,409);
   r=await request('/api/admin/privacy/health','admin');assert.equal(r.body.open,0);
