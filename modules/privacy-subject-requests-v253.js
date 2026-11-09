@@ -80,18 +80,28 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
     MIN(CASE WHEN status NOT IN ('completed','rejected')
        THEN datetime(created_at, '+1 month') ELSE NULL END) AS earliestDueAt
     FROM privacy_subject_requests`);
+  const notificationQueue=db.prepare(`SELECT
+    SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+    SUM(CASE WHEN status='sending' THEN 1 ELSE 0 END) AS sending,
+    SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,
+    SUM(CASE WHEN status='sent' THEN 1 ELSE 0 END) AS sent
+    FROM email_outbox WHERE template_key='privacy_request_notify'`);
   app.get('/api/admin/privacy/health',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     const row=summary.get();
     const notificationAddressConfigured=Boolean(String(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL||'').trim());
     const emailWorkerEnabled=process.env.EMAIL_WORKER_ENABLED==='true';
-    const emailProviderConfigured=Boolean(String(process.env.EMAIL_PROVIDER||'').trim()) &&
-      process.env.EMAIL_PROVIDER!=='console';
+    const emailProviderConfigured=String(process.env.EMAIL_PROVIDER||'').trim().toLowerCase()==='resend' &&
+      Boolean(String(process.env.RESEND_API_KEY||'').trim()) &&
+      Boolean(String(process.env.EMAIL_FROM||'').trim());
+    const delivery=notificationQueue.get();
     res.json({
       total:Number(row.total||0),unreviewed:Number(row.unreviewed||0),
       open:Number(row.open||0),overdue:Number(row.overdue||0),
       earliestDueAt:row.earliestDueAt||null,
       notificationAddressConfigured,emailWorkerEnabled,emailProviderConfigured,
+      notificationQueue:{pending:Number(delivery.pending||0),sending:Number(delivery.sending||0),
+        failed:Number(delivery.failed||0),sent:Number(delivery.sent||0)},
       automaticDeliveryReady:notificationAddressConfigured&&emailWorkerEnabled&&emailProviderConfigured,
       warning:'Būsenos kontrolė nepakeičia juridinio prašymo įvertinimo, termino patikros ar atsakymo pateikimo.'
     });
