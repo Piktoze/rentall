@@ -80,15 +80,20 @@
         const select=document.createElement('select');
         ['in_review','awaiting_verification','completed','rejected'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=statuses[v];select.appendChild(o)});
         const note=document.createElement('textarea');note.rows=2;note.maxLength=2000;note.placeholder='Užbaigiant / atmetant: sprendimo pagrindas, patikros ir atsakymo registravimo nuoroda (be perteklinių asmens duomenų).';note.setAttribute('aria-label','Sprendimo pagrindas');note.style.cssText='display:block;width:100%;margin:8px 0';
+        const checks=document.createElement('div');
+        const makeCheck=(name,title)=>{const label=document.createElement('label');label.style.cssText='display:block;margin:6px 0';const input=document.createElement('input');input.type='checkbox';input.name=name;label.append(input,document.createTextNode(' '+title));checks.appendChild(label);return input};
+        const responseSent=makeCheck('responseSent','Atsakymas / sprendimas iš tikrųjų išsiųstas pareiškėjui');
+        const identityReviewed=makeCheck('identityReviewed','Patikrinta pareiškėjo tapatybė ir teisė į duomenis');
+        const actionPerformed=makeCheck('actionPerformed','Prašymas faktiškai įvykdytas arba priimtas dokumentuotas teisėtas sprendimas');
         const save=document.createElement('button');save.type='button';save.textContent='Keisti būseną';
         save.addEventListener('click',async()=>{
           const terminal=['completed','rejected'].includes(select.value);
           if(terminal&&!window.confirm('Ar tikrai atlikta atskira teisėtumo, tapatybės ir atsakymo patikra? Vien būsena duomenų nepašalina.'))return;
           save.disabled=true;
-          try{await api('/api/admin/privacy/requests/'+encodeURIComponent(r.requestId)+'/status',{method:'POST',body:JSON.stringify({status:select.value,reviewConfirmed:terminal,resolutionNote:note.value})});setMessage('Būsena atnaujinta.');await refresh()}
+          try{await api('/api/admin/privacy/requests/'+encodeURIComponent(r.requestId)+'/status',{method:'POST',body:JSON.stringify({status:select.value,reviewConfirmed:terminal,resolutionNote:note.value,responseSent:responseSent.checked,identityReviewed:identityReviewed.checked,actionPerformed:actionPerformed.checked})});setMessage('Būsena atnaujinta.');await refresh()}
           catch(e){setMessage(e.message)}finally{save.disabled=false}
         });
-        box.append(select,note,save);
+        box.append(select,note,checks,save);
       }
       $('rioPrivacyAdminList').appendChild(box);
       });
