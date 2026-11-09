@@ -22,8 +22,8 @@ Object.assign(process.env,env);
 const {db,createAppUser,upsertRentalListing,createRentalBookingAtomic,
   setBookingPaymentDetails,createRentalAgreement}=await import('./db.js');
 const supplier='api-e2e-supplier@example.invalid',renter='api-e2e-renter@example.invalid',
-  outsider='api-e2e-outsider@example.invalid',password='Testing12345!',id='api-e2e-1';
-for(const [email,role] of [[supplier,'supplier'],[renter,'customer'],[outsider,'customer']])
+  outsider='api-e2e-outsider@example.invalid',otherSupplier='api-e2e-second-supplier@example.invalid',password='Testing12345!',id='api-e2e-1';
+for(const [email,role] of [[supplier,'supplier'],[otherSupplier,'supplier'],[renter,'customer'],[outsider,'customer']])
   createAppUser({email,password,role,displayName:'E2E Test'});
 upsertRentalListing({listingId:'api-e2e-listing',ownerEmail:supplier,title:'Temporary API test item',totalQuantity:1});
 createRentalBookingAtomic({bookingId:id,listingId:'api-e2e-listing',startDate:'2099-06-01',
@@ -133,6 +133,27 @@ try{
  const published=await publish(photos);
  status(published,200,'Two uploaded photos permit listing publication');
  assert.equal(published.body.listing.photos.length,2);
+ const anotherSupplierCookie=await signIn(otherSupplier);
+ const attemptedTakeover=await api('/api/supplier/listings',{method:'POST',cookie:anotherSupplierCookie,
+   data:{listing:{...listingBase,title:'Unauthorized takeover',photos,coverPhoto:photos[0]}}});
+ status(attemptedTakeover,400,'Other supplier must not overwrite listing ID');
+ const ownerStillOwns=await api('/api/supplier/listings',{cookie:supplierCookie});
+ status(ownerStillOwns,200,'Original supplier listing list');
+ assert.ok(ownerStillOwns.body.listings.some(l=>l.id===listingBase.id&&l.title===listingBase.title),
+   'Rejected takeover must preserve original owner and title');
+ const otherListings=await api('/api/supplier/listings',{cookie:anotherSupplierCookie});
+ status(otherListings,200,'Another supplier listing list');
+ assert.ok(!otherListings.body.listings.some(l=>l.id===listingBase.id),'Other supplier must not own another listing');
+ status(await api('/api/supplier/listings/'+listingBase.id,{method:'DELETE',cookie:anotherSupplierCookie}),
+   404,'Other supplier cannot delete listing');
+ status(await api('/api/supplier/listings/'+listingBase.id+'/archive',{method:'POST',cookie:anotherSupplierCookie}),
+   404,'Other supplier cannot archive listing');
+ const updated=await api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
+   data:{listing:{...listingBase,title:'Owner updated title',photos,coverPhoto:photos[0]}}});
+ status(updated,200,'Owner can edit listing with valid photos');
+ assert.equal(updated.body.listing.title,'Owner updated title');
+ console.log('PASS HTTP listing create/edit, photo count, account ownership, archive/delete access');
+
 
  // Demo is strictly local: verify authorization and terminal state do not regress.
  // Pending request must never create a TEST or demo payment intent until
