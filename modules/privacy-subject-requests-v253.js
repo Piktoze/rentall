@@ -17,7 +17,7 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth) {
       ON privacy_subject_requests(user_id, created_at DESC);
   `);
   const list = db.prepare(`SELECT request_id AS requestId, request_type AS type, status, created_at AS createdAt,
-    updated_at AS updatedAt FROM privacy_subject_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`);
+    updated_at AS updatedAt, datetime(created_at, '+1 month') AS dueAt FROM privacy_subject_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`);
   const countRecent = db.prepare(`SELECT COUNT(*) AS count FROM privacy_subject_requests
     WHERE user_id = ? AND created_at > datetime('now', '-1 day')`);
   const insert = db.prepare(`INSERT INTO privacy_subject_requests
@@ -38,13 +38,16 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth) {
   `);
   const allRequests=db.prepare(`SELECT r.request_id AS requestId, r.user_id AS userId,
     u.email AS accountEmail, r.request_type AS type, r.details, r.status,
-    r.created_at AS createdAt, r.updated_at AS updatedAt
+    r.created_at AS createdAt, r.updated_at AS updatedAt,
+    datetime(r.created_at, '+1 month') AS dueAt,
+    CASE WHEN r.status NOT IN ('completed','rejected') AND datetime(r.created_at, '+1 month') < datetime('now') THEN 1 ELSE 0 END AS overdue
     FROM privacy_subject_requests r LEFT JOIN app_users u ON u.user_id=r.user_id
     ORDER BY r.created_at DESC LIMIT 100`);
   const findRequest=db.prepare('SELECT request_id AS requestId, status FROM privacy_subject_requests WHERE request_id=?');
+  try{db.exec('ALTER TABLE privacy_subject_request_audit ADD COLUMN resolution_note TEXT')}catch(e){if(!String(e.message).includes('duplicate column name'))throw e}
   const updateStatus=db.prepare(`UPDATE privacy_subject_requests SET status=?, updated_at=CURRENT_TIMESTAMP WHERE request_id=? AND status=?`);
   const insertAudit=db.prepare(`INSERT INTO privacy_subject_request_audit
-    (audit_id,request_id,actor_user_id,action,previous_status,next_status) VALUES (?,?,?,?,?,?)`);
+    (audit_id,request_id,actor_user_id,action,previous_status,next_status,resolution_note) VALUES (?,?,?,?,?,?,?)`);
   const adminOnly=(req,res,next)=>req.appUser?.role==='admin'?next():res.status(403).json({code:'FORBIDDEN',error:'Prieiga draudžiama'});
   app.get('/api/admin/privacy/requests',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
@@ -60,13 +63,18 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth) {
     if(!existing)return res.status(404).json({code:'NOT_FOUND'});
     if(['completed','rejected'].includes(existing.status))return res.status(409).json({code:'ALREADY_CLOSED'});
     // A workflow state change does not perform erasure, export, or disclosure.
-    if(['completed','rejected'].includes(status) && req.body?.reviewConfirmed!==true)
+    const terminal=['completed','rejected'].includes(status);
+    if(terminal && req.body?.reviewConfirmed!==true)
       return res.status(400).json({code:'REVIEW_CONFIRMATION_REQUIRED'});
+    const resolutionNote=String(req.body?.resolutionNote||'').trim();
+    if(terminal && (resolutionNote.length<20 || resolutionNote.length>2000))
+      return res.status(400).json({code:'RESOLUTION_NOTE_REQUIRED',error:'Nurodykite peržiūros sprendimo ir atsakymo registravimo duomenis (20–2000 ženklų).'});
+    if(!terminal && resolutionNote.length>2000)return res.status(400).json({code:'INVALID_NOTE'});
     const result=db.transaction(()=>{
       const updated=updateStatus.run(status,id,existing.status);
       if(updated.changes!==1)return false;
       insertAudit.run('dsra_'+crypto.randomUUID(),id,String(req.appUser.userId),
-        'status_changed',existing.status,status);
+        'status_changed',existing.status,status,resolutionNote);
       return true;
     })();
     if(!result)return res.status(409).json({code:'CONFLICT'});
