@@ -553,7 +553,7 @@ export function getAvailability({ listingId, startDate, endDate, requestedQuanti
   expireStalePendingBookings();
   const listing = getRentalListing(listingId);
   if (!listing) return null;
-  if (listing.moderationStatus !== 'active') {
+  if (listing.moderationStatus !== 'active' || listing.lifecycleStatus !== 'active') {
     return {listingId:String(listingId),totalQuantity:Number(listing.totalQuantity||0),bookedQuantity:0,remainingQuantity:0,requestedQuantity:Number(requestedQuantity||1),available:false,unavailableReason:'listing_not_active'};
   }
 
