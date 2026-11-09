@@ -1411,6 +1411,18 @@ app.get('/api/listings', simpleRateLimit({windowMs:60000,max:180,keyPrefix:'publ
 
 // Trader/private classification is a marketplace declaration, not Stripe identity.
 // Never represent self-disclosure as a verified trader due-diligence outcome.
+// Current, server-authoritative disclosure for pre-contract renter information.
+// Never trust cached ownerType or a caller-provided 'verified' attribute.
+app.get('/api/listings/:listingId/trader-disclosure',
+ simpleRateLimit({windowMs:60000,max:120,keyPrefix:'public-trader-status'}),(req,res)=>{
+ const listing=listPublicRentalListings().find(item=>String(item.id)===String(req.params.listingId));
+ if(!listing)return res.status(404).json({error:'Skelbimas nerastas.'});
+ const trader=getSupplierTraderDisclosure(listing.ownerEmail);
+ res.set('Cache-Control','no-store');
+ res.json({listingId:String(listing.id),status:trader.status,verified:trader.verified,
+  publicIdentity:getVerifiedMarketplaceTraderPublicProfile(listing.ownerEmail)});
+});
+
 app.get('/api/supplier/trader-status',requireRole('supplier','admin'),(req,res)=>{
   res.set('Cache-Control','no-store, private');
   res.json({trader:getSupplierTraderDisclosure(req.appUser.email)});
