@@ -44,6 +44,14 @@ const payFixture=createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-l
   customerEmail:renter,customerName:'API Renter',orderValue:100});
 setBookingPaymentDetails({bookingId:payId,paymentIntentId:'demo_pi_prepared_e2e',
   paymentStatus:'requires_payment_method',paymentProvider:'demo',platformFeeAmount:15,supplierAmount:85});
+// Dedicated synthetic returned booking for forced notification-storage failure.
+// No payment provider or real customer is involved.
+const failureBookingId='api-e2e-notification-failure';
+createRentalBookingAtomic({bookingId:failureBookingId,listingId:'api-e2e-listing',
+  startDate:'2099-09-01',endDate:'2099-09-02',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Test Renter',orderValue:100});
+db.prepare("UPDATE rental_bookings SET status='returned' WHERE booking_id=?").run(failureBookingId);
+
 
 upsertRentalListing({listingId:'api-e2e-instant',ownerEmail:supplier,title:'Instant mode fixture',totalQuantity:1});
 db.prepare("UPDATE rental_listings SET booking_mode='instant' WHERE listing_id=?").run('api-e2e-instant');
@@ -526,6 +534,31 @@ try{
    method:'POST',cookie:outsiderCookie,data:{body:'Nepriklausantis asmuo'}}),403,
    'Outsider cannot send conversation messages');
  console.log('PASS HTTP two-way booking messages and outsider read/write isolation');
+ // Real HTTP fault injection: make in-app notifications impossible only in this
+ // temporary, isolated SQLite database, then verify dispute is still durable.
+ // Do this after all ordinary flows because the temporary notification table is dropped.
+ const {default:SQLite}=await import('better-sqlite3');
+ const faultDb=new SQLite(dbPath);
+ try{
+   faultDb.exec('DROP TABLE rental_notifications');
+ }finally{faultDb.close()}
+ const failedNoticeDispute=await api('/api/rentals/disputes',{method:'POST',
+   cookie:renterCookie,data:{bookingId:failureBookingId,
+     reason:'Synthetic return disagreement under notification outage'}});
+ status(failedNoticeDispute,200,'Dispute registered despite both notification insert failures');
+ assert.ok(failedNoticeDispute.body.dispute?.disputeId,'Persisted dispute ID returned');
+ const persistedDb=new SQLite(dbPath,{readonly:true});
+ try{
+   const stored=persistedDb.prepare('SELECT dispute_id,booking_id FROM rental_disputes WHERE booking_id=?').get(failureBookingId);
+   assert.equal(stored?.dispute_id,failedNoticeDispute.body.dispute.disputeId);
+ }finally{persistedDb.close()}
+ const retryFailedNotice=await api('/api/rentals/disputes',{method:'POST',
+   cookie:renterCookie,data:{bookingId:failureBookingId,reason:'Retry after successful response'}});
+ status(retryFailedNotice,409,'Repeated request cannot create a second open dispute');
+ assert.equal(retryFailedNotice.body.code,'DISPUTE_ALREADY_OPEN');
+ assert.ok(logs.includes('rental_dispute_notification_failed'),
+   'Missing notification infrastructure must be reported in server diagnostics');
+ console.log('PASS HTTP injected notification failure: dispute persists, API returns 200, replay returns 409');
  outcome=true;
  console.log('PASS real HTTP two-account pickup PIN and supplier-only return without PIN: consent, role enforcement and replay protection');
 }finally{
