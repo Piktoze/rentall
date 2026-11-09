@@ -3504,7 +3504,7 @@ async function openListingDetail(listingId){
   const quantity=Math.max(1,Number(ctx.qty||1)),dateReady=Boolean(ctx.from&&ctx.to);
   const dateLabel=dateReady?`${escapeHtml(ctx.from)} → ${escapeHtml(ctx.to)}`:'Choose rental dates';
   const supplierName=listing.ownerName||listing.company||'RentInOrbit supplier';
-  const supplierVerified=Boolean(supplierTrust?.verifiedSupplier);
+  const supplierVerified=authoritativeTrader?.verified===true;
   const responseLabel=listing.bookingMode==='instant'?uiText('Instant Book'):`${uiText('Usually responds within')} ${Number(listing.supplierResponseHours||4)} ${uiText('active hours')}`;
   document.getElementById('listingDetailContent').dataset.sourceLang=String(listing.sourceLanguage||'');
   document.getElementById('listingDetailContent').innerHTML=`
