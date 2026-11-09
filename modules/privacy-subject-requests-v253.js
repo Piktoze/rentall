@@ -42,7 +42,10 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
     datetime(r.created_at, '+1 month') AS dueAt,
     CASE WHEN r.status NOT IN ('completed','rejected') AND datetime(r.created_at, '+1 month') < datetime('now') THEN 1 ELSE 0 END AS overdue
     FROM privacy_subject_requests r LEFT JOIN app_users u ON u.user_id=r.user_id
-    ORDER BY r.created_at DESC LIMIT 100`);
+    ORDER BY
+      CASE WHEN r.status IN ('completed','rejected') THEN 1 ELSE 0 END ASC,
+      CASE WHEN r.status NOT IN ('completed','rejected') THEN datetime(r.created_at, '+1 month') END ASC,
+      r.created_at DESC, r.request_id DESC LIMIT ? OFFSET ?`);
   const findRequest=db.prepare('SELECT request_id AS requestId, status FROM privacy_subject_requests WHERE request_id=?');
   try{db.exec('ALTER TABLE privacy_subject_request_audit ADD COLUMN resolution_note TEXT')}catch(e){if(!String(e.message).includes('duplicate column name'))throw e}
   const updateStatus=db.prepare(`UPDATE privacy_subject_requests SET status=?, updated_at=CURRENT_TIMESTAMP WHERE request_id=? AND status=?`);
@@ -77,7 +80,13 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
   });
   app.get('/api/admin/privacy/requests',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
-    res.json({requests:allRequests.all()});
+    const rawOffset=String(req.query?.offset??'0');
+    if(!/^(0|[1-9][0-9]{0,5})$/.test(rawOffset))
+      return res.status(400).json({code:'INVALID_OFFSET'});
+    const offset=Number(rawOffset);
+    const pageSize=50;
+    const rows=allRequests.all(pageSize+1,offset);
+    res.json({requests:rows.slice(0,pageSize),hasMore:rows.length>pageSize,nextOffset:offset+pageSize});
   });
   app.post('/api/admin/privacy/requests/:requestId/status',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
