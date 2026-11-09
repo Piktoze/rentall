@@ -24,14 +24,14 @@
 
 ## 2. Prieš naršyklinius veiksmus – Work preflight
 1. Patikrink, kad atidarytas **staging**, o ne production; užfiksuok URL ir dabartinį commit/deploy.
-2. Patikrink `GET /healthz`, `GET /api/readiness`, `GET /api/ops/status`, `GET /api/integrations/capabilities` ir atsakymo kodus; nepublikuok sesijos tokenų, Stripe paslapčių ar klientų PII. `/api/launch-readiness` gali grąžinti 503, kai galutiniai teisiniai rekvizitai nepateikti – dokumentuok tikslią priežastį, ne apeik.
+2. Iš Work komandų aplinkos, jei yra prieiga ir priklausomybės, paleisk tik skaitymo veiksmą `node release/smoke-production.mjs https://rentall-staging.up.railway.app` (tai tik HTTP smoke, jokio diegimo ir mokėjimo). Atskirai patikrink `GET /healthz`, `GET /api/readiness`, `GET /api/ops/status`, `GET /api/integrations/capabilities` ir atsakymo kodus; nepublikuok sesijos tokenų, Stripe paslapčių ar klientų PII. `/api/launch-readiness` gali grąžinti 503, kai galutiniai teisiniai rekvizitai nepateikti – dokumentuok tikslią priežastį, ne apeik.
 3. Staging tiekėjo paskyroje patikrink Connect statusą. Prieš bet kokį mokėjimą B1 diagnostikoje patvirtink, kad tiekėjas yra rezervacijos skelbimo savininkas ir jo susietos Stripe paskyros paskutiniai keturi ID simboliai sutampa su **saugiai** patikrintu Stripe TEST kontekstu.
 4. Pasirink vieną testinį €100 skelbimą (`V203 Launch Audit 100 EUR Item`, jei vis dar egzistuoja ir priklauso teisingam tiekėjui). Rinkis **atsiėmimą 0 €**, jokių +40 € pristatymo, papildomų užstatų ar kitų prekių; jei tai negalima, užfiksuok kainą ir sustok prieš mokėjimą.
 5. Rask dvi **atskiras** paskyras: tiekėjo (skelbimo savininko) ir nuomininko. Jų sesijas atskirk skirtingais profilių / inkognito kontekstais. Nuomininko paskyroje neturi būti tiekėjo valdymo.
 
 ## 3. B1 – realus Stripe TEST €100 ir refundas (REZERVACIJA A)
 **A paskirtis – finansinis ciklas: iki perdavimo apmokėti ir atšaukti, kad būtų galima patikrinti refundą.**
-1. Nuomininkas sukuria naują aiškiai pažymėtą A rezervaciją (100 €; būsena `pending` / `unpaid`).
+1. Nuomininkas sukuria naują aiškiai pažymėtą A rezervaciją (100 €; būsena `pending` / `unpaid`). Parink nuomos pradžią **ne anksčiau kaip po 72 valandų**, kad atšaukimas prieš perdavimą pagal įprastą Moderate grafiką galėtų būti 100 % – vis tiek patikrink konkretaus skelbimo galiojančią politiką ir pradžios laiką.
 2. Dar prieš tiekėjo patvirtinimą bandyti pradėti mokėjimą **tik per numatytą UI**: jis turi būti neleidžiamas, o Stripe PaymentIntent neturi būti sukurtas. Jei UI siūlo neleistiną kelią – **STOP**.
 3. Tiekėjas patvirtina **tą pačią A rezervaciją**. Tikėtina `confirmed` / `unpaid`.
 4. Nuomininkas pradeda mokėjimą UI; patikrink, kad rodoma tiksliai **100,00 €**, o laukiamas platformos mokestis **15,00 €** TIK JEIGU realus tiekėjo planas / kainodaros snapshot patvirtina 15 % (kitu atveju dokumentuok neatitikimą ir nestumk toliau aklai).
@@ -66,7 +66,7 @@
 - Vartotoja patvirtino, kad jau turi individualią veiklą, ir aiškiai nurodė EVRK / rekvizitus užpildyti **prieš pat viešą paleidimą**. Šį vieną žingsnį atidėk; visa kita gali būti suprojektuota iš anksto.
 - Jei viešuose puslapiuose tebėra „nėra galutinė teisinė redakcija“, B4 lieka NO-GO mokamam viešam paleidimui. Neimituok teisinių dokumentų patvirtinimo.
 
-## 7. B5 – privaloma baigiamoji ataskaita
+B4 išsamus kontrolinis sąrašas: `docs/B4-LEGAL-READINESS-CHECKLIST.md` (parengiamasis dokumentas, ne vieša politika).\n\n## 7. B5 – privaloma baigiamoji ataskaita
 Prie kiekvienos patikros nurodyk `PASS / FAIL / BLOCKED / NOT RUN` ir įrodymą (URL arba šaltinio įrašo ID, užsakymo ID, Stripe TEST PaymentIntent/Refund ID, commit, deployment, laiką). Slaptų tokenų ir pilnų asmens duomenų ataskaitoje netalpink.
 
 | Blokas | Minimalus PASS įrodymas | 2026-11-09 žinoma būsena |
