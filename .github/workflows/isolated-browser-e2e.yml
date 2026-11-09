@@ -64,6 +64,8 @@ jobs:
           npm run db:init
       - name: Test isolated privacy HTTP authorization and audit
         run: node privacy-requests-http-v255.test.mjs
+      - name: Verify signed Stripe webhook locally (synthetic events only)
+        run: node webhook-signed-http-v231.test.js
       - name: Run real Chromium browser E2E, no live services
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
       - name: Upload diagnostics on failures
