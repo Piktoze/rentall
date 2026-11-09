@@ -755,7 +755,9 @@ app.post('/api/stripe/webhook',
           if(bookingId){
             const booking=getRentalBookingById(bookingId);
             const binding=booking?validateRentalPaymentIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
-            if(booking && binding.ok && booking.paymentStatus!=='paid' && !booking.stripeRefundId){
+            if(booking && binding.ok &&
+               !['paid','succeeded','refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase()) &&
+               !booking.stripeRefundId){
               setBookingPaymentDetails({
                 bookingId,
                 paymentIntentId:pi.id,
