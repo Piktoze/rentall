@@ -1679,26 +1679,31 @@ export function setRentalBookingStatusAfterRefund(bookingId,status){
 }
 
 
+// A retry claim must be atomic. Reading status then unconditionally updating
+// allows simultaneous Stripe deliveries to BOTH take ownership of one event.
+const claimWebhookRetryStmt=db.prepare(`
+  UPDATE webhook_events
+  SET status='processing',
+      processing_started_at=@now,
+      processed_at=NULL,
+      error_message=NULL
+  WHERE event_id=@event_id
+    AND (
+      status='failed'
+      OR (status='processing' AND processing_started_at IS NOT NULL
+          AND processing_started_at < @stale_before)
+    )
+`);
+
 export function claimWebhookRetry(eventId,{staleMinutes=5}={}){
-  const event=getWebhookEvent(eventId);
-  if(!event) return {claimed:false,event:null};
-
-  const staleBefore=Date.now()-Math.max(1,Number(staleMinutes||5))*60000;
-  const processingStarted=event.processingStartedAt
-    ? new Date(event.processingStartedAt).getTime()
-    : 0;
-
-  const retryable=
-    event.status==='failed'
-    || (event.status==='processing' && processingStarted && processingStarted<staleBefore);
-
-  if(!retryable) return {claimed:false,event};
-
-  markProcessingStmt.run({
+  const now=new Date();
+  const staleBefore=new Date(now.getTime()-Math.max(1,Number(staleMinutes||5))*60000);
+  const result=claimWebhookRetryStmt.run({
     event_id:eventId,
-    processing_started_at:new Date().toISOString()
+    now:now.toISOString(),
+    stale_before:staleBefore.toISOString()
   });
-  return {claimed:true,event:getWebhookEvent(eventId)};
+  return {claimed:result.changes===1,event:getWebhookEvent(eventId)};
 }
 
 
