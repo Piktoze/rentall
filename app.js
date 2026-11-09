@@ -1373,7 +1373,7 @@ function renderUniversalListings(items=loadUniversalListings()){
   if(!grid) return;
   grid.innerHTML=items.map(l=>`
     <div class="listing-card">
-      <small>${l.ownerType==='business'?'Business':'Individual'} · ${l.city}</small>
+      <small>${escapeHtml(rioTraderDisclosureText(l).title)} · ${escapeHtml(l.city||'')}</small>
       <h4>${l.title}</h4>
       <p>${l.description||'Local rental listing'}</p>
       <div class="listing-meta">
@@ -1631,7 +1631,7 @@ renderUniversalListings = function(items=loadUniversalListings()){
     const zones = normalizeDeliveryZones(l.deliveryZones);
     return `
       <div class="listing-card">
-        <small>${l.ownerType==='business'?'Business':'Individual'} · ${l.city}</small>
+        <small>${escapeHtml(rioTraderDisclosureText(l).title)} · ${escapeHtml(l.city||'')}</small>
         <h4>${l.title}</h4>
         <p>${l.description||'Local rental listing'}</p>
 
@@ -2174,7 +2174,7 @@ renderUniversalListings = function(items=loadUniversalListings()){
 
     return `
       <div class="listing-card">
-        <small>${l.ownerType==='business'?'Business':'Individual'} · ${l.city}</small>
+        <small>${escapeHtml(rioTraderDisclosureText(l).title)} · ${escapeHtml(l.city||'')}</small>
         <h4>${l.title}</h4>
         <p>${l.description||'Local rental listing'}</p>
 
@@ -2828,6 +2828,10 @@ async function fetchAvailability(listingId,startDate,endDate,quantity=1){
 }
 
 async function createRealBooking(listingId,startDate,endDate,quantity=1,details={}){
+  await rioRefreshCheckoutTraderDisclosure();
+  const ack=document.getElementById('rioCheckoutTraderAck');
+  if(!ack?.checked||ack.disabled||rioCheckoutDisclosureListing!==String(listingId))
+   throw new Error('Susipažinkite su nuomotojo statusu ir vartotojų teisėmis prieš pateikdami rezervaciją.');
   const payload={...details,listingId,startDate,endDate,quantity,status:'pending'};
   if(/pickup|atsiim|atsiėm/i.test(document.getElementById('accommodationType')?.value||'')){
     Object.assign(payload,{deliveryCity:'',deliveryAddress:'',accommodationName:'',roomNumber:'',deliveryInstructions:''});
@@ -3443,10 +3447,54 @@ document.getElementById('listingForm')?.addEventListener('submit',()=>{
   },20);
 }, true);
 
+// Trader status is a separate marketplace declaration, not Stripe legal form.
+function rioTraderDisclosureText(record){
+ const kind=String(record?.status||record?.supplierTraderStatus||'undeclared');
+ const verified=record?.verified===true||record?.supplierTraderVerified===true;
+ if(kind==='trader')return {title:'Nuomotojas: verslininkas'+(verified?' (patikrintas)':' (deklaruotas, nepatikrintas)'),
+  explanation:'Nuomojantis iš verslininko taikomos atitinkamos privalomos vartotojų teisės pagal konkrečią sutartį ir teisės aktus.'};
+ if(kind==='private')return {title:'Nuomotojas: privatus asmuo (pagal deklaraciją)',
+  explanation:'Specialios ES vartotojų teisės, taikomos sutartims su verslininkais, paprastai netaikomos privačių asmenų tarpusavio sandoriams. Kitos įstatymuose numatytos teisės išlieka.'};
+ return {title:'Nuomotojo veiklos statusas nenurodytas',
+  explanation:'Kol statusas neaiškus, negalime pasakyti, ar nuomotojas veikia kaip verslininkas. Teisės priklauso nuo faktinio jo veiklos pobūdžio.'};
+}
+function rioTraderNoticeMarkup(record){
+ const info=rioTraderDisclosureText(record),identity=record?.publicIdentity||record?.supplierPublicIdentity;
+ return '<strong>'+escapeHtml(info.title)+'</strong> — '+escapeHtml(info.explanation)+
+  (identity?.legalName?'<p>Patikrintas tiekėjas: '+escapeHtml(identity.legalName)+'</p>':'');
+}
+let rioCheckoutDisclosureKey='',rioCheckoutDisclosureListing='';
+async function rioRefreshCheckoutTraderDisclosure(){
+ const ack=document.getElementById('rioCheckoutTraderAck'),notice=document.getElementById('rioCheckoutTraderNotice');
+ if(!ack||!notice)return;
+ const listing=activeCheckoutListing||inferCheckoutListing();
+ if(!listing?.id){ack.disabled=true;ack.checked=false;rioCheckoutDisclosureKey='';rioCheckoutDisclosureListing='';notice.textContent='Pasirinkite skelbimą.';return;}
+ const id=String(listing.id);
+ if(rioCheckoutDisclosureListing!==id){ack.checked=false;ack.disabled=true;rioCheckoutDisclosureKey='';}
+ rioCheckoutDisclosureListing=id;
+ try{
+  const record=await apiJson('/api/listings/'+encodeURIComponent(id)+'/trader-disclosure');
+  if(rioCheckoutDisclosureListing!==id)return;
+  const key=JSON.stringify([id,record.status,record.verified,record.publicIdentity?.legalName]);
+  if(key!==rioCheckoutDisclosureKey)ack.checked=false;
+  rioCheckoutDisclosureKey=key;
+  notice.innerHTML=rioTraderNoticeMarkup(record);ack.disabled=false;
+ }catch{
+  ack.checked=false;ack.disabled=true;rioCheckoutDisclosureKey='';
+  notice.textContent='Nepavyko patikrinti nuomotojo statuso. Rezervacijos pateikti negalima.';
+ }
+}
+document.getElementById('bookingForm')?.addEventListener('click',()=>{rioRefreshCheckoutTraderDisclosure().catch(()=>{});},true);
+const rioCheckoutItems=document.getElementById('checkoutItems');
+if(rioCheckoutItems)new MutationObserver(()=>{rioRefreshCheckoutTraderDisclosure().catch(()=>{});})
+ .observe(rioCheckoutItems,{childList:true,subtree:true});
+
 async function openListingDetail(listingId){
   const listing=loadUniversalListings().find(l=>String(l.id)===String(listingId)); if(!listing) return;
   let reviewData={reviews:[],summary:{reviewCount:0,averageRating:null}};
   let supplierTrust={verifiedSupplier:false};
+  let authoritativeTrader={status:'undeclared',verified:false,publicIdentity:null};
+  try{authoritativeTrader=await apiJson('/api/listings/'+encodeURIComponent(listingId)+'/trader-disclosure')}catch{}
   try{reviewData=await apiJson(`/api/rentals/reviews?listingId=${encodeURIComponent(listingId)}`)}catch{}
   try{supplierTrust=await apiJson(`/api/listings/${encodeURIComponent(listingId)}/reputation`)}catch{}
   const ctx=getCurrentSearchContext(),preview=calculateListingPreview(listing,ctx);
@@ -3467,6 +3515,7 @@ async function openListingDetail(listingId){
         <h2>${escapeHtml(listing.title)}</h2>
         <div class="v92-listing-subline"><b>${rating?`★ ${Number(rating).toFixed(1)} · ${reviewCount} review${reviewCount===1?'':'s'}`:uiText('New listing')}</b><span>•</span><span>${escapeHtml(location||'Location shown after booking')}</span></div>
         <p class="v92-description">${escapeHtml(listing.description||'Rental listing')}</p>
+        <section class="rio-trader-disclosure"><h3>Nuomotojas ir vartotojų teisės</h3><p>${rioTraderNoticeMarkup(authoritativeTrader)}</p></section>
         <div class="v92-trust-row" aria-label="Rental protections"><div><b>${escapeHtml(uiText('✓ Secure booking'))}</b><span>${escapeHtml(uiText('Protected checkout'))}</span></div><div><b>${supplierVerified?'✓ Verified supplier':escapeHtml(uiText('Supplier profile'))}</b><span>${escapeHtml(supplierName)}</span></div><div><b>${escapeHtml(responseLabel)}</b><span>${listing.bookingMode==='instant'?uiText('No approval wait'):uiText('08:00–22:00 local time; overnight paused')}</span></div><div><b>${escapeHtml(uiText('✓ Clear cancellation'))}</b><span>${escapeHtml(uiText((listing.cancellationPolicy||'moderate').toLowerCase()))}</span></div></div>
         <div class="v92-facts"><div><span>${escapeHtml(uiText('Available'))}</span><b>${Number(listing.quantity||1)} ${escapeHtml(uiText('unit'))}</b></div><div><span>${escapeHtml(uiText('Fulfilment'))}</span><b>${escapeHtml(fulfillment.join(' + ')||uiText('Pickup'))}</b></div><div><span>${escapeHtml(uiText('Deposit'))}</span><b>${listing.deposit?`€${Number(listing.deposit).toFixed(2)}`:uiText('No deposit')}</b></div><div><span>${escapeHtml(uiText('Cancellation'))}</span><b>${escapeHtml(uiText(String(listing.cancellationPolicy||'moderate').toLowerCase()))}</b></div></div>
         <section class="v92-reviews"><div class="v92-section-head"><h3>${escapeHtml(uiText('Reviews'))}</h3><span>${rating?`★ ${Number(rating).toFixed(1)}`:uiText('Not rated yet')}</span></div><div class="listing-review-list">${reviewData.reviews?.length?reviewData.reviews.slice(0,4).map(r=>`<div class="listing-review"><b>${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))} · ${escapeHtml(r.customerName||'Customer')}</b><p>${escapeHtml(r.comment||'')}</p></div>`).join(''):`<p class="muted">${escapeHtml(uiText('No reviews yet. Be the first renter to review this item.'))}</p>`}</div></section>
