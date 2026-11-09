@@ -56,7 +56,7 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
     previous_status AS previousStatus, next_status AS nextStatus,
     resolution_note AS resolutionNote, created_at AS createdAt
     FROM privacy_subject_request_audit WHERE request_id=?
-    ORDER BY created_at ASC, audit_id ASC LIMIT 200`);
+    ORDER BY created_at ASC, rowid ASC LIMIT 200`);
   app.get('/api/admin/privacy/requests/:requestId/audit',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     const id=String(req.params.requestId||'');
