@@ -34,6 +34,9 @@ assert.ok(moduleSource.includes('RESOLUTION_NOTE_REQUIRED'),'terminal status nee
 assert.ok(moduleSource.includes('resolution_note'),'decision rationale auditable');
 assert.ok(ui.includes('TERMINAS PRAĖJĘS'),'overdue visible to admin');
 assert.ok(ui.includes('resolutionNote:note.value'),'admin rationale submitted');
+assert.ok(moduleSource.includes("app.get('/api/admin/privacy/health',requireAuth,adminOnly"),'admin-only queue health');
+assert.ok(ui.includes("api('/api/admin/privacy/health')"),'admin UI reads operational readiness');
+assert.ok(ui.includes('Neperžiūrėti:') && ui.includes('Pradelsti:'),'admin dashboard status counts');
 assert.ok(moduleSource.includes('PRIVACY_REQUESTS_NOTIFY_EMAIL'),'operator address configurable');
 assert.ok(moduleSource.includes("templateKey:'privacy_request_notify'"),'operational email queued');
 assert.ok(server.includes("registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail)"),'email queue injected');
