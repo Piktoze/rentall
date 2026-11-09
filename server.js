@@ -26,6 +26,8 @@ import {
   getAdminDashboardData,
   listCustomerRentalBookings,
   createAppUser,
+  declareSupplierTraderStatus,
+  getSupplierTraderDisclosure,
   enableSupplierForUser,
   authenticateAppUser,
   createAppSession,
@@ -1393,7 +1395,30 @@ function validateSupplierListingInput(listing){
 }
 
 app.get('/api/listings', simpleRateLimit({windowMs:60000,max:180,keyPrefix:'public-listings'}), (req,res)=>{
-  res.json({listings:listPublicRentalListings()});
+  res.json({listings:listPublicRentalListings().map(listing=>({
+    ...listing,
+    // Public classification only; never expose verification details or registration PII.
+    supplierTraderStatus:getSupplierTraderDisclosure(listing.ownerEmail).status,
+    supplierTraderVerified:getSupplierTraderDisclosure(listing.ownerEmail).verified
+  }))});
+});
+
+// Trader/private classification is a marketplace declaration, not Stripe identity.
+// Never represent self-disclosure as a verified trader due-diligence outcome.
+app.get('/api/supplier/trader-status',requireRole('supplier','admin'),(req,res)=>{
+  res.set('Cache-Control','no-store, private');
+  res.json({trader:getSupplierTraderDisclosure(req.appUser.email)});
+});
+app.post('/api/supplier/trader-status',requireRole('supplier','admin'),
+ simpleRateLimit({windowMs:60000,max:12,keyPrefix:'supplier-trader-declaration'}),(req,res)=>{
+  const status=String(req.body?.status||'').trim().toLowerCase();
+  if(!['private','trader'].includes(status))
+    return res.status(400).json({error:'Pasirinkite privatų nuomotoją arba verslininką.',code:'INVALID_TRADER_STATUS'});
+  if(req.body?.confirmed!==true)
+    return res.status(400).json({error:'Būtina aiškiai patvirtinti tiekėjo statusą.',code:'TRADER_DECLARATION_REQUIRED'});
+  const trader=declareSupplierTraderStatus(req.appUser.userId,status);
+  res.set('Cache-Control','no-store, private');
+  res.json({trader});
 });
 
 app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
