@@ -45,6 +45,8 @@
     const warnings=[];
     if(!health.automaticDeliveryReady)warnings.push('Automatinis administratoriaus informavimas NĖRA patvirtintas: patikrinkite privatumo el. pašto adresą, siuntimo paslaugą ir laiškų darbuotoją.');
     if(health.overdue>0)warnings.push('DĖMESIO: pradelstų prašymų '+health.overdue+'.');
+    if(health.notificationQueue?.failed>0)warnings.push('DĖMESIO: neišsiųstų BDAR laiškų klaidų '+health.notificationQueue.failed+'.');
+    if(health.notificationQueue?.pending>0)warnings.push('BDAR pranešimai eilėje: '+health.notificationQueue.pending+'.');
     $('rioPrivacyAdminHealth').textContent='Neperžiūrėti: '+health.unreviewed+' · Atviri: '+health.open+' · Pradelsti: '+health.overdue+
       (health.earliestDueAt?' · Artimiausia orientacinė data: '+String(health.earliestDueAt).slice(0,10):'')+
       (warnings.length?' | '+warnings.join(' '):' | El. pašto konfigūracijos požymiai nustatyti; tikro pristatymo tai neįrodo.');
