@@ -1170,7 +1170,7 @@ app.get('/api/auth/me', (req,res)=>{
   res.json({user:sessionUser(req)});
 });
 
-registerPrivacyRequestRoutes(app, db, requireAuth);
+registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail);
 
 app.post('/api/auth/enable-supplier', requireRole('customer','supplier','admin'), (req,res)=>{
   try{
@@ -1289,6 +1289,13 @@ function queueBookingStatusEmail(booking,status,{message=''}={}){
 // V139 production transactional email worker. Explicitly disabled unless enabled by deployment config.
 function renderTransactionalEmail(item){
   const key=String(item?.templateKey||''), payload=item?.payload||{};
+  if(key==='privacy_request_notify'){
+    return `<!doctype html><html lang="lt"><body style="font-family:Arial,sans-serif;color:#15354f"><h1>Gautas BDAR prašymas</h1>
+      <p>Užregistruotas naujas duomenų subjekto prašymas. Atidarykite apsaugotą administratoriaus skydelį ir įvertinkite jį.</p>
+      <p>Registracijos numeris: <strong>${escapeEmailHtml(payload.requestId||'')}</strong></p>
+      <p>Tipas: ${escapeEmailHtml(payload.type||'')}</p>
+      <p>Neatsakinėkite į šį pranešimą pateikdami asmens duomenis.</p></body></html>`;
+  }
   if(key==='supplier_booking_received') return renderSupplierBookingReceivedEmail(payload);
   if(key==='supplier_activation') return renderSupplierActivationEmail(payload);
   if(key==='supplier_freshness') return renderSupplierFreshnessEmail(payload);
