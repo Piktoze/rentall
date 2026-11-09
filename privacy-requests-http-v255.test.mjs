@@ -29,6 +29,10 @@ async function request(path,actor,body,method='GET'){
 try{
   let r=await request('/api/privacy/requests',null);assert.equal(r.status,401);
   r=await request('/api/admin/privacy/requests','user-a');assert.equal(r.status,403);
+  r=await request('/api/admin/privacy/requests/dsr_00000000-0000-0000-0000-000000000000/audit',null);assert.equal(r.status,401);
+  r=await request('/api/admin/privacy/requests/dsr_00000000-0000-0000-0000-000000000000/audit','user-a');assert.equal(r.status,403);
+  r=await request('/api/admin/privacy/requests/invalid/audit','admin');assert.equal(r.status,400);
+  r=await request('/api/admin/privacy/requests/dsr_00000000-0000-0000-0000-000000000000/audit','admin');assert.equal(r.status,404);
   r=await request('/api/admin/privacy/health',null);assert.equal(r.status,401);
   r=await request('/api/admin/privacy/health','user-a');assert.equal(r.status,403);
   r=await request('/api/admin/privacy/health','admin');assert.equal(r.status,200);
@@ -58,7 +62,10 @@ try{
   assert.equal(r.status,200);
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,resolutionNote:'Tapatybė patikrinta, atsakymo registracijos numeris REF-1234.'},'POST');
   assert.equal(r.status,200);
-  const audit=db.prepare('SELECT * FROM privacy_subject_request_audit ORDER BY created_at').all();
+  r=await request('/api/admin/privacy/requests/'+id+'/audit','admin');assert.equal(r.status,200);
+  assert.equal(r.body.requestId,id);assert.equal(r.body.events.length,2);
+  assert.ok(r.body.events[1].resolutionNote.includes('REF-1234'));
+    const audit=db.prepare('SELECT * FROM privacy_subject_request_audit ORDER BY created_at').all();
   assert.equal(audit.length,2);assert.ok(audit[1].resolution_note.includes('REF-1234'));
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'in_review'},'POST');
   assert.equal(r.status,409);
