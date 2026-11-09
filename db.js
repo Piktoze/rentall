@@ -530,7 +530,7 @@ const listRentalBookingsStmt = db.prepare(`
          rl.total_quantity AS totalQuantity
   FROM rental_bookings rb
   JOIN rental_listings rl ON rl.listing_id = rb.listing_id
-  WHERE (@owner_email IS NULL OR rl.owner_email = @owner_email)
+  WHERE (@owner_email IS NULL OR LOWER(COALESCE(rl.owner_email,'')) = LOWER(@owner_email))
   ORDER BY rb.start_date ASC, rb.created_at DESC
 `);
 
