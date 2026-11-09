@@ -2,7 +2,7 @@
 import crypto from 'node:crypto';
 
 const ALLOWED = new Set(['access','rectification','erasure','restriction','portability','objection']);
-export function registerPrivacyRequestRoutes(app, db, requireAuth) {
+export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=null) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS privacy_subject_requests (
       request_id TEXT PRIMARY KEY,
@@ -96,6 +96,22 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth) {
       return res.status(429).json({code:'PRIVACY_REQUEST_LIMIT',error:'Prašymų limitas pasiektas. Susisiekite su duomenų valdytoju.'});
     const requestId='dsr_'+crypto.randomUUID();
     insert.run(requestId,String(req.appUser.userId),type,details);
+    // Only enqueue a minimal operational notification when an operator address is configured.
+    // Do not send request details or account contact data by email.
+    const operatorAddress=String(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL||'').trim();
+    if(operatorAddress && typeof enqueueEmail==='function'){
+      try{
+        enqueueEmail({recipient:operatorAddress,templateKey:'privacy_request_notify',
+          subject:'RentInOrbit · Naujas duomenų subjekto prašymas',
+          payload:{requestId,type,reviewPath:'/?privacy-requests=1'},
+          dedupeKey:'privacy-request:'+requestId});
+      }catch(error){
+        console.error(JSON.stringify({type:'privacy_request_notification_failure',requestId,
+          errorCode:String(error?.code||'EMAIL_QUEUE_FAILED')}));
+      }
+    }else{
+      console.warn(JSON.stringify({type:'privacy_request_operator_notification_not_configured',requestId}));
+    }
     res.status(201).json({requestId,type,status:'received',
       notice:'Prašymas užregistruotas. Tai nėra automatinis duomenų ištrynimas ar eksportas. Atsakymas bus pateiktas po tapatybės ir teisinių pagrindų patikros.'});
   });
