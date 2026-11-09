@@ -353,6 +353,19 @@ try{
  const inbox=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{cookie:renterCookie});
  status(inbox,200,'Renter receives the supplier conversation');
  assert.ok(inbox.body.messages.some(m=>m.body==='Sveiki, daiktas jau paruoštas.'));
+ const reply=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
+   method:'POST',cookie:renterCookie,data:{body:'Ačiū, atvyksiu sutartu laiku.'}});
+ status(reply,200,'Renter can reply to supplier');
+ const supplierInbox=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',
+   {cookie:supplierCookie});
+ status(supplierInbox,200,'Supplier can read renter reply');
+ assert.ok(supplierInbox.body.messages.some(m=>m.body==='Ačiū, atvyksiu sutartu laiku.'));
+ status(await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',
+   {cookie:outsiderCookie}),403,'Outsider cannot read the conversation');
+ status(await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
+   method:'POST',cookie:outsiderCookie,data:{body:'Nepriklausantis asmuo'}}),403,
+   'Outsider cannot send conversation messages');
+ console.log('PASS HTTP two-way booking messages and outsider read/write isolation');
  outcome=true;
  console.log('PASS real HTTP two-account pickup PIN and supplier-only return without PIN: consent, role enforcement and replay protection');
 }finally{
