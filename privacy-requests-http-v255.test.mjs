@@ -64,6 +64,17 @@ try{
   assert.equal(r.status,409);
   r=await request('/api/admin/privacy/health','admin');assert.equal(r.body.open,0);
   assert.equal(r.body.unreviewed,0);
+  // The first page must not hide unreviewed requests behind older completed records.
+  const seed=db.prepare("INSERT INTO privacy_subject_requests(request_id,user_id,request_type,details,status,created_at) VALUES (?,?,?,?,?,?)");
+  for(let i=0;i<55;i++)seed.run('historical-'+i,'user-b','access','','completed','2026-01-01 00:00:00');
+  seed.run('open-priority','user-b','erasure','','received','2026-11-01 10:00:00');
+  r=await request('/api/admin/privacy/requests?offset=0','admin');
+  assert.equal(r.status,200);assert.equal(r.body.requests.length,50);assert.equal(r.body.hasMore,true);
+  assert.equal(r.body.requests[0].requestId,'open-priority');
+  r=await request('/api/admin/privacy/requests?offset=50','admin');
+  assert.equal(r.status,200);assert.ok(r.body.requests.length>0);assert.equal(r.body.hasMore,false);
+  r=await request('/api/admin/privacy/requests?offset=-1','admin');
+  assert.equal(r.status,400);
   console.log('PASS GDPR isolated HTTP: 401, 403, 400, 201, per-account privacy, due dates, operator outbox, admin audit, terminal 409');
 }finally{
   await new Promise(resolve=>server.close(resolve));db.close();
