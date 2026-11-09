@@ -49,6 +49,32 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
   const insertAudit=db.prepare(`INSERT INTO privacy_subject_request_audit
     (audit_id,request_id,actor_user_id,action,previous_status,next_status,resolution_note) VALUES (?,?,?,?,?,?,?)`);
   const adminOnly=(req,res,next)=>req.appUser?.role==='admin'?next():res.status(403).json({code:'FORBIDDEN',error:'Prieiga draudžiama'});
+  // Admin-only operational health: aggregate counts, never expose request details or secrets.
+  const summary=db.prepare(`SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN status='received' THEN 1 ELSE 0 END) AS unreviewed,
+    SUM(CASE WHEN status NOT IN ('completed','rejected') THEN 1 ELSE 0 END) AS open,
+    SUM(CASE WHEN status NOT IN ('completed','rejected')
+       AND datetime(created_at, '+1 month') < datetime('now') THEN 1 ELSE 0 END) AS overdue,
+    MIN(CASE WHEN status NOT IN ('completed','rejected')
+       THEN datetime(created_at, '+1 month') ELSE NULL END) AS earliestDueAt
+    FROM privacy_subject_requests`);
+  app.get('/api/admin/privacy/health',requireAuth,adminOnly,(req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    const row=summary.get();
+    const notificationAddressConfigured=Boolean(String(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL||'').trim());
+    const emailWorkerEnabled=process.env.EMAIL_WORKER_ENABLED==='true';
+    const emailProviderConfigured=Boolean(String(process.env.EMAIL_PROVIDER||'').trim()) &&
+      process.env.EMAIL_PROVIDER!=='console';
+    res.json({
+      total:Number(row.total||0),unreviewed:Number(row.unreviewed||0),
+      open:Number(row.open||0),overdue:Number(row.overdue||0),
+      earliestDueAt:row.earliestDueAt||null,
+      notificationAddressConfigured,emailWorkerEnabled,emailProviderConfigured,
+      automaticDeliveryReady:notificationAddressConfigured&&emailWorkerEnabled&&emailProviderConfigured,
+      warning:'Būsenos kontrolė nepakeičia juridinio prašymo įvertinimo, termino patikros ar atsakymo pateikimo.'
+    });
+  });
   app.get('/api/admin/privacy/requests',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     res.json({requests:allRequests.all()});
