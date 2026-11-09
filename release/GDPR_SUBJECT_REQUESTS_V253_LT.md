@@ -100,3 +100,10 @@
 - `automaticDeliveryReady` vis tiek reiškia tik būtinų nustatymų **požymius**, ne tikro pristatymo arba gavimo patvirtinimą.
 - Izoliuotas HTTP testas patikrina, kad į bendrus skaitiklius nepatenka kitų šablonų laiškai ir kad failed/pending skaičiai grąžinami tik administratoriui.
 - El. pašto gavėjo adreso staging paslaugoje vis dar nėra; nenaudoti spėjamo gavėjo. Prieš GO – paskirti atsakingą asmenį, sukonfigūruoti jo adresą ir užfiksuoti faktinio laiško pristatymo rezultatą.
+
+## V263 – galutinė el. pašto adresato sintaksės patikra
+- `PRIVACY_REQUESTS_NOTIFY_EMAIL` laikomas sukonfigūruotu tik jei yra sintaksiškai tinkamas el. pašto adresas. Neteisingas adresas nelaikomas paruoštu pristatymu.
+- Nauji prašymai registruojami net kai adresatas klaidingas, bet klaidingam adresui laiškai į eilę nededami; operacinis įspėjimas lieka administratoriaus suvestinėje.
+- Jei laiškų eilės funkcija atmeta įrašymą, serveris dabar tai registruoja kaip `privacy_request_notification_queue_rejected`. Tai neįrodo sėkmingo pristatymo.
+- Izoliuotas HTTP testas patvirtina, kad klaidingas gavėjo adresas panaikina pristatymo parengtį ir nesukuria pranešimo eilėje.
+- **Išorinė 28 punkto sąlyga:** reikia realiai paskirto BDAR laiškų gavėjo ir patikrinto pristatymo, taip pat vykdomo Playwright naršyklės testo. Šiuo metu vien CI sintaksės patikros nelaikyti naršyklės E2E.
