@@ -122,13 +122,6 @@ try{
  status(declaredTrader,200,'Supplier can declare commercial status');
  assert.equal(declaredTrader.body.trader.status,'trader');
  assert.equal(declaredTrader.body.trader.verified,false,'Self-declared trader is never verified');
- const publicTraderListings=await api('/api/listings');
- status(publicTraderListings,200,'Public listings available with trader disclosure');
- const publicListing=publicTraderListings.body.listings.find(item=>item.id==='api-e2e-listing');
- assert.ok(publicListing,'Supplier fixture listing present publicly');
- assert.equal(publicListing.supplierTraderStatus,'trader');
- assert.equal(publicListing.supplierTraderVerified,false);
- console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
  status(customerBookings,200,'Renter booking list');
  assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
@@ -171,6 +164,13 @@ try{
  const published=await publish(photos);
  status(published,200,'Two uploaded photos permit listing publication');
  assert.equal(published.body.listing.photos.length,2);
+ const publicTraderListings=await api('/api/listings');
+ status(publicTraderListings,200,'Public listings available with trader disclosure');
+ const publicListing=publicTraderListings.body.listings.find(item=>item.id===listingBase.id);
+ assert.ok(publicListing,'Published supplier listing present publicly');
+ assert.equal(publicListing.supplierTraderStatus,'trader');
+ assert.equal(publicListing.supplierTraderVerified,false);
+ console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const anotherSupplierCookie=await signIn(otherSupplier);
  const attemptedTakeover=await api('/api/supplier/listings',{method:'POST',cookie:anotherSupplierCookie,
    data:{listing:{...listingBase,title:'Unauthorized takeover',photos,coverPhoto:photos[0]}}});
