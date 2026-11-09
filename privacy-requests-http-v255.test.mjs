@@ -15,6 +15,8 @@ const accounts={'user-a':{userId:'user-a',role:'customer'},'user-b':{userId:'use
 function requireAuth(req,res,next){const user=accounts[req.headers['x-test-actor']];if(!user)return res.status(401).json({error:'Auth required'});req.appUser=user;next()}
 const queued=[];
 const oldAddress=process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL;
+const oldWorker=process.env.EMAIL_WORKER_ENABLED;
+process.env.EMAIL_WORKER_ENABLED='false';
 process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL='privacy@example.test';
 registerPrivacyRequestRoutes(app,db,requireAuth,(x)=>{queued.push(x);return queued.length});
 const server=app.listen(0,'127.0.0.1');
@@ -65,6 +67,8 @@ try{
   console.log('PASS GDPR isolated HTTP: 401, 403, 400, 201, per-account privacy, due dates, operator outbox, admin audit, terminal 409');
 }finally{
   await new Promise(resolve=>server.close(resolve));db.close();
+  if(oldWorker===undefined)delete process.env.EMAIL_WORKER_ENABLED;
+  else process.env.EMAIL_WORKER_ENABLED=oldWorker;
   if(oldAddress===undefined)delete process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL;
   else process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL=oldAddress;
 }
