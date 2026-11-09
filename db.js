@@ -1027,23 +1027,30 @@ const listAllListingsStmt=db.prepare(`
   ORDER BY title
 `);
 
-export function createRentalDispute({bookingId,openedBy='customer',reason,details=null}){
-  const booking=rentalBookingStmt.get(bookingId);
-  if(!booking){
-    const err=new Error('Booking not found'); err.code='BOOKING_NOT_FOUND'; throw err;
+// An IMMEDIATE transaction acquires the write reservation before checking for
+// an existing open dispute. Two workers cannot both pass the check and insert.
+const findOpenDisputeStmt=db.prepare("SELECT dispute_id FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1");
+const getDisputeByIdStmt=db.prepare(`
+  SELECT dispute_id AS disputeId, booking_id AS bookingId, opened_by AS openedBy,
+         reason, details, status, resolution, created_at AS createdAt,
+         resolved_at AS resolvedAt FROM rental_disputes WHERE dispute_id=?`);
+const createRentalDisputeAtomic=db.transaction(({bookingId,openedBy,reason,details})=>{
+  if(!rentalBookingStmt.get(bookingId)){
+    const err=new Error('Booking not found');err.code='BOOKING_NOT_FOUND';throw err;
+  }
+  if(findOpenDisputeStmt.get(bookingId)){
+    const err=new Error('An open dispute already exists for this booking');
+    err.code='DISPUTE_ALREADY_OPEN';throw err;
   }
   const disputeId=`DP-${crypto.randomUUID()}`;
-  const existing=listDisputesStmt.all().find(d=>d.bookingId===bookingId && d.status==='open');
-  if(existing){ const err=new Error('An open dispute already exists for this booking'); err.code='DISPUTE_ALREADY_OPEN'; throw err; }
   createDisputeStmt.run({
-    dispute_id:disputeId,
-    booking_id:bookingId,
-    opened_by:openedBy,
-    reason,
-    details,
-    created_at:new Date().toISOString()
+    dispute_id:disputeId,booking_id:bookingId,opened_by:openedBy,
+    reason,details,created_at:new Date().toISOString()
   });
-  return listDisputesStmt.all().find(d=>d.disputeId===disputeId);
+  return getDisputeByIdStmt.get(disputeId);
+});
+export function createRentalDispute({bookingId,openedBy='customer',reason,details=null}){
+  return createRentalDisputeAtomic.immediate({bookingId,openedBy,reason,details});
 }
 
 export function listRentalDisputes(){ return listDisputesStmt.all(); }
