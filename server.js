@@ -664,7 +664,8 @@ app.post('/api/stripe/webhook',
                 });
               }
 
-              const terminalNonPayable=new Set(['expired','cancelled','declined']);
+              // A legacy pending payment must never count as supplier approval.
+              const terminalNonPayable=new Set(['pending','expired','cancelled','declined']);
               if(terminalNonPayable.has(booking.status) && !booking.stripeRefundId){
                 const refund=await refundDirectCharge(stripe,{
                   accountId:String(event.account),
@@ -685,14 +686,8 @@ app.post('/api/stripe/webhook',
           if(bookingId){
             let paidBooking=getRentalBookingById(bookingId);
             const paidListing=paidBooking ? getRentalListing(paidBooking.listingId) : null;
-            if(!lateTerminalRefunded && paidListing?.bookingMode==='instant' && paidBooking?.status==='pending'){
-              try{
-                paidBooking=updateRentalBookingStatus(bookingId,'confirmed');
-                markSupplierResponded(bookingId);
-                // Instant booking approval is not a supplier signature.
-                queueBookingStatusEmail(paidBooking,'confirmed',{message:'Instant Book confirmed automatically after payment.'});
-              }catch(err){console.warn('Instant Book auto-confirm failed',bookingId,err.message);}
-            }
+            // Never auto-confirm a pending reservation from a payment webhook.
+            // Supplier approval is the only action that unlocks payment.
             if(paidBooking?.customerEmail){
               createRentalNotification({
                 uniqueKey:`payment:${pi.id}:customer`,
