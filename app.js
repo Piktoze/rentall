@@ -7049,6 +7049,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  });
  byId('rioTraderReload')?.addEventListener('click',load);
  document.getElementById('supplierAccountBtn')?.addEventListener('click',()=>{load().catch(()=>{});});
+ document.getElementById('supplierDashboardToggle')?.addEventListener('click',()=>{load().catch(()=>{});});
+ document.querySelector('[data-v124-target="rioTraderPanel"]')?.addEventListener('click',()=>{load().catch(()=>{});});
  window.addEventListener('rentinorbit:auth-changed',()=>{load().catch(()=>{});});
  // Load once after app authentication is initialized, never persist drafts locally.
  load().catch(()=>{});
