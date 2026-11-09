@@ -14,4 +14,9 @@ assert.ok(server.includes("if(!agreement?.customerAcceptedAt||!agreement?.suppli
 const db=fs.readFileSync('./db.js','utf8');
 assert.ok(db.includes("if(!agreement?.customerAcceptedAt||!agreement?.supplierAcceptedAt)"),'Both signatures required by DB transfer gate');
 assert.ok(db.includes("party!=='customer'"),'Supplier transfer codes disallowed');
+const app=fs.readFileSync('./app.js','utf8');
+assert.ok(app.includes('nuomotojas patvirtins rezervaciją ir apmokėjimas bus sėkmingas'),
+  'Renter sees when their pickup code becomes available');
+assert.ok(app.includes('Nuomotojas turi atskirai patvirtinti savo sutartį'),
+  'Renter sees that supplier signature is independent');
 console.log('PASS explicit supplier agreement consent, renter-only PIN, both signatures');
