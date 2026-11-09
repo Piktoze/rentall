@@ -56,7 +56,7 @@ try{
   assert.equal(r.body.requests[0].accountEmail,'a@example.test');
   r=await request('/api/admin/privacy/requests/'+id+'/status','user-b',{status:'completed',reviewConfirmed:true,resolutionNote:'Internal decision documented.'},'POST');
   assert.equal(r.status,403);
-  r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true},'POST');
+  r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,responseSent:true,identityReviewed:true,actionPerformed:true},'POST');
   assert.equal(r.status,400);assert.equal(r.body.code,'RESOLUTION_NOTE_REQUIRED');
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'in_review'},'POST');
   assert.equal(r.status,200);
