@@ -324,6 +324,9 @@ function stripBrowserPayoutIdentifiers(accounts){
     // Such sensitive data belongs in Stripe/on the server, not browser storage.
     delete copy.iban;
     delete copy.taxId;
+    // The legacy browser-only supplier prototype stored plaintext passwords.
+    // All real logins now use the server's password hashing and HTTP-only cookie.
+    delete copy.password;
     return copy;
   });
 }
@@ -331,7 +334,7 @@ function loadAccounts(){
   try{
     const existing=JSON.parse(localStorage.getItem(SUPPLIER_KEY)||'[]');
     const safe=stripBrowserPayoutIdentifiers(existing);
-    if(Array.isArray(existing) && existing.some(item=>item&&('iban' in item||'taxId' in item)))
+    if(Array.isArray(existing) && existing.some(item=>item&&('iban' in item||'taxId' in item||'password' in item)))
       localStorage.setItem(SUPPLIER_KEY,JSON.stringify(safe));
     return safe;
   }catch{return [];}
