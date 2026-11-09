@@ -258,7 +258,7 @@ try{
    403,'Supplier must never receive renter PIN');
  const code=await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'pickup'}});
  status(code,200,'Renter PIN after own consent');
- assert.match(code.body.code,/^\\d{6}$/);
+ assert.match(code.body.code,/^\d{6}$/);
  assert.equal(code.body.validUntilUsed,true,'Issued pickup code must remain valid until used');
  assert.equal(code.body.expiresAt,null,'Issued pickup code must not expose a countdown');
  const repeatCode=await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,
