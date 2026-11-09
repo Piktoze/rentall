@@ -72,14 +72,14 @@ jobs:
         run: node webhook-signed-http-v231.test.js
       - name: Run real Chromium browser E2E, no live services
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
-      - name: Upload diagnostics on failures
-        if: failure()
+      - name: Upload browser test evidence after every run
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: isolated-browser-e2e-failure
+          name: isolated-browser-e2e-report
           path: |
             e2e/report/
             e2e/test-results/
             test-results/
-          if-no-files-found: ignore
+          if-no-files-found: warn
           retention-days: 3
