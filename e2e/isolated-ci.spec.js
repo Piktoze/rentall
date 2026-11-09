@@ -23,6 +23,19 @@ test.describe('Isolated CI real-browser safety gate',()=>{
     expect(response).not.toMatch(/whsec_[a-zA-Z0-9]+/);
   });
 
+  test('synthetic CI listing is visible through the actual public API',async({request})=>{
+    const response=await request.get('/api/listings');
+    expect(response.status()).toBe(200);
+    const payload=await response.json();
+    expect(Array.isArray(payload.listings)).toBe(true);
+    const listing=payload.listings.find(item=>item.id==='ci-drill-discovery');
+    expect(listing,'The isolated CI fixture must be public before browser discovery tests').toBeTruthy();
+    expect(listing.title).toBe('CI Drill Test Rental');
+    expect(Number(listing.priceDay)).toBe(100);
+    expect(Number(listing.quantity)).toBe(2);
+    expect(listing.lifecycleStatus).toBe('active');
+  });
+
   test('unknown booking cannot be read without authorization',async({request})=>{
     const response=await request.get('/api/bookings/not-a-real-booking');
     expect([401,403,404]).toContain(response.status());
