@@ -42,6 +42,12 @@ const payFixture=createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-l
 setBookingPaymentDetails({bookingId:payId,paymentIntentId:'demo_pi_prepared_e2e',
   paymentStatus:'requires_payment_method',paymentProvider:'demo',platformFeeAmount:15,supplierAmount:85});
 
+upsertRentalListing({listingId:'api-e2e-instant',ownerEmail:supplier,title:'Instant mode fixture',totalQuantity:1});
+db.prepare("UPDATE rental_listings SET booking_mode='instant' WHERE listing_id=?").run('api-e2e-instant');
+createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2e-instant',
+  startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
+  customerEmail:renter,customerName:'Instant test renter',orderValue:100});
+
 db.close();
 Object.keys(process.env).forEach(k=>delete process.env[k]);
 Object.assign(process.env,previous);
@@ -154,6 +160,22 @@ try{
  assert.equal(updated.body.listing.title,'Owner updated title');
  console.log('PASS HTTP listing create/edit, photo count, account ownership, archive/delete access');
 
+
+ // Instant mode must follow the same supplier-first payment rule for the MVP.
+ const instantPending=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
+   data:{bookingId:'api-e2e-instant-pending'}});
+ status(instantPending,409,'Instant mode cannot create a payment intent before supplier approval');
+ assert.equal(instantPending.body.code,'SUPPLIER_CONFIRMATION_REQUIRED');
+ const instantDemoPending=await api('/api/payments/demo/confirm',{method:'POST',cookie:renterCookie,
+   data:{bookingId:'api-e2e-instant-pending',outcome:'succeeded'}});
+ status(instantDemoPending,409,'Instant mode cannot complete demo payment before supplier approval');
+ assert.equal(instantDemoPending.body.code,'SUPPLIER_CONFIRMATION_REQUIRED');
+ status(await api('/api/rentals/bookings/api-e2e-instant-pending/status',{method:'POST',
+   cookie:supplierCookie,data:{status:'confirmed'}}),200,'Supplier can confirm instant-mode request');
+ const instantUnlocked=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
+   data:{bookingId:'api-e2e-instant-pending'}});
+ status(instantUnlocked,200,'Instant mode payment unlocked only after supplier confirmation');
+ console.log('PASS supplier approval required before payment in request and instant booking modes');
 
  // Demo is strictly local: verify authorization and terminal state do not regress.
  // Pending request must never create a TEST or demo payment intent until
