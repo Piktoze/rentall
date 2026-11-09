@@ -34,6 +34,7 @@ for(const suite of [
   'transfer-supplier-consent-v207.test.js',
   'return-notes-security-v265.test.mjs',
   'dispute-notification-safety-v266.test.mjs',
+  'dispute-atomicity-v267.test.mjs',
   'rental-status-bypass-v208.test.js',
   'rental-identity-boundary-v209.test.js',
   'rental-http-e2e-v210.test.js',
