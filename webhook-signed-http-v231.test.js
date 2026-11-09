@@ -117,7 +117,10 @@ try{
  // persist them in webhook audit history.
  valid.data.object.billing_details={email:'audit-private@example.invalid'};
  valid.data.object.client_secret='audit-test-secret-must-not-be-stored';
- const good=await post(valid,{connect:true});assert.equal(good.status,200,'Valid Connect-signed event');
+ const good=await post(valid,{connect:true});
+  assert.equal(good.status,200,
+    'Valid Connect-signed event: HTTP '+good.status+' response='+good.body.slice(0,900)+
+    ' localServerLog='+logs.slice(-1800));
  assert.equal(read().booking.payment_status,'paid','Valid account-bound signed event pays booking');
  const storedAudit=read().events.find(row=>row.event_id===valid.id);
  assert.ok(storedAudit,'Signed event must have persistent audit record');
