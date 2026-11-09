@@ -130,6 +130,13 @@ try{
  assert.equal(read().booking.payment_status,'refunded','Late failed webhook must not downgrade refunded booking');
  assert.equal(read().notifications.length,beforeSecondDelivery.notifications.length,
    'Late failure must not create misleading failure notifications');
+ const afterRefundSuccess=await post(event('evt_webhook_e2e_success_after_refund',accountId),{connect:true});
+ assert.equal(afterRefundSuccess.status,200);
+ assert.equal(read().booking.payment_status,'refunded',
+   'Delayed succeeded webhook must not reopen a refunded booking');
+ assert.equal(read().notifications.length,beforeSecondDelivery.notifications.length,
+   'Delayed success must not re-notify the renter or supplier as newly paid');
+
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
  console.log('PASS signed webhook HTTP E2E: bad signature denied, account binding enforced, paid booking persisted, replay and cross-endpoint delivery deduplicated');
