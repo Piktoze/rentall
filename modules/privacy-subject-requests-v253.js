@@ -2,6 +2,7 @@
 import crypto from 'node:crypto';
 
 const ALLOWED = new Set(['access','rectification','erasure','restriction','portability','objection']);
+const validOperatorEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value||'').trim());
 export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=null) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS privacy_subject_requests (
@@ -89,7 +90,7 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
   app.get('/api/admin/privacy/health',requireAuth,adminOnly,(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     const row=summary.get();
-    const notificationAddressConfigured=Boolean(String(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL||'').trim());
+    const notificationAddressConfigured=validOperatorEmail(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL);
     const emailWorkerEnabled=process.env.EMAIL_WORKER_ENABLED==='true';
     const emailProviderConfigured=String(process.env.EMAIL_PROVIDER||'').trim().toLowerCase()==='resend' &&
       Boolean(String(process.env.RESEND_API_KEY||'').trim()) &&
@@ -172,12 +173,13 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
     // Only enqueue a minimal operational notification when an operator address is configured.
     // Do not send request details or account contact data by email.
     const operatorAddress=String(process.env.PRIVACY_REQUESTS_NOTIFY_EMAIL||'').trim();
-    if(operatorAddress && typeof enqueueEmail==='function'){
+    if(validOperatorEmail(operatorAddress) && typeof enqueueEmail==='function'){
       try{
-        enqueueEmail({recipient:operatorAddress,templateKey:'privacy_request_notify',
+        const queuedId=enqueueEmail({recipient:operatorAddress,templateKey:'privacy_request_notify',
           subject:'RentInOrbit · Naujas duomenų subjekto prašymas',
           payload:{requestId,type,reviewPath:'/?privacy-requests=1'},
           dedupeKey:'privacy-request:'+requestId});
+        if(!queuedId)console.error(JSON.stringify({type:'privacy_request_notification_queue_rejected',requestId}));
       }catch(error){
         console.error(JSON.stringify({type:'privacy_request_notification_failure',requestId,
           errorCode:String(error?.code||'EMAIL_QUEUE_FAILED')}));
