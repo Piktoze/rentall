@@ -41,3 +41,10 @@
 - Neatliekamas automatinis trynimas, taisymas ar eksportas.
 
 **Prieš viešą GO:** sukonfigūruoti valdytojo patvirtintą adresą, veikiančią laiškų siuntimo paslaugą, terminų stebėseną / eskalavimą, realią užklausos apdorojimo ir atsakymo registravimo procedūrą. Integracinis E2E vis dar privalomas.
+
+## V256 – administratoriaus matoma BDAR eilės būklė
+- `GET /api/admin/privacy/health` yra apsaugotas sesija ir **admin** vaidmeniu. Rodo bendrus prašymų skaitiklius: gautus-neperžiūrėtus, atvirus, pradelstus ir artimiausią **orientacinę** termino datą.
+- Administratoriaus dialogas šią informaciją rodo atidarius skydelį. Kai `PRIVACY_REQUESTS_NOTIFY_EMAIL`, `EMAIL_WORKER_ENABLED` ar tikra el. pašto paslauga nenustatyti, rodomas ryškus įspėjimas. Net visiems trims esant aktyviems **pristatymas nėra įrodytas**.
+- Nėra automatinio skaitymo ar priminimų grafiko, nėra paskyros duomenų eksportavimo ar trynimo ir nėra viešo API, kuris rodytų kitų naudotojų prašymų kiekius.
+- Testai: anonimas → 401; neadministratorius → 403; administratorius → 200; skaitikliai prieš/po prašymo; sutvarkyti ankstesnių modulių šaltinio patikros testai.
+- **Operacinė būtinybė:** paskirti atsakingą asmenį, sukonfigūruoti patvirtintą el. pašto gavėją, išsiųsti saugų sintetinį bandymą ir patvirtinti tikrą pristatymą. Be to prašymai gali likti nepastebėti, jei administratorius neatidarys skydelio.
