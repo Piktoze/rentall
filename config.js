@@ -170,7 +170,8 @@ export function liveLaunchReadinessReport(env=process.env){
     {id:'stripe_live_publishable',ready:/^pk_live_[A-Za-z0-9_\\-]{12,}$/.test(publishable)},
     {id:'stripe_webhook_signing',ready:/^whsec_[A-Za-z0-9_\\-]{12,}$/.test(value('STRIPE_WEBHOOK_SECRET',env))},
     {id:'stripe_connect_webhook_signing',ready:/^whsec_[A-Za-z0-9_\\-]{12,}$/.test(value('STRIPE_CONNECT_WEBHOOK_SECRET',env))},
-    {id:'stripe_connect_v2',ready:value('STRIPE_CONNECT_V2_PROVISIONING',env)==='true'}
+    {id:'stripe_connect_v2',ready:value('STRIPE_CONNECT_V2_PROVISIONING',env)==='true'},
+    {id:'legal_launch_prerequisites',ready:legalLaunchReadinessReport(env).ready}
   ];
   const blocking=checks.filter(c=>!c.ready).map(c=>c.id);
   // Stripe Dashboard charges_enabled/payouts_enabled and actual TEST E2E are
