@@ -48,9 +48,10 @@
     $('rioPrivacyAdminHealth').textContent='Neperžiūrėti: '+health.unreviewed+' · Atviri: '+health.open+' · Pradelsti: '+health.overdue+
       (health.earliestDueAt?' · Artimiausia orientacinė data: '+String(health.earliestDueAt).slice(0,10):'')+
       (warnings.length?' | '+warnings.join(' '):' | El. pašto konfigūracijos požymiai nustatyti; tikro pristatymo tai neįrodo.');
-    const all=(await api('/api/admin/privacy/requests')).requests;
-    if(!all.length)item($('rioPrivacyAdminList'),'Gautų prašymų nėra.');
-    all.forEach(r=>{
+    const loadPage=async(offset=0)=>{
+      const {requests:all,hasMore,nextOffset}=await api('/api/admin/privacy/requests?offset='+offset);
+      if(!all.length && offset===0)item($('rioPrivacyAdminList'),'Gautų prašymų nėra.');
+      all.forEach(r=>{
       const box=document.createElement('div');box.style.cssText='border-top:1px solid #d9e5ed;padding:12px 0';
       const heading=document.createElement('p');
       heading.textContent=(r.accountEmail||r.userId)+' · '+(names[r.type]||r.type)+' · '+(statuses[r.status]||r.status)+' · iki '+String(r.dueAt||'').slice(0,10)+(r.overdue?' · TERMINAS PRAĖJĘS':'');
@@ -71,7 +72,18 @@
         box.append(select,note,save);
       }
       $('rioPrivacyAdminList').appendChild(box);
-    });
+      });
+      if(hasMore){
+        const more=document.createElement('button');more.type='button';more.textContent='Rodyti daugiau prašymų';
+        more.addEventListener('click',async()=>{
+          more.disabled=true;more.textContent='Įkeliama…';
+          try{more.remove();await loadPage(nextOffset)}
+          catch(e){more.disabled=false;more.textContent='Rodyti daugiau prašymų';setMessage(e.message);$('rioPrivacyAdminList').appendChild(more)}
+        });
+        $('rioPrivacyAdminList').appendChild(more);
+      }
+    };
+    await loadPage();
   }
   btn.addEventListener('click',async()=>{dialog.showModal();setMessage('');try{await refresh()}catch(e){setMessage(e.message)}});
   $('rioPrivacyClose').addEventListener('click',()=>dialog.close());
