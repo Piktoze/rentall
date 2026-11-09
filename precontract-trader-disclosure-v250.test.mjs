@@ -22,6 +22,8 @@ assert.ok(app.includes("Nuomotojo veiklos statusas nenurodytas"),
  'Undeclared status must never masquerade as a verified trader');
 assert.ok(app.includes("Specialios ES vartotojų teisės"),
  'Warn about different consumer rights for private-to-private rental');
+assert.ok(app.includes('const supplierVerified=authoritativeTrader?.verified===true;'),
+ 'Do not infer legal verification from reputation-only trust badge');
 assert.ok(app.includes("rioTraderNoticeMarkup(authoritativeTrader)"),
  'Supplier status must appear in listing detail, not only checkout');
 assert.ok(server.includes("app.get('/api/listings/:listingId/trader-disclosure'"),
