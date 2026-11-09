@@ -122,6 +122,28 @@ try{
  status(declaredTrader,200,'Supplier can declare commercial status');
  assert.equal(declaredTrader.body.trader.status,'trader');
  assert.equal(declaredTrader.body.trader.verified,false,'Self-declared trader is never verified');
+ status(await api('/api/supplier/trader-profile',{cookie:renterCookie}),403,
+   'Renter cannot view trader traceability details');
+ status(await api('/api/supplier/trader-profile',{method:'POST',cookie:renterCookie,
+   data:{legalName:'Other Firm'}}),403,'Renter cannot write supplier identity');
+ const initialProfile=await api('/api/supplier/trader-profile',{cookie:supplierCookie});
+ status(initialProfile,200,'Supplier can view own traceability draft');
+ assert.equal(initialProfile.body.profile,null);
+ status(await api('/api/supplier/trader-profile',{method:'POST',cookie:supplierCookie,
+   data:{legalName:'Test Supplier',contactAddress:'Test Street 1, Vilnius',
+     contactPhone:'+37061234567',contactEmail:'supplier@example.invalid',
+     euComplianceCertified:false}}),400,'EU compliance self-certification must be explicit');
+ const traderProfile=await api('/api/supplier/trader-profile',{method:'POST',cookie:supplierCookie,
+   data:{legalName:'Test Supplier',contactAddress:'Test Street 1, Vilnius',
+     contactPhone:'+37061234567',contactEmail:'supplier@example.invalid',
+     registerName:'Sample Register',registerNumber:'TEST-999',
+     euComplianceCertified:true}});
+ status(traderProfile,200,'Supplier can submit complete traceability draft');
+ assert.equal(traderProfile.body.profile.verified,false,'Draft cannot imply third-party identity verification');
+ const savedProfile=await api('/api/supplier/trader-profile',{cookie:supplierCookie});
+ status(savedProfile,200,'Submitted traceability details persist');
+ assert.equal(savedProfile.body.profile.legalName,'Test Supplier');
+ console.log('PASS HTTP trader traceability: supplier-only access, explicit compliance certification, persistence, unverified draft');
  const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
  status(customerBookings,200,'Renter booking list');
  assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
@@ -170,6 +192,7 @@ try{
  assert.ok(publicListing,'Published supplier listing present publicly');
  assert.equal(publicListing.supplierTraderStatus,'trader');
  assert.equal(publicListing.supplierTraderVerified,false);
+ assert.equal(publicListing.supplierPublicIdentity,null,'Unverified submitted trader contact data must stay private');
  console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const anotherSupplierCookie=await signIn(otherSupplier);
  const attemptedTakeover=await api('/api/supplier/listings',{method:'POST',cookie:anotherSupplierCookie,
