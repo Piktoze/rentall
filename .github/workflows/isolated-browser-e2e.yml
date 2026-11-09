@@ -75,6 +75,9 @@ jobs:
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
       - name: Run real Chromium browser E2E, no live services
+        # Collect independent browser evidence even if a prior HTTP regression fails.
+        # The workflow still fails overall when any critical step fails.
+        if: ${{ success() || failure() }}
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
       - name: Upload browser test evidence after every run
         if: always()
