@@ -39,28 +39,29 @@
     if(!user)return;
     const {requests}=await api('/api/privacy/requests');
     if(!requests.length)item($('rioPrivacyHistory'),'Prašymų nėra.');
-    requests.forEach(r=>item($('rioPrivacyHistory'),(names[r.type]||r.type)+' – '+(statuses[r.status]||r.status)+' · '+String(r.createdAt||'').slice(0,19)));
+    requests.forEach(r=>item($('rioPrivacyHistory'),(names[r.type]||r.type)+' – '+(statuses[r.status]||r.status)+' · '+String(r.createdAt||'').slice(0,19)+' · orientacinė atsakymo data: '+String(r.dueAt||'').slice(0,10)));
     if(user.role!=='admin')return;
     const all=(await api('/api/admin/privacy/requests')).requests;
     if(!all.length)item($('rioPrivacyAdminList'),'Gautų prašymų nėra.');
     all.forEach(r=>{
       const box=document.createElement('div');box.style.cssText='border-top:1px solid #d9e5ed;padding:12px 0';
       const heading=document.createElement('p');
-      heading.textContent=(r.accountEmail||r.userId)+' · '+(names[r.type]||r.type)+' · '+(statuses[r.status]||r.status);
+      heading.textContent=(r.accountEmail||r.userId)+' · '+(names[r.type]||r.type)+' · '+(statuses[r.status]||r.status)+' · iki '+String(r.dueAt||'').slice(0,10)+(r.overdue?' · TERMINAS PRAĖJĘS':'');
       box.appendChild(heading);
       if(r.details){const details=document.createElement('p');details.textContent=r.details;box.appendChild(details)}
       if(!['completed','rejected'].includes(r.status)){
         const select=document.createElement('select');
         ['in_review','awaiting_verification','completed','rejected'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=statuses[v];select.appendChild(o)});
+        const note=document.createElement('textarea');note.rows=2;note.maxLength=2000;note.placeholder='Užbaigiant / atmetant: sprendimo pagrindas, patikros ir atsakymo registravimo nuoroda (be perteklinių asmens duomenų).';note.setAttribute('aria-label','Sprendimo pagrindas');note.style.cssText='display:block;width:100%;margin:8px 0';
         const save=document.createElement('button');save.type='button';save.textContent='Keisti būseną';
         save.addEventListener('click',async()=>{
           const terminal=['completed','rejected'].includes(select.value);
           if(terminal&&!window.confirm('Ar tikrai atlikta atskira teisėtumo, tapatybės ir atsakymo patikra? Vien būsena duomenų nepašalina.'))return;
           save.disabled=true;
-          try{await api('/api/admin/privacy/requests/'+encodeURIComponent(r.requestId)+'/status',{method:'POST',body:JSON.stringify({status:select.value,reviewConfirmed:terminal})});setMessage('Būsena atnaujinta.');await refresh()}
+          try{await api('/api/admin/privacy/requests/'+encodeURIComponent(r.requestId)+'/status',{method:'POST',body:JSON.stringify({status:select.value,reviewConfirmed:terminal,resolutionNote:note.value})});setMessage('Būsena atnaujinta.');await refresh()}
           catch(e){setMessage(e.message)}finally{save.disabled=false}
         });
-        box.append(select,document.createTextNode(' '),save);
+        box.append(select,note,save);
       }
       $('rioPrivacyAdminList').appendChild(box);
     });
