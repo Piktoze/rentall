@@ -156,6 +156,12 @@ assertProductionConfig();
 
 const app = express();
 
+// Validate an address before queueing transactional email. This helper is
+// intentionally local and does not contact any email provider.
+function isEmail(value){
+  return typeof value==='string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function safeOperationalError(error){
   let message=String(error?.message||error||'Operational error');
   for(const name of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','RESEND_API_KEY','SESSION_SECRET','EMAIL_WORKER_TOKEN']){
