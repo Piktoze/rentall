@@ -107,3 +107,9 @@
 - Jei laiškų eilės funkcija atmeta įrašymą, serveris dabar tai registruoja kaip `privacy_request_notification_queue_rejected`. Tai neįrodo sėkmingo pristatymo.
 - Izoliuotas HTTP testas patvirtina, kad klaidingas gavėjo adresas panaikina pristatymo parengtį ir nesukuria pranešimo eilėje.
 - **Išorinė 28 punkto sąlyga:** reikia realiai paskirto BDAR laiškų gavėjo ir patikrinto pristatymo, taip pat vykdomo Playwright naršyklės testo. Šiuo metu vien CI sintaksės patikros nelaikyti naršyklės E2E.
+
+## V264 – BDAR operacinio laiško skydelio nuoroda
+- `privacy_request_notify` šablone dabar pateikiama **konfigūruoto APP_URL** absoliuti nuoroda `/?privacy-requests=1`; gavėjas turi prisijungti **administratoriaus** paskyra.
+- Nuoroda išvedama su HTML escapinimu. Laiške pateikiamas tik prašymo registracijos ID ir tipas, bet ne įrašytas aprašymas, prašytojo el. paštas ar jo paskyros duomenys.
+- Pridėta statinė regresijos patikra ir paliktas atskiras išorinio laiško pristatymo patvirtinimo reikalavimas.
+- Šis pakeitimas **neįrodo**, kad laiškas išsiųstas, gautas arba kad naršyklės testas atliktas. Negalima laikyti 28 punkto uždarytu iki tikrų E2E įrodymų.
