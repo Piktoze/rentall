@@ -70,7 +70,12 @@
             item(historyList,String(event.createdAt||'')+' · '+(statuses[event.previousStatus]||event.previousStatus||'—')+
               ' → '+(statuses[event.nextStatus]||event.nextStatus||'—')+
               ' · administratorius: '+String(event.actorUserId||'')+
-              (event.resolutionNote?' · įrašas: '+event.resolutionNote:''));
+              (event.resolutionNote?' · įrašas: '+event.resolutionNote:'')+
+              (['completed','rejected'].includes(event.nextStatus)?
+                ' · patvirtinimai: peržiūra '+(event.reviewConfirmed?'taip':'ne')+
+                ', atsakymas '+(event.responseSent?'taip':'ne')+
+                (event.nextStatus==='completed'?', tapatybė '+(event.identityReviewed?'taip':'ne')+
+                ', veiksmas '+(event.actionPerformed?'taip':'ne'):'') : ''));
           }
           historyList.hidden=false;history.textContent='Slėpti sprendimų istoriją';
         }catch(e){setMessage(e.message)}finally{history.disabled=false}
