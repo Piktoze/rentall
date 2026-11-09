@@ -1206,6 +1206,35 @@ function hashPassword(password, saltHex){
   return crypto.scryptSync(String(password),salt,64).toString('hex');
 }
 
+// Separate marketplace trader disclosure from Stripe's legal entity type.
+// An individual may act commercially; user self-declarations are not verification.
+try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_status TEXT NOT NULL DEFAULT 'undeclared' CHECK(marketplace_trader_status IN ('undeclared','private','trader'))")}catch(err){
+  if(!String(err?.message||'').includes('duplicate column name'))throw err;
+}
+try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_declared_at TEXT")}catch(err){
+  if(!String(err?.message||'').includes('duplicate column name'))throw err;
+}
+try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_verified_at TEXT")}catch(err){
+  if(!String(err?.message||'').includes('duplicate column name'))throw err;
+}
+const supplierTraderByEmailStmt=db.prepare(`SELECT marketplace_trader_status AS status,
+ marketplace_trader_declared_at AS declaredAt,marketplace_trader_verified_at AS verifiedAt
+ FROM app_users WHERE email=? COLLATE NOCASE AND role IN ('supplier','admin')`);
+export function getSupplierTraderDisclosure(email){
+  const row=supplierTraderByEmailStmt.get(String(email||'').trim());
+  return {status:row?.status||'undeclared',declaredAt:row?.declaredAt||null,
+    verified:!!row?.verifiedAt};
+}
+export function declareSupplierTraderStatus(userId,status){
+  if(!['private','trader'].includes(status))throw Object.assign(new Error('Invalid trader status'),{code:'INVALID_TRADER_STATUS'});
+  const result=db.prepare(`UPDATE app_users
+    SET marketplace_trader_status=?,marketplace_trader_declared_at=?,
+        marketplace_trader_verified_at=NULL,updated_at=?
+    WHERE user_id=? AND role IN ('supplier','admin')`).run(status,new Date().toISOString(),new Date().toISOString(),String(userId));
+  if(result.changes!==1)throw Object.assign(new Error('Supplier account not found'),{code:'SUPPLIER_NOT_FOUND'});
+  return getSupplierTraderDisclosure(db.prepare('SELECT email FROM app_users WHERE user_id=?').get(String(userId))?.email);
+}
+
 function publicUser(row){
   if(!row) return null;
   return {
@@ -1214,6 +1243,7 @@ function publicUser(row){
     role:row.role,
     displayName:row.display_name,
     businessName:row.business_name,
+    marketplaceTraderStatus:row.marketplace_trader_status||'undeclared',
     country:row.country,
     city:row.city,
     createdAt:row.created_at
