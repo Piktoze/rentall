@@ -29,6 +29,12 @@ jobs:
       DB_PATH: ${{ runner.temp }}/rentinorbit-ci.sqlite
       UPLOADS_DIR: ${{ runner.temp }}/rentinorbit-ci-uploads
       STRIPE_MODE: test
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      STRIPE_CONNECT_WEBHOOK_SECRET: ""
+      DATABASE_URL: ""
+      RENTINORBIT_DB_PATH: ""
+      RAILWAY_VOLUME_MOUNT_PATH: ""
       EMAIL_PROVIDER: disabled
       EMAIL_WORKER_ENABLED: "false"
     steps:
@@ -49,7 +55,7 @@ jobs:
           case "${DB_PATH}" in /data/*) exit 1 ;; esac
           npm run db:init
       - name: Run real Chromium browser E2E, no live services
-        run: npx playwright test e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
+        run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
       - name: Upload diagnostics on failures
         if: failure()
         uses: actions/upload-artifact@v4
