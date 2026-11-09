@@ -683,6 +683,41 @@
         </div>
       </div>
     </div>
+    <section class="dashboard-section rio-trader-panel" id="rioTraderPanel" aria-labelledby="rioTraderHeading">
+      <div class="panel-head">
+        <div>
+          <h3 id="rioTraderHeading">Nuomotojo statusas ir duomenys</h3>
+          <p>Patvirtinkite, ar nuomojate kaip privatus asmuo, ar kaip verslininkas. Tai nėra tapatybės patikra.</p>
+        </div>
+        <button type="button" class="secondary" id="rioTraderReload">Atnaujinti</button>
+      </div>
+      <p id="rioTraderStatus" role="status" aria-live="polite">Prisijungus bus parodyta būsena.</p>
+      <form id="rioTraderDeclaration" class="auth-form">
+        <label for="rioTraderKind">Nuomotojo veiklos statusas</label>
+        <select id="rioTraderKind" required>
+          <option value="">Pasirinkite</option>
+          <option value="private">Privatus nuomotojas (ne verslo tikslais)</option>
+          <option value="trader">Verslininkas (vykdoma ekonominė veikla)</option>
+        </select>
+        <label class="checkbox-label"><input type="checkbox" id="rioTraderConfirm" required> Patvirtinu, kad statusą nurodžiau teisingai.</label>
+        <button type="submit" class="primary" id="rioTraderSaveStatus">Išsaugoti statusą</button>
+      </form>
+      <form id="rioTraderBusinessForm" class="auth-form" hidden>
+        <h4>Verslininko duomenys</h4>
+        <p>Duomenys išsaugomi kaip juodraštis. Prieš rodant juos pirkėjams būtina papildoma patikra. Paso, asmens kodo ir banko rekvizitų čia nekelkite.</p>
+        <div class="form-grid two">
+          <label>Vardas, pavardė arba juridinis pavadinimas<input id="rioTraderLegalName" required minlength="2" maxlength="180" autocomplete="organization"></label>
+          <label>Kontaktinis telefonas<input id="rioTraderPhone" type="tel" required maxlength="25" autocomplete="tel"></label>
+          <label>Kontaktinis el. paštas<input id="rioTraderEmail" type="email" required maxlength="180" autocomplete="email"></label>
+          <label>Registro pavadinimas (jei taikoma)<input id="rioTraderRegister" maxlength="180"></label>
+          <label>Registracijos numeris (jei taikoma)<input id="rioTraderNumber" maxlength="90"></label>
+          <label class="full">Kontaktinis adresas<input id="rioTraderAddress" required minlength="8" maxlength="350" autocomplete="street-address"></label>
+        </div>
+        <label class="checkbox-label"><input type="checkbox" id="rioTraderCompliance" required> Patvirtinu, kad siūlomi daiktai ir paslaugos atitinka taikomus ES teisės reikalavimus.</label>
+        <button type="submit" class="primary" id="rioTraderSaveProfile">Pateikti duomenis</button>
+      </form>
+      <small id="rioTraderMessage" role="status" aria-live="polite"></small>
+    </section>
     <nav class="v124-supplier-nav" aria-label="Supplier dashboard navigation" data-i18n-aria-label="Supplier dashboard navigation">
       <button type="button" data-v124-target="supplierOverview" data-i18n-text="Overview">Overview</button>
       <button type="button" data-v124-target="v94InventoryBody" data-i18n-text="Inventory &amp; pricing">Inventory & pricing</button>
