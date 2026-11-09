@@ -85,3 +85,10 @@
 5. Tik po faktinio išsiuntimo ir veiksmo pažymėti reikiamus patvirtinimus bei galutinę būseną; patikrinti audito istoriją.
 6. Jei numatoma, kad terminas bus viršytas, nedelsiant laikytis taikytinų BDAR pranešimo ir termino pratęsimo taisyklių. UI rodoma data yra orientacinė ir neskaičiuoja visų išimčių.
 7. Nepatvirtinti viešo GO be asmens duomenų apsaugos / teisinio proceso peržiūros, privataus el. pašto adresato, realaus pristatymo patikros ir naršyklės E2E.
+
+## V261 – saugus naršyklės testų rinkinys (be staging DB pakeitimų)
+- Naujas `e2e/privacy-requests-v261.spec.js` naudoja „Playwright“ naršyklę ir perima tik privatumo / prisijungimo API atsakymus, pateikdamas **sintetinius** kliento ir administratoriaus duomenis.
+- Tikrina: neprisijungusio naudotojo formos blokavimą; kliento prašymo pateikimo vizualią eigą; statuso ir termino rodymą; administratoriaus suvestinės, trūkstamos el. pašto konfigūracijos perspėjimo bei sprendimų istorijos rodymą; `/?privacy-requests=1` nuorodą.
+- Paleidimo komanda izoliuotoje kūrėjo/testų aplinkoje: `npm run test:e2e:privacy`. Tam reikia įdiegtų „Playwright Chromium“ naršyklės failų. Testą paleisti tik su izoliuota testų DB / serveriu; neprijungti prie tikros staging `/data`.
+- `release/rc-gate.js` tikrina naršyklės testo **JavaScript sintaksę**, bet build proceso metu pačios „Playwright“ naršyklės neatidaro. Nevadinti testo PASS be realaus paleidimo rezultatų.
+- ChatGPT naršyklės prieiga negalėjo perskaityti staging atviro skirtuko (trūko leidimo pasiekti šį hostą), todėl realus vizualinis E2E lieka **nepatvirtintas**.
