@@ -90,6 +90,27 @@ try{
  console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
+ // Booking lists must be scoped to the account identity (not request parameters).
+ const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
+ status(customerBookings,200,'Renter booking list');
+ assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
+ const unrelatedBookings=await api('/api/customer/bookings',{cookie:outsiderCookie});
+ status(unrelatedBookings,200,'Unrelated account booking list');
+ assert.ok(!unrelatedBookings.body.bookings.some(b=>b.bookingId===id),'Outsider must not see renter booking');
+ const supplierBookings=await api('/api/rentals/bookings',{cookie:supplierCookie});
+ status(supplierBookings,200,'Supplier booking list');
+ assert.ok(supplierBookings.body.bookings.some(b=>b.bookingId===id),'Supplier sees booking for owned listing');
+ const supplierWithForeignFilter=await api('/api/rentals/bookings?ownerEmail=not-the-supplier@example.invalid',{cookie:supplierCookie});
+ status(supplierWithForeignFilter,200,'Supplier cannot override ownership via query');
+ assert.ok(supplierWithForeignFilter.body.bookings.some(b=>b.bookingId===id),'Supplier owner filter must use session identity');
+ status(await api('/api/rentals/bookings',{cookie:renterCookie}),403,'Renter cannot view supplier booking list');
+ status(await api('/api/rentals/bookings',{cookie:outsiderCookie}),403,'Outsider cannot view supplier booking list');
+ status(await api('/api/customer/bookings/'+id,{cookie:outsiderCookie}),403,'Outsider cannot access renter booking detail');
+ const renterDetail=await api('/api/customer/bookings/'+id,{cookie:renterCookie});
+ status(renterDetail,200,'Renter can open own booking detail');
+ status(await api('/api/customer/bookings/'+id+'?accessToken='+encodeURIComponent(payFixture.paymentToken),{cookie:outsiderCookie}),403,
+   'Signed-in outsider cannot use a guest token to impersonate another renter');
+ console.log('PASS HTTP booking list and detail account isolation');
  // New public listing must have two to five real uploaded photo files.
  const listingBase={id:'photo-e2e-listing',title:'Photo integration fixture',
    city:'Vilnius',quantity:1,priceDay:12,bookingMode:'request'};
