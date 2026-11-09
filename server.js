@@ -1721,7 +1721,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     // Payment, authorization and Stripe intent creation are forbidden until
     // the supplier confirms a request booking, in ALL environments.
     const preauthorizeRequest=false;
-    if(listing?.bookingMode==='request' && booking.status!=='confirmed'){
+    if(booking.status!=='confirmed'){
       return res.status(409).json({error:'Supplier confirmation is required before payment.',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
     }
     const amount=Math.round(Number(booking.orderValue||0)*100);
@@ -1811,7 +1811,7 @@ app.post('/api/payments/demo/confirm', simpleRateLimit({windowMs:60000,max:30,ke
     if(['paid','succeeded','refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase())||booking.stripeRefundId)
       return res.status(409).json({error:'Payment was already completed or refunded',code:'BOOKING_PAYMENT_FINAL'});
     const listingForPayment=getRentalListing(booking.listingId);
-    if(listingForPayment?.bookingMode==='request'&&booking.status!=='confirmed')
+    if(booking.status!=='confirmed')
       return res.status(409).json({error:'Supplier confirmation required before payment',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
     if(booking.paymentProvider!=='demo'||!String(booking.stripePaymentIntentId||'').startsWith('demo_pi_'))
       return res.status(409).json({error:'Demo checkout must be initiated before confirmation',code:'PAYMENT_INTENT_REQUIRED'});
