@@ -52,6 +52,20 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
   const insertAudit=db.prepare(`INSERT INTO privacy_subject_request_audit
     (audit_id,request_id,actor_user_id,action,previous_status,next_status,resolution_note) VALUES (?,?,?,?,?,?,?)`);
   const adminOnly=(req,res,next)=>req.appUser?.role==='admin'?next():res.status(403).json({code:'FORBIDDEN',error:'Prieiga draudžiama'});
+  const requestAudit=db.prepare(`SELECT audit_id AS auditId, actor_user_id AS actorUserId, action,
+    previous_status AS previousStatus, next_status AS nextStatus,
+    resolution_note AS resolutionNote, created_at AS createdAt
+    FROM privacy_subject_request_audit WHERE request_id=?
+    ORDER BY created_at ASC, audit_id ASC LIMIT 200`);
+  app.get('/api/admin/privacy/requests/:requestId/audit',requireAuth,adminOnly,(req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    const id=String(req.params.requestId||'');
+    if(!/^dsr_[0-9a-f-]{36}$/.test(id))
+      return res.status(400).json({code:'INVALID_REQUEST_ID'});
+    if(!findRequest.get(id))return res.status(404).json({code:'NOT_FOUND'});
+    res.json({requestId:id,events:requestAudit.all(id)});
+  });
+
   // Admin-only operational health: aggregate counts, never expose request details or secrets.
   const summary=db.prepare(`SELECT
     COUNT(*) AS total,
