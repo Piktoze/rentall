@@ -114,6 +114,22 @@ try{
  assert.equal(afterSecondDelivery.booking.payment_status,'paid');
  assert.equal(afterSecondDelivery.notifications.length,beforeSecondDelivery.notifications.length,'No duplicate booking notifications');
  assert.equal(afterSecondDelivery.outbox.length,beforeSecondDelivery.outbox.length,'No duplicate payment emails');
+ // Stripe can deliver a stale payment_failed event after the same PaymentIntent
+ // was marked paid or refunded. It must never downgrade financial state.
+ const failedEvent=id=>({...event(id,accountId),type:'payment_intent.payment_failed',
+   data:{object:{...event(id,accountId).data.object,status:'requires_payment_method'}}});
+ const afterPaidFailed=await post(failedEvent('evt_webhook_e2e_failed_after_paid'),{connect:true});
+ assert.equal(afterPaidFailed.status,200);
+ assert.equal(read().booking.payment_status,'paid','Late failed webhook must not downgrade paid booking');
+ const fixtureDb=new Database(dbPath);
+ try{
+  fixtureDb.prepare("UPDATE rental_bookings SET payment_status='refunded' WHERE booking_id=?").run(bookingId);
+ }finally{fixtureDb.close();}
+ const afterRefundFailed=await post(failedEvent('evt_webhook_e2e_failed_after_refund'),{connect:true});
+ assert.equal(afterRefundFailed.status,200);
+ assert.equal(read().booking.payment_status,'refunded','Late failed webhook must not downgrade refunded booking');
+ assert.equal(read().notifications.length,beforeSecondDelivery.notifications.length,
+   'Late failure must not create misleading failure notifications');
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
  console.log('PASS signed webhook HTTP E2E: bad signature denied, account binding enforced, paid booking persisted, replay and cross-endpoint delivery deduplicated');
