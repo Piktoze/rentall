@@ -7055,3 +7055,65 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  // Load once after app authentication is initialized, never persist drafts locally.
  load().catch(()=>{});
 })();
+
+
+// V249 — administrator review of trader evidence; the UI cannot verify identity.
+(function initAdminTraderReviewV249(){
+ const list=document.getElementById('rioAdminReviewList');
+ const msg=document.getElementById('rioAdminReviewMessage');
+ if(!list||!msg)return;
+ async function refresh(){
+  try{
+   const data=await apiJson('/api/admin/trader-reviews');
+   const profiles=Array.isArray(data.profiles)?data.profiles:[];
+   list.innerHTML=profiles.map(p=>
+     '<article class="admin-card rio-review" data-id="'+escapeHtml(p.userId)+'" data-submitted="'+escapeHtml(p.submittedAt||'')+'">'+
+     '<h4>'+escapeHtml(p.legalName||'Tiekėjas')+'</h4>'+
+     '<p>'+escapeHtml(p.email||'')+' · '+(p.verifiedAt?'Patikrinta':'Nepatikrinta')+'</p>'+
+     '<details><summary>Peržiūrėti pateiktus duomenis</summary>'+
+       '<p>'+escapeHtml(p.contactAddress||'')+'</p>'+
+       '<p>'+escapeHtml(p.contactPhone||'')+' · '+escapeHtml(p.contactEmail||'')+'</p>'+
+       '<p>'+escapeHtml(p.registerName||'')+' · '+escapeHtml(p.registerNumber||'')+'</p></details>'+
+     '<form class="auth-form rio-review-form">'+
+       '<label>Patikros bylos arba įrodymo nuoroda<input name="evidenceReference" required minlength="8" maxlength="180"></label>'+
+       '<label>Sprendimo motyvai<textarea name="reviewNote" required minlength="8" maxlength="600"></textarea></label>'+
+       '<label><input type="checkbox" name="identityChecked"> Tapatybė patikrinta atskiru kanalu</label>'+
+       '<label><input type="checkbox" name="contactChecked"> Kontaktai patikrinti</label>'+
+       '<label><input type="checkbox" name="registryChecked"> Registro ar veiklos statusas patikrintas</label>'+
+       '<label><input type="checkbox" name="paymentAccountChecked"> Mokėjimų paskyra patikrinta</label>'+
+       '<div><button class="primary" type="submit" name="decision" value="approved" '+(p.verifiedAt?'disabled':'')+'>Patvirtinti</button> '+
+       '<button class="secondary" type="submit" name="decision" value="rejected">Atmesti</button></div>'+
+     '</form></article>'
+   ).join('')||'<p>Patikros paraiškų nėra.</p>';
+   list.querySelectorAll('.rio-review-form').forEach(form=>{
+     form.addEventListener('submit',async e=>{
+       e.preventDefault();
+       const decision=e.submitter?.value;
+       if(!['approved','rejected'].includes(decision))return;
+       if(decision==='approved'&&!window.confirm('Patvirtinate, kad visi keturi nepriklausomi patikrinimai atlikti?'))return;
+       const card=form.closest('.rio-review');
+       const fd=new FormData(form);
+       const payload={decision,submittedAt:card.dataset.submitted,
+         evidenceReference:String(fd.get('evidenceReference')||'').trim(),
+         reviewNote:String(fd.get('reviewNote')||'').trim(),
+         identityChecked:fd.has('identityChecked'),contactChecked:fd.has('contactChecked'),
+         registryChecked:fd.has('registryChecked'),paymentAccountChecked:fd.has('paymentAccountChecked')};
+       form.querySelectorAll('button').forEach(button=>button.disabled=true);
+       try{
+         await apiJson('/api/admin/trader-reviews/'+encodeURIComponent(card.dataset.id),
+           {method:'POST',body:JSON.stringify(payload)});
+         msg.textContent='Sprendimas užregistruotas.';
+         await refresh();
+       }catch(err){
+         msg.textContent=err.message||'Nepavyko išsaugoti sprendimo.';
+         form.querySelectorAll('button').forEach(button=>button.disabled=false);
+       }
+     });
+   });
+  }catch(err){
+   if(err.status!==401&&err.status!==403)msg.textContent=err.message||'Nepavyko įkelti patikrų.';
+  }
+ }
+ document.getElementById('rioAdminReviewRefresh')?.addEventListener('click',refresh);
+ document.getElementById('refreshAdminBtn')?.addEventListener('click',refresh);
+})();
