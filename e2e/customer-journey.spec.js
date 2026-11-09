@@ -63,6 +63,8 @@ test.describe('RentInOrbit customer journey',()=>{
    await expect(page.locator('#v145AvailabilityContinue')).toBeEnabled();
    await page.locator('#v145AvailabilityContinue').click();
    await expect(page.locator('#checkoutModal')).toBeVisible();
+   // Rental start time became mandatory; the checkout must not advance without it.
+   await page.locator('#rentalStartTime').fill('10:00');
    await page.locator('.checkout-step[data-step="1"] .next-step').click();
    await expect(page.locator('.checkout-step[data-step="2"]')).toHaveClass(/active/);
    await page.locator('#closeCheckout').click();
@@ -90,11 +92,12 @@ test.describe('RentInOrbit customer journey',()=>{
    await page.locator('#loginPassword').fill(password);
    await page.locator('#supplierLoginForm button[type="submit"]').click();
    await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
-   // Supplier dashboard is intentionally collapsed until explicitly expanded.
-   await page.locator('#supplierDashboardToggle').click();
-   await expect(page.locator('#supplier-dashboard')).toHaveClass(/dashboard-expanded/);
-   await page.locator('[data-v129-tab="calendar"]').click();
-   await expect(page.locator('#v129CalendarPanel')).toHaveClass(/active/);
+   // V178 moved supplier tools into the header drawer; old dashboard tabs are hidden.
+   await page.locator('#supplierAuthBtn').click();
+   await expect(page.locator('#supplierActionDrawer')).toHaveClass(/open/);
+   await page.locator('#supplierActionDrawer [data-supplier-action="calendar"]').click();
+   await expect(page.locator('#supplierActionDrawer')).not.toHaveClass(/open/);
+   await expect(page.locator('#supplierAvailabilitySection')).toHaveClass(/supplier-v178-external-visible/);
  });
 });
 
