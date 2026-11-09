@@ -17,3 +17,17 @@
 7. Patikrinti, ar šios lentelės duomenims priskirtas adekvatus saugojimo ir išvalymo terminas bei duomenų bazės atsarginių kopijų politika.
 
 **Statusas:** dalinis backend įdiegimas, **NO-GO**. Production, main, LIVE Stripe ir /data nekeisti.
+
+## V254 papildymas – naudotojo ir administratoriaus sąsajos
+- Puslapio apačioje yra „Mano duomenų teisės“ mygtukas, atveriantis lietuvišką dialogą. Prisijungus galima pateikti prašymą ir peržiūrėti tik savo prašymų būsenas.
+- Administratorius (tik serverio autorizuotas vaidmuo `admin`) gali peržiūrėti registruotus prašymus, jų aprašymus ir keisti jų būsenas.
+- Būsenų keitimai saugomi `privacy_subject_request_audit` su administratoriaus ID, ankstesne / nauja būsena ir laiku.
+- Užbaigimas / atmetimas reikalauja `reviewConfirmed`, bet **tai tik administratoriaus patvirtinimas** ir neįrodo duomenų trynimo, eksporto, atsakymo gavimo arba tapatybės patikros.
+- Naudotojo ir administratoriaus formose įrašomas tekstas rodomas per `textContent`, ne per HTML.
+- Jokie automatiniai asmens duomenų trynimo, taisymo ar eksportavimo veiksmai neįdiegti.
+
+## Dar neužtikrinta
+- Nėra pranešimo administratoriui apie naują prašymą ir termino kontrolės – prieš atveriant paslaugą viešai būtina įdiegti veikiantį informavimo / peržiūros procesą.
+- Nėra įrodymų / dokumentų prijungimo prie bylos, tapatybės patvirtinimo, atsakymo registravimo, duomenų perdavimo saugiu kanalu bei atsakingo asmens priskyrimo.
+- Būtina įvertinti atskirus duomenų saugojimo terminus, retenkciją, vidinę tvarką, teisėtus pagrindus ir procesą neprisijungusiems naudotojams.
+- Šaltinio kodo patikros neužtikrina integracinio 401/403, kryžminės paskyros atskyrimo ir tikro e2e testo: privaloma atlikti izoliuotoje staging testinėje bazėje.
