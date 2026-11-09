@@ -106,6 +106,29 @@ try{
    'Supplier cannot read platform-wide payment/webhook audit');
  status(await api('/api/stripe/webhook-events',{cookie:outsiderCookie}),403,
    'Other account cannot read financial audit');
+ // Supplier trader self-declaration must not equal verified legal status.
+ const initialTrader=await api('/api/supplier/trader-status',{cookie:supplierCookie});
+ status(initialTrader,200,'Supplier can inspect trader declaration');
+ assert.equal(initialTrader.body.trader.status,'undeclared');
+ assert.equal(initialTrader.body.trader.verified,false);
+ status(await api('/api/supplier/trader-status',{method:'POST',cookie:supplierCookie,
+   data:{status:'trader',confirmed:false}}),400,'Explicit declaration consent required');
+ status(await api('/api/supplier/trader-status',{method:'POST',cookie:renterCookie,
+   data:{status:'trader',confirmed:true}}),403,'Renter cannot self-declare as supplier');
+ status(await api('/api/supplier/trader-status',{method:'POST',cookie:supplierCookie,
+   data:{status:'company',confirmed:true}}),400,'Stripe legal entity type is not trader status');
+ const declaredTrader=await api('/api/supplier/trader-status',{method:'POST',cookie:supplierCookie,
+   data:{status:'trader',confirmed:true}});
+ status(declaredTrader,200,'Supplier can declare commercial status');
+ assert.equal(declaredTrader.body.trader.status,'trader');
+ assert.equal(declaredTrader.body.trader.verified,false,'Self-declared trader is never verified');
+ const publicTraderListings=await api('/api/listings');
+ status(publicTraderListings,200,'Public listings available with trader disclosure');
+ const publicListing=publicTraderListings.body.listings.find(item=>item.id==='api-e2e-listing');
+ assert.ok(publicListing,'Supplier fixture listing present publicly');
+ assert.equal(publicListing.supplierTraderStatus,'trader');
+ assert.equal(publicListing.supplierTraderVerified,false);
+ console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
  status(customerBookings,200,'Renter booking list');
  assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
