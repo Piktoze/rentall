@@ -228,6 +228,22 @@ try{
  const afterRejection=await api('/api/listings');
  assert.equal(afterRejection.body.listings.find(l=>l.id===listingBase.id).supplierPublicIdentity,null,
    'Revoked trader identity must be removed from public listing');
+ const again=await api(reviewUrl,{method:'POST',cookie:adminCookie,data:reviewBase});
+ status(again,200,'Admin may reapprove after a documented rejection');
+ const revisedProfile=await api('/api/supplier/trader-profile',{method:'POST',cookie:supplierCookie,
+   data:{legalName:'Revised Supplier',contactAddress:'New Test Street 4, Vilnius',
+     contactPhone:'+37061234567',contactEmail:'supplier@example.invalid',
+     registerName:'Sample Register',registerNumber:'TEST-999',euComplianceCertified:true}});
+ status(revisedProfile,200,'Supplier may edit approved profile');
+ assert.equal(revisedProfile.body.profile.verified,false,
+   'Editing previously approved trader profile revokes its verification');
+ const afterProfileEdit=await api('/api/listings');
+ const changedListing=afterProfileEdit.body.listings.find(l=>l.id===listingBase.id);
+ assert.equal(changedListing.supplierTraderVerified,false);
+ assert.equal(changedListing.supplierPublicIdentity,null,
+   'Edited identity data stays hidden pending independent re-review');
+ status(await api(reviewUrl,{method:'POST',cookie:adminCookie,data:reviewBase}),409,
+   'Old approval evidence cannot be reused after supplier profile update');
  console.log('PASS HTTP admin trader review: role isolation, evidence, approval, replay guard, revocation');
 
  console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
