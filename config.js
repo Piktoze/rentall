@@ -156,6 +156,31 @@ export function productionConfigReport(env=process.env){
   };
 }
 
+// This is a GO/NO-GO report for accepting real money. Unlike the general
+// deployment contract, a test-key deployment cannot pass the LIVE launch gate.
+// It never performs external requests and never reveals key material.
+export function liveLaunchReadinessReport(env=process.env){
+  const config=productionConfigReport(env);
+  const secret=value('STRIPE_SECRET_KEY',env);
+  const publishable=value('STRIPE_PUBLISHABLE_KEY',env);
+  const checks=[
+    {id:'production_configuration',ready:config.ready&&config.production&&config.deployment&&!config.staging},
+    {id:'stripe_live_mode',ready:value('STRIPE_MODE',env).toLowerCase()==='live'},
+    {id:'stripe_live_secret',ready:/^[sr]k_live_[A-Za-z0-9_\\-]{12,}$/.test(secret)},
+    {id:'stripe_live_publishable',ready:/^pk_live_[A-Za-z0-9_\\-]{12,}$/.test(publishable)},
+    {id:'stripe_webhook_signing',ready:/^whsec_[A-Za-z0-9_\\-]{12,}$/.test(value('STRIPE_WEBHOOK_SECRET',env))},
+    {id:'stripe_connect_webhook_signing',ready:/^whsec_[A-Za-z0-9_\\-]{12,}$/.test(value('STRIPE_CONNECT_WEBHOOK_SECRET',env))},
+    {id:'stripe_connect_v2',ready:value('STRIPE_CONNECT_V2_PROVISIONING',env)==='true'}
+  ];
+  const blocking=checks.filter(c=>!c.ready).map(c=>c.id);
+  // Stripe Dashboard charges_enabled/payouts_enabled and actual TEST E2E are
+  // independent external launch requirements; this local report cannot verify them.
+  return {ready:blocking.length===0,checks,blocking,
+    externalVerificationRequired:['platform_charges_enabled','platform_payouts_enabled',
+      'supplier_connect_charges_enabled','supplier_connect_payouts_enabled',
+      'stripe_test_payment_webhook_refund_e2e']};
+}
+
 export function productionStorageReport(env=process.env){
   const deployment=isDeploymentEnvironment(env);
   const config=resolveDatabaseConfig(env);
