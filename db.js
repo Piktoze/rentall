@@ -1217,12 +1217,6 @@ try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_declared_at TEX
 try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_verified_at TEXT")}catch(err){
   if(!String(err?.message||'').includes('duplicate column name'))throw err;
 }
-const supplierTraderByEmailStmt=db.prepare(`SELECT u.marketplace_trader_status AS status,
- u.marketplace_trader_declared_at AS declaredAt,
- CASE WHEN u.marketplace_trader_status='trader' AND p.verified_at IS NOT NULL
- THEN u.marketplace_trader_verified_at ELSE NULL END AS verifiedAt
- FROM app_users u LEFT JOIN marketplace_trader_profiles p ON p.user_id=u.user_id
- WHERE u.email=? COLLATE NOCASE AND u.role IN ('supplier','admin')`);
 export function getSupplierTraderDisclosure(email){
   const row=supplierTraderByEmailStmt.get(String(email||'').trim());
   return {status:row?.status||'undeclared',declaredAt:row?.declaredAt||null,
@@ -1254,6 +1248,12 @@ CREATE TABLE IF NOT EXISTS marketplace_trader_profiles (
  verified_at TEXT
 );
 `);
+const supplierTraderByEmailStmt=db.prepare(`SELECT u.marketplace_trader_status AS status,
+ u.marketplace_trader_declared_at AS declaredAt,
+ CASE WHEN u.marketplace_trader_status='trader' AND p.verified_at IS NOT NULL
+ THEN u.marketplace_trader_verified_at ELSE NULL END AS verifiedAt
+ FROM app_users u LEFT JOIN marketplace_trader_profiles p ON p.user_id=u.user_id
+ WHERE u.email=? COLLATE NOCASE AND u.role IN ('supplier','admin')`);
 const traderProfileByUserStmt=db.prepare(`SELECT legal_name AS legalName,
  contact_address AS contactAddress,contact_phone AS contactPhone,
  contact_email AS contactEmail,register_name AS registerName,
