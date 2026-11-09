@@ -36,7 +36,8 @@ const previous={...process.env};
 for(const key of Object.keys(process.env))if(!(key in env))delete process.env[key];
 Object.assign(process.env,env);
 const {db,createAppUser,upsertRentalListing,createRentalBookingAtomic,
- saveStripeConnection,setBookingPaymentDetails,closeDatabase}=await import('./db.js');
+ saveStripeConnection,setBookingPaymentDetails,closeDatabase,
+ beginWebhookEvent,markWebhookFailed,claimWebhookRetry,markWebhookProcessed}=await import('./db.js');
 const {saveDirectMerchantMetadata}=await import('./modules/stripe-connect-store-v195.js');
 const user=createAppUser({email,password:'TestLocalOnly1!',role:'supplier',displayName:'Webhook fixture'});
 saveStripeConnection({userId:user.userId,userEmail:email,stripeAccountId:accountId,connectApi:'v2_merchant_direct'});
@@ -47,6 +48,20 @@ createRentalBookingAtomic({bookingId,listingId:'webhook-e2e-listing',
  customerEmail:'webhook-e2e-customer@example.invalid',orderValue:100});
 setBookingPaymentDetails({bookingId,paymentIntentId,paymentStatus:'requires_payment_method',
  platformFeeAmount:15,supplierAmount:85,paymentProvider:'stripe'});
+// Persistent retry claims are conditional SQL updates, not a read/write race.
+const retryId='evt_retry_claim_atomic_e2e';
+assert.equal(beginWebhookEvent({eventId:retryId,type:'payment_intent.succeeded'}).duplicate,false);
+markWebhookFailed(retryId,'simulated recoverable crash');
+assert.equal(claimWebhookRetry(retryId).claimed,true,'First retry owns failed event');
+assert.equal(claimWebhookRetry(retryId).claimed,false,'Second retry cannot reclaim an active event');
+db.prepare("UPDATE webhook_events SET processing_started_at=? WHERE event_id=?")
+ .run('2020-01-01T00:00:00.000Z',retryId);
+assert.equal(claimWebhookRetry(retryId,{staleMinutes:5}).claimed,true,
+ 'Orphaned processing event can be reclaimed after timeout');
+assert.equal(claimWebhookRetry(retryId).claimed,false,
+ 'Recovered event must be owned by only one worker');
+markWebhookProcessed(retryId);
+assert.equal(claimWebhookRetry(retryId).claimed,false,'Processed event cannot be reclaimed');
 closeDatabase();
 for(const key of Object.keys(process.env))delete process.env[key];
 Object.assign(process.env,previous);
