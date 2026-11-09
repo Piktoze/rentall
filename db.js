@@ -1266,6 +1266,7 @@ const upsertFullListingStmt=db.prepare(`
     supplier_response_hours=excluded.supplier_response_hours,
     data_json=excluded.data_json,
     updated_at=excluded.updated_at
+  WHERE rental_listings.owner_email = excluded.owner_email COLLATE NOCASE
 `);
 
 const listPublicFullListingsStmt=db.prepare(`
@@ -1390,6 +1391,10 @@ export function saveFullRentalListing(listing, ownerEmail){
     supplierResponseHours:Math.max(1,Math.min(48,Number(listing.supplierResponseHours||4)))
   };
 
+  const existingOwner=db.prepare('SELECT owner_email FROM rental_listings WHERE listing_id=?').get(id);
+  if(existingOwner && String(existingOwner.owner_email||'').toLowerCase()!==normalized.ownerEmail){
+    throw Object.assign(new Error('Skelbimas nepriklauso šiai paskyrai.'),{code:'LISTING_OWNERSHIP_DENIED'});
+  }
   upsertFullListingStmt.run({
     listing_id:id,
     owner_email:normalized.ownerEmail,
