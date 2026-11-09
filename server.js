@@ -2656,7 +2656,13 @@ app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleR
       const booking=getRentalBookingById(bookingId);if(!booking)return res.status(404).json({error:'Booking not found'});
       customerEmail=booking.customerEmail;
     }else{
-      // Any signed-in RentInOrbit member, including a supplier, can rent from another supplier with the same account.
+      // A general listing enquiry is allowed, but a booking-bound conversation
+      // must be initiated only by that booking's actual renter.
+      if(bookingId){
+        const renterBooking=getRentalBookingById(bookingId);
+        if(!renterBooking || String(renterBooking.customerEmail||'').toLowerCase()!==actorEmail)
+          return res.status(403).json({error:'Rezervacija nepriklauso šiai paskyrai.',code:'BOOKING_ACCESS_DENIED'});
+      }
       customerEmail=req.appUser.email;
     }
     if(!customerEmail||!supplierEmail)return res.status(400).json({error:'Conversation participants are unavailable'});
