@@ -317,13 +317,28 @@ const demoSupplier = {
   password:'demo123'
 };
 
+function stripBrowserPayoutIdentifiers(accounts){
+  return (Array.isArray(accounts)?accounts:[]).map(account=>{
+    const copy={...account};
+    // Historical V5 profile used localStorage for payment/tax identifiers.
+    // Such sensitive data belongs in Stripe/on the server, not browser storage.
+    delete copy.iban;
+    delete copy.taxId;
+    return copy;
+  });
+}
 function loadAccounts(){
   try{
     const existing=JSON.parse(localStorage.getItem(SUPPLIER_KEY)||'[]');
-    return Array.isArray(existing)?existing:[];
+    const safe=stripBrowserPayoutIdentifiers(existing);
+    if(Array.isArray(existing) && existing.some(item=>item&&('iban' in item||'taxId' in item)))
+      localStorage.setItem(SUPPLIER_KEY,JSON.stringify(safe));
+    return safe;
   }catch{return [];}
 }
-function saveAccounts(accounts){ localStorage.setItem(SUPPLIER_KEY, JSON.stringify(accounts)); }
+function saveAccounts(accounts){
+  localStorage.setItem(SUPPLIER_KEY,JSON.stringify(stripBrowserPayoutIdentifiers(accounts)));
+}
 function getSession(){ return localStorage.getItem(SESSION_KEY); }
 function setSession(email){ localStorage.setItem(SESSION_KEY,email); refreshAuthUI(); }
 function clearSession(){ localStorage.removeItem(SESSION_KEY); refreshAuthUI(); }
@@ -489,8 +504,8 @@ function v5FillProfile(s){
   document.getElementById('accFreeDeliveryAbove').value=s.freeDeliveryAbove ?? '';
   document.getElementById('accPayoutName').value=s.payoutName ?? '';
   document.getElementById('accPayoutCountry').value=s.payoutCountry ?? '';
-  document.getElementById('accIban').value=s.iban ?? '';
-  document.getElementById('accTaxId').value=s.taxId ?? '';
+  document.getElementById('accIban').value=''; // Bank details are handled by Stripe.
+  document.getElementById('accTaxId').value=''; // Do not mirror tax ID into localStorage.
   document.getElementById('accPayoutSchedule').value=s.payoutSchedule ?? 'Weekly';
 }
 
@@ -523,8 +538,6 @@ document.getElementById('supplierAccountForm').addEventListener('submit',(e)=>{
     freeDeliveryAbove:Number(document.getElementById('accFreeDeliveryAbove').value||0),
     payoutName:document.getElementById('accPayoutName').value.trim(),
     payoutCountry:document.getElementById('accPayoutCountry').value,
-    iban:document.getElementById('accIban').value.trim(),
-    taxId:document.getElementById('accTaxId').value.trim(),
     payoutSchedule:document.getElementById('accPayoutSchedule').value
   };
   saveAccounts(accounts);
