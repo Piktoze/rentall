@@ -3708,7 +3708,7 @@ openLiveSupplierOrder=function(bookingId){
     <div class="supplier-order-grid">
       <div><span>${escapeHtml(uiText('Refund amount'))}</span><b>${b.refundAmount!=null?money(b.refundAmount):'—'}</b></div>
       <div><span>${escapeHtml(uiText('Return condition'))}</span><b>${escapeHtml(uiText(b.returnCondition||'—'))}</b></div>
-      <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Return notes'))}</span><b>${b.returnNotes||'—'}</b></div>
+      <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Return notes'))}</span><b>${escapeHtml(String(b.returnNotes||'—'))}</b></div>
     </div>`;
   summary.appendChild(extra);
 };
@@ -6907,7 +6907,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
               ? {returnCondition,returnNotes}
               : {purpose:'pickup',code})
           });
-          showResult(purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas. Nuomininkui išsiųstas pranešimas.');
+          showResult(purpose==='pickup'?'Daiktas išduotas ir užfiksuotas.':'Daikto grąžinimas užfiksuotas. Nuomininko paskyroje sukurtas pranešimas.');
           await refreshLiveSupplierBookings();
           await renderBookings();
           openLiveSupplierOrder(bookingId);
