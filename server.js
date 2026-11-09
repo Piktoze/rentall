@@ -2840,7 +2840,8 @@ app.post('/api/rentals/disputes', simpleRateLimit({windowMs:60000,max:10,keyPref
       user?.email &&
       String(booking.customerEmail||'').toLowerCase()===String(user.email).toLowerCase()
     );
-    const guestCustomerAllowed=!!verifyBookingPaymentToken(bookingId,accessToken);
+    // A guest link must never override an authenticated account identity.
+    const guestCustomerAllowed=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
     if(!supplierAllowed && !accountCustomerAllowed && !guestCustomerAllowed){
       return res.status(403).json({error:'Booking access denied'});
     }
