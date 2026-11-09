@@ -194,6 +194,14 @@ try{
  assert.equal(publicListing.supplierTraderStatus,'trader');
  assert.equal(publicListing.supplierTraderVerified,false);
  assert.equal(publicListing.supplierPublicIdentity,null,'Unverified submitted trader contact data must stay private');
+ const publicSellerDisclosure=await api('/api/listings/'+encodeURIComponent(listingBase.id)+'/trader-disclosure');
+ status(publicSellerDisclosure,200,'Renter can query authoritative trader status without login');
+ assert.equal(publicSellerDisclosure.body.status,'trader');
+ assert.equal(publicSellerDisclosure.body.verified,false);
+ assert.equal(publicSellerDisclosure.body.publicIdentity,null,
+   'Precontract disclosure must never leak unverified trader contact details');
+ status(await api('/api/listings/nonexistent-test-item/trader-disclosure'),404,
+   'Unknown listing must not expose supplier information');
 
  status(await api('/api/admin/trader-reviews',{cookie:supplierCookie}),403,
    'Supplier cannot read admin trader evidence queue');
