@@ -20,7 +20,8 @@ test.describe('RentInOrbit customer journey',()=>{
    await details.click();
    const modal=page.locator('#listingDetailModal, #listingDetail, .listing-detail-modal').first();
    await expect(modal).toBeVisible();
-   await expect(page.locator('text=/per day|day/i').first()).toBeVisible();
+   await expect(modal.locator('.v92-price')).toContainText('€100.00');
+   await expect(modal.locator('#detailAvailabilityBtn')).toBeVisible();
  });
  test('availability is a guarded handoff into checkout',async({page})=>{
    await page.goto('/');
