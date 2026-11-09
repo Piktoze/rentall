@@ -181,6 +181,34 @@ export function liveLaunchReadinessReport(env=process.env){
       'stripe_test_payment_webhook_refund_e2e']};
 }
 
+// Legal launch readiness is intentionally separate from a healthy deployment.
+// Setting these values never substitutes for independent legal/DSA/GDPR review.
+export function legalLaunchReadinessReport(env=process.env){
+  const operatorName=value('LEGAL_OPERATOR_NAME',env);
+  const legalForm=value('LEGAL_OPERATOR_LEGAL_FORM',env);
+  const address=value('LEGAL_OPERATOR_ADDRESS',env);
+  const support=value('LEGAL_SUPPORT_EMAIL',env);
+  const complaints=value('LEGAL_COMPLAINTS_EMAIL',env);
+  const privacy=value('LEGAL_PRIVACY_CONTACT',env);
+  const checks=[
+    {id:'operator_identity',ready:operatorName.length>=2},
+    {id:'operator_legal_form',ready:legalForm.length>=2},
+    {id:'operator_service_address',ready:address.length>=8},
+    {id:'operator_contact',ready:validEmail(support)},
+    {id:'complaints_contact',ready:validEmail(complaints)},
+    {id:'privacy_controller_contact',ready:validEmail(privacy)},
+    {id:'supplier_trader_status_disclosure',ready:value('LEGAL_TRADER_STATUS_DISCLOSURE_READY',env)==='true'},
+    {id:'dsa_trader_traceability',ready:value('LEGAL_DSA_TRADER_VERIFICATION_READY',env)==='true'},
+    {id:'privacy_retention_schedule',ready:value('LEGAL_PRIVACY_RETENTION_SCHEDULE_READY',env)==='true'},
+    {id:'consumer_dispute_information',ready:value('LEGAL_CONSUMER_ADR_INFO_READY',env)==='true'},
+    {id:'legal_texts_reviewed',ready:value('LEGAL_TEXTS_REVIEWED',env)==='true'}
+  ];
+  const blocking=checks.filter(item=>!item.ready).map(item=>item.id);
+  return {ready:blocking.length===0,checks,blocking,
+    independentReviewRequired:true,
+    note:'Configured declarations are not proof of legal compliance or trader verification.'};
+}
+
 export function productionStorageReport(env=process.env){
   const deployment=isDeploymentEnvironment(env);
   const config=resolveDatabaseConfig(env);
