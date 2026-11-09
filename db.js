@@ -1301,7 +1301,7 @@ export function getVerifiedMarketplaceTraderPublicProfile(email){
  FROM marketplace_trader_profiles p
  JOIN app_users u ON u.user_id=p.user_id
  WHERE u.email=? COLLATE NOCASE AND u.marketplace_trader_status='trader'
- AND p.verified_at IS NOT NULL`).get(String(email||''));
+ AND u.marketplace_trader_verified_at IS NOT NULL AND p.verified_at IS NOT NULL`).get(String(email||''));
  return row?{...row,euComplianceCertified:!!row.euComplianceCertified}:null;
 }
 
