@@ -308,6 +308,27 @@ try{
  status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
    data:{returnCondition:'good'}}),409,'Return cannot be repeated');
  assert.equal(returned.body.booking.status,'returned');
+ // After handover or return, cancellation/refund must be blocked; disputes remain available.
+ status(await api(route+'/cancel',{method:'POST',cookie:supplierCookie,
+   data:{reason:'Attempt to cancel after physical return'}}),409,
+   'Supplier cannot cancel and refund a returned rental');
+ status(await api(route+'/cancel',{method:'POST',cookie:renterCookie,
+   data:{reason:'Attempt to cancel after physical return'}}),409,
+   'Renter cannot cancel and refund a returned rental');
+ const disputeOpened=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
+   data:{bookingId:id,openedBy:'supplier',reason:'Returned item condition disagreement',
+     details:'Requesting administrator review'}});
+ status(disputeOpened,200,'Renter can open dispute after return');
+ assert.equal(disputeOpened.body.dispute.openedBy,'customer',
+   'Caller cannot spoof dispute initiator using openedBy request field');
+ const repeatDispute=await api('/api/rentals/disputes',{method:'POST',cookie:supplierCookie,
+   data:{bookingId:id,reason:'Second dispute for same booking'}});
+ status(repeatDispute,409,'Only one open dispute per booking');
+ assert.equal(repeatDispute.body.code,'DISPUTE_ALREADY_OPEN');
+ status(await api('/api/rentals/disputes',{method:'POST',cookie:outsiderCookie,
+   data:{bookingId:id,reason:'Unrelated account dispute'}}),403,
+   'Outsider cannot open a dispute');
+ console.log('PASS HTTP disputed return: participant identity, one open dispute, no post-handover refund');
  // Supplier can discover an existing booking in Messages before a conversation exists.
  const supplierChats=await api('/api/conversations',{cookie:supplierCookie});
  status(supplierChats,200,'Supplier booking chat candidates');
