@@ -34,5 +34,10 @@ assert.ok(moduleSource.includes('RESOLUTION_NOTE_REQUIRED'),'terminal status nee
 assert.ok(moduleSource.includes('resolution_note'),'decision rationale auditable');
 assert.ok(ui.includes('TERMINAS PRAĖJĘS'),'overdue visible to admin');
 assert.ok(ui.includes('resolutionNote:note.value'),'admin rationale submitted');
+assert.ok(moduleSource.includes('PRIVACY_REQUESTS_NOTIFY_EMAIL'),'operator address configurable');
+assert.ok(moduleSource.includes("templateKey:'privacy_request_notify'"),'operational email queued');
+assert.ok(server.includes("registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail)"),'email queue injected');
+assert.ok(server.includes("if(key==='privacy_request_notify')"),'email renderer available');
+assert.ok(!moduleSource.includes('payload:{requestId,type,details}'),'no private request details in operator email');
 console.log('PASS GDPR rights UI and admin audit source checks');
 console.log('PASS GDPR request source gate '+tests.length+'/'+tests.length);
