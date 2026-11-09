@@ -219,6 +219,20 @@ try{
    data:{bookingId:payId,outcome:'failed'}});
  status(downgrade,409,'Paid booking cannot be downgraded to failed');
  assert.equal(downgrade.body.code,'BOOKING_PAYMENT_FINAL');
+ // A supplier-initiated cancellation after a completed demo payment must
+ // refund the full amount once and reject further cancellation/refund attempts.
+ const refunded=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
+   cookie:supplierCookie,data:{reason:'Supplier cannot fulfil rental'}});
+ status(refunded,200,'Supplier cancels paid booking');
+ assert.equal(refunded.body.refundAmount,100,'Supplier cancellation refunds all €100');
+ assert.equal(refunded.body.booking.status,'cancelled');
+ const refundReplay=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
+   cookie:supplierCookie,data:{reason:'Duplicate cancellation'}});
+ status(refundReplay,409,'Duplicate cancellation cannot issue a second refund');
+ const afterRefund=await api('/api/payments/create-intent',{method:'POST',
+   cookie:renterCookie,data:{bookingId:payId}});
+ status(afterRefund,409,'Refunded booking cannot restart checkout');
+ console.log('PASS HTTP demo paid €100 refund and duplicate cancellation protection');
 
  const route='/api/rentals/bookings/'+id;
  status(await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'pickup'}}),
