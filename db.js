@@ -2036,7 +2036,9 @@ CREATE TABLE IF NOT EXISTS rental_party_transfer_codes (
 export function rentalTransferStatus(bookingId){
   const rows=db.prepare("SELECT purpose,party,expires_at,consumed_at,failed_attempts FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer'").all(String(bookingId));
   return Object.fromEntries(rows.map(r=>[r.purpose+'_'+r.party,{
-    expiresAt:r.expires_at,consumedAt:r.consumed_at,attemptsRemaining:Math.max(0,5-r.failed_attempts)
+    expiresAt:r.expires_at?.startsWith('9999-')?null:r.expires_at,
+    validUntilUsed:!!r.expires_at?.startsWith('9999-') && !r.consumed_at,
+    consumedAt:r.consumed_at,attemptsRemaining:Math.max(0,5-r.failed_attempts)
   }]));
 }
 // An agreement timestamp alone cannot authorize transfer codes. Require the
