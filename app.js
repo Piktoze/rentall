@@ -6979,6 +6979,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(!card.isConnected)return;
       if(!data.agreement?.customerAcceptedAt){
         create('accept',renterTrustLabel('accept'));
+        const info=document.createElement('p');
+        info.className='muted rio-renter-transfer-hint';
+        info.textContent='Perdavimo kodą rasite šiame užsakyme, kai patys patvirtinsite nuomos sutartį, nuomotojas patvirtins rezervaciją ir apmokėjimas bus sėkmingas. Nuomotojas turi atskirai patvirtinti savo sutartį prieš perduodamas daiktą. Kodas galioja iki panaudojimo.';
+        actions.appendChild(info);
       }else if(data.acceptanceEvidence?.customer?.verified!==true){
         create('accept',renterTrustLabel('accept'));
       }else if(status==='confirmed' && ['paid','succeeded'].includes(payment)){
