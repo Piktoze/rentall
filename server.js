@@ -28,6 +28,9 @@ import {
   createAppUser,
   declareSupplierTraderStatus,
   getSupplierTraderDisclosure,
+  getMarketplaceTraderProfile,
+  saveMarketplaceTraderProfile,
+  getVerifiedMarketplaceTraderPublicProfile,
   enableSupplierForUser,
   authenticateAppUser,
   createAppSession,
@@ -1399,7 +1402,8 @@ app.get('/api/listings', simpleRateLimit({windowMs:60000,max:180,keyPrefix:'publ
     ...listing,
     // Public classification only; never expose verification details or registration PII.
     supplierTraderStatus:getSupplierTraderDisclosure(listing.ownerEmail).status,
-    supplierTraderVerified:getSupplierTraderDisclosure(listing.ownerEmail).verified
+    supplierTraderVerified:getSupplierTraderDisclosure(listing.ownerEmail).verified,
+    supplierPublicIdentity:getVerifiedMarketplaceTraderPublicProfile(listing.ownerEmail)
   }))});
 });
 
@@ -1419,6 +1423,24 @@ app.post('/api/supplier/trader-status',requireRole('supplier','admin'),
   const trader=declareSupplierTraderStatus(req.appUser.userId,status);
   res.set('Cache-Control','no-store, private');
   res.json({trader});
+});
+
+// This endpoint stores a supplier-submitted draft; it is NOT DSA verification.
+// ID/eID and payment-account checks must occur via approved verification flows.
+app.get('/api/supplier/trader-profile',requireRole('supplier','admin'),(req,res)=>{
+  res.set('Cache-Control','no-store, private');
+  res.json({profile:getMarketplaceTraderProfile(req.appUser.userId)});
+});
+app.post('/api/supplier/trader-profile',requireRole('supplier','admin'),
+ simpleRateLimit({windowMs:60000,max:8,keyPrefix:'supplier-trader-profile'}),(req,res)=>{
+  try{
+    const profile=saveMarketplaceTraderProfile(req.appUser.userId,req.body||{});
+    res.set('Cache-Control','no-store, private');
+    res.json({profile,verificationRequired:true});
+  }catch(err){
+    res.status(err.code==='TRADER_STATUS_REQUIRED'?409:400)
+      .json({error:'Tiekėjo atsekamumo duomenys neužpildyti arba statusas netinkamas.',code:err.code||'TRADER_PROFILE_INVALID'});
+  }
 });
 
 app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
