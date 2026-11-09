@@ -41,7 +41,7 @@ test.describe('RentInOrbit customer journey',()=>{
    await expect(page.locator('#v145AvailabilityResult')).toHaveAttribute('data-state','error');
    await expect(page.locator('#v145AvailabilityContinue')).toBeDisabled();
  });
- test('discovery, checkout navigation and My Bookings respond',async({page})=>{
+ test('discovery, checkout navigation and authenticated My Bookings respond',async({page,request})=>{
    await page.route('**/api/rentals/availability?**',route=>route.fulfill({
      status:200,
      contentType:'application/json',
@@ -68,6 +68,20 @@ test.describe('RentInOrbit customer journey',()=>{
    await page.locator('.checkout-step[data-step="1"] .next-step').click();
    await expect(page.locator('.checkout-step[data-step="2"]')).toHaveClass(/active/);
    await page.locator('#closeCheckout').click();
+   // No booking or login: private customer navigation must be hidden.
+   await expect(page.locator('#myBookingsBtn')).toBeHidden();
+   // An actual customer session unlocks the bookings UI, without granting supplier access.
+   const email=`customer-${Date.now()}@rentinorbit.test`;
+   const password='demo12345';
+   const registration=await request.post('/api/auth/register',{
+     data:{email,password,role:'customer',displayName:'E2E Renter',termsAccepted:true}
+   });
+   expect(registration.ok()).toBeTruthy();
+   await page.locator('#supplierAuthBtn').click();
+   await page.locator('#loginEmail').fill(email);
+   await page.locator('#loginPassword').fill(password);
+   await page.locator('#supplierLoginForm button[type="submit"]').click();
+   await expect(page.locator('#myBookingsBtn')).toBeVisible();
    await page.locator('#myBookingsBtn').click();
    await expect(page.locator('#customerBookingsList')).toBeVisible();
  });
