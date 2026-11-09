@@ -5,6 +5,14 @@ on:
     branches: [staging/v203]
     paths:
       - "e2e/**"
+      - "server.js"
+      - "db.js"
+      - "app.js"
+      - "config.js"
+      - "modules/**"
+      - "privacy-requests-http-v255.test.mjs"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/isolated-browser-e2e.yml"
   workflow_dispatch:
 
@@ -54,6 +62,8 @@ jobs:
           test "${DB_PATH}" = "${RUNNER_TEMP}/rentinorbit-ci.sqlite"
           case "${DB_PATH}" in /data/*) exit 1 ;; esac
           npm run db:init
+      - name: Test isolated privacy HTTP authorization and audit
+        run: node privacy-requests-http-v255.test.mjs
       - name: Run real Chromium browser E2E, no live services
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
       - name: Upload diagnostics on failures
