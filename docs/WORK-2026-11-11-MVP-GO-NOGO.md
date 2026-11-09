@@ -16,6 +16,7 @@
 - Naujausias **faktiškai peržiūrėtas** Chromium GH Actions run `42686094634` (commit `a49c2893`) – **13/14 PASS**, vienas testas nesėkmingas dėl paslėpto svečio `#myBookingsBtn`. Pataisa `111fdfb5` įdiegta: svečio meniu turi likti paslėptas, naujai užregistruotas sintetinis `customer` naudotojas gali atidaryti užsakymų skiltį. **Šio naujo commit Chromium 14/14 rezultatas šio dokumento atnaujinimo metu nepatvirtintas.**
 - GH Actions izoliuotas Chromium vykdomas po `push` į `staging/v203`; Railway `checkSuites=false`, todėl Railway `SUCCESS` nėra GH Actions `SUCCESS`. Chromium rezultato negalima spręsti vien iš to, kad Gmail negavo nesėkmės laiško. Peržiūrėti GH Actions puslapį: https://github.com/Piktoze/rentall/actions/workflows/isolated-browser-e2e.yml ; paleidimo ataskaitoje rasti `14 passed`, final `success` ir `isolated-browser-e2e-report` artefaktą.
 - GH Actions run `42682344603` ankstesnis webhook 500 (`isEmail is not defined`) ištaisytas commit `15e3763`, po to izoliuotas pasirašyto webhook HTTP testas patvirtintas PASS. Tai dar **ne** realus `livemode=false` Stripe mokėjimas ir refundas.
+- **B3 išorinis HTTPS jau patvirtintas:** Railway proxy HTTP žurnalai `2026-11-09T19:58:37Z` registravo `200` visiems penkiems **viešiems staging** GET maršrutams: `/healthz`, `/api/readiness`, `/api/ops/status`, `/api/integrations/capabilities`, `/api/listings`. Tai reali momentinė išorinio pasiekiamumo patikra; nepareiškimas apie visos svetainės funkcionalumą. 2026-11-11 pakanka pakartoti trumpą smoke, jei aplinka nepasikeitė, ir sutelkti laiką į naujų A/B rezervacijų laiškus.
 - B3: 2026-11-08 Gmail `INBOX` faktiškai gauti RentInOrbit pranešimai `Booking confirmed — complete payment`, `Payment received`, `Booking cancelled`; tai **istorinio pristatymo** įrodymas, o ne 2026-11-11 A/B laiškų patvirtinimas.
 - Stripe **TEST sandbox platformos kontekstas** `acct_1UT4JCLM72MR015z`; prijungtas TEST tiekėjas `acct_1UYJrGLM72xqOs4D`. Paskutinį kartą `charges_enabled=true`, `payouts_enabled=true`, `card_payments=active`, `transfers=active`, `currently_due=[]`. Tai **nepatvirtina** susiejimo su konkrečiu staging tiekėju.
 - Ankstesnis tikrinimo kandidatas `RB-1793990438974-nfe2k6`; jo tinkamumą ir autorystę būtina patikrinti. Platformos PaymentIntent paieška pagal bookingId anksčiau grąžino 0; **Direct Charge** gali būti matomas tik prijungtos paskyros kontekste.
@@ -79,7 +80,7 @@ Prie kiekvienos patikros nurodyk `PASS / FAIL / BLOCKED / NOT RUN` ir įrodymą 
 |---|---|---|
 | B1 | Stripe TEST **A** €100 PI + susietas tiekėjas + tinkamas mokestis + signed webhook + booking paid + vienas refundas | Neatlikta |
 | B2 | Reali **B** dviejų paskyrų naršyklės eiga, abu parašai, vienkartinis PIN, grąžinimas be antro PIN | Neatlikta |
-| B3 | HTTPS, readiness/ops, DB backup+restore, realiai pristatyti testiniai laiškai | Backup+restore PASS; visa kita iš dalies |
+| B3 | HTTPS, readiness/ops, DB backup+restore, realiai pristatyti testiniai laiškai | Staging penki HTTPS GET = 200 (2026-11-09 19:58 UTC), S3 backup+restore PASS; naujų A/B laiškų pristatymą dar patikrinti |
 | B4 | Galutiniai teisiniai tekstai, operatoriaus identifikacija ir reikiamas atitikimas | Rekvizitai sąmoningai atidėti |
 | B5 | B1–B4 PASS, nulis kritinių neatitikimų, dokumentuotas atšaukimo / grįžimo planas | NO-GO |
 
