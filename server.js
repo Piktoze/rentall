@@ -121,6 +121,7 @@ import {HELP_CENTER_COPY,getPolicyPage} from './modules/help-center-content-v177
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
+import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v253.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -1168,6 +1169,8 @@ app.post('/api/auth/logout', (req,res)=>{
 app.get('/api/auth/me', (req,res)=>{
   res.json({user:sessionUser(req)});
 });
+
+registerPrivacyRequestRoutes(app, db, requireAuth);
 
 app.post('/api/auth/enable-supplier', requireRole('customer','supplier','admin'), (req,res)=>{
   try{
