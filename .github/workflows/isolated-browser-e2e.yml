@@ -79,6 +79,27 @@ jobs:
         # The workflow still fails overall when any critical step fails.
         if: ${{ success() || failure() }}
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
+      - name: Probe public staging HTTPS endpoints (read-only evidence)
+        if: ${{ always() }}
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'JS'
+          const base = 'https://rentall-staging.up.railway.app';
+          const paths = ['/healthz', '/api/readiness', '/api/ops/status', '/api/integrations/capabilities', '/api/listings'];
+          for (const path of paths) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+            try {
+              const res = await fetch(base + path, { method: 'GET', redirect: 'error', signal: controller.signal, headers: { 'Accept': 'application/json' } });
+              console.log(`STAGING_HTTP ${path} ${res.status} ${res.ok ? 'OK' : 'CHECK'}`);
+            } catch (error) {
+              console.log(`STAGING_HTTP ${path} UNAVAILABLE ${error.name || 'NetworkError'}`);
+            } finally {
+              clearTimeout(timeout);
+            }
+          }
+          console.log('Read-only staging probe completed; HTTP results are informational, not Chromium E2E or Stripe charge proof.');
+          JS
       - name: Upload browser test evidence after every run
         if: always()
         uses: actions/upload-artifact@v4
