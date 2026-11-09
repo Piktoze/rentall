@@ -51,6 +51,11 @@ createRentalBookingAtomic({bookingId:failureBookingId,listingId:'api-e2e-listing
   startDate:'2099-09-01',endDate:'2099-09-02',quantity:1,status:'confirmed',
   customerEmail:renter,customerName:'Test Renter',orderValue:100});
 db.prepare("UPDATE rental_bookings SET status='returned' WHERE booking_id=?").run(failureBookingId);
+const concurrentDisputeId='api-e2e-concurrent-dispute';
+createRentalBookingAtomic({bookingId:concurrentDisputeId,listingId:'api-e2e-listing',
+  startDate:'2099-09-12',endDate:'2099-09-13',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Test Renter',orderValue:100});
+db.prepare("UPDATE rental_bookings SET status='returned' WHERE booking_id=?").run(concurrentDisputeId);
 
 
 upsertRentalListing({listingId:'api-e2e-instant',ownerEmail:supplier,title:'Instant mode fixture',totalQuantity:1});
@@ -496,6 +501,17 @@ try{
  status(await api('/api/rentals/disputes',{method:'POST',cookie:outsiderCookie,
    data:{bookingId:id,reason:'Unrelated account dispute'}}),403,
    'Outsider cannot open a dispute');
+ // Two simultaneous attempts must resolve to exactly one open dispute.
+ const parallel=await Promise.all([
+   api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
+     data:{bookingId:concurrentDisputeId,reason:'Simultaneous renter dispute'}}),
+   api('/api/rentals/disputes',{method:'POST',cookie:supplierCookie,
+     data:{bookingId:concurrentDisputeId,reason:'Simultaneous supplier dispute'}})
+ ]);
+ assert.deepEqual(parallel.map(x=>x.status).sort((a,b)=>a-b),[200,409],
+   'Only one of two simultaneous dispute POSTs may succeed');
+ assert.equal(parallel.find(x=>x.status===409)?.body.code,'DISPUTE_ALREADY_OPEN');
+ console.log('PASS HTTP parallel dispute submissions: one success and one conflict');
  console.log('PASS HTTP disputed return: participant identity, one open dispute, no post-handover refund');
  // A foreign renter cannot attach a conversation to someone else's booking.
  const forgedConversation=await api('/api/conversations',{method:'POST',cookie:outsiderCookie,
