@@ -115,6 +115,13 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
     const terminal=['completed','rejected'].includes(status);
     if(terminal && req.body?.reviewConfirmed!==true)
       return res.status(400).json({code:'REVIEW_CONFIRMATION_REQUIRED'});
+    // Explicit human workflow checkpoints. No personal identity documents or exports are uploaded.
+    if(terminal && req.body?.responseSent!==true)
+      return res.status(400).json({code:'RESPONSE_NOT_CONFIRMED',error:'Patvirtinkite, kad sprendimas faktiškai išsiųstas duomenų subjektui.'});
+    if(status==='completed' && req.body?.identityReviewed!==true)
+      return res.status(400).json({code:'IDENTITY_REVIEW_REQUIRED',error:'Prieš vykdymą patikrinkite prašytojo tapatybės / teisės į duomenis pagrindą.'});
+    if(status==='completed' && req.body?.actionPerformed!==true)
+      return res.status(400).json({code:'ACTION_NOT_CONFIRMED',error:'Patvirtinkite, kad prašoma duomenų tvarkymo operacija realiai atlikta arba teisėtai išspręsta.'});
     const resolutionNote=String(req.body?.resolutionNote||'').trim();
     if(terminal && (resolutionNote.length<20 || resolutionNote.length>2000))
       return res.status(400).json({code:'RESOLUTION_NOTE_REQUIRED',error:'Nurodykite peržiūros sprendimo ir atsakymo registravimo duomenis (20–2000 ženklų).'});
