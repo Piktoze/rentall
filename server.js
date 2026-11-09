@@ -2975,30 +2975,28 @@ app.post('/api/rentals/disputes', simpleRateLimit({windowMs:60000,max:10,keyPref
 
     const safeOpenedBy=supplierAllowed ? 'supplier' : 'customer';
     const dispute=createRentalDispute({bookingId,openedBy:safeOpenedBy,reason:safeReason,details:safeDetails});
-    // The dispute is already persisted. Notifications are best-effort and must
-    // never make the API claim that dispute registration failed.
-    try{
-      const listing=getRentalListing(booking.listingId);
-      if(listing?.ownerEmail){
+    // The dispute is already persisted. Failure to notify either party must
+    // not erase that result or prevent the other party's notification.
+    const listing=getRentalListing(booking.listingId);
+    const recipients=[
+      {email:listing?.ownerEmail,side:'supplier',title:'Gautas nuomos ginčas',
+        message:`Užregistruotas ginčas dėl užsakymo ${bookingId}. Peržiūrėkite ginčo informaciją paskyroje.`},
+      {email:booking?.customerEmail,side:'customer',title:'Ginčas užregistruotas',
+        message:`Užregistruotas ginčas dėl užsakymo ${bookingId}. Būseną galite peržiūrėti paskyroje.`}
+    ];
+    for(const recipient of recipients){
+      if(!recipient.email)continue;
+      try{
         createRentalNotification({
-          uniqueKey:`dispute:${dispute.disputeId}:supplier`,
-          audience:'supplier',userEmail:listing.ownerEmail,bookingId,
-          type:'dispute.opened',title:'Gautas nuomos ginčas',
-          message:`Užregistruotas ginčas dėl užsakymo ${bookingId}. Peržiūrėkite ginčo informaciją paskyroje.`
+          uniqueKey:`dispute:${dispute.disputeId}:${recipient.side}`,
+          audience:recipient.side,userEmail:recipient.email,bookingId,
+          type:'dispute.opened',title:recipient.title,message:recipient.message
         });
+      }catch(notificationError){
+        console.error(JSON.stringify({type:'rental_dispute_notification_failed',
+          disputeId:dispute.disputeId,bookingId,side:recipient.side,
+          errorCode:String(notificationError?.code||'NOTIFICATION_FAILED')}));
       }
-      if(booking?.customerEmail){
-        createRentalNotification({
-          uniqueKey:`dispute:${dispute.disputeId}:customer`,
-          audience:'customer',userEmail:booking.customerEmail,bookingId,
-          type:'dispute.opened',title:'Ginčas užregistruotas',
-          message:`Užregistruotas ginčas dėl užsakymo ${bookingId}. Būseną galite peržiūrėti paskyroje.`
-        });
-      }
-    }catch(notificationError){
-      console.error(JSON.stringify({type:'rental_dispute_notification_failed',
-        disputeId:dispute.disputeId,bookingId,
-        errorCode:String(notificationError?.code||'NOTIFICATION_FAILED')}));
     }
     res.set('Cache-Control','no-store, private');
     res.json({dispute});
