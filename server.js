@@ -654,6 +654,11 @@ app.post('/api/stripe/webhook',
                 console.warn('Ignoring unbound payment_intent.succeeded',pi.id,bookingId,binding.reason);
                 break;
               }
+              // A delayed succeeded event must not reopen a previously refunded
+              // booking or send a misleading "payment received" notification.
+              if(booking.stripeRefundId ||
+                 ['refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase()))
+                break;
               if(!booking.stripeRefundId){
                 setBookingPaymentDetails({
                   bookingId,
