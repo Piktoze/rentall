@@ -48,3 +48,10 @@
 - Nėra automatinio skaitymo ar priminimų grafiko, nėra paskyros duomenų eksportavimo ar trynimo ir nėra viešo API, kuris rodytų kitų naudotojų prašymų kiekius.
 - Testai: anonimas → 401; neadministratorius → 403; administratorius → 200; skaitikliai prieš/po prašymo; sutvarkyti ankstesnių modulių šaltinio patikros testai.
 - **Operacinė būtinybė:** paskirti atsakingą asmenį, sukonfigūruoti patvirtintą el. pašto gavėją, išsiųsti saugų sintetinį bandymą ir patvirtinti tikrą pristatymą. Be to prašymai gali likti nepastebėti, jei administratorius neatidarys skydelio.
+
+## V257 – pilnas administratoriaus sąrašas be nematomų atvirų prašymų
+- Administratoriaus `GET /api/admin/privacy/requests?offset=0` grąžina iki 50 įrašų ir `hasMore`, `nextOffset`. Parametras ribotas iki 6 skaitmenų, netaisyklingas atmetamas HTTP 400.
+- Sąrašas pirmiausia rikiuojamas pagal atvirą būseną ir orientacinį terminą, po to pagal sukūrimo laiką. Seni uždaryti prašymai nebeišstumia atvirų įrašų iš pirmojo puslapio.
+- Administratoriaus sąsajoje yra „Rodyti daugiau prašymų“, kai `hasMore=true`.
+- Izoliuotas HTTP testas patikrina 50 įrašų ribą, kitą puslapį, prioritetinį atviro prašymo rodymą ir netaisyklingo `offset` atmetimą.
+- Pastaba: puslapiavimas pagal `OFFSET` nėra snapshot nuoseklumo garantija, jei įrašai keičiasi tuo pat metu; prieš užbaigiant konkretų prašymą būtina iš naujo patikrinti dabartinę būseną (esamas maršrutas tai daro).
