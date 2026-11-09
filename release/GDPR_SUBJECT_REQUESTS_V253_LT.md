@@ -69,3 +69,19 @@
 - Administratoriaus sąsajoje šie patvirtinimai yra atskiri pažymimi laukai. Negali būti automatiškai pažymėti.
 - API atmeta bandymą užbaigti, jei nėra bent vieno būtino patvirtinimo; izoliuotas HTTP testas apima visus šiuos 400 atsakymų ir tik leistiną galutinį perėjimą.
 - **Riba:** žymos yra administratoriaus deklaracijos; jos neįrodo realaus asmens tapatybės patvirtinimo, prašymo įvykdymo ar atsakymo gavimo. Reikia realios procedūros ir dokumentinio audito pagal taikytiną teisę. Asmens dokumentų nekaupiame šiame modulyje.
+
+## V260 – užbaigimo patvirtinimų audito įrodymai (procedūriniai)
+- Kiekvienam būsenos perėjimui `privacy_subject_request_audit` papildomai išsaugo `review_confirmed`, `response_sent`, `identity_reviewed`, `action_performed` (0/1). Įrašoma vienoje DB transakcijoje su prašymo būsenos pasikeitimu.
+- Paprastas `in_review` būsenos pasikeitimas saugo visus patvirtinimus kaip 0. `completed` reikalauja visų keturių deklaracijų. `rejected` reikalauja peržiūros ir išsiųsto atsakymo deklaracijų.
+- Administratoriaus audito peržiūroje patvirtinimai matomi aiškiai; tai nėra asmens tapatybės dokumentų ar privatumo prašymo eksporto archyvas.
+- Atskiras izoliuotos atminties SQLite HTTP testas patikrina, ar visos deklaracijos tikrai įrašytos ir perskaitomos iš audito API.
+- Šios žymos tik **vidinė administratoriaus deklaracija**, ne automatinis realaus vykdymo arba laiško pristatymo įrodymas.
+
+## Praktinė tvarka paskirtam BDAR prašymų administratoriui
+1. Kas darbo dieną atsidaryti `/?privacy-requests=1`, prisijungti administratoriaus paskyra ir peržiūrėti `Neperžiūrėti`, `Atviri`, `Pradelsti` skaitiklius. Tai būtina kol veikiančių, pristatytų el. pašto įspėjimų nėra.
+2. Gautam prašymui priskirti `Nagrinėjamas`; patikrinti prašymo pobūdį, tapatybės ir duomenų atskleidimo pagrindą saugiu atskiru kanalu. Nesaugoti asmens dokumentų šioje sistemoje.
+3. Atskirai patikrinti sutartis, apskaitos, mokėjimų, duomenų saugojimo ir kitus teisėtus apribojimus. Ištrynimas nebūtinai taikomas visoms finansinėms ar apskaitos eilutėms.
+4. Paruošti atsakymą prašytojui ir atlikti leistiną veiksmą patvirtintu saugiu kanalu. Registruoti tik neslaptą atsakymo numerį / sprendimo pagrindą.
+5. Tik po faktinio išsiuntimo ir veiksmo pažymėti reikiamus patvirtinimus bei galutinę būseną; patikrinti audito istoriją.
+6. Jei numatoma, kad terminas bus viršytas, nedelsiant laikytis taikytinų BDAR pranešimo ir termino pratęsimo taisyklių. UI rodoma data yra orientacinė ir neskaičiuoja visų išimčių.
+7. Nepatvirtinti viešo GO be asmens duomenų apsaugos / teisinio proceso peržiūros, privataus el. pašto adresato, realaus pristatymo patikros ir naršyklės E2E.
