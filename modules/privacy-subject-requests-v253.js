@@ -48,13 +48,17 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
       r.created_at DESC, r.request_id DESC LIMIT ? OFFSET ?`);
   const findRequest=db.prepare('SELECT request_id AS requestId, status FROM privacy_subject_requests WHERE request_id=?');
   try{db.exec('ALTER TABLE privacy_subject_request_audit ADD COLUMN resolution_note TEXT')}catch(e){if(!String(e.message).includes('duplicate column name'))throw e}
+  for(const column of ['review_confirmed','response_sent','identity_reviewed','action_performed']){
+    try{db.exec('ALTER TABLE privacy_subject_request_audit ADD COLUMN '+column+' INTEGER NOT NULL DEFAULT 0')}
+    catch(e){if(!String(e.message).includes('duplicate column name'))throw e}
+  }
   const updateStatus=db.prepare(`UPDATE privacy_subject_requests SET status=?, updated_at=CURRENT_TIMESTAMP WHERE request_id=? AND status=?`);
   const insertAudit=db.prepare(`INSERT INTO privacy_subject_request_audit
-    (audit_id,request_id,actor_user_id,action,previous_status,next_status,resolution_note) VALUES (?,?,?,?,?,?,?)`);
+    (audit_id,request_id,actor_user_id,action,previous_status,next_status,resolution_note,review_confirmed,response_sent,identity_reviewed,action_performed) VALUES (?,?,?,?,?,?,?,?,?,?,?)`);
   const adminOnly=(req,res,next)=>req.appUser?.role==='admin'?next():res.status(403).json({code:'FORBIDDEN',error:'Prieiga draudžiama'});
   const requestAudit=db.prepare(`SELECT audit_id AS auditId, actor_user_id AS actorUserId, action,
     previous_status AS previousStatus, next_status AS nextStatus,
-    resolution_note AS resolutionNote, created_at AS createdAt
+    resolution_note AS resolutionNote, review_confirmed AS reviewConfirmed, response_sent AS responseSent, identity_reviewed AS identityReviewed, action_performed AS actionPerformed, created_at AS createdAt
     FROM privacy_subject_request_audit WHERE request_id=?
     ORDER BY created_at ASC, rowid ASC LIMIT 200`);
   app.get('/api/admin/privacy/requests/:requestId/audit',requireAuth,adminOnly,(req,res)=>{
@@ -130,7 +134,10 @@ export function registerPrivacyRequestRoutes(app, db, requireAuth, enqueueEmail=
       const updated=updateStatus.run(status,id,existing.status);
       if(updated.changes!==1)return false;
       insertAudit.run('dsra_'+crypto.randomUUID(),id,String(req.appUser.userId),
-        'status_changed',existing.status,status,resolutionNote);
+        'status_changed',existing.status,status,resolutionNote,
+        Number(terminal && req.body?.reviewConfirmed===true),Number(terminal && req.body?.responseSent===true),
+        Number(status==='completed' && req.body?.identityReviewed===true),
+        Number(status==='completed' && req.body?.actionPerformed===true));
       return true;
     })();
     if(!result)return res.status(409).json({code:'CONFLICT'});
