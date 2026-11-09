@@ -894,6 +894,16 @@ let stripeConnectAccountId=null;
 
 async function waitForStripeConnectJs(){
   if(window.StripeConnect?.init) return window.StripeConnect;
+  // Connect.js is needed only for an explicitly opened supplier onboarding
+  // screen, not for every visitor viewing listings or using the search page.
+  let loader=document.querySelector('script[data-rio-connect-js]');
+  if(!loader){
+    loader=document.createElement('script');
+    loader.src='https://connect-js.stripe.com/v1.0/connect.js';
+    loader.async=true;
+    loader.dataset.rioConnectJs='on-demand';
+    document.head.appendChild(loader);
+  }
   await new Promise((resolve,reject)=>{
     const deadline=Date.now()+10000;
     const poll=()=>{
@@ -901,6 +911,7 @@ async function waitForStripeConnectJs(){
       if(Date.now()>deadline) return reject(new Error('Stripe Connect.js did not load'));
       setTimeout(poll,50);
     };
+    loader.addEventListener('error',()=>reject(new Error('Stripe Connect.js did not load')),{once:true});
     poll();
   });
   return window.StripeConnect;
