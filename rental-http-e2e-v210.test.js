@@ -99,6 +99,13 @@ try{
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider);
  // Booking lists must be scoped to the account identity (not request parameters).
+ // Financial audit is never exposed to renters, suppliers or guests.
+ status(await api('/api/stripe/webhook-events',{cookie:renterCookie}),403,
+   'Renter cannot read payment/webhook audit');
+ status(await api('/api/stripe/webhook-events',{cookie:supplierCookie}),403,
+   'Supplier cannot read platform-wide payment/webhook audit');
+ status(await api('/api/stripe/webhook-events',{cookie:outsiderCookie}),403,
+   'Other account cannot read financial audit');
  const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
  status(customerBookings,200,'Renter booking list');
  assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
