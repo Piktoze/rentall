@@ -7,6 +7,10 @@ import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v
 const db=new Database(':memory:');
 db.pragma('foreign_keys=ON');
 db.exec("CREATE TABLE app_users (user_id TEXT PRIMARY KEY,email TEXT)");
+db.exec("CREATE TABLE email_outbox(id INTEGER PRIMARY KEY,template_key TEXT NOT NULL,status TEXT NOT NULL)");
+db.prepare("INSERT INTO email_outbox(template_key,status) VALUES (?,?)").run('privacy_request_notify','failed');
+db.prepare("INSERT INTO email_outbox(template_key,status) VALUES (?,?)").run('privacy_request_notify','pending');
+db.prepare("INSERT INTO email_outbox(template_key,status) VALUES (?,?)").run('other_template','failed');
 db.prepare('INSERT INTO app_users(user_id,email) VALUES (?,?)').run('user-a','a@example.test');
 db.prepare('INSERT INTO app_users(user_id,email) VALUES (?,?)').run('user-b','b@example.test');
 db.prepare('INSERT INTO app_users(user_id,email) VALUES (?,?)').run('admin','admin@example.test');
@@ -38,6 +42,9 @@ try{
   r=await request('/api/admin/privacy/health','admin');assert.equal(r.status,200);
   assert.equal(r.body.unreviewed,0);assert.equal(r.body.overdue,0);
   assert.equal(r.body.notificationAddressConfigured,true);
+  assert.equal(r.body.notificationQueue.failed,1);
+  assert.equal(r.body.notificationQueue.pending,1);
+  assert.equal(r.body.notificationQueue.sent,0);
   assert.equal(r.body.automaticDeliveryReady,false);
   r=await request('/api/privacy/requests','user-a',{type:'bogus'},'POST');assert.equal(r.status,400);
   r=await request('/api/privacy/requests','user-a',{type:'access',details:'Mano duomenų kopija'},'POST');
