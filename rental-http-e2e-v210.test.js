@@ -234,6 +234,10 @@ try{
  status(afterRefund,409,'Refunded booking cannot restart checkout');
  console.log('PASS HTTP demo paid €100 refund and duplicate cancellation protection');
 
+ // A valid guest token must not become an identity override for an unrelated signed-in user.
+ status(await api('/api/rentals/disputes',{method:'POST',cookie:outsiderCookie,
+   data:{bookingId:payId,reason:'Unauthorized dispute probe',accessToken:payFixture.paymentToken}}),
+   403,'Signed-in outsider cannot open a dispute with another renter guest token');
  const route='/api/rentals/bookings/'+id;
  // The agreement and acceptance evidence are private to the two booking parties.
  status(await api(route+'/trust',{cookie:outsiderCookie}),403,'Outsider cannot read agreement acceptance evidence');
