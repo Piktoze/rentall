@@ -11,6 +11,8 @@ on:
       - "config.js"
       - "modules/**"
       - "privacy-requests-http-v255.test.mjs"
+      - "rental-http-e2e-v210.test.js"
+      - "webhook-signed-http-v231.test.js"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/isolated-browser-e2e.yml"
