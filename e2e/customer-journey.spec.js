@@ -30,8 +30,16 @@ test.describe('RentInOrbit customer journey',()=>{
    await availability.click();
    await expect(page.locator('#availabilityModal')).toBeVisible();
    await expect(page.locator('#availabilityQuantity')).toHaveValue('1');
+   // V145 immediately checks prefilled valid dates; proceed is correctly enabled.
+   await expect(page.locator('#v145AvailabilityResult')).toHaveAttribute('data-state','success');
+   await expect(page.locator('#v145AvailabilityContinue')).toBeEnabled();
+   // Exceed the seeded listing's quantity and verify checkout remains blocked.
+   await page.locator('#availabilityQuantity').fill('3');
+   await page.locator('#availabilityQuantity').dispatchEvent('change');
    await expect(page.locator('#v145AvailabilityContinue')).toBeDisabled();
-   await expect(page.locator('#v145AvailabilityResult')).toHaveAttribute('aria-live','polite');
+   await page.locator('#refreshAvailabilityBtn').click();
+   await expect(page.locator('#v145AvailabilityResult')).toHaveAttribute('data-state','error');
+   await expect(page.locator('#v145AvailabilityContinue')).toBeDisabled();
  });
  test('discovery, checkout navigation and My Bookings respond',async({page})=>{
    await page.route('**/api/rentals/availability?**',route=>route.fulfill({
@@ -45,10 +53,13 @@ test.describe('RentInOrbit customer journey',()=>{
      body:JSON.stringify({days:[]})
    }));
    await page.goto('/');
+   // CI fixture is located in Klaipėda; the default search city is Vilnius.
+   await page.locator('#countrySelect').selectOption('LT');
+   await page.locator('#citySelect').selectOption('Klaipėda');
    await page.locator('#keywordSearch').fill('drill');
    await page.locator('#searchForm button[type="submit"]').click();
-   await expect(page.locator('[data-detail-id], .detail-btn').first()).toBeVisible();
-   await page.locator('[data-availability-id], .availability-btn').first().click();
+   await expect(page.locator('[data-detail-id="ci-drill-discovery"]')).toBeVisible();
+   await page.locator('[data-availability-id="ci-drill-discovery"]').click();
    await expect(page.locator('#v145AvailabilityContinue')).toBeEnabled();
    await page.locator('#v145AvailabilityContinue').click();
    await expect(page.locator('#checkoutModal')).toBeVisible();
@@ -79,6 +90,9 @@ test.describe('RentInOrbit customer journey',()=>{
    await page.locator('#loginPassword').fill(password);
    await page.locator('#supplierLoginForm button[type="submit"]').click();
    await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
+   // Supplier dashboard is intentionally collapsed until explicitly expanded.
+   await page.locator('#supplierDashboardToggle').click();
+   await expect(page.locator('#supplier-dashboard')).toHaveClass(/dashboard-expanded/);
    await page.locator('[data-v129-tab="calendar"]').click();
    await expect(page.locator('#v129CalendarPanel')).toHaveClass(/active/);
  });
