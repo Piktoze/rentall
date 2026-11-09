@@ -62,6 +62,8 @@ jobs:
           test "${DB_PATH}" = "${RUNNER_TEMP}/rentinorbit-ci.sqlite"
           case "${DB_PATH}" in /data/*) exit 1 ;; esac
           npm run db:init
+      - name: Seed synthetic discovery listing in temporary CI database
+        run: node e2e/seed-ci-listing.mjs
       - name: Test isolated privacy HTTP authorization and audit
         run: node privacy-requests-http-v255.test.mjs
       - name: Verify full two-account booking lifecycle over real local HTTP
