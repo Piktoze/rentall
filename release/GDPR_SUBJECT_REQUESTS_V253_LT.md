@@ -31,3 +31,13 @@
 - Nėra įrodymų / dokumentų prijungimo prie bylos, tapatybės patvirtinimo, atsakymo registravimo, duomenų perdavimo saugiu kanalu bei atsakingo asmens priskyrimo.
 - Būtina įvertinti atskirus duomenų saugojimo terminus, retenkciją, vidinę tvarką, teisėtus pagrindus ir procesą neprisijungusiems naudotojams.
 - Šaltinio kodo patikros neužtikrina integracinio 401/403, kryžminės paskyros atskyrimo ir tikro e2e testo: privaloma atlikti izoliuotoje staging testinėje bazėje.
+
+## V255 papildymas – terminai, sprendimo įrodymas ir operacinis pranešimas
+- Naudotojui ir administratoriui pateikiama **orientacinė** termino data: registracijos data + 1 kalendorinis mėnuo. Tai nėra automatinis juridinių pratęsimų ar konkrečių terminų išimčių apskaičiavimas.
+- Administratoriaus sąsajoje matomas pradelsto prašymo indikatorius.
+- Užbaigti ar atmesti prašymą leidžiama tik su `reviewConfirmed=true` ir 20–2000 ženklų `resolutionNote`; note saugoma `privacy_subject_request_audit`, bet nėra tapatybės patikrinimo / realaus atsakymo patvirtinimo.
+- Jei sukonfigūruotas `PRIVACY_REQUESTS_NOTIFY_EMAIL`, į bendrą `email_outbox` eilę įdedamas pranešimas be prašymo aprašymo ir asmens kontaktų. `privacy_request_notify` palaiko esamas pašto apdorojimo mechanizmas. Jei adresas arba veikiantis siuntimo worker nėra sukonfigūruotas, **pranešimo pristatymas negarantuojamas**. Numatytasis adresas tyčia nenustatomas.
+- API registruoja įspėjimą, kai adresas nėra sukonfigūruotas; tai nėra pakeitimas operaciniam stebėjimui.
+- Neatliekamas automatinis trynimas, taisymas ar eksportas.
+
+**Prieš viešą GO:** sukonfigūruoti valdytojo patvirtintą adresą, veikiančią laiškų siuntimo paslaugą, terminų stebėseną / eskalavimą, realią užklausos apdorojimo ir atsakymo registravimo procedūrą. Integracinis E2E vis dar privalomas.
