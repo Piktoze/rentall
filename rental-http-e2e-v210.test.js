@@ -303,6 +303,12 @@ try{
  const approved=await api('/api/rentals/bookings/'+pendingId+'/status',{method:'POST',
    cookie:supplierCookie,data:{status:'confirmed'}});
  status(approved,200,'Supplier approval without prior card authorization');
+ const beforePaymentTrust=await api('/api/rentals/bookings/'+pendingId+'/trust',{cookie:renterCookie});
+ status(beforePaymentTrust,200,'Renter sees agreement after supplier booking approval');
+ assert.equal(beforePaymentTrust.body.agreement?.customerAcceptedAt,null,
+   'Supplier booking approval must never sign the renter agreement');
+ assert.equal(beforePaymentTrust.body.agreement?.supplierAcceptedAt,null,
+   'Supplier booking approval must not silently sign the supplier agreement');
  const unlocked=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
    data:{bookingId:pendingId}});
  status(unlocked,200,'Payment intent only after supplier approval');
@@ -311,6 +317,10 @@ try{
    data:{bookingId:pendingId,outcome:'succeeded'}});
  status(pendingPaid,200,'Confirmed rental can complete demo payment');
  assert.equal(pendingPaid.body.booking.paymentStatus,'paid');
+ const afterPaymentTrust=await api('/api/rentals/bookings/'+pendingId+'/trust',{cookie:renterCookie});
+ status(afterPaymentTrust,200,'Renter agreement remains independently unsigned after payment');
+ assert.equal(afterPaymentTrust.body.agreement?.customerAcceptedAt,null,
+   'Successful payment must not sign the renter agreement');
  // Follow ONE booking from pending through approval, payment, two signatures,
  // pickup, return and subsequent dispute (all local demo money only).
  const fullRoute='/api/rentals/bookings/'+pendingId;
