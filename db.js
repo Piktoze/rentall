@@ -1305,6 +1305,75 @@ export function getVerifiedMarketplaceTraderPublicProfile(email){
  return row?{...row,euComplianceCertified:!!row.euComplianceCertified}:null;
 }
 
+// Human-reviewed trader traceability evidence. Never store identity document scans
+// or Stripe bank information here. Decisions are append-only for audit purposes.
+db.exec(`
+ CREATE TABLE IF NOT EXISTS marketplace_trader_review_audit (
+  review_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES app_users(user_id),
+  reviewer_user_id TEXT NOT NULL REFERENCES app_users(user_id),
+  decision TEXT NOT NULL CHECK(decision IN ('approved','rejected')),
+  source_submitted_at TEXT NOT NULL,
+  evidence_reference TEXT NOT NULL,
+  review_note TEXT NOT NULL,
+  reviewed_at TEXT NOT NULL
+ );
+ CREATE INDEX IF NOT EXISTS idx_trader_review_user_time
+ ON marketplace_trader_review_audit(user_id,reviewed_at DESC);
+`);
+export function listMarketplaceTraderReviewQueue(){
+ return db.prepare(`SELECT u.user_id AS userId,u.email,
+  u.marketplace_trader_status AS traderStatus,
+  p.legal_name AS legalName,p.contact_email AS contactEmail,
+  p.contact_phone AS contactPhone,p.contact_address AS contactAddress,
+  p.register_name AS registerName,p.register_number AS registerNumber,
+  p.submitted_at AS submittedAt,p.verified_at AS verifiedAt,
+  (SELECT a.decision FROM marketplace_trader_review_audit a
+   WHERE a.user_id=u.user_id ORDER BY a.reviewed_at DESC,a.rowid DESC LIMIT 1) AS lastDecision
+ FROM marketplace_trader_profiles p
+ JOIN app_users u ON u.user_id=p.user_id
+ WHERE u.marketplace_trader_status='trader'
+ ORDER BY CASE WHEN p.verified_at IS NULL THEN 0 ELSE 1 END,p.submitted_at DESC
+ LIMIT 100`).all();
+}
+export function reviewMarketplaceTraderProfile({userId,reviewerUserId,decision,
+ submittedAt,evidenceReference,reviewNote,identityChecked=false,
+ contactChecked=false,registryChecked=false,paymentAccountChecked=false}){
+ const id=String(userId||''),reviewer=String(reviewerUserId||'');
+ if(!['approved','rejected'].includes(decision))
+  throw Object.assign(new Error('Invalid review decision'),{code:'INVALID_REVIEW_DECISION'});
+ const evidence=String(evidenceReference||'').trim().slice(0,180);
+ const note=String(reviewNote||'').trim().slice(0,600);
+ if(evidence.length<8||note.length<8)
+  throw Object.assign(new Error('Review evidence and note required'),{code:'REVIEW_EVIDENCE_REQUIRED'});
+ if(decision==='approved'&&![identityChecked,contactChecked,registryChecked,paymentAccountChecked].every(x=>x===true))
+  throw Object.assign(new Error('Independent verification attestations required'),{code:'REVIEW_CHECKS_REQUIRED'});
+ const reviewerRole=db.prepare('SELECT role FROM app_users WHERE user_id=?').get(reviewer)?.role;
+ if(reviewerRole!=='admin')
+  throw Object.assign(new Error('Administrator review required'),{code:'REVIEW_ACCESS_DENIED'});
+ return db.transaction(()=>{
+  const row=db.prepare(`SELECT p.submitted_at AS submittedAt,p.verified_at AS verifiedAt
+   FROM marketplace_trader_profiles p JOIN app_users u ON u.user_id=p.user_id
+   WHERE p.user_id=? AND u.marketplace_trader_status='trader'
+     AND p.eu_compliance_certified=1`).get(id);
+  if(!row)throw Object.assign(new Error('Trader profile missing'),{code:'TRADER_PROFILE_MISSING'});
+  if(row.submittedAt!==String(submittedAt||''))
+   throw Object.assign(new Error('Trader profile changed since review'),{code:'TRADER_PROFILE_CHANGED'});
+  if(row.verifiedAt && decision==='approved')
+   throw Object.assign(new Error('Trader profile already approved'),{code:'TRADER_ALREADY_APPROVED'});
+  const now=new Date().toISOString();
+  db.prepare('UPDATE marketplace_trader_profiles SET verified_at=? WHERE user_id=?')
+   .run(decision==='approved'?now:null,id);
+  db.prepare(`UPDATE app_users SET marketplace_trader_verified_at=?,updated_at=?
+   WHERE user_id=?`).run(decision==='approved'?now:null,now,id);
+  db.prepare(`INSERT INTO marketplace_trader_review_audit
+   (review_id,user_id,reviewer_user_id,decision,source_submitted_at,
+    evidence_reference,review_note,reviewed_at) VALUES(?,?,?,?,?,?,?,?)`)
+   .run('TRV-'+crypto.randomUUID(),id,reviewer,decision,row.submittedAt,evidence,note,now);
+  return {userId:id,decision,reviewedAt:now,verified:decision==='approved'};
+ })();
+}
+
 function publicUser(row){
   if(!row) return null;
   return {
