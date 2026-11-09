@@ -8,14 +8,14 @@ test.describe('RentInOrbit customer journey',()=>{
  test('home → discovery → listing detail is navigable',async({page})=>{
    await page.goto('/');
    await expect(page.locator('body')).toBeVisible();
-   const details=page.locator('[data-detail-id], .detail-btn').first();
+   const details=page.locator(process.env.CI?'[data-detail-id="ci-drill-discovery"]':'[data-detail-id], .detail-btn').first();
    await expect(details).toBeVisible({timeout:10000});
    await details.click();
    await expect(page.locator('#listingDetailModal, #listingDetail, .listing-detail-modal').first()).toBeVisible();
  });
  test('booking surface exposes dates, quantity and authoritative total',async({page})=>{
    await page.goto('/');
-   const details=page.locator('[data-detail-id], .detail-btn').first();
+   const details=page.locator(process.env.CI?'[data-detail-id="ci-drill-discovery"]':'[data-detail-id], .detail-btn').first();
    await expect(details).toBeVisible({timeout:10000});
    await details.click();
    const modal=page.locator('#listingDetailModal, #listingDetail, .listing-detail-modal').first();
@@ -25,7 +25,7 @@ test.describe('RentInOrbit customer journey',()=>{
  });
  test('availability is a guarded handoff into checkout',async({page})=>{
    await page.goto('/');
-   const availability=page.locator('[data-availability-id], .availability-btn').first();
+   const availability=page.locator(process.env.CI?'[data-availability-id="ci-drill-discovery"]':'[data-availability-id], .availability-btn').first();
    await expect(availability).toBeVisible({timeout:10000});
    await availability.click();
    await expect(page.locator('#availabilityModal')).toBeVisible();
