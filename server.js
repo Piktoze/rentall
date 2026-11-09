@@ -444,6 +444,9 @@ function bookingAccessAllowed(req, bookingId){
     user?.email &&
     String(booking.customerEmail||'').toLowerCase()===String(user.email).toLowerCase()
   ) return true;
+  // Guest booking links must not override an authenticated account identity.
+  // Signed-in users can access a booking only through actual ownership.
+  if(user) return false;
   const token=req.body?.accessToken || req.query?.accessToken || '';
   return !!verifyBookingPaymentToken(bookingId,token);
 }
