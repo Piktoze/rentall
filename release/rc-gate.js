@@ -14,6 +14,7 @@ for(const script of ['ops/backup-scheduler.js','ops/backup-and-verify.js','ops/t
 for(const suite of [
   'live-launch-gate-v243.test.mjs',
   'legal-launch-gate-v246.test.mjs',
+  'booking-agreement-v247.test.mjs',
   'connect-fee-settlement-v244.test.mjs',
   'deposit-payment-timing-v245.test.mjs',
   'backup-evidence-order-v235.test.mjs',
