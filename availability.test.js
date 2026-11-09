@@ -81,6 +81,29 @@ try {
   });
   assert(released.remainingQuantity === 6, 'Expected cancelled booking to release 6 units');
 
+  // A booking beginning exactly when another ends must not overlap.
+  const adjacent=createRentalBookingAtomic({
+    bookingId:'test-adjacent',listingId:'test-chairs',
+    startDate:'2026-11-03',endDate:'2026-11-05',
+    quantity:6,status:'pending'
+  });
+  assert(adjacent.availabilityAfter.remainingQuantity === 4,
+    'Adjacent booking at previous end boundary should be allowed');
+
+  // Calendar and booking routes must reject archived listings consistently.
+  db.prepare("UPDATE rental_listings SET lifecycle_status='archived' WHERE listing_id=?").run('test-chairs');
+  const archivedAvailability=getAvailability({
+    listingId:'test-chairs',startDate:'2026-11-06',endDate:'2026-11-07',requestedQuantity:1
+  });
+  assert(archivedAvailability && !archivedAvailability.available && archivedAvailability.remainingQuantity===0,
+    'Archived listing must show unavailable despite remaining inventory');
+  let archiveDenied=false;
+  try{
+    createRentalBookingAtomic({bookingId:'test-archived',listingId:'test-chairs',
+      startDate:'2026-11-06',endDate:'2026-11-07',quantity:1,status:'pending'});
+  }catch(err){archiveDenied=err.code==='LISTING_NOT_ACTIVE';}
+  assert(archiveDenied,'Archived listing must not accept new reservations');
+
   console.log('PASS: availability, anti-double-booking and inventory release work correctly.');
 } finally {
   db.close();
