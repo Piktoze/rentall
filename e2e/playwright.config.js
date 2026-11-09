@@ -2,5 +2,5 @@ import {defineConfig} from '@playwright/test';
 export default defineConfig({
  testDir:'.',timeout:30000,retries:1,workers:process.env.CI?1:undefined,use:{baseURL:'http://127.0.0.1:3000',serviceWorkers:'block',trace:'retain-on-failure',screenshot:'only-on-failure'},
  webServer:{command:'NODE_ENV=test APP_URL=http://127.0.0.1:3000 PORT=3000 node ../server.js',url:'http://127.0.0.1:3000',reuseExistingServer:!process.env.CI,timeout:30000},
- reporter:[['list'],['html',{outputFolder:'report',open:'never'}]]
+ reporter:process.env.CI?[['github'],['list'],['html',{outputFolder:'report',open:'never'}]]:[['list'],['html',{outputFolder:'report',open:'never'}]]
 });
