@@ -61,6 +61,12 @@ try{
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'in_review'},'POST');
   assert.equal(r.status,200);
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,resolutionNote:'Tapatybė patikrinta, atsakymo registracijos numeris REF-1234.'},'POST');
+  assert.equal(r.status,400);assert.equal(r.body.code,'RESPONSE_NOT_CONFIRMED');
+  r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,responseSent:true,resolutionNote:'Tapatybė patikrinta, atsakymo registracijos numeris REF-1234.'},'POST');
+  assert.equal(r.status,400);assert.equal(r.body.code,'IDENTITY_REVIEW_REQUIRED');
+  r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,responseSent:true,identityReviewed:true,resolutionNote:'Tapatybė patikrinta, atsakymo registracijos numeris REF-1234.'},'POST');
+  assert.equal(r.status,400);assert.equal(r.body.code,'ACTION_NOT_CONFIRMED');
+  r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'completed',reviewConfirmed:true,responseSent:true,identityReviewed:true,actionPerformed:true,resolutionNote:'Tapatybė patikrinta, atsakymo registracijos numeris REF-1234.'},'POST');
   assert.equal(r.status,200);
   r=await request('/api/admin/privacy/requests/'+id+'/audit','admin');assert.equal(r.status,200);
   assert.equal(r.body.requestId,id);assert.equal(r.body.events.length,2);
