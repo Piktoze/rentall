@@ -1217,9 +1217,12 @@ try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_declared_at TEX
 try{db.exec("ALTER TABLE app_users ADD COLUMN marketplace_trader_verified_at TEXT")}catch(err){
   if(!String(err?.message||'').includes('duplicate column name'))throw err;
 }
-const supplierTraderByEmailStmt=db.prepare(`SELECT marketplace_trader_status AS status,
- marketplace_trader_declared_at AS declaredAt,marketplace_trader_verified_at AS verifiedAt
- FROM app_users WHERE email=? COLLATE NOCASE AND role IN ('supplier','admin')`);
+const supplierTraderByEmailStmt=db.prepare(`SELECT u.marketplace_trader_status AS status,
+ u.marketplace_trader_declared_at AS declaredAt,
+ CASE WHEN u.marketplace_trader_status='trader' AND p.verified_at IS NOT NULL
+ THEN u.marketplace_trader_verified_at ELSE NULL END AS verifiedAt
+ FROM app_users u LEFT JOIN marketplace_trader_profiles p ON p.user_id=u.user_id
+ WHERE u.email=? COLLATE NOCASE AND u.role IN ('supplier','admin')`);
 export function getSupplierTraderDisclosure(email){
   const row=supplierTraderByEmailStmt.get(String(email||'').trim());
   return {status:row?.status||'undeclared',declaredAt:row?.declaredAt||null,
@@ -1279,6 +1282,7 @@ export function saveMarketplaceTraderProfile(userId,data){
     data?.euComplianceCertified!==true)
    throw Object.assign(new Error('Incomplete trader traceability declaration'),{code:'TRADER_PROFILE_INCOMPLETE'});
  const now=new Date().toISOString();
+ db.transaction(()=>{
  db.prepare(`INSERT INTO marketplace_trader_profiles
  (user_id,legal_name,contact_address,contact_phone,contact_email,
   register_name,register_number,eu_compliance_certified,submitted_at,verified_at)
@@ -1290,6 +1294,8 @@ export function saveMarketplaceTraderProfile(userId,data){
  eu_compliance_certified=excluded.eu_compliance_certified,
  submitted_at=excluded.submitted_at,verified_at=NULL`).run(id,legalName,contactAddress,
  contactPhone,contactEmail,registerName||null,registerNumber||null,1,now);
+ db.prepare('UPDATE app_users SET marketplace_trader_verified_at=NULL,updated_at=? WHERE user_id=?').run(now,id);
+ })();
  return getMarketplaceTraderProfile(id);
 }
 // Public listing data must not show submitted-but-unverified contact details.
