@@ -112,6 +112,22 @@ try{
  console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // B1: staging-only Stripe/booking binding inspection must be strictly supplier-scoped.
+ const bindingUrl='/api/stripe/connect/booking-binding/'+encodeURIComponent(id);
+ status(await api(bindingUrl),401,'Unauthenticated user cannot inspect Stripe booking binding');
+ status(await api(bindingUrl,{cookie:renterCookie}),403,'Renter cannot inspect supplier Stripe booking binding');
+ status(await api(bindingUrl,{cookie:outsiderCookie}),403,'Unrelated renter cannot inspect Stripe booking binding');
+ const otherSupplierCookie=await signIn(otherSupplier);
+ status(await api(bindingUrl,{cookie:otherSupplierCookie}),404,'Different supplier cannot inspect listing owner Stripe binding');
+ const ownBinding=await api(bindingUrl,{cookie:supplierCookie});
+ status(ownBinding,200,'Listing owner can inspect own Stripe booking binding');
+ assert.equal(ownBinding.body.bookingId,id);
+ assert.equal(ownBinding.body.supplierOwnsListing,true);
+ assert.equal(ownBinding.body.hasOwnerStripeConnection,false,'Synthetic supplier has no Stripe account');
+ assert.equal(ownBinding.body.bookingHasPaymentIntent,true,'Synthetic mock payment is recorded');
+ assert.ok(!('clientSecret' in ownBinding.body)&&!('stripeAccountId' in ownBinding.body)&&!('supplierEmail' in ownBinding.body),
+   'Binding report must not reveal Stripe credentials or full supplier identity');
+ console.log('PASS HTTP staging Stripe booking-binding: supplier-only, outsider isolation and redacted read-only diagnostics');
  // Booking lists must be scoped to the account identity (not request parameters).
  // Financial audit is never exposed to renters, suppliers or guests.
  status(await api('/api/stripe/webhook-events',{cookie:renterCookie}),403,
