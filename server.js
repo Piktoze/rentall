@@ -2069,7 +2069,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     });
     const agreement=createRentalAgreement({
       bookingId,
-      termsVersion:'rentinorbit-rental-v2',
+      termsVersion:'rentinorbit-rental-v3',
       // Agreeing to platform checkout terms does not replace signing the
       // booking-specific rental agreement. Each party accepts explicitly.
       customerAcceptedAt:null,
@@ -2081,10 +2081,16 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
         cancellationPolicy:result.booking.cancellationPolicySnapshot||listingForBooking.cancellationPolicy||'moderate',
         cancellationPolicyVersion:result.booking.cancellationPolicyVersion,
         terms:[
-          'Nuomotojas išnuomoja daiktą, o nuomininkas įsipareigoja jį naudoti tik pagal paskirtį.',
-          'Daiktas turi būti grąžintas sutartu laiku, atsižvelgiant į įprastą nusidėvėjimą.',
-          'Žalos, negrąžinimo, atšaukimo ir užstato klausimai sprendžiami pagal skelbimo bei RentInOrbit sąlygas.',
-          'Šios per RentInOrbit pateiktos rezervacijos mokėjimai, keitimai ir pratęsimai vykdomi per platformą.'
+          'Nuomotojas patvirtina, kad turi teisę nuomoti skelbime aprašytą daiktą, pateikia tikslią informaciją apie būklę, komplektaciją, saugų naudojimą ir sutartą perdavimo būdą.',
+          'Nuomininkas naudoja daiktą pagal paskirtį, laikosi pateiktų saugos instrukcijų, saugo komplektaciją ir laiku grąžina daiktą pagal rezervacijos sąlygas, atsižvelgiant į įprastą nusidėvėjimą.',
+          'Abi šalys atskirai patvirtina šią konkrečios rezervacijos sutartį. Iki abiejų patvirtinimų daikto perdavimas pagal RentInOrbit kodą negalimas.',
+          'Perduodant daiktą nuomotojas patikrina nuomininko pateiktą vienkartinį perdavimo kodą. Kodas galioja iki panaudojimo; panaudotas dar kartą nepriimamas.',
+          'Grąžinimą RentInOrbit sistemoje patvirtina nuomotojas be papildomo nuomininko grąžinimo kodo. Šalys raginamos išsaugoti perdavimo ir grąžinimo būklės nuotraukas bei kitus įrodymus.',
+          'Atšaukimo terminai, nuomos pradžios laikas ir grąžintina suma nustatomi pagal šiai rezervacijai išsaugotą atšaukimo politiką, nepažeidžiant privalomų vartotojų teisių.',
+          'Užstatas, jei taikomas, yra atskiras nuo nuomos mokesčio. Jo panaudojimas dėl pagrįstos žalos ar negrąžinimo priklauso nuo faktinių įrodymų, užsakymo sąlygų ir mokėjimo paslaugos apribojimų.',
+          'Dėl žalos, trūkumo, vėlavimo ar nesutarimo šalys praneša per RentInOrbit užsakymo ginčo funkciją, pateikia turimus įrodymus ir bendradarbiauja sprendžiant ginčą.',
+          'RentInOrbit paprastai teikia tarpininkavimo, rezervavimo, mokėjimų integravimo ir komunikacijos infrastruktūrą; nuomojamo daikto šalys yra nuomotojas ir nuomininkas. Ši sąlyga nepanaikina privalomų teisinių RentInOrbit pareigų.',
+          'Su šia rezervacija susiję platformos mokėjimai ir sutarties pakeitimai tvarkomi sistemoje; jokios sąlygos neapriboja šalių privalomų teisinių teisių ir teisėtų ginčų nagrinėjimo būdų.'
         ]
       }
     });
