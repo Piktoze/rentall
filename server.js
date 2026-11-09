@@ -1294,6 +1294,8 @@ function renderTransactionalEmail(item){
       <p>Užregistruotas naujas duomenų subjekto prašymas. Atidarykite apsaugotą administratoriaus skydelį ir įvertinkite jį.</p>
       <p>Registracijos numeris: <strong>${escapeEmailHtml(payload.requestId||'')}</strong></p>
       <p>Tipas: ${escapeEmailHtml(payload.type||'')}</p>
+      <p><a href="${escapeEmailHtml(new URL('/?privacy-requests=1',appUrl).toString())}">Atidaryti apsaugotą BDAR prašymų skydelį</a></p>
+      <p>Nuoroda nėra prisijungimo ar prieigos suteikimo būdas – reikalinga administratoriaus paskyra.</p>
       <p>Neatsakinėkite į šį pranešimą pateikdami asmens duomenis.</p></body></html>`;
   }
   if(key==='supplier_booking_received') return renderSupplierBookingReceivedEmail(payload);
