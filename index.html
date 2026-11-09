@@ -1352,7 +1352,7 @@
 
       <div class="profile-section">
         <h3 data-i18n-text="Payment information">Payment information</h3>
-        <p class="section-note" data-i18n-text="Payout details are managed through the secure payment connection for your supplier account.">Payout details are managed through the secure payment connection for your supplier account.</p>
+        <p class="section-note">Banko sąskaitos duomenis pateikite tik saugioje Stripe Connect aplinkoje. Šiame profilyje IBAN ir mokesčių identifikatorių nesaugome.</p>
         <div class="form-grid two">
           <label><span data-i18n-text="Account holder name">Account holder name</span><input id="accPayoutName" placeholder="Your profile S.L."></label>
           <label><span data-i18n-text="Bank / payout country">Bank / payout country</span>
@@ -1367,8 +1367,8 @@
               <option value="Other" data-i18n-text="Other">Other</option>
             </select>
           </label>
-          <label class="full"><span data-i18n-text="IBAN">IBAN</span><input id="accIban" placeholder="IBAN" data-i18n-placeholder="IBAN"></label>
-          <label><span data-i18n-text="VAT / Tax ID">VAT / Tax ID</span><input id="accTaxId" placeholder="B12345678"></label>
+          <label class="full"><span data-i18n-text="IBAN">IBAN</span><input id="accIban" placeholder="Tvarkoma saugiai per Stripe" disabled autocomplete="off"></label>
+          <label><span data-i18n-text="VAT / Tax ID">VAT / Tax ID</span><input id="accTaxId" placeholder="Pateikiama per saugią tiekėjo patikrą" disabled autocomplete="off"></label>
           <label><span data-i18n-text="Payout schedule">Payout schedule</span>
             <select id="accPayoutSchedule">
               <option value="Weekly" data-i18n-text="Weekly">Weekly</option>
