@@ -2127,3 +2127,13 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
   user-select:all;
 }
 .customer-booking-card .rio-renter-code small{line-height:1.45;}
+
+
+/* V248: server-backed trader identity form. Browser [hidden] must win over grid layout. */
+#rioTraderPanel{margin:16px 0;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--surface,#fff)}
+#rioTraderPanel [hidden]{display:none!important}
+#rioTraderPanel .auth-form{margin:12px 0 18px}
+#rioTraderPanel .checkbox-label{display:flex;align-items:flex-start;gap:10px;font-weight:500}
+#rioTraderPanel .checkbox-label input{width:auto;flex:none;margin-top:3px}
+#rioTraderPanel #rioTraderStatus{font-weight:600}
+#rioTraderPanel #rioTraderMessage{display:block;min-height:1.5em}
