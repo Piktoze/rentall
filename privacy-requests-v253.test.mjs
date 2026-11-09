@@ -19,4 +19,15 @@ const tests=[
  ['documented manual processing',doc.includes('nėra automatinio apdorojimo')]
 ];
 for(const [name,ok] of tests){console.log((ok?'PASS ':'FAIL ')+name); assert.ok(ok,name)}
+const ui=fs.readFileSync('modules/privacy-requests-ui-v254.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+assert.ok(html.includes('modules/privacy-requests-ui-v254.js?v=254'),'privacy UI loaded');
+assert.ok(ui.includes("api('/api/privacy/requests'"),'user can view requests');
+assert.ok(ui.includes("method:'POST',body:JSON.stringify({type:"),'user can submit requests');
+assert.ok(ui.includes("api('/api/admin/privacy/requests'"),'admin review UI');
+assert.ok(moduleSource.includes("req.appUser?.role==='admin'"),'admin check');
+assert.ok(moduleSource.includes('privacy_subject_request_audit'),'audit log');
+assert.ok(moduleSource.includes('REVIEW_CONFIRMATION_REQUIRED'),'explicit terminal confirmation');
+execFileSync(process.execPath,['--check','modules/privacy-requests-ui-v254.js'],{stdio:'inherit'});
+console.log('PASS GDPR rights UI and admin audit source checks');
 console.log('PASS GDPR request source gate '+tests.length+'/'+tests.length);
