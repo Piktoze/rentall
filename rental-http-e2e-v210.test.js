@@ -235,6 +235,17 @@ try{
  console.log('PASS HTTP demo paid €100 refund and duplicate cancellation protection');
 
  const route='/api/rentals/bookings/'+id;
+ // The agreement and acceptance evidence are private to the two booking parties.
+ status(await api(route+'/trust',{cookie:outsiderCookie}),403,'Outsider cannot read agreement acceptance evidence');
+ status(await api(route+'/agreement',{cookie:outsiderCookie}),403,'Outsider cannot read rental agreement');
+ status(await api(route+'/trust',{cookie:renterCookie}),200,'Renter can view booking trust status');
+ status(await api(route+'/agreement',{cookie:supplierCookie}),200,'Supplier can view booking agreement');
+ status(await api(route+'/agreement/accept',{method:'POST',cookie:outsiderCookie,
+   data:{accepted:true,accessToken:payFixture.paymentToken}}),403,
+   'Signed-in outsider cannot sign with another booking guest token');
+ status(await api(route+'/transfer-code',{method:'POST',cookie:outsiderCookie,
+   data:{purpose:'pickup',accessToken:payFixture.paymentToken}}),403,
+   'Signed-in outsider cannot obtain renter PIN with guest token');
  status(await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'pickup'}}),
    409,'Unsigned renter must not receive PIN');
  status(await api(route+'/agreement/accept',{method:'POST',cookie:outsiderCookie,data:{accepted:true}}),
