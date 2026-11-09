@@ -59,6 +59,10 @@ assert.ok(ui.includes('neišsiųstų BDAR laiškų klaidų'),'admin sees failed 
 assert.ok(moduleSource.includes("templateKey:'privacy_request_notify'"),'operational email queued');
 assert.ok(server.includes("registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail)"),'email queue injected');
 assert.ok(server.includes("if(key==='privacy_request_notify')"),'email renderer available');
+const gdprEmailTemplate=server.split("if(key==='privacy_request_notify'){")[1]?.split("if(key==='supplier_booking_received')")[0]||'';
+assert.ok(gdprEmailTemplate.includes("new URL('/?privacy-requests=1',appUrl)"),'notification contains configured secure admin deep link');
+assert.ok(gdprEmailTemplate.includes('escapeEmailHtml(new URL('),'admin link is HTML escaped');
+assert.ok(!gdprEmailTemplate.includes('payload.details') && !gdprEmailTemplate.includes('payload.accountEmail'),'notification excludes free text and requester email');
 assert.ok(!moduleSource.includes('payload:{requestId,type,details}'),'no private request details in operator email');
 console.log('PASS GDPR rights UI and admin audit source checks');
 console.log('PASS GDPR request source gate '+tests.length+'/'+tests.length);
