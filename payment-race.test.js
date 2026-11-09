@@ -8,6 +8,6 @@ assert.match(server,/BOOKING_PAYMENT_FINAL/,'reject already paid/refunded checko
 assert.match(server,/if\(!booking\.stripeRefundId\)/,'persisted refund guard');
 assert.match(server,/idempotencyKey:`booking:\$\{booking\.bookingId\}:cancellation-refund:\$\{cents\}`/,'cancellation refund idempotency');
 assert.match(server,/idempotencyKey:`booking:\$\{bookingId\}:late-terminal-refund`/,'late terminal refund idempotency');
-assert.match(server,/new Set\(\['expired','cancelled','declined'\]\)/,'late payment terminal states');
+assert.match(server,/new Set\(\['pending','expired','cancelled','declined'\]\)/,'pending and late terminal payments must be refunded');
 assert.match(direct,/connectedRequestOptions\(accountId,\{idempotencyKey\}\)/,'Stripe connected-account binding and idempotency');
 console.log('PASS: payment race static gate aligned to V195 Direct Charges');
