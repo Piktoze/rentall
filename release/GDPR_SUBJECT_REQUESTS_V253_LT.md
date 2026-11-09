@@ -55,3 +55,10 @@
 - Administratoriaus sąsajoje yra „Rodyti daugiau prašymų“, kai `hasMore=true`.
 - Izoliuotas HTTP testas patikrina 50 įrašų ribą, kitą puslapį, prioritetinį atviro prašymo rodymą ir netaisyklingo `offset` atmetimą.
 - Pastaba: puslapiavimas pagal `OFFSET` nėra snapshot nuoseklumo garantija, jei įrašai keičiasi tuo pat metu; prieš užbaigiant konkretų prašymą būtina iš naujo patikrinti dabartinę būseną (esamas maršrutas tai daro).
+
+## V258 – administratoriaus sprendimų auditas
+- Pridėtas tik administratoriui prieinamas `GET /api/admin/privacy/requests/:requestId/audit`, kuris grąžina būsenos perėjimų istoriją, administratoriaus ID, laiką ir sprendimo pagrindo įrašą. Neprisijungusiam – 401, neadministratoriui – 403, neegzistuojančiam ID – 404.
+- Administratoriaus dialoge konkretus prašymas turi mygtuką „Peržiūrėti sprendimų istoriją“. Duomenys vaizduojami tik kaip tekstas.
+- El. laiške numatyta `/?privacy-requests=1` nuoroda dabar atveria prašymų langą. Tai nėra automatinis tapatybės patvirtinimas; prisijungimas išlieka būtinas.
+- Testuotas prieigos ribojimas ir audito istorijos turinys izoliuotoje atminties DB.
+- **Apribojimai:** audito istorija neįrodo, kad duomenų kopija iš tikrųjų pateikta, prašymas įvykdytas ar klientas gavo atsakymą. Vis dar būtina dokumentuota išorinė procedūra ir tikras naršyklės/pašto pristatymo testas.
