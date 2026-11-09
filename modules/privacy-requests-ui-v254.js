@@ -18,7 +18,7 @@
     <button type="submit" id="rioPrivacySubmit">Pateikti prašymą</button></form>
     <p id="rioPrivacyMessage" role="status" aria-live="polite"></p>
     <h3>Mano prašymai</h3><ul id="rioPrivacyHistory"></ul>
-    <section id="rioPrivacyAdmin" hidden><h3>Administratoriaus peržiūra</h3><p>Būsenos pakeitimas savaime neištrina ir neeksportuoja duomenų. Prieš užbaigiant būtina atskira teisėta peržiūra ir atsakymas.</p><div id="rioPrivacyAdminList"></div></section>
+    <section id="rioPrivacyAdmin" hidden><h3>Administratoriaus peržiūra</h3><div id="rioPrivacyAdminHealth" role="status" aria-live="polite" style="padding:10px 0;font-weight:600"></div><p>Būsenos pakeitimas savaime neištrina ir neeksportuoja duomenų. Prieš užbaigiant būtina atskira teisėta peržiūra ir atsakymas.</p><div id="rioPrivacyAdminList"></div></section>
     <p>Neturėdami prieigos prie paskyros, kreipkitės privatumo politikoje nurodytu kontaktu.</p>`;
   document.body.appendChild(dialog);
   const $=id=>document.getElementById(id);
@@ -41,6 +41,13 @@
     if(!requests.length)item($('rioPrivacyHistory'),'Prašymų nėra.');
     requests.forEach(r=>item($('rioPrivacyHistory'),(names[r.type]||r.type)+' – '+(statuses[r.status]||r.status)+' · '+String(r.createdAt||'').slice(0,19)+' · orientacinė atsakymo data: '+String(r.dueAt||'').slice(0,10)));
     if(user.role!=='admin')return;
+    const health=await api('/api/admin/privacy/health');
+    const warnings=[];
+    if(!health.automaticDeliveryReady)warnings.push('Automatinis administratoriaus informavimas NĖRA patvirtintas: patikrinkite privatumo el. pašto adresą, siuntimo paslaugą ir laiškų darbuotoją.');
+    if(health.overdue>0)warnings.push('DĖMESIO: pradelstų prašymų '+health.overdue+'.');
+    $('rioPrivacyAdminHealth').textContent='Neperžiūrėti: '+health.unreviewed+' · Atviri: '+health.open+' · Pradelsti: '+health.overdue+
+      (health.earliestDueAt?' · Artimiausia orientacinė data: '+String(health.earliestDueAt).slice(0,10):'')+
+      (warnings.length?' | '+warnings.join(' '):' | El. pašto konfigūracijos požymiai nustatyti; tikro pristatymo tai neįrodo.');
     const all=(await api('/api/admin/privacy/requests')).requests;
     if(!all.length)item($('rioPrivacyAdminList'),'Gautų prašymų nėra.');
     all.forEach(r=>{
