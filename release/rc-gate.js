@@ -16,6 +16,7 @@ for(const suite of [
   'legal-launch-gate-v246.test.mjs',
   'booking-agreement-v247.test.mjs',
   'supplier-trader-ui-v248.test.mjs',
+  'precontract-trader-disclosure-v250.test.mjs',
   'connect-fee-settlement-v244.test.mjs',
   'deposit-payment-timing-v245.test.mjs',
   'backup-evidence-order-v235.test.mjs',
