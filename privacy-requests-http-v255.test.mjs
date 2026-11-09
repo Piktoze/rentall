@@ -27,10 +27,20 @@ async function request(path,actor,body,method='GET'){
 try{
   let r=await request('/api/privacy/requests',null);assert.equal(r.status,401);
   r=await request('/api/admin/privacy/requests','user-a');assert.equal(r.status,403);
+  r=await request('/api/admin/privacy/health',null);assert.equal(r.status,401);
+  r=await request('/api/admin/privacy/health','user-a');assert.equal(r.status,403);
+  r=await request('/api/admin/privacy/health','admin');assert.equal(r.status,200);
+  assert.equal(r.body.unreviewed,0);assert.equal(r.body.overdue,0);
+  assert.equal(r.body.notificationAddressConfigured,true);
+  assert.equal(r.body.automaticDeliveryReady,false);
   r=await request('/api/privacy/requests','user-a',{type:'bogus'},'POST');assert.equal(r.status,400);
   r=await request('/api/privacy/requests','user-a',{type:'access',details:'Mano duomenų kopija'},'POST');
   assert.equal(r.status,201);const id=r.body.requestId;
   assert.equal(queued.length,1);
+  r=await request('/api/admin/privacy/health','admin');assert.equal(r.status,200);
+  assert.equal(r.body.unreviewed,1);assert.equal(r.body.open,1);
+  assert.equal(r.body.overdue,0);
+  assert.ok(r.body.earliestDueAt);
   assert.equal(queued[0].payload.details,undefined);
   r=await request('/api/privacy/requests','user-a');assert.equal(r.status,200);
   assert.equal(r.body.requests.length,1);assert.equal(r.body.requests[0].requestId,id);
@@ -50,6 +60,8 @@ try{
   assert.equal(audit.length,2);assert.ok(audit[1].resolution_note.includes('REF-1234'));
   r=await request('/api/admin/privacy/requests/'+id+'/status','admin',{status:'in_review'},'POST');
   assert.equal(r.status,409);
+  r=await request('/api/admin/privacy/health','admin');assert.equal(r.body.open,0);
+  assert.equal(r.body.unreviewed,0);
   console.log('PASS GDPR isolated HTTP: 401, 403, 400, 201, per-account privacy, due dates, operator outbox, admin audit, terminal 409');
 }finally{
   await new Promise(resolve=>server.close(resolve));db.close();
