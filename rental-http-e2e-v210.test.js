@@ -258,7 +258,18 @@ try{
    403,'Supplier must never receive renter PIN');
  const code=await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,data:{purpose:'pickup'}});
  status(code,200,'Renter PIN after own consent');
- assert.match(code.body.code,/^\d{6}$/);
+ assert.match(code.body.code,/^\\d{6}$/);
+ assert.equal(code.body.validUntilUsed,true,'Issued pickup code must remain valid until used');
+ assert.equal(code.body.expiresAt,null,'Issued pickup code must not expose a countdown');
+ const repeatCode=await api(route+'/transfer-code',{method:'POST',cookie:renterCookie,
+   data:{purpose:'pickup'}});
+ status(repeatCode,200,'Reopening the renter booking must preserve the PIN');
+ assert.equal(repeatCode.body.code,code.body.code,'Unused pickup PIN must remain stable');
+ const pinTrust=await api(route+'/trust',{cookie:renterCookie});
+ status(pinTrust,200,'Renter can inspect pickup PIN status');
+ assert.equal(pinTrust.body.transfer.pickup_customer.validUntilUsed,true);
+ assert.equal(pinTrust.body.transfer.pickup_customer.expiresAt,null,'Do not expose year-9999 sentinel');
+
  status(await api(route+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
    data:{purpose:'pickup',code:code.body.code}}),409,'Cannot hand over before supplier signs');
  status(await api(route+'/agreement/accept',{method:'POST',cookie:supplierCookie,data:{accepted:true}}),
