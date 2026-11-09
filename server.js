@@ -1644,7 +1644,9 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
     if(!accountOwner&&!guestOwner)return res.status(403).json({error:'Booking access denied'});
-    if(!['pending','confirmed'].includes(booking.status))return res.status(409).json({error:`Deposit cannot be authorized in status ${booking.status}`});
+    // Security-deposit holds must not precede supplier approval or rental payment.
+    if(booking.status!=='confirmed')return res.status(409).json({error:'Supplier confirmation required before deposit authorization',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
+    if(booking.paymentStatus!=='paid')return res.status(409).json({error:'Rental must be paid before deposit authorization',code:'RENTAL_PAYMENT_REQUIRED'});
     const amount=Math.round(Math.max(0,Number(booking.securityDepositAmount||0))*100);
     if(amount<=0)return res.status(409).json({error:'This booking does not require a security deposit'});
     const listing=getRentalListing(booking.listingId);
