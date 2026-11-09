@@ -51,6 +51,9 @@ assert.ok(moduleSource.includes("app.get('/api/admin/privacy/health',requireAuth
 assert.ok(ui.includes("api('/api/admin/privacy/health')"),'admin UI reads operational readiness');
 assert.ok(ui.includes('Neperžiūrėti:') && ui.includes('Pradelsti:'),'admin dashboard status counts');
 assert.ok(moduleSource.includes('PRIVACY_REQUESTS_NOTIFY_EMAIL'),'operator address configurable');
+assert.ok(moduleSource.includes("FROM email_outbox WHERE template_key='privacy_request_notify'"),'admin health monitors only GDPR email queue');
+assert.ok(moduleSource.includes('process.env.RESEND_API_KEY'),'email readiness requires API credential');
+assert.ok(ui.includes('neišsiųstų BDAR laiškų klaidų'),'admin sees failed privacy alerts');
 assert.ok(moduleSource.includes("templateKey:'privacy_request_notify'"),'operational email queued');
 assert.ok(server.includes("registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail)"),'email queue injected');
 assert.ok(server.includes("if(key==='privacy_request_notify')"),'email renderer available');
