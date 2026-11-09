@@ -33,6 +33,9 @@ assert.ok(moduleSource.includes("app.get('/api/admin/privacy/requests/:requestId
 assert.ok(ui.includes('Peržiūrėti sprendimų istoriją'),'audit visible to admin');
 assert.ok(ui.includes("get('privacy-requests')==='1'"),'privacy email deep link honored');
 assert.ok(moduleSource.includes('REVIEW_CONFIRMATION_REQUIRED'),'explicit terminal confirmation');
+for(const code of ['RESPONSE_NOT_CONFIRMED','IDENTITY_REVIEW_REQUIRED','ACTION_NOT_CONFIRMED'])
+  assert.ok(moduleSource.includes(code),'closure requires '+code);
+assert.ok(ui.includes('responseSent:responseSent.checked') && ui.includes('identityReviewed:identityReviewed.checked') && ui.includes('actionPerformed:actionPerformed.checked'),'UI submits explicit closure confirmations');
 execFileSync(process.execPath,['--check','modules/privacy-requests-ui-v254.js'],{stdio:'inherit'});
 assert.ok(moduleSource.includes("datetime(r.created_at, '+1 month') AS dueAt"),'admin deadline recorded');
 assert.ok(moduleSource.includes('RESOLUTION_NOTE_REQUIRED'),'terminal status needs resolution note');
