@@ -35,6 +35,8 @@ const pendingId='api-e2e-pending';
 createRentalBookingAtomic({bookingId:pendingId,listingId:'api-e2e-listing',
   startDate:'2099-07-01',endDate:'2099-07-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'API Renter',orderValue:100});
+createRentalAgreement({bookingId:pendingId,termsVersion:'e2e-full-lifecycle-v1',
+  snapshot:{listingTitle:'Temporary API test item',total:100,startDate:'2099-07-01',endDate:'2099-07-02'}});
 const payId='api-e2e-payment';
 const payFixture=createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
   startDate:'2099-06-05',endDate:'2099-06-06',quantity:1,status:'confirmed',
@@ -195,6 +197,40 @@ try{
    data:{bookingId:pendingId,outcome:'succeeded'}});
  status(pendingPaid,200,'Confirmed rental can complete demo payment');
  assert.equal(pendingPaid.body.booking.paymentStatus,'paid');
+ // Follow ONE booking from pending through approval, payment, two signatures,
+ // pickup, return and subsequent dispute (all local demo money only).
+ const fullRoute='/api/rentals/bookings/'+pendingId;
+ const renterConsent=await api(fullRoute+'/agreement/accept',{method:'POST',cookie:renterCookie,
+   data:{accepted:true}});
+ status(renterConsent,200,'Lifecycle renter independently signs agreement');
+ const lifecyclePin=await api(fullRoute+'/transfer-code',{method:'POST',cookie:renterCookie,
+   data:{purpose:'pickup'}});
+ status(lifecyclePin,200,'Lifecycle renter obtains handover PIN');
+ assert.equal(lifecyclePin.body.validUntilUsed,true);
+ assert.equal(lifecyclePin.body.expiresAt,null);
+ status(await api(fullRoute+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
+   data:{purpose:'pickup',code:lifecyclePin.body.code}}),409,
+   'Full-cycle handover requires the supplier signature independently');
+ status(await api(fullRoute+'/agreement/accept',{method:'POST',cookie:supplierCookie,
+   data:{accepted:true}}),200,'Lifecycle supplier signs agreement');
+ const handover=await api(fullRoute+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
+   data:{purpose:'pickup',code:lifecyclePin.body.code}});
+ status(handover,200,'Full-cycle item handover');
+ assert.equal(handover.body.booking.status,'active');
+ status(await api(fullRoute+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
+   data:{purpose:'pickup',code:lifecyclePin.body.code}}),409,'Full-cycle pickup PIN replay denied');
+ const fullReturn=await api(fullRoute+'/return-confirm',{method:'POST',cookie:supplierCookie,
+   data:{returnCondition:'good'}});
+ status(fullReturn,200,'Full-cycle supplier confirms return without PIN');
+ assert.equal(fullReturn.body.booking.status,'returned');
+ const fullDispute=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
+   data:{bookingId:pendingId,reason:'Lifecycle test of return dispute'}});
+ status(fullDispute,200,'Full-cycle renter can open dispute after return');
+ status(await api(fullRoute+'/cancel',{method:'POST',cookie:renterCookie,
+   data:{reason:'Cannot cancel already returned item'}}),409,
+   'Full-cycle returned booking cannot be cancelled for automatic refund');
+ console.log('PASS single-booking HTTP lifecycle: pending → approval → demo payment → signatures → PIN → return → dispute');
+
  // Guest tokens work only without a different authenticated account.
  const impersonated=await api('/api/payments/create-intent',{method:'POST',cookie:outsiderCookie,
    data:{bookingId:payId,paymentToken:payFixture.paymentToken}});
