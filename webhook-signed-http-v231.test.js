@@ -70,7 +70,7 @@ const event=(id,account)=>({
 const read=()=>{
  const database=new Database(dbPath,{readonly:true,fileMustExist:true});
  try{return {booking:database.prepare('SELECT payment_status, stripe_payment_intent_id FROM rental_bookings WHERE booking_id=?').get(bookingId),
-  events:database.prepare("SELECT event_id,status FROM webhook_events WHERE event_id LIKE 'evt_webhook_e2e_%' ORDER BY event_id").all(),
+  events:database.prepare("SELECT event_id,status,payload_json AS payloadJson FROM webhook_events WHERE event_id LIKE 'evt_webhook_e2e_%' ORDER BY event_id").all(),
   notifications:database.prepare("SELECT audience,type,unique_key FROM rental_notifications WHERE booking_id=? ORDER BY audience,type").all(bookingId),
   outbox:database.prepare("SELECT template_key,dedupe_key FROM email_outbox WHERE dedupe_key LIKE ?").all('%'+paymentIntentId+'%')}}
  finally{database.close()}
@@ -98,8 +98,21 @@ try{
  assert.equal(wrong.status,200,'Wrong-account event is accepted but ignored');
  assert.equal(read().booking.payment_status,'requires_payment_method','Wrong connected account cannot pay booking');
  const valid=event('evt_webhook_e2e_valid',accountId);
+ // Signed Stripe objects may include customer PII and client secrets; do not
+ // persist them in webhook audit history.
+ valid.data.object.billing_details={email:'audit-private@example.invalid'};
+ valid.data.object.client_secret='audit-test-secret-must-not-be-stored';
  const good=await post(valid,{connect:true});assert.equal(good.status,200,'Valid Connect-signed event');
  assert.equal(read().booking.payment_status,'paid','Valid account-bound signed event pays booking');
+ const storedAudit=read().events.find(row=>row.event_id===valid.id);
+ assert.ok(storedAudit,'Signed event must have persistent audit record');
+ assert.equal(storedAudit.status,'processed');
+ assert.ok(!storedAudit.payloadJson.includes('audit-private@example.invalid'),
+  'Audit must not persist customer email from Stripe event');
+ assert.ok(!storedAudit.payloadJson.includes('audit-test-secret-must-not-be-stored'),
+  'Audit must not persist client secret');
+ assert.equal(JSON.parse(storedAudit.payloadJson).objectId,paymentIntentId,
+  'Audit must retain useful provider object correlation');
  const duplicate=await post(valid);assert.equal(duplicate.status,200);
  assert.equal(JSON.parse(duplicate.body).duplicate,true,'Webhook replay is idempotent');
  assert.equal(read().booking.payment_status,'paid');
