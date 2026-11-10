@@ -1841,6 +1841,28 @@ export function expireStalePendingBookings(now=new Date()){
   return stale.map(x=>x.bookingId);
 }
 
+// Read-only, bounded operations queue for expired pending bookings that still
+// have provider objects. Excludes customer PII and all Stripe object IDs.
+const unresolvedExpiryStmt=db.prepare(`
+  SELECT booking_id AS bookingId,
+         listing_id AS listingId,
+         expires_at AS expiresAt,
+         CASE WHEN stripe_payment_intent_id IS NOT NULL THEN 1 ELSE 0 END AS hasPaymentIntent,
+         CASE WHEN security_deposit_payment_intent_id IS NOT NULL THEN 1 ELSE 0 END AS hasDepositIntent
+  FROM rental_bookings
+  WHERE status='pending'
+    AND expires_at IS NOT NULL
+    AND expires_at <= @now
+    AND (stripe_payment_intent_id IS NOT NULL OR security_deposit_payment_intent_id IS NOT NULL)
+  ORDER BY expires_at ASC, booking_id ASC
+  LIMIT @limit
+`);
+export function listUnreconciledExpiredBookings({now=new Date(),limit=50}={}){
+  const safeLimit=Number.isFinite(Number(limit))?Math.max(1,Math.min(100,Math.trunc(Number(limit)))):50;
+  return unresolvedExpiryStmt.all({now:now.toISOString(),limit:safeLimit})
+    .map(row=>({...row,hasPaymentIntent:Boolean(row.hasPaymentIntent),hasDepositIntent:Boolean(row.hasDepositIntent)}));
+}
+
 export function setStripeRefundDetails(bookingId,{refundId=null,refundStatus=null,refundAmount=null}={}){
   setStripeRefundStmt.run({
     booking_id:bookingId,
