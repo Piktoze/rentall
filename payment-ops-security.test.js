@@ -10,4 +10,15 @@ assert(server.includes("Math.min(200,Number(limit)||50)"),'Webhook log query mus
 // Keep the guard inside the provider-object cancellation branch, after the unpaid/no-provider exit.
 assert(/if\(!hasStripePayment && !hasStripeDeposit\) return null;\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*if\(!stripe\) throw new Error\('Stripe is unavailable; payment\/deposit cancellation cannot be verified'\)/.test(server),
   'Stripe cancellation must fail closed when payment or deposit exists and Stripe is unavailable');
+// Refunds must be bound to the booking and must not proceed while Stripe is processing.
+const cancelHandler=server.split('async function handleStripeCancellationForBooking(booking, refundAmount){')[1]?.split('async function cancelBookingWithPaymentHandling(')[0]||'';
+assert(cancelHandler.includes("String(intent.metadata?.bookingId||'')!==String(booking.bookingId)") &&
+  cancelHandler.includes("String(intent.metadata?.purpose||'')!=='rental_payment'") &&
+  cancelHandler.includes("Number(intent.amount)!==Math.round(Number(booking.orderValue||0)*100)") &&
+  cancelHandler.includes("String(intent.currency||'').toLowerCase()!=='eur'"),
+  'Cancellation must verify Stripe PaymentIntent booking, purpose, amount, and currency before refund');
+assert(cancelHandler.includes("if(intent.status==='processing')") &&
+  cancelHandler.includes("error.code='PAYMENT_STILL_PROCESSING'") &&
+  cancelHandler.includes("else if(intent.status!=='canceled')"),
+  'Processing and unexpected Stripe payment states must stop cancellation');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
