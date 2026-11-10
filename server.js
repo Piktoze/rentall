@@ -3135,7 +3135,8 @@ app.post('/api/admin/bookings/:bookingId/deposit/release', requireRole('admin'),
     const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
     if(!connection?.stripeAccountId)return res.status(409).json({error:'Supplier Stripe account not found'});
     const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
-    if(String(intent.metadata?.bookingId||'')!==String(booking.bookingId)||String(intent.metadata?.purpose||'')!=='security_deposit')return res.status(409).json({error:'Deposit authorization identity mismatch'});
+    const depositBinding=validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId);
+    if(!depositBinding.ok)return res.status(409).json({error:'Deposit authorization identity, amount or currency mismatch'});
     if(intent.status==='requires_capture') await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:deposit-release`});
     else if(intent.status!=='canceled') return res.status(409).json({error:`Deposit cannot be released from provider status ${intent.status}`});
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:'canceled',depositStatus:'released'});
@@ -3161,8 +3162,12 @@ app.post('/api/admin/bookings/:bookingId/deposit/capture', requireRole('admin'),
     const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
     if(!connection?.stripeAccountId)return res.status(409).json({error:'Supplier Stripe account not found'});
     const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
-    if(String(intent.metadata?.bookingId||'')!==String(booking.bookingId)||String(intent.metadata?.purpose||'')!=='security_deposit'||intent.status!=='requires_capture')return res.status(409).json({error:'Deposit authorization is not capture-ready'});
+    const depositBinding=validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId);
+    if(!depositBinding.ok || intent.status!=='requires_capture')return res.status(409).json({error:'Deposit authorization is not capture-ready or does not match booking'});
     const captured=await captureDirectSecurityDeposit(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,amountCents:captureCents,idempotencyKey:`booking:${booking.bookingId}:deposit-capture:${captureCents}`});
+    if(String(captured?.id||'')!==String(intent.id) || captured?.status!=='succeeded'){
+      throw new Error('Stripe deposit capture is not confirmed; reconciliation required');
+    }
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:captured.status,depositStatus:'captured'});
     const updated=resolveRentalSecurityDeposit(booking.bookingId,{status:'captured',resolution:reason});
     if(updated.customerEmail)createRentalNotification({uniqueKey:`booking:${booking.bookingId}:deposit:captured:${captureCents}:customer`,audience:'customer',userEmail:updated.customerEmail,bookingId:booking.bookingId,type:'deposit.captured',title:'Security deposit claim resolved',message:`€${(captureCents/100).toFixed(2)} of the security deposit was captured after claim review. Resolution: ${reason}`});
