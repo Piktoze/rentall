@@ -6,4 +6,8 @@ assert(server.includes("app.post('/api/stripe/connect/simulate-event', requireRo
 assert(server.includes("NODE_ENV==='production' && process.env.ENABLE_STRIPE_SIMULATOR!=='true'"),'Simulator must default off in production');
 assert(server.includes("Cache-Control','no-store, private"),'Sensitive API no-store policy missing');
 assert(server.includes("Math.min(200,Number(limit)||50)"),'Webhook log query must be bounded');
+// Stripe outage must not turn a charged booking into a cancellation without refund.
+// Keep the guard inside the provider-object cancellation branch, after the unpaid/no-provider exit.
+assert(/if\(!hasStripePayment && !hasStripeDeposit\) return null;\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*if\(!stripe\) throw new Error\('Stripe is unavailable; payment\/deposit cancellation cannot be verified'\)/.test(server),
+  'Stripe cancellation must fail closed when payment or deposit exists and Stripe is unavailable');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
