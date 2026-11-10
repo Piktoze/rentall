@@ -21,4 +21,15 @@ assert(cancelHandler.includes("if(intent.status==='processing')") &&
   cancelHandler.includes("error.code='PAYMENT_STILL_PROCESSING'") &&
   cancelHandler.includes("else if(intent.status!=='canceled')"),
   'Processing and unexpected Stripe payment states must stop cancellation');
+// Deposit settlement must not be bypassed by cancelling a booking while a hold
+// is processing, captured, or tied to another booking.
+assert(cancelHandler.includes("String(deposit.metadata?.bookingId||'')!==String(booking.bookingId)") &&
+  cancelHandler.includes("String(deposit.metadata?.purpose||'')!=='security_deposit'") &&
+  cancelHandler.includes("Number(deposit.amount)!==Math.round(Number(booking.securityDepositAmount||0)*100)") &&
+  cancelHandler.includes("String(deposit.currency||'').toLowerCase()!=='eur'"),
+  'Cancellation must bind the Stripe security deposit to the booking, amount and currency');
+assert(cancelHandler.includes("new Set(['requires_capture','requires_payment_method','requires_confirmation','requires_action']).has(deposit.status)") &&
+  cancelHandler.includes("else if(deposit.status!=='canceled')") &&
+  cancelHandler.includes("Stripe deposit is not safely cancellable; manual review required"),
+  'Only safely cancellable deposit states may finish booking cancellation');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
