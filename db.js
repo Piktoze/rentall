@@ -405,6 +405,10 @@ const overlappingBookedStmt = db.prepare(`
           payment_status='paid'
           OR expires_at IS NULL
           OR expires_at > @now
+          -- A provider-side charge/hold can finish after local expiry.
+          -- Do not resell inventory until payment/deposit reconciliation.
+          OR stripe_payment_intent_id IS NOT NULL
+          OR security_deposit_payment_intent_id IS NOT NULL
         )
       )
     )
@@ -1812,6 +1816,8 @@ const expirePendingStmt=db.prepare(`
     AND COALESCE(payment_status,'unpaid')!='paid'
     AND expires_at IS NOT NULL
     AND expires_at<=@now
+    AND stripe_payment_intent_id IS NULL
+    AND security_deposit_payment_intent_id IS NULL
 `);
 
 const setStripeRefundStmt=db.prepare(`
@@ -1830,7 +1836,7 @@ const setStripeRefundStmt=db.prepare(`
 
 export function expireStalePendingBookings(now=new Date()){
   const iso=now.toISOString();
-  const stale=db.prepare(`SELECT booking_id AS bookingId FROM rental_bookings WHERE status='pending' AND COALESCE(payment_status,'unpaid')!='paid' AND expires_at IS NOT NULL AND expires_at<=?`).all(iso);
+  const stale=db.prepare(`SELECT booking_id AS bookingId FROM rental_bookings WHERE status='pending' AND COALESCE(payment_status,'unpaid')!='paid' AND expires_at IS NOT NULL AND expires_at<=? AND stripe_payment_intent_id IS NULL AND security_deposit_payment_intent_id IS NULL`).all(iso);
   if(stale.length) expirePendingStmt.run({now:iso});
   return stale.map(x=>x.bookingId);
 }
