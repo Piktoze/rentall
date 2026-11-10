@@ -54,7 +54,7 @@ assert(expiryHandler.includes("else if(dpi.status!=='canceled')") &&
 // never exposes customer email or Stripe PaymentIntent IDs.
 assert(server.includes("app.get('/api/admin/ops/unreconciled-expired-bookings',requireRole('admin')"),
   'Expired provider reconciliation queue must require admin access');
-const queueRoute=server.split("app.get('/api/admin/ops/unreconciled-expired-bookings'")[1]?.split("// V130 non-secret integration capability contract.")[0]||'';
+const queueRoute=server.split("app.get('/api/admin/ops/unreconciled-expired-bookings'")[1]?.split("app.get('/api/admin/ops/unreconciled-expired-bookings/:bookingId/verify'")[0]||'';
 assert(queueRoute.includes("Cache-Control','no-store, private") &&
   !queueRoute.includes('paymentIntentId') &&
   !queueRoute.includes('customerEmail'),
