@@ -59,4 +59,23 @@ assert(queueRoute.includes("Cache-Control','no-store, private") &&
   !queueRoute.includes('paymentIntentId') &&
   !queueRoute.includes('customerEmail'),
   'Unreconciled bookings route must not leak provider IDs or personal data');
+// Live provider reconciliation preview is restricted to staging/admin and
+// cannot write to Stripe, release inventory, or disclose provider identifiers.
+const expiryPreview=server.split("app.get('/api/admin/ops/unreconciled-expired-bookings/:bookingId/verify'")[1]?.split("// V130 non-secret integration capability contract.")[0]||'';
+assert(expiryPreview.includes("requireRole('admin')") &&
+  expiryPreview.includes("process.env.RENTINORBIT_STAGING!=='true'") &&
+  expiryPreview.includes("simpleRateLimit({windowMs:60000,max:10") &&
+  expiryPreview.includes("Cache-Control','no-store, private"),
+  'Provider reconciliation must be staging-only, admin-only, rate-limited and uncached');
+assert(expiryPreview.includes("validateRentalPaymentIntentBinding(") &&
+  expiryPreview.includes("validateSecurityDepositIntentBinding(") &&
+  expiryPreview.includes('requiresManualReview:true,inventoryReleased:false'),
+  'Provider preview must check booking bindings and leave holds untouched');
+for(const forbidden of ['refundDirectCharge(','cancelDirectChargePaymentIntent(',
+  'setRentalSecurityDepositProviderState(','setBookingPaymentDetails(',
+  'expireStalePendingBookings(','setRentalBookingStatusAfterRefund(']){
+  assert(!expiryPreview.includes(forbidden),'Read-only provider verification must not mutate state: '+forbidden);
+}
+assert(!expiryPreview.includes('client_secret') && !expiryPreview.includes('stripeAccountId:connection.stripeAccountId,'),
+  'Provider preview response must not expose payment credentials or account identifiers');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
