@@ -16,7 +16,7 @@ process.env.UPLOADS_DIR=path.join(folder,'uploads');
 
 const {
   db,upsertRentalListing,createRentalBookingAtomic,getAvailability,
-  expireStalePendingBookings,setBookingPaymentDetails
+  expireStalePendingBookings,setBookingPaymentDetails,listUnreconciledExpiredBookings
 }=await import('./db.js');
 
 function assert(v,msg){if(!v) throw new Error(msg);}
@@ -62,6 +62,14 @@ try{
       .run('2000-01-01T00:00:00.000Z','pi_test_unsettled_hold',bookingId);
     assert(!expireStalePendingBookings().includes(bookingId),
       'Expiry must not release a pending booking with an unsettled provider object');
+    const pendingQueue=listUnreconciledExpiredBookings();
+    const pendingEntry=pendingQueue.find(row=>row.bookingId===bookingId);
+    assert(pendingEntry,'Unresolved provider hold must appear in the admin triage queue');
+    assert(pendingEntry.hasPaymentIntent===(provider==='stripe_payment_intent_id'),'Payment flag must match provider object');
+    assert(pendingEntry.hasDepositIntent===(provider==='security_deposit_payment_intent_id'),'Deposit flag must match provider object');
+    assert(!('customerEmail' in pendingEntry)&&!('stripePaymentIntentId' in pendingEntry)
+      &&!('securityDepositPaymentIntentId' in pendingEntry),
+      'Triage queue must not expose customer PII or Stripe object IDs');
     assert(db.prepare('SELECT status FROM rental_bookings WHERE booking_id=?').get(bookingId).status==='pending',
       'Provider-backed booking must stay pending until reconciliation');
     assert(getAvailability({listingId,startDate:'2099-02-01',endDate:'2099-02-02',requestedQuantity:1}).remainingQuantity===0,
@@ -70,6 +78,8 @@ try{
     db.prepare(`UPDATE rental_bookings SET ${provider}=NULL WHERE booking_id=?`).run(bookingId);
     assert(expireStalePendingBookings().includes(bookingId),
       'Booking may expire only after provider object is cleared');
+    assert(!listUnreconciledExpiredBookings().some(row=>row.bookingId===bookingId),
+      'Reconciled reservation must disappear from operations queue');
     assert(getAvailability({listingId,startDate:'2099-02-01',endDate:'2099-02-02',requestedQuantity:1}).remainingQuantity===1,
       'Inventory is released after the provider hold is resolved');
   }
