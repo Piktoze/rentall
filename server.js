@@ -394,11 +394,23 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
 
   if(booking?.securityDepositPaymentIntentId && !['released','captured'].includes(String(booking.securityDepositStatus||''))){
     const deposit=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
-    if(deposit.status==='requires_capture'){
-      await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:deposit.id,idempotencyKey:`booking:${booking.bookingId}:cancel-deposit`});
-      setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:deposit.id,providerStatus:'canceled',depositStatus:'released'});
-      try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Security deposit authorization released after cancellation.'})}catch{}
+    // Verify the provider hold belongs to this specific booking before releasing
+    // inventory or changing any deposit accounting.
+    if(String(deposit.id||'')!==String(booking.securityDepositPaymentIntentId) ||
+       String(deposit.metadata?.bookingId||'')!==String(booking.bookingId) ||
+       String(deposit.metadata?.purpose||'')!=='security_deposit' ||
+       Number(deposit.amount)!==Math.round(Number(booking.securityDepositAmount||0)*100) ||
+       String(deposit.currency||'').toLowerCase()!=='eur'){
+      throw new Error('Stripe deposit does not match this booking; cancellation requires review');
     }
+    if(new Set(['requires_capture','requires_payment_method','requires_confirmation','requires_action']).has(deposit.status)){
+      await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:deposit.id,idempotencyKey:`booking:${booking.bookingId}:cancel-deposit`});
+    }else if(deposit.status!=='canceled'){
+      // In particular, do not erase a processing or captured security deposit.
+      throw new Error('Stripe deposit is not safely cancellable; manual review required');
+    }
+    setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:deposit.id,providerStatus:'canceled',depositStatus:'released'});
+    try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Security deposit authorization released after cancellation.'})}catch{}
   }
   return refund;
 }
