@@ -32,4 +32,10 @@ assert(cancelHandler.includes("new Set(['requires_capture','requires_payment_met
   cancelHandler.includes("else if(deposit.status!=='canceled')") &&
   cancelHandler.includes("Stripe deposit is not safely cancellable; manual review required"),
   'Only safely cancellable deposit states may finish booking cancellation');
+// Do not refund a rental while a captured (not merely held) deposit is unresolved.
+const bookingCancel=server.split('async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefund=false}={}){')[1]?.split('function bookingAccessAllowed(')[0]||'';
+assert(bookingCancel.includes("String(booking.securityDepositStatus||'').toLowerCase()==='captured'") &&
+  bookingCancel.includes("error.code='DEPOSIT_RECONCILIATION_REQUIRED'") &&
+  bookingCancel.indexOf("error.code='DEPOSIT_RECONCILIATION_REQUIRED'")<bookingCancel.indexOf('await handleStripeCancellationForBooking(booking,refundAmount)'),
+  'Captured deposit must block rental refund before any provider operations');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
