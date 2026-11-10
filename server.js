@@ -57,6 +57,7 @@ import {
   getFullRentalListing,
   getCustomerBookingByAccessToken,
   expireStalePendingBookings,
+  listUnreconciledExpiredBookings,
   setStripeRefundDetails,
   calculateRefundAmount,
   setRentalBookingStatusAfterRefund,
@@ -1567,6 +1568,19 @@ app.get('/api/ops/status',(req,res)=>{
   const productionReady=gate.ready&&checks.runtime.ok&&checks.stripe.ok&&checks.database.ok&&checks.notifications.ok&&checks.emailWorker.ok;
   res.set('Cache-Control','no-store');
   res.status(productionReady||!runtimeConfig.production?200:503).json({ok:productionReady,checks,version:APP_VERSION});
+});
+
+// Admin-only read-only triage; never returns payment IDs, PII or secrets.
+// This queue is NOT authorization to cancel Stripe objects or release inventory.
+app.get('/api/admin/ops/unreconciled-expired-bookings',requireRole('admin'),(req,res)=>{
+  try{
+    const bookings=listUnreconciledExpiredBookings({limit:req.query.limit});
+    res.set('Cache-Control','no-store, private');
+    res.json({ok:true,bookings,action:'manual_stripe_provider_review_required'});
+  }catch(error){
+    console.warn('Unreconciled expiry queue failed',safeOperationalError(error));
+    res.status(503).json({error:'Unreconciled bookings queue unavailable'});
+  }
 });
 
 // V130 non-secret integration capability contract.
