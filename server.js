@@ -359,6 +359,20 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
   let refund=null;
   if(booking?.stripePaymentIntentId){
     const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId});
+    // A stored PaymentIntent ID is not sufficient proof of booking ownership.
+    // Fail closed before refund/cancellation unless the provider object matches.
+    if(String(intent.id||'')!==String(booking.stripePaymentIntentId) ||
+       String(intent.metadata?.bookingId||'')!==String(booking.bookingId) ||
+       String(intent.metadata?.purpose||'')!=='rental_payment' ||
+       Number(intent.amount)!==Math.round(Number(booking.orderValue||0)*100) ||
+       String(intent.currency||'').toLowerCase()!=='eur'){
+      throw new Error('Stripe payment intent does not match this booking; cancellation requires review');
+    }
+    if(intent.status==='processing'){
+      const error=new Error('Stripe payment is processing; cancellation must wait for settlement');
+      error.code='PAYMENT_STILL_PROCESSING';
+      throw error;
+    }
     if(intent.status==='succeeded'){
       if(!booking.stripeRefundId){
         const alreadyRefunded=Math.max(0,Number(booking.refundAmount||0));
@@ -373,6 +387,8 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
       }
     }else if(new Set(['requires_payment_method','requires_confirmation','requires_action','requires_capture']).has(intent.status)){
       await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:cancel-payment`});
+    }else if(intent.status!=='canceled'){
+      throw new Error('Unexpected Stripe payment status; cancellation requires review');
     }
   }
 
