@@ -28,6 +28,7 @@ for(const suite of [
   'connect-fee-settlement-v244.test.mjs',
   'deposit-payment-timing-v245.test.mjs',
   'backup-evidence-order-v235.test.mjs',
+  'expiration.test.js',
   'payment-ops-security.test.js',
   'payment-race.test.js',
   'rental-preauth-v204.test.js',
