@@ -348,7 +348,9 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
   const hasStripePayment=!!booking?.stripePaymentIntentId;
   const hasStripeDeposit=!!booking?.securityDepositPaymentIntentId;
   if(!hasStripePayment && !hasStripeDeposit) return null;
-  if(!stripe) return null;
+  // Never mark a charged/authorized booking cancelled when Stripe is unavailable:
+  // we must first verify or cancel its provider objects to prevent lost refunds.
+  if(!stripe) throw new Error('Stripe is unavailable; payment/deposit cancellation cannot be verified');
   const listing=getRentalListing(booking?.listingId);
   const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
   if(!connection?.stripeAccountId) throw new Error('Supplier Stripe account not found for booking');
