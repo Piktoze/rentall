@@ -434,6 +434,13 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
     err.code='INVALID_TRANSITION';
     throw err;
   }
+  // A captured deposit is real money, not a releasable authorization.
+  // Require manual reconciliation before any automatic rental refund.
+  if(String(booking.securityDepositStatus||'').toLowerCase()==='captured'){
+    const error=new Error('Captured security deposit requires manual review before cancellation');
+    error.code='DEPOSIT_RECONCILIATION_REQUIRED';
+    throw error;
+  }
   const listing=getRentalListing(booking.listingId);
   let collectedPayment=new Set(['paid','partially_refunded','refunded'])
     .has(String(booking.paymentStatus||'unpaid').toLowerCase());
