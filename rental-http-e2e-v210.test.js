@@ -64,6 +64,16 @@ createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2
   startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Instant test renter',orderValue:100});
 
+// Expired provider-backed pending reservation: synthetic identifiers only.
+const stalledId='api-e2e-stalled-provider';
+upsertRentalListing({listingId:'api-e2e-stalled-listing',ownerEmail:supplier,
+  title:'Temporary unreconciled checkout item',totalQuantity:1});
+createRentalBookingAtomic({bookingId:stalledId,listingId:'api-e2e-stalled-listing',
+  startDate:'2099-12-01',endDate:'2099-12-02',quantity:1,status:'pending',
+  customerEmail:renter,customerName:'Temporary E2E Renter',orderValue:100});
+db.prepare("UPDATE rental_bookings SET expires_at=?,stripe_payment_intent_id=? WHERE booking_id=?")
+  .run('2000-01-01T00:00:00.000Z','pi_test_unreconciled_http',stalledId);
+
 db.close();
 Object.keys(process.env).forEach(k=>delete process.env[k]);
 Object.assign(process.env,previous);
@@ -112,6 +122,31 @@ try{
  console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // B1 admin diagnostic: actual HTTP role isolation, redaction and fail-closed.
+ const triageUrl='/api/admin/ops/unreconciled-expired-bookings';
+ status(await api(triageUrl),401,'Guest cannot inspect unresolved Stripe reservations');
+ status(await api(triageUrl,{cookie:renterCookie}),403,'Renter cannot inspect unresolved Stripe reservations');
+ status(await api(triageUrl,{cookie:supplierCookie}),403,'Supplier cannot inspect admin Stripe queue');
+ const triage=await api(triageUrl,{cookie:adminCookie});
+ status(triage,200,'Administrator can inspect unresolved provider queue');
+ const stalled=triage.body.bookings.find(row=>row.bookingId===stalledId);
+ assert.ok(stalled,'Unreconciled provider booking must be visible to administrator');
+ assert.equal(stalled.hasPaymentIntent,true);
+ assert.equal(stalled.hasDepositIntent,false);
+ assert.equal(triage.body.action,'manual_stripe_provider_review_required');
+ assert.ok(!('customerEmail' in stalled)&&!('stripePaymentIntentId' in stalled)&&
+   !('securityDepositPaymentIntentId' in stalled),'Queue must not expose personal data or Stripe IDs');
+ const verifyUrl=triageUrl+'/'+encodeURIComponent(stalledId)+'/verify';
+ status(await api(verifyUrl),401,'Guest cannot verify Stripe provider status');
+ status(await api(verifyUrl,{cookie:renterCookie}),403,'Renter cannot verify Stripe provider status');
+ status(await api(verifyUrl,{cookie:supplierCookie}),403,'Supplier cannot verify admin Stripe provider status');
+ status(await api(verifyUrl,{cookie:adminCookie}),503,
+   'Admin provider verification must fail closed when TEST Stripe is not configured');
+ const triageAfter=await api(triageUrl,{cookie:adminCookie});
+ status(triageAfter,200,'Read-only verification must not change unresolved queue');
+ assert.ok(triageAfter.body.bookings.some(row=>row.bookingId===stalledId),
+   'Provider verification without Stripe must never release the hold');
+ console.log('PASS HTTP admin-only unresolved Stripe triage: roles, redaction, no provider and no release');
  // B1: staging-only Stripe/booking binding inspection must be strictly supplier-scoped.
  const bindingUrl='/api/stripe/connect/booking-binding/'+encodeURIComponent(id);
  status(await api(bindingUrl),401,'Unauthenticated user cannot inspect Stripe booking binding');
