@@ -78,4 +78,17 @@ for(const forbidden of ['refundDirectCharge(','cancelDirectChargePaymentIntent('
 }
 assert(!expiryPreview.includes('client_secret') && !expiryPreview.includes('stripeAccountId:connection.stripeAccountId,'),
   'Provider preview response must not expose payment credentials or account identifiers');
+// Administrative deposit release/capture must verify the full Stripe object
+// against the booking, not just metadata, and never record an unconfirmed capture.
+const depositReleaseRoute=server.split("app.post('/api/admin/bookings/:bookingId/deposit/release'")[1]?.split("app.post('/api/admin/bookings/:bookingId/deposit/capture'")[0]||'';
+const depositCaptureRoute=server.split("app.post('/api/admin/bookings/:bookingId/deposit/capture'")[1]?.split("app.get('/api/admin/disputes'")[0]||'';
+assert(depositReleaseRoute.includes('validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId)'),
+  'Admin release must validate provider account, intent ID, booking, amount, and currency');
+assert(depositCaptureRoute.includes('validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId)'),
+  'Admin capture must validate provider account, intent ID, booking, amount, and currency');
+assert(depositCaptureRoute.includes("String(captured?.id||'')!==String(intent.id)") &&
+  depositCaptureRoute.includes("captured?.status!=='succeeded'") &&
+  depositCaptureRoute.indexOf("captured?.status!=='succeeded'")<
+    depositCaptureRoute.indexOf("depositStatus:'captured'"),
+  'Admin capture cannot be recorded as successful without confirmed Stripe success');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
