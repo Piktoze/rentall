@@ -1583,6 +1583,54 @@ app.get('/api/admin/ops/unreconciled-expired-bookings',requireRole('admin'),(req
   }
 });
 
+// Read-only Stripe provider reconciliation preview for one expired pending
+// booking. No Stripe writes, inventory release, database mutation or identifiers
+// are returned; actual remediation remains a separately authorized operation.
+app.get('/api/admin/ops/unreconciled-expired-bookings/:bookingId/verify',
+  requireRole('admin'),
+  simpleRateLimit({windowMs:60000,max:10,keyPrefix:'expired-provider-verify'}),
+  async (req,res)=>{
+    res.set('Cache-Control','no-store, private');
+    if(process.env.RENTINORBIT_STAGING!=='true') return res.status(404).json({error:'Not found'});
+    if(!stripe) return res.status(503).json({error:'Stripe verification unavailable'});
+    const booking=getRentalBookingById(String(req.params.bookingId||''));
+    if(!booking || booking.status!=='pending' || !booking.expiresAt ||
+       Date.parse(booking.expiresAt)>Date.now() ||
+       (!booking.stripePaymentIntentId && !booking.securityDepositPaymentIntentId)){
+      return res.status(404).json({error:'Unreconciled expired booking not found'});
+    }
+    const listing=getRentalListing(booking.listingId);
+    const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
+    if(!connection?.stripeAccountId || connection.connectApi!=='v2_merchant_direct'){
+      return res.status(409).json({error:'Supplier Stripe connection requires review'});
+    }
+    try{
+      const response={bookingId:booking.bookingId,verifiedAt:new Date().toISOString(),
+        payment:null,deposit:null,requiresManualReview:true,inventoryReleased:false};
+      if(booking.stripePaymentIntentId){
+        const intent=await retrieveDirectChargePaymentIntent(stripe,{
+          accountId:connection.stripeAccountId,paymentIntentId:booking.stripePaymentIntentId
+        });
+        const binding=validateRentalPaymentIntentBinding(intent,booking,connection.stripeAccountId);
+        if(!binding.ok) return res.status(409).json({error:'Rental payment binding requires review'});
+        response.payment={status:String(intent.status||'unknown')};
+      }
+      if(booking.securityDepositPaymentIntentId){
+        const deposit=await retrieveDirectChargePaymentIntent(stripe,{
+          accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId
+        });
+        const binding=validateSecurityDepositIntentBinding(deposit,booking,connection.stripeAccountId);
+        if(!binding.ok) return res.status(409).json({error:'Security deposit binding requires review'});
+        response.deposit={status:String(deposit.status||'unknown')};
+      }
+      res.json(response);
+    }catch(error){
+      console.warn('Expired booking provider verification failed',safeOperationalError(error));
+      res.status(502).json({error:'Unable to verify Stripe provider state'});
+    }
+  }
+);
+
 // V130 non-secret integration capability contract.
 app.get('/api/integrations/capabilities',(req,res)=>{
  res.set('Cache-Control','no-store');
