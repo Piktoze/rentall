@@ -1810,8 +1810,20 @@ async function processExpiredBookings(){
       }
       if(stripe && connection?.stripeAccountId && booking.securityDepositPaymentIntentId && !['released','captured'].includes(booking.securityDepositStatus)){
         const dpi=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
-        if(dpi.status==='requires_capture') await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:dpi.id,idempotencyKey:`booking:${bookingId}:expiry-deposit-cancel`});
-        setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:dpi.id,providerStatus:dpi.status==='requires_capture'?'canceled':dpi.status,depositStatus:'released'});
+        if(String(dpi.id||'')!==String(booking.securityDepositPaymentIntentId) ||
+           String(dpi.metadata?.bookingId||'')!==String(bookingId) ||
+           String(dpi.metadata?.purpose||'')!=='security_deposit' ||
+           Number(dpi.amount)!==Math.round(Number(booking.securityDepositAmount||0)*100) ||
+           String(dpi.currency||'').toLowerCase()!=='eur'){
+          throw new Error('Expired booking deposit does not match provider authorization');
+        }
+        if(new Set(['requires_capture','requires_payment_method','requires_confirmation','requires_action']).has(dpi.status)){
+          await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:dpi.id,idempotencyKey:`booking:${bookingId}:expiry-deposit-cancel`});
+        }else if(dpi.status!=='canceled'){
+          // Processing or captured deposits must not be falsely marked released.
+          throw new Error('Expired booking deposit requires provider reconciliation');
+        }
+        setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:dpi.id,providerStatus:'canceled',depositStatus:'released'});
         resolveRentalSecurityDeposit(bookingId,{status:'released',resolution:'Booking expired before completion; deposit authorization released.'});
       }
       if(booking.customerEmail)createRentalNotification({uniqueKey:`booking:${bookingId}:expired:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId,type:'booking.expired',title:'Booking request expired',message:'This booking request expired before payment/confirmation was completed. No active reservation remains.'});
