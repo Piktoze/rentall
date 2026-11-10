@@ -1,9 +1,18 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
-const dbFile=path.resolve('./rentinorbit-expiration-test.sqlite');
+// Execute only against disposable temp files. A production/Railway build
+// environment must never make this test touch its configured storage.
+const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-expiration-'));
+const dbFile=path.join(folder,'expiry-test.sqlite');
+for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
+  'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
+  'STRIPE_SECRET_KEY','STRIPE_PUBLISHABLE_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_CONNECT_WEBHOOK_SECRET'])delete process.env[k];
+process.env.NODE_ENV='test';
+process.env.RENTINORBIT_STAGING='true';
 process.env.DB_PATH=dbFile;
-for(const s of ['', '-shm', '-wal']){try{fs.unlinkSync(dbFile+s)}catch{}}
+process.env.UPLOADS_DIR=path.join(folder,'uploads');
 
 const {
   db,upsertRentalListing,createRentalBookingAtomic,getAvailability,
@@ -69,5 +78,5 @@ try{
   console.log('PASS: unpaid booking expiration releases inventory.');
 } finally{
   db.close();
-  for(const s of ['', '-shm', '-wal']){try{fs.unlinkSync(dbFile+s)}catch{}}
+  fs.rmSync(folder,{recursive:true,force:true});
 }
