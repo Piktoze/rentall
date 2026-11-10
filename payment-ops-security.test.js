@@ -38,4 +38,16 @@ assert(bookingCancel.includes("String(booking.securityDepositStatus||'').toLower
   bookingCancel.includes("error.code='DEPOSIT_RECONCILIATION_REQUIRED'") &&
   bookingCancel.indexOf("error.code='DEPOSIT_RECONCILIATION_REQUIRED'")<bookingCancel.indexOf('await handleStripeCancellationForBooking(booking,refundAmount)'),
   'Captured deposit must block rental refund before any provider operations');
+// Expiry cleanup must not claim a deposit was released while Stripe still holds
+// or processes it; the provider object's booking and amount must also match.
+const expiryHandler=server.split('async function processExpiredBookings(){')[1]?.split('const BOOKING_EXPIRY_SWEEP_MS=')[0]||'';
+assert(expiryHandler.includes("String(dpi.metadata?.bookingId||'')!==String(bookingId)") &&
+  expiryHandler.includes("String(dpi.metadata?.purpose||'')!=='security_deposit'") &&
+  expiryHandler.includes("Number(dpi.amount)!==Math.round(Number(booking.securityDepositAmount||0)*100)") &&
+  expiryHandler.includes("String(dpi.currency||'').toLowerCase()!=='eur'"),
+  'Expired booking must verify the Stripe deposit belongs to the booking');
+assert(expiryHandler.includes("else if(dpi.status!=='canceled')") &&
+  expiryHandler.includes('Expired booking deposit requires provider reconciliation') &&
+  expiryHandler.indexOf("else if(dpi.status!=='canceled')")<expiryHandler.indexOf("depositStatus:'released'"),
+  'Expiry must fail closed on unsettled deposit rather than marking it released');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
