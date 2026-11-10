@@ -3,6 +3,13 @@
 **Parengta:** 2026-11-09. **Statusas:** vykdymo instrukcija, NE įvykdytų E2E testų ataskaita.
 **Tikslas:** trečiadienį vienu valdomu Work seansu atlikti likusius realius įrodymus ir priimti tik įrodymais pagrįstą GO/NO-GO. Nebeplėsti kosmetinių darbų.
 
+## 2026-11-10 18:38 LT – naujausias patikrintas preflight (viršesnis už žemiau esančius istorinius commit ID)
+- Railway **staging** environment ID `ca5aa000-83a9-40b9-b9b6-74b3602f3dde`; paskutinis sėkmingas deployment `2a0f9a95-4d7a-4f5b-9ab9-eed6115d18a5`, commit `2f28acacf07d7ffab655e24e57b43151b4278129` (2026-11-10 16:04 LT). Online 1/1, 0 aktyvių warning/critical, 3 ankstesni FAILED per 8 val.; pendingWork 0. Tai **nėra** naujo Chromium ar Stripe TEST E2E įrodymas.
+- GitHub Actions senas run [42686094634](https://github.com/Piktoze/rentall/actions/runs/42686094634) tebėra **FAIL** naršykliniame žingsnyje (13/14); `fetch_commit_workflow_runs` pagal `2f28acac` grąžino tuščią PR-triggered rezultatą, bet šis API **neapima visų push/dispatch vykdymų**, todėl negalima iš jo daryti išvados, kad naujesnio Chromium vykdymo nėra. Work turi atverti [visus workflow vykdymus](https://github.com/Piktoze/rentall/actions/workflows/isolated-browser-e2e.yml) ir tikrinti paskutinį `staging/v203` run, jo commit, job, testų skaičių ir artefaktą; jei nėra aktualaus PASS, izoliuotą workflow paleisti tik saugiai, nekeičiant production ir nenaudojant mokamų kreditų.
+- Izoliuoto workflow `on.push.paths` filtrai reiškia, kad ne kiekvienas commit automatiškai paleidžia Chromium. Railway release gate **27/27** laikyti atskiru nuo Chromium **14/14**.
+- Tikras €100 Stripe TEST Direct Charge / webhook / refundas ir dviejų prisijungusių paskyrų UI eiga lieka **NOT RUN / BLOCKED**, B1–B5 neuždaryti. Neatlikti mokėjimų ar juridinių sutikimų be atskiro leidimo.
+- Šiame protokole žemiau pateikti ankstesni commit/deploy ID yra **istoriniai**; prieš bet kokį veiksmą vėl perskaityti faktinę šaką, staging deployment ir issue #3.
+
 ## 0. Nekeičiamos ribos
 - GitHub **tik** `Piktoze/rentall`, šaka `staging/v203`; Railway **tik** `nurturing-strength / staging`, URL `https://rentall-staging.up.railway.app`.
 - Stripe **tik TEST/sandbox, livemode=false**. Jokio LIVE, production, `main`, `/data` pakeitimo ir realių klientų duomenų. Naujos mokamos paslaugos ir papildomų kreditų biudžetas 0 €.
