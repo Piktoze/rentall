@@ -124,6 +124,7 @@ import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
 import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v253.js';
 import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-v276.js';
+import {assertPaymentCancellationConsistency} from './modules/stripe-cancellation-consistency-v277.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -386,6 +387,7 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
        String(intent.currency||'').toLowerCase()!=='eur'){
       throw new Error('Stripe payment intent does not match this booking; cancellation requires review');
     }
+    assertPaymentCancellationConsistency(booking,intent);
     if(intent.status==='processing'){
       const error=new Error('Stripe payment is processing; cancellation must wait for settlement');
       error.code='PAYMENT_STILL_PROCESSING';
