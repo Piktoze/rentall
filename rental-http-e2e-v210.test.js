@@ -572,6 +572,19 @@ try{
  const fullDispute=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
    data:{bookingId:pendingId,reason:'Lifecycle test of return dispute'}});
  status(fullDispute,200,'Full-cycle renter can open dispute after return');
+ const disputedCompletion=await api(fullRoute+'/status',{method:'POST',cookie:supplierCookie,
+   data:{status:'completed'}});
+ status(disputedCompletion,409,'Open dispute blocks rental completion');
+ assert.equal(disputedCompletion.body.code,'OPEN_DISPUTE_BLOCKS_COMPLETION');
+ const disputedSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const booking=disputedSnapshot.prepare('SELECT status FROM rental_bookings WHERE booking_id=?').get(pendingId);
+   const dispute=disputedSnapshot.prepare("SELECT status FROM rental_disputes WHERE booking_id=? ORDER BY created_at DESC LIMIT 1").get(pendingId);
+   assert.equal(booking.status,'returned','Disputed rental must remain returned');
+   assert.equal(dispute.status,'open','Completion denial must not close dispute');
+ }finally{disputedSnapshot.close()}
+ console.log('PASS HTTP returned rental with open dispute cannot be silently completed');
+
  status(await api(fullRoute+'/cancel',{method:'POST',cookie:renterCookie,
    data:{reason:'Cannot cancel already returned item'}}),409,
    'Full-cycle returned booking cannot be cancelled for automatic refund');
