@@ -73,6 +73,12 @@ createRentalBookingAtomic({bookingId:unpaidCancelId,listingId:'api-e2e-unpaid-li
   startDate:'2099-12-20',endDate:'2099-12-21',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Test Renter',orderValue:100});
 
+// Concurrent cancellation fixture: two requests racing over one unpaid booking.
+const parallelCancelId='api-e2e-parallel-cancel';
+createRentalBookingAtomic({bookingId:parallelCancelId,listingId:'api-e2e-unpaid-listing',
+  startDate:'2099-12-23',endDate:'2099-12-24',quantity:1,status:'pending',
+  customerEmail:renter,customerName:'Test Renter',orderValue:100});
+
 // Cancellation regression: synthetic provider-backed bookings, local test only.
 const offlinePaidId='api-e2e-offline-paid';
 createRentalBookingAtomic({bookingId:offlinePaidId,listingId:'api-e2e-listing',
@@ -184,6 +190,24 @@ try{
    data:{reason:'Repeated unpaid cancellation'}}),409,
    'Repeated unpaid cancellation must be blocked');
  console.log('PASS HTTP unpaid €100 booking: authorized cancellation, €0 refund, no Stripe object, replay blocked');
+ // Two simultaneous cancellation requests must not succeed twice.
+ const parallelUrl='/api/rentals/bookings/'+parallelCancelId+'/cancel';
+ const parallelResults=await Promise.all([0,1].map(i=>api(parallelUrl,{
+   method:'POST',cookie:supplierCookie,
+   data:{reason:'Parallel cancellation attempt '+i}
+ })));
+ assert.deepEqual(parallelResults.map(x=>x.status).sort((a,b)=>a-b),[200,409],
+   'Concurrent cancellation must allow one transition only');
+ assert.equal(parallelResults.find(x=>x.status===200)?.body.refundAmount,0,
+   'Concurrent unpaid cancellation must still refund €0');
+ const parallelRead=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=parallelRead.prepare('SELECT status,refund_amount,stripe_refund_id FROM rental_bookings WHERE booking_id=?').get(parallelCancelId);
+   assert.equal(row.status,'cancelled');
+   assert.equal(row.refund_amount,0);
+   assert.equal(row.stripe_refund_id,null);
+ }finally{parallelRead.close()}
+ console.log('PASS HTTP parallel unpaid cancellation: one 200, one 409, zero refund');
  // Stripe outage must not permit cancellation of a charged rental or
  // an authorized security deposit. Check persisted state, not only HTTP error.
  for(const bookingId of [offlinePaidId,offlineDepositId]){
