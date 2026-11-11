@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
+import Database from 'better-sqlite3';
 import {spawn} from 'node:child_process';
 
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
@@ -64,6 +65,20 @@ createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2
   startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Instant test renter',orderValue:100});
 
+// Cancellation regression: synthetic provider-backed bookings, local test only.
+const offlinePaidId='api-e2e-offline-paid';
+createRentalBookingAtomic({bookingId:offlinePaidId,listingId:'api-e2e-listing',
+  startDate:'2099-11-01',endDate:'2099-11-02',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Temporary Renter',orderValue:100});
+setBookingPaymentDetails({bookingId:offlinePaidId,paymentIntentId:'pi_test_offline_paid',
+  paymentStatus:'paid',paymentProvider:'stripe',platformFeeAmount:15,supplierAmount:85});
+const offlineDepositId='api-e2e-offline-deposit';
+createRentalBookingAtomic({bookingId:offlineDepositId,listingId:'api-e2e-listing',
+  startDate:'2099-11-05',endDate:'2099-11-06',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Temporary Renter',orderValue:100});
+db.prepare("UPDATE rental_bookings SET security_deposit_payment_intent_id=?, security_deposit_status=?,security_deposit_amount=? WHERE booking_id=?")
+  .run('pi_test_offline_deposit','authorized',50,offlineDepositId);
+
 // Expired provider-backed pending reservation: synthetic identifiers only.
 const stalledId='api-e2e-stalled-provider';
 upsertRentalListing({listingId:'api-e2e-stalled-listing',ownerEmail:supplier,
@@ -122,6 +137,24 @@ try{
  console.log('PASS HTTP registration requires explicit terms consent');
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // Stripe outage must not permit cancellation of a charged rental or
+ // an authorized security deposit. Check persisted state, not only HTTP error.
+ for(const bookingId of [offlinePaidId,offlineDepositId]){
+   const rejected=await api('/api/rentals/bookings/'+bookingId+'/cancel',{
+     method:'POST',cookie:supplierCookie,data:{reason:'Provider unavailable test'}
+   });
+   status(rejected,400,'Stripe-unavailable provider cancellation must fail closed');
+   const snapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+   try{
+     const state=snapshot.prepare("SELECT status,payment_status,security_deposit_status FROM rental_bookings WHERE booking_id=?").get(bookingId);
+     assert.equal(state.status,'confirmed','Provider outage must not cancel the booking');
+     if(bookingId===offlinePaidId) assert.equal(state.payment_status,'paid',
+       'Provider outage must preserve paid status');
+     else assert.equal(state.security_deposit_status,'authorized',
+       'Provider outage must preserve deposit authorization');
+   }finally{snapshot.close();}
+ }
+ console.log('PASS HTTP Stripe-offline provider cancellation preserves paid booking and authorized deposit');
  // B1 admin diagnostic: actual HTTP role isolation, redaction and fail-closed.
  const triageUrl='/api/admin/ops/unreconciled-expired-bookings';
  status(await api(triageUrl),401,'Guest cannot inspect unresolved Stripe reservations');
