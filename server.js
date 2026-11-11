@@ -1931,6 +1931,10 @@ app.post('/api/admin/stripe/connect/verify-existing-binding', requireRole('admin
     const contactEmail=String(account?.contact_email||'').trim().toLowerCase();
     const responsibilities=account?.defaults?.responsibilities||{};
     const ownerMatchesStripe=!!ownerEmail && !!contactEmail && ownerEmail===contactEmail;
+    const assignedUser=byAccount?db.prepare('SELECT user_id,email,role FROM app_users WHERE user_id=?').get(byAccount.user_id):null;
+    const assignedConnection=byAccount?getDirectMerchantConnectionByUserId(db,byAccount.user_id):null;
+    const assignedListings=assignedUser?db.prepare('SELECT COUNT(*) AS count FROM rental_listings WHERE owner_email=? COLLATE NOCASE').get(assignedUser.email)?.count||0:0;
+    const assignedMatchesStripe=!!assignedUser && !!contactEmail && assignedUser.email.trim().toLowerCase()===contactEmail;
     const accountAlreadyAssigned=!!byAccount;
     const ownerHasConnection=!!byUser || !!byEmail;
     const providerCompatible=account?.livemode===false &&
@@ -1952,6 +1956,13 @@ app.post('/api/admin/stripe/connect/verify-existing-binding', requireRole('admin
       ownerMatchesStripeContact:ownerMatchesStripe,
       ownerHasConnection,
       accountAlreadyAssigned,
+      assignedUserExists:Boolean(assignedUser),
+      assignedUserRoleValid:assignedUser?.role==='supplier',
+      assignedUserMatchesStripeContact:assignedMatchesStripe,
+      assignedUserIsSeedDemo:assignedMatchesStripe && contactEmail==='demo@rentinorbit.test',
+      assignedUserHasListings:assignedListings>0,
+      assignedListingCount:assignedListings,
+      assignedConnectionReady:directMerchantReady(assignedConnection),
       providerCompatible,
       capabilityStatus:parsed.merchantCapabilityStatus,
       eligibleForReview,
