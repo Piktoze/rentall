@@ -63,6 +63,7 @@ for(const suite of [
   'stripe-pricing-resume-v236.test.mjs',
   'stripe-delayed-webhook-cancel-v237.test.mjs',
   'stripe-cancellation-proof-v276.test.mjs',
+  'stripe-cancellation-consistency-v277.test.mjs',
   'stripe-terminal-payment-ui-v238.test.mjs',
   'supplier-order-actions-layout-v239.test.mjs',
   'agreement-localization-state-v240.test.mjs',
