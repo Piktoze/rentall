@@ -125,6 +125,7 @@ import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
 import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v253.js';
 import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-v276.js';
 import {assertPaymentCancellationConsistency} from './modules/stripe-cancellation-consistency-v277.js';
+import {assertExistingRefundCoversCancellation} from './modules/stripe-refund-coverage-v278.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -394,6 +395,9 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
       throw error;
     }
     if(intent.status==='succeeded'){
+      // Existing refund ID may represent only a partial refund. Never declare
+      // the full policy refund complete without covering the required amount.
+      assertExistingRefundCoversCancellation(booking,refundAmount);
       if(!booking.stripeRefundId){
         const alreadyRefunded=Math.max(0,Number(booking.refundAmount||0));
         const orderValue=Math.max(0,Number(booking.orderValue||0));
