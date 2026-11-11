@@ -123,6 +123,7 @@ import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/sup
 import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
 import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v253.js';
+import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-v276.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -414,11 +415,7 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
       }
     }else if(new Set(['requires_payment_method','requires_confirmation','requires_action','requires_capture']).has(intent.status)){
       const cancelledPayment=await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:cancel-payment`});
-      if(String(cancelledPayment?.id||'')!==String(intent.id) || String(cancelledPayment?.status||'')!=='canceled'){
-        const error=new Error('Stripe payment cancellation is not confirmed; manual reconciliation required');
-        error.code='PAYMENT_CANCELLATION_UNCONFIRMED';
-        throw error;
-      }
+      assertCancelledPaymentIntent(cancelledPayment,intent.id);
     }else if(intent.status!=='canceled'){
       throw new Error('Unexpected Stripe payment status; cancellation requires review');
     }
@@ -437,11 +434,7 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
     }
     if(new Set(['requires_capture','requires_payment_method','requires_confirmation','requires_action']).has(deposit.status)){
       const cancelledDeposit=await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:deposit.id,idempotencyKey:`booking:${booking.bookingId}:cancel-deposit`});
-      if(String(cancelledDeposit?.id||'')!==String(deposit.id) || String(cancelledDeposit?.status||'')!=='canceled'){
-        const error=new Error('Stripe deposit cancellation is not confirmed; manual reconciliation required');
-        error.code='DEPOSIT_CANCELLATION_UNCONFIRMED';
-        throw error;
-      }
+      assertCancelledPaymentIntent(cancelledDeposit,deposit.id,{deposit:true});
     }else if(deposit.status!=='canceled'){
       // In particular, do not erase a processing or captured security deposit.
       throw new Error('Stripe deposit is not safely cancellable; manual review required');
