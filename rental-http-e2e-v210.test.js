@@ -661,6 +661,20 @@ try{
  try{
    faultDb.exec('DROP TABLE rental_notifications');
  }finally{faultDb.close()}
+ // The chat message must still return 200 when the notification table is down;
+ // otherwise a customer retries and can accidentally duplicate the message.
+ const outageText='Pranešimų tarnyba laikinai neveikia';
+ const outageMessage=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
+   method:'POST',cookie:renterCookie,data:{body:outageText}});
+ status(outageMessage,200,'Stored message remains successful despite notification-store outage');
+ assert.ok(outageMessage.body.message?.messageId,'Persisted chat message ID must be returned');
+ const outageInbox=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',
+   {cookie:supplierCookie});
+ status(outageInbox,200,'Supplier reads message after notification outage');
+ assert.equal(outageInbox.body.messages.filter(m=>m.body===outageText).length,1,
+   'Notification outage must persist exactly one chat message');
+ assert.ok(logs.includes('message_notification_failure'),'Notification failure must be recorded in redacted diagnostics');
+ console.log('PASS HTTP message survives notification outage without false failure or duplicate');
  const failedNoticeDispute=await api('/api/rentals/disputes',{method:'POST',
    cookie:renterCookie,data:{bookingId:failureBookingId,
      reason:'Synthetic return disagreement under notification outage'}});
