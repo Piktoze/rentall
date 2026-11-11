@@ -91,4 +91,12 @@ assert(depositCaptureRoute.includes("String(captured?.id||'')!==String(intent.id
   depositCaptureRoute.indexOf("captured?.status!=='succeeded'")<
     depositCaptureRoute.indexOf("depositStatus:'captured'"),
   'Admin capture cannot be recorded as successful without confirmed Stripe success');
+// Cancellation must reject a failed, wrong-payment or wrong-amount refund response
+// before updating DB refund state or finishing the booking cancellation.
+const refundGuard=server.split("refund=await refundDirectCharge(stripe,")[1]?.split("setStripeRefundDetails(booking.bookingId")[0]||'';
+assert(refundGuard.includes("String(refund.payment_intent||'')!==String(intent.id)") &&
+  refundGuard.includes("Number(refund.amount)!==cents") &&
+  refundGuard.includes("new Set(['pending','succeeded']).has(String(refund.status||''))") &&
+  refundGuard.includes("error.code='REFUND_RECONCILIATION_REQUIRED'"),
+  'Stripe cancellation must verify refund payment ID, amount and accepted status before persisting');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
