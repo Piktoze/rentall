@@ -2276,7 +2276,6 @@ app.get('/api/rentals/calendar', simpleRateLimit({windowMs:60000,max:60,keyPrefi
 });
 
 app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPrefix:'booking-create'}), bookingIdempotency, (req, res) => {
-  console.log('STAGING_BOOKING_DIAG_V1',JSON.stringify({contentType:req.headers['content-type']||null,listingId:req.body?.listingId||null,startDate:req.body?.startDate||null,endDate:req.body?.endDate||null,quantity:req.body?.quantity??null,termsAccepted:req.body?.termsAccepted??null,deliveryCity:req.body?.deliveryCity||null,deliveryAddress:req.body?.deliveryAddress||null,accommodationName:req.body?.accommodationName||null}));
   try {
     const {
       listingId, startDate, endDate, quantity = 1, status = 'pending',
