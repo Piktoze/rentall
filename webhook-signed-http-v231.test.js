@@ -219,6 +219,26 @@ try{
  assert.equal((await post(refundEvent('evt_refund_failed_new',accountId,'failed'),{connect:true})).status,200);
  assert.equal(refundState().refund_status,'failed','Signed refund failure must be recorded');
  assert.equal(refundState().payment_status,'paid','Failed refund must not be marked refunded');
+ const notificationsAfterFailure=read().notifications.length;
+ assert.equal((await post(refundEvent('evt_refund_late_pending_after_failed',accountId,'pending'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'failed',
+   'Late pending event must never reopen failed refund');
+ assert.equal(refundState().payment_status,'paid',
+   'Failed refund must remain collected after late pending update');
+ assert.equal(read().notifications.length,notificationsAfterFailure,
+   'Late pending refund must not add contradictory notifications');
+ const cancelledDb=new Database(dbPath);
+ try{
+   cancelledDb.prepare("UPDATE rental_bookings SET payment_status='paid',refund_status='pending' WHERE booking_id=?").run(bookingId);
+ }finally{cancelledDb.close()}
+ assert.equal((await post(refundEvent('evt_refund_canceled_terminal',accountId,'canceled'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'canceled','Canceled refund must remain terminal');
+ assert.equal((await post(refundEvent('evt_refund_late_pending_after_canceled',accountId,'pending'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'canceled',
+   'Late pending event must not reopen canceled refund');
+ assert.equal(refundState().payment_status,'paid',
+   'Canceled refund must not falsely mark payment refunded');
+
  console.log('PASS signed refund webhook HTTP: account, intent and amount binding; settled, failed and out-of-order states');
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
