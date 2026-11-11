@@ -2583,6 +2583,14 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       const unresolved=db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(req.params.bookingId);
       if(unresolved)
         return res.status(409).json({error:'Nuomos užbaigimas galimas tik išsprendus atvirą ginčą.',code:'OPEN_DISPUTE_BLOCKS_COMPLETION'});
+      // A physical return is not proof that a security deposit was released
+      // or that a damage claim has settled. Never present a deposit-bearing
+      // rental as completed while provider reconciliation is outstanding.
+      const completionBooking=getRentalBookingById(req.params.bookingId);
+      if(completionBooking?.status==='returned' &&
+         Number(completionBooking.securityDepositAmount||0)>0 &&
+         !['released','captured'].includes(String(completionBooking.securityDepositStatus||'').toLowerCase()))
+        return res.status(409).json({error:'Prieš užbaigdami nuomą išspręskite užstato atlaisvinimą arba pagrįstą nuskaičiavimą.',code:'DEPOSIT_RECONCILIATION_REQUIRED'});
     }
 
     // Refresh expired requests before an approval can capture any funds.
