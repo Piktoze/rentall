@@ -5,7 +5,11 @@ const root=path.resolve(new URL('..',import.meta.url).pathname);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const sourceFiles=['app.js',...fs.readdirSync(path.join(root,'modules')).filter(x=>x.endsWith('.js')).map(x=>`modules/${x}`)];
 const sources=new Map(sourceFiles.map(file=>[file,fs.readFileSync(path.join(root,file),'utf8')]));
-const tests=fs.readdirSync(root).filter(x=>/\.test\.(?:js|cjs)$/.test(x));
+const tests=[
+  ...fs.readdirSync(root).filter(x=>/\.test\.(?:js|cjs|mjs)$/.test(x)),
+  ...fs.readdirSync(path.join(root,'tests')).filter(x=>/\.test\.(?:js|cjs|mjs)$/.test(x)).map(x=>`tests/${x}`),
+  ...fs.readdirSync(path.join(root,'e2e')).filter(x=>/\.spec\.(?:js|cjs|mjs)$/.test(x)).map(x=>`e2e/${x}`)
+];
 const testSources=new Map(tests.map(file=>[file,fs.readFileSync(path.join(root,file),'utf8')]));
 const lineAt=(text,index)=>text.slice(0,index).split('\n').length;
 const attrs=raw=>Object.fromEntries([...raw.matchAll(/([:\w-]+)(?:=(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)].map(m=>[m[1],m[2]??m[3]??m[4]??true]));
