@@ -135,6 +135,22 @@ try{
  status(registered,200,'Account registration with explicit terms acceptance succeeds');
  assert.equal(registered.body.user.email,registration.email);
  console.log('PASS HTTP registration requires explicit terms consent');
+ // A logged-out cookie must be invalidated by the server, not merely removed
+ // in the browser. The response must also remain non-cacheable.
+ const ephemeralCookie=await signIn(registration.email);
+ const beforeLogout=await api('/api/auth/me',{cookie:ephemeralCookie});
+ status(beforeLogout,200,'Fresh session before logout');
+ assert.equal(beforeLogout.body.user?.email,registration.email);
+ assert.equal(beforeLogout.cacheControl,'no-store, private','Auth profile must not be cached');
+ status(await api('/api/auth/logout',{method:'POST',cookie:ephemeralCookie}),200,
+   'Server must revoke session on logout');
+ const afterLogout=await api('/api/auth/me',{cookie:ephemeralCookie});
+ status(afterLogout,200,'Authentication check after logout');
+ assert.equal(afterLogout.body.user,null,'Old session cookie must not authenticate after logout');
+ status(await api('/api/customer/bookings',{cookie:ephemeralCookie}),401,
+   'Revoked cookie must not access private bookings');
+ console.log('PASS HTTP logout revokes session and prevents private booking reads');
+
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
  // Stripe outage must not permit cancellation of a charged rental or
