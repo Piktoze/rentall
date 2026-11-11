@@ -20,6 +20,12 @@ try{
   vm.runInNewContext(initSource+'\ninitSupplierCalendarDates();',context);
   assert.equal(nodes.supplierCalendarFrom.value,'2026-11-12','Calendar must use local date, not UTC yesterday');
   assert.equal(nodes.supplierCalendarTo.value,'2026-12-10','28-day local interval must be stable');
+  // A user-selected start day must survive initialization when only end is empty.
+  nodes.supplierCalendarFrom.value='2026-12-01';
+  nodes.supplierCalendarTo.value='';
+  vm.runInNewContext(initSource+'\ninitSupplierCalendarDates();',context);
+  assert.equal(nodes.supplierCalendarFrom.value,'2026-12-01','User-selected start must be preserved');
+  assert.equal(nodes.supplierCalendarTo.value,'2026-12-29','Missing end must be derived from selected start');
   assert.ok(app.includes('span>93'),'Calendar must not send ranges forbidden by API');
   assert.ok(app.includes('from<todayKey'),'Calendar must reject past date before network call');
   assert.ok(app.includes('date.toISOString().slice(0,10)===value'),'Calendar must reject invalid dates');
