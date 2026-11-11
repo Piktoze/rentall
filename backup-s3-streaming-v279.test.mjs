@@ -13,7 +13,7 @@ try{
     assert.equal(cmd.input.Bucket,'synthetic');
     assert.equal(cmd.input.Key,'sqlite/example.db');
     requested++;
-    return {Body:Readable.from([Buffer.from('SQLite format 3\\0'),Buffer.alloc(128*1024,0x42),Buffer.from('END')])};
+    return {Body:Readable.from([Buffer.concat([Buffer.from('SQLite format 3'),Buffer.from([0])]),Buffer.alloc(128*1024,0x42),Buffer.from('END')])};
   }};
   const file=path.join(folder,'restored.db');
   await downloadBackupObject(goodClient,'synthetic','sqlite/example.db',file);
