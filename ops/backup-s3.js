@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {pipeline} from 'node:stream/promises';
 import {DeleteObjectsCommand,GetObjectCommand,ListObjectsV2Command,PutObjectCommand,S3Client} from '@aws-sdk/client-s3';
 
 export function s3BackupEnabled(env=process.env){
@@ -26,8 +27,19 @@ export async function uploadBackupObject(client,bucket,key,filePath,contentType)
 
 export async function downloadBackupObject(client,bucket,key,filePath){
   const response=await client.send(new GetObjectCommand({Bucket:bucket,Key:key}));
-  const bytes=await response.Body.transformToByteArray();
-  fs.writeFileSync(filePath,bytes,{flag:'wx'});
+  if(!response.Body || typeof response.Body[Symbol.asyncIterator]!=='function')
+    throw new Error('S3 backup response has no readable stream');
+  // Stream to an exclusive destination instead of allocating a full database
+  // copy in memory. The restore command validates the resulting SHA-256.
+  const fd=fs.openSync(filePath,'wx');
+  try{
+    await pipeline(response.Body,fs.createWriteStream(filePath,{fd,autoClose:true}));
+  }catch(error){
+    // Only unlink after successful exclusive creation: never remove an
+    // unrelated file which already existed at the requested destination.
+    fs.rmSync(filePath,{force:true});
+    throw error;
+  }
 }
 
 export async function pruneBackupObjects(client,bucket,prefix,retention,{protectedKeys=[]}={}){
