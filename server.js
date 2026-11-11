@@ -227,9 +227,16 @@ app.use((req,res,next)=>{
 });
 
 const rateBuckets=new Map();
+let rateSweepCounter=0;
 function simpleRateLimit({windowMs=60000,max=60,keyPrefix='global'}={}){
   return (req,res,next)=>{
     const now=Date.now();
+    // Evict expired rate-limit buckets periodically without background timers.
+    if(++rateSweepCounter%256===0){
+      for(const [bucketKey,bucket] of rateBuckets){
+        if(bucket.resetAt<=now)rateBuckets.delete(bucketKey);
+      }
+    }
     const ip=req.ip || req.socket?.remoteAddress || 'unknown';
     const key=`${keyPrefix}:${ip}`;
     let bucket=rateBuckets.get(key);
