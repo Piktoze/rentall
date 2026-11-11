@@ -569,7 +569,7 @@ function validateRentalPaymentIntentBinding(pi,booking,eventAccount=null){
   if(!accountBinding.ok) return accountBinding;
   if(String(pi.id||'')!==String(booking.stripePaymentIntentId||'')) return {ok:false,reason:'payment_intent_id_mismatch'};
   if(String(pi.metadata?.bookingId||'')!==String(booking.bookingId||'')) return {ok:false,reason:'booking_metadata_mismatch'};
-  if(String(pi.metadata?.purpose||'rental_payment')!=='rental_payment') return {ok:false,reason:'payment_purpose_mismatch'};
+  if(String(pi.metadata?.purpose||'')!=='rental_payment') return {ok:false,reason:'payment_purpose_mismatch'};
   const expectedAmount=Math.round(Math.max(0,Number(booking.orderValue||0))*100);
   if(Number(pi.amount)!==expectedAmount) return {ok:false,reason:'payment_amount_mismatch'};
   if(String(pi.currency||'').toLowerCase()!=='eur') return {ok:false,reason:'payment_currency_mismatch'};
