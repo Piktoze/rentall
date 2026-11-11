@@ -112,6 +112,14 @@ try{
  const wrong=await post(event('evt_webhook_e2e_wrong_account','acct_different_merchant'));
  assert.equal(wrong.status,200,'Wrong-account event is accepted but ignored');
  assert.equal(read().booking.payment_status,'requires_payment_method','Wrong connected account cannot pay booking');
+ // A correctly signed event missing explicit rental_payment purpose must not
+ // mark the booking paid: an intent ID and amount alone do not prove its purpose.
+ const missingPurpose=event('evt_webhook_e2e_missing_purpose',accountId);
+ delete missingPurpose.data.object.metadata.purpose;
+ const missing=await post(missingPurpose,{connect:true});
+ assert.equal(missing.status,200,'Missing-purpose signed event is accepted but ignored');
+ assert.equal(read().booking.payment_status,'requires_payment_method',
+   'Missing-purpose Stripe intent cannot mark booking paid');
  const valid=event('evt_webhook_e2e_valid',accountId);
  // Signed Stripe objects may include customer PII and client secrets; do not
  // persist them in webhook audit history.
