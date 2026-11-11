@@ -6,6 +6,7 @@ const source=fs.readFileSync('ops/audit-surface-v203.mjs','utf8');
 
 const stagingGuard=server.match(/app\.use\(\(req,res,next\)=>\{\s*if\(process\.env\.RENTINORBIT_STAGING==='true'\)\{\s*res\.setHeader\('X-Robots-Tag','noindex, nofollow, noarchive'\)/);
 assert.ok(stagingGuard,'Staging HTML and API responses must set noindex/nofollow headers');
+assert.ok(!server.includes('STAGING_BOOKING_DIAG_V1'),'Booking request diagnostic must not log personal delivery addresses');
 
 const robots=server.split("app.get('/robots.txt'")[1]?.split("app.get('/sitemap.xml'")[0]||'';
 assert.ok(robots.includes("process.env.RENTINORBIT_STAGING==='true'"),'Staging must have separate robots route');
