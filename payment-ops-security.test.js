@@ -99,4 +99,11 @@ assert(refundGuard.includes("String(refund.payment_intent||'')!==String(intent.i
   refundGuard.includes("new Set(['pending','succeeded']).has(String(refund.status||''))") &&
   refundGuard.includes("error.code='REFUND_RECONCILIATION_REQUIRED'"),
   'Stripe cancellation must verify refund payment ID, amount and accepted status before persisting');
+// A pending Stripe refund must not be advertised as settled to either party.
+const cancellationRoute=server.split("app.post('/api/rentals/bookings/:bookingId/cancel'")[1]?.split("app.post('/api/rentals/bookings/:bookingId/return'")[0]||'';
+assert(cancellationRoute.includes("String(booking?.refundStatus||'').toLowerCase()==='pending'") &&
+  cancellationRoute.includes('Refund initiated (awaiting Stripe confirmation)') &&
+  cancellationRoute.includes('refundNotice') &&
+  cancellationRoute.includes('const refundText=pendingRefund'),
+  'Pending Stripe refunds must have truthful customer/supplier notifications and emails');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
