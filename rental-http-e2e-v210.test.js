@@ -73,6 +73,11 @@ createRentalBookingAtomic({bookingId:unpaidCancelId,listingId:'api-e2e-unpaid-li
   startDate:'2099-12-20',endDate:'2099-12-21',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Test Renter',orderValue:100});
 
+// Keep an agreement on an unpaid booking to verify terminal signatures
+// are rejected because of booking status, not merely a missing document.
+createRentalAgreement({bookingId:unpaidCancelId,termsVersion:'closed-signature-v1',
+  snapshot:{listingTitle:'Synthetic unpaid cancellation item',total:100}});
+
 // Concurrent cancellation fixture: two requests racing over one unpaid booking.
 const parallelCancelId='api-e2e-parallel-cancel';
 createRentalBookingAtomic({bookingId:parallelCancelId,listingId:'api-e2e-unpaid-listing',
@@ -190,6 +195,23 @@ try{
    data:{reason:'Repeated unpaid cancellation'}}),409,
    'Repeated unpaid cancellation must be blocked');
  console.log('PASS HTTP unpaid €100 booking: authorized cancellation, €0 refund, no Stripe object, replay blocked');
+ const cancelledConsent=await api('/api/rentals/bookings/'+unpaidCancelId+'/agreement/accept',{
+   method:'POST',cookie:renterCookie,data:{accepted:true}
+ });
+ status(cancelledConsent,409,'Cancelled booking cannot be signed after cancellation');
+ assert.equal(cancelledConsent.body.code,'AGREEMENT_BOOKING_CLOSED');
+ const closedConsent=await api('/api/rentals/bookings/'+unpaidCancelId+'/agreement/accept',{
+   method:'POST',cookie:supplierCookie,data:{accepted:true}
+ });
+ status(closedConsent,409,'Supplier cannot sign a cancelled rental agreement');
+ const closedDb=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const signed=closedDb.prepare('SELECT customer_accepted_at,supplier_accepted_at FROM rental_agreements WHERE booking_id=?').get(unpaidCancelId);
+   assert.equal(signed.customer_accepted_at,null,'Cancelled renter consent must not mutate agreement');
+   assert.equal(signed.supplier_accepted_at,null,'Cancelled supplier consent must not mutate agreement');
+ }finally{closedDb.close()}
+ console.log('PASS cancelled booking blocks both late signatures without changing acceptance evidence');
+
  // Two simultaneous cancellation requests must not succeed twice.
  const parallelUrl='/api/rentals/bookings/'+parallelCancelId+'/cancel';
  const parallelResults=await Promise.all([0,1].map(i=>api(parallelUrl,{
@@ -517,6 +539,9 @@ try{
  const fullReturn=await api(fullRoute+'/return-confirm',{method:'POST',cookie:supplierCookie,
    data:{returnCondition:'good'}});
  status(fullReturn,200,'Full-cycle supplier confirms return without PIN');
+ status(await api(fullRoute+'/agreement/accept',{method:'POST',cookie:renterCookie,
+   data:{accepted:true}}),409,'Returned rental cannot be re-signed after handover');
+
  assert.equal(fullReturn.body.booking.status,'returned');
  const fullDispute=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
    data:{bookingId:pendingId,reason:'Lifecycle test of return dispute'}});
