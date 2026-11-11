@@ -3002,11 +3002,12 @@ function initSupplierCalendarDates(){
   const toEl=document.getElementById('supplierCalendarTo');
   if(!fromEl||!toEl) return;
   if(!fromEl.value){
+    // Date inputs represent local calendar days, not UTC instants.
     const today=new Date();
-    fromEl.value=today.toISOString().slice(0,10);
-    const end=new Date(today);
-    end.setDate(end.getDate()+28);
-    toEl.value=end.toISOString().slice(0,10);
+    const localDay=(date)=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+    fromEl.value=localDay(today);
+    const end=new Date(today.getFullYear(),today.getMonth(),today.getDate()+28);
+    toEl.value=localDay(end);
   }
 }
 
@@ -3039,7 +3040,13 @@ async function renderSupplierAvailability(){
   const c=SUPPLIER_CALENDAR_COPY[language]||SUPPLIER_CALENDAR_COPY.lt;
   const request=++supplierCalendarRequestSequence;
   if(!listingId){grid.innerHTML='<p>'+escapeHtml(c.noListings)+'</p>';summary.textContent='';return;}
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(from||'')||!/^\d{4}-\d{2}-\d{2}$/.test(to||'')||from>=to){
+  const parseDay=value=>{const date=new Date(value+'T00:00:00Z');return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value?date:null;};
+  const fromDay=/^\d{4}-\d{2}-\d{2}$/.test(from||'')?parseDay(from):null;
+  const toDay=/^\d{4}-\d{2}-\d{2}$/.test(to||'')?parseDay(to):null;
+  const todayLocal=new Date();
+  const todayKey=[todayLocal.getFullYear(),String(todayLocal.getMonth()+1).padStart(2,'0'),String(todayLocal.getDate()).padStart(2,'0')].join('-');
+  const span=fromDay&&toDay?(toDay-fromDay)/86400000:null;
+  if(!fromDay||!toDay||span<1||span>93||from<todayKey){
     grid.innerHTML='<p>'+escapeHtml(c.invalid)+'</p>';summary.textContent='';return;
   }
   grid.innerHTML='<p class="supplier-calendar-loading">'+escapeHtml(c.loading)+'</p>';
