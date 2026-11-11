@@ -9,7 +9,7 @@ assert.ok(branch,'Remote backup path missing');
 const put=branch.indexOf("await uploadBackupObject(client,bucket,backupKey,output");
 const metadata=branch.indexOf("await uploadBackupObject(client,bucket,'metadata/last-verified-backup.json'");
 const rename=branch.indexOf('fs.renameSync(tempEvidencePath,evidencePath)');
-const prune=branch.indexOf("await pruneBackupObjects(client,bucket,'sqlite/',retention)");
+const prune=branch.indexOf("await pruneBackupObjects(client,bucket,'sqlite/',retention,{protectedKeys:[backupKey]})");
 assert.ok(put>=0&&metadata>put&&rename>metadata&&prune>rename,
   'Backup retention may only run after the new backup AND verified metadata pointer are durable');
 assert.match(branch,/try\s*\{\s*remote=await pruneBackupObjects[\s\S]*?catch\(error\)/,
