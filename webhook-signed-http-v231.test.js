@@ -176,6 +176,50 @@ try{
  assert.equal(read().notifications.length,beforeSecondDelivery.notifications.length,
    'Delayed success must not re-notify the renter or supplier as newly paid');
 
+ // Stripe's refund.updated/failed events reconcile an earlier pending
+ // cancellation refund without exposing or touching any real provider account.
+ const refundId='re_test_local_webhook_refund';
+ const refundDb=new Database(dbPath);
+ try{
+   refundDb.prepare("UPDATE rental_bookings SET payment_status='paid',stripe_refund_id=?,refund_status='pending',refund_amount=100 WHERE booking_id=?")
+     .run(refundId,bookingId);
+ }finally{refundDb.close();}
+ const refundEvent=(id,account,status,overrides={})=>({
+   id,type:status==='failed'?'refund.failed':'refund.updated',account,livemode:false,
+   data:{object:{id:refundId,object:'refund',payment_intent:paymentIntentId,
+     amount:10000,currency:'eur',status,metadata:{bookingId},...overrides}}
+ });
+ const refundState=()=>{
+   const database=new Database(dbPath,{readonly:true,fileMustExist:true});
+   try{return database.prepare("SELECT payment_status,refund_status FROM rental_bookings WHERE booking_id=?").get(bookingId)}
+   finally{database.close()}
+ };
+ assert.equal((await post(refundEvent('evt_refund_wrong_account','acct_wrong','succeeded'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'pending','Wrong connected account cannot settle refund');
+ assert.equal((await post(refundEvent('evt_refund_wrong_intent',accountId,'succeeded',
+   {payment_intent:'pi_other'}),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'pending','Wrong payment intent cannot settle refund');
+ assert.equal((await post(refundEvent('evt_refund_wrong_amount',accountId,'succeeded',
+   {amount:9999}),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'pending','Wrong refund amount cannot settle refund');
+ assert.equal((await post(refundEvent('evt_refund_succeeded',accountId,'succeeded'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'succeeded','Signed refund success must settle refund');
+ assert.equal(refundState().payment_status,'refunded','Fully refunded charge must be marked refunded');
+ const countAfterRefund=read().notifications.length;
+ assert.equal((await post(refundEvent('evt_refund_stale_pending',accountId,'pending'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'succeeded','Stale pending update must not downgrade succeeded refund');
+ assert.equal((await post(refundEvent('evt_refund_stale_failed',accountId,'failed'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'succeeded','Stale failed update must not downgrade succeeded refund');
+ assert.equal(read().notifications.length,countAfterRefund,'Stale refund events must not duplicate notifications');
+ // A separate refund-failure scenario must preserve paid funds status.
+ const failedDb=new Database(dbPath);
+ try{
+   failedDb.prepare("UPDATE rental_bookings SET payment_status='paid',refund_status='pending' WHERE booking_id=?").run(bookingId);
+ }finally{failedDb.close();}
+ assert.equal((await post(refundEvent('evt_refund_failed_new',accountId,'failed'),{connect:true})).status,200);
+ assert.equal(refundState().refund_status,'failed','Signed refund failure must be recorded');
+ assert.equal(refundState().payment_status,'paid','Failed refund must not be marked refunded');
+ console.log('PASS signed refund webhook HTTP: account, intent and amount binding; settled, failed and out-of-order states');
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
  console.log('PASS signed webhook HTTP E2E: bad signature denied, account binding enforced, paid booking persisted, replay and cross-endpoint delivery deduplicated');
