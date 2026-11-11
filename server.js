@@ -367,6 +367,16 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
   // Do not require Stripe Connect merely to release its inventory.
   const hasStripePayment=!!booking?.stripePaymentIntentId;
   const hasStripeDeposit=!!booking?.securityDepositPaymentIntentId;
+  // A charged booking without its Stripe PaymentIntent cannot be safely
+  // reconciled or refunded. In particular, an unrelated deposit intent is
+  // not proof of collection of the rental payment.
+  const markedCollected=new Set(['paid','partially_refunded','refunded'])
+    .has(String(booking?.paymentStatus||'').toLowerCase()) || !!booking?.stripeRefundId;
+  if(markedCollected && !hasStripePayment){
+    const error=new Error('Paid booking has no Stripe rental PaymentIntent; manual reconciliation required');
+    error.code='PAYMENT_INTENT_MISSING';
+    throw error;
+  }
   if(!hasStripePayment && !hasStripeDeposit) return null;
   // Never mark a charged/authorized booking cancelled when Stripe is unavailable:
   // we must first verify or cancel its provider objects to prevent lost refunds.
