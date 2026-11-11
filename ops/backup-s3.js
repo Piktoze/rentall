@@ -30,15 +30,37 @@ export async function downloadBackupObject(client,bucket,key,filePath){
   fs.writeFileSync(filePath,bytes,{flag:'wx'});
 }
 
-export async function pruneBackupObjects(client,bucket,prefix,retention){
-  const listed=await client.send(new ListObjectsV2Command({Bucket:bucket,Prefix:prefix}));
-  const stale=(listed.Contents||[])
-    .filter(object=>object.Key?.endsWith('.db'))
-    .sort((a,b)=>new Date(b.LastModified||0)-new Date(a.LastModified||0))
-    .slice(retention)
+export async function pruneBackupObjects(client,bucket,prefix,retention,{protectedKeys=[]}={}){
+  // S3 ListObjectsV2 returns at most 1,000 objects per page. Only prune after
+  // listing ALL pages; otherwise the oldest backups may never be considered.
+  const objects=[];
+  let continuationToken;
+  const seenTokens=new Set();
+  do{
+    const page=await client.send(new ListObjectsV2Command({
+      Bucket:bucket,Prefix:prefix,...(continuationToken?{ContinuationToken:continuationToken}:{})
+    }));
+    objects.push(...(page.Contents||[]));
+    if(!page.IsTruncated)break;
+    const next=String(page.NextContinuationToken||'');
+    if(!next||seenTokens.has(next))throw new Error('Backup listing pagination is incomplete');
+    seenTokens.add(next);
+    continuationToken=next;
+  }while(true);
+  const protectedSet=new Set(protectedKeys.map(String));
+  const backups=objects.filter(object=>object.Key?.startsWith(prefix)&&object.Key.endsWith('.db'))
+    .sort((a,b)=>new Date(b.LastModified||0)-new Date(a.LastModified||0));
+  const retain=Math.max(2,Math.trunc(Number(retention)||2));
+  const stale=backups.slice(retain)
+    .filter(object=>!protectedSet.has(object.Key))
     .map(object=>({Key:object.Key}));
-  if(stale.length) await client.send(new DeleteObjectsCommand({Bucket:bucket,Delete:{Objects:stale,Quiet:true}}));
-  return {listed:(listed.Contents||[]).filter(object=>object.Key?.endsWith('.db')).length,deleted:stale.length};
+  // Batch deletes; S3 DeleteObjects accepts up to 1,000 keys per request.
+  for(let i=0;i<stale.length;i+=1000){
+    const batch=stale.slice(i,i+1000);
+    const response=await client.send(new DeleteObjectsCommand({Bucket:bucket,Delete:{Objects:batch,Quiet:true}}));
+    if(response.Errors?.length)throw new Error('Backup retention delete had failed keys');
+  }
+  return {listed:backups.length,deleted:stale.length};
 }
 
 export async function readBackupEvidence(client,bucket,key){
