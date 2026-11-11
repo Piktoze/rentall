@@ -2856,6 +2856,11 @@ app.post('/api/rentals/bookings/:bookingId/agreement/accept',
   const guestCustomer=!user&&!!verifyBookingPaymentToken(id,req.body?.accessToken||'');
   const customer=!supplier&&(accountCustomer||guestCustomer);
   if(!supplier&&!customer)return res.status(403).json({error:'Negalite patvirtinti šios sutarties.'});
+  // An agreement may be signed independently while a request awaits approval,
+  // but an already handed-over, returned or terminal booking cannot acquire
+  // new signatures through a stale tab or replayed HTTP request.
+  if(!['pending','confirmed'].includes(String(booking.status||'')))
+    return res.status(409).json({error:'Šios rezervacijos sutarties patvirtinti nebegalima.',code:'AGREEMENT_BOOKING_CLOSED'});
   if(req.body?.accepted!==true)return res.status(400).json({error:'Būtinas aiškus sutarties patvirtinimas.'});
   const agreement=getRentalAgreement(id);
   if(!agreement)return res.status(404).json({error:'Sutartis nerasta.'});
