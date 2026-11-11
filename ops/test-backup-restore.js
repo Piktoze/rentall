@@ -13,9 +13,12 @@ const backupDir=path.resolve(process.env.BACKUP_DIR||path.join(path.dirname(dbPa
 const evidencePath=path.resolve(process.env.DB_BACKUP_EVIDENCE_PATH||path.join(backupDir,'last-verified-backup.json'));
 const remote=s3BackupEnabled();
 const s3=remote?createBackupS3():null;
-const evidence=fs.existsSync(evidencePath)
-  ?JSON.parse(fs.readFileSync(evidencePath,'utf8'))
-  :await readBackupEvidence(s3.client,s3.bucket,'metadata/last-verified-backup.json');
+// For remote backups the S3 metadata pointer is authoritative; a cached
+// local evidence file may be older than the most recently published backup.
+// Fail closed on remote metadata outage rather than silently restoring stale data.
+const evidence=remote
+  ?await readBackupEvidence(s3.client,s3.bucket,'metadata/last-verified-backup.json')
+  :JSON.parse(fs.readFileSync(evidencePath,'utf8'));
 if(!evidence.ok || evidence.integrity!=='ok') throw new Error('Latest backup evidence is not verified');
 const source=path.join(backupDir,path.basename(String(evidence.backupFile||'')));
 const restoreDir=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-restore-test-'));
