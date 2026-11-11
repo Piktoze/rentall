@@ -35,6 +35,7 @@ for(const suite of [
   'backup-evidence-order-v235.test.mjs',
   'backup-retention-order-v273.test.mjs',
   'backup-s3-pagination-v274.test.mjs',
+  'backup-authoritative-restore-v275.test.mjs',
   'expiration.test.js',
   'payment-ops-security.test.js',
   'payment-race.test.js',
