@@ -98,6 +98,15 @@ createRentalBookingAtomic({bookingId:offlineDepositId,listingId:'api-e2e-listing
 db.prepare("UPDATE rental_bookings SET security_deposit_payment_intent_id=?, security_deposit_status=?,security_deposit_amount=? WHERE booking_id=?")
   .run('pi_test_offline_deposit','authorized',50,offlineDepositId);
 
+// A locally paid Stripe booking with no rental PaymentIntent must never
+// be reported as refunded without a corresponding provider operation.
+const missingIntentId='api-e2e-paid-missing-intent';
+createRentalBookingAtomic({bookingId:missingIntentId,listingId:'api-e2e-listing',
+  startDate:'2099-12-27',endDate:'2099-12-28',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Synthetic Renter',orderValue:100});
+setBookingPaymentDetails({bookingId:missingIntentId,paymentIntentId:null,
+  paymentStatus:'paid',paymentProvider:'stripe',platformFeeAmount:15,supplierAmount:85});
+
 // Expired provider-backed pending reservation: synthetic identifiers only.
 const stalledId='api-e2e-stalled-provider';
 upsertRentalListing({listingId:'api-e2e-stalled-listing',ownerEmail:supplier,
@@ -230,6 +239,23 @@ try{
    assert.equal(row.stripe_refund_id,null);
  }finally{parallelRead.close()}
  console.log('PASS HTTP parallel unpaid cancellation: one 200, one 409, zero refund');
+ const missingIntentCancellation=await api(
+   '/api/rentals/bookings/'+missingIntentId+'/cancel',{
+     method:'POST',cookie:supplierCookie,data:{reason:'Missing Stripe intent reconciliation probe'}
+   });
+ status(missingIntentCancellation,400,'Paid Stripe booking without PaymentIntent cannot be auto-refunded');
+ assert.equal(missingIntentCancellation.body.code,'PAYMENT_INTENT_MISSING');
+ const missingIntentSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=missingIntentSnapshot.prepare(
+     'SELECT status,payment_status,refund_amount,stripe_refund_id FROM rental_bookings WHERE booking_id=?'
+   ).get(missingIntentId);
+   assert.equal(row.status,'confirmed','Inconsistent paid booking remains open for reconciliation');
+   assert.equal(row.payment_status,'paid');
+   assert.equal(row.refund_amount,null,'No fake refund amount is recorded');
+   assert.equal(row.stripe_refund_id,null,'No fake provider refund is recorded');
+ }finally{missingIntentSnapshot.close()}
+ console.log('PASS HTTP paid Stripe booking missing PaymentIntent: refund fail-closed, DB unchanged');
  // Stripe outage must not permit cancellation of a charged rental or
  // an authorized security deposit. Check persisted state, not only HTTP error.
  for(const bookingId of [offlinePaidId,offlineDepositId]){
