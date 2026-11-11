@@ -266,7 +266,7 @@ function sameOriginWriteGuard(req,res,next){
 app.use('/api',sameOriginWriteGuard);
 
 app.use('/api',(req,res,next)=>{
-  if(req.path.startsWith('/auth/') || req.path.startsWith('/customer/') || req.path.startsWith('/supplier/') || req.path.startsWith('/admin/') || req.path.startsWith('/payments/') || req.path.startsWith('/stripe/')){
+  if(req.path.startsWith('/auth/') || req.path.startsWith('/customer/') || req.path.startsWith('/supplier/') || req.path.startsWith('/admin/') || req.path.startsWith('/payments/') || req.path.startsWith('/stripe/') || req.path.startsWith('/rentals/') || req.path.startsWith('/bookings/') || req.path.startsWith('/messages/') || req.path.startsWith('/agreements/')){
     res.setHeader('Cache-Control','no-store, private');
     res.setHeader('Pragma','no-cache');
   }
