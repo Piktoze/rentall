@@ -65,6 +65,14 @@ createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2
   startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Instant test renter',orderValue:100});
 
+// Synthetic returned €100 rental awaiting a €50 deposit resolution.
+const unsettledDepositId='api-e2e-deposit-unsettled';
+createRentalBookingAtomic({bookingId:unsettledDepositId,listingId:'api-e2e-listing',
+  startDate:'2099-10-20',endDate:'2099-10-21',quantity:1,status:'confirmed',
+  customerEmail:renter,customerName:'Synthetic deposit renter',orderValue:100});
+db.prepare("UPDATE rental_bookings SET status='returned',payment_status='paid',payment_provider='mock',security_deposit_amount=50,security_deposit_status='release_pending' WHERE booking_id=?")
+  .run(unsettledDepositId);
+
 // Unpaid cancellation must release inventory with exactly zero refund.
 const unpaidCancelId='api-e2e-unpaid-cancel';
 upsertRentalListing({listingId:'api-e2e-unpaid-listing',ownerEmail:supplier,
@@ -181,6 +189,39 @@ try{
 
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // Completion must not misrepresent a still-held security deposit as settled.
+ const depositCompletionUrl='/api/rentals/bookings/'+unsettledDepositId+'/status';
+ const depositCompletion=async()=>api(depositCompletionUrl,{method:'POST',cookie:supplierCookie,
+   data:{status:'completed'}});
+ const pendingDepositFinish=await depositCompletion();
+ status(pendingDepositFinish,409,'Unresolved deposit release blocks completion');
+ assert.equal(pendingDepositFinish.body.code,'DEPOSIT_RECONCILIATION_REQUIRED');
+ const claimDb=new Database(dbPath);
+ try{
+   claimDb.prepare("UPDATE rental_bookings SET security_deposit_status='claim_pending' WHERE booking_id=?").run(unsettledDepositId);
+ }finally{claimDb.close()}
+ status(await depositCompletion(),409,'Pending deposit claim blocks completion');
+ const depositPendingSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=depositPendingSnapshot.prepare(
+     'SELECT status,security_deposit_status,payout_status FROM rental_bookings WHERE booking_id=?'
+   ).get(unsettledDepositId);
+   assert.equal(row.status,'returned','Incomplete deposit must keep booking in returned state');
+   assert.equal(row.security_deposit_status,'claim_pending');
+   assert.notEqual(row.payout_status,'paid','Unresolved deposit cannot mark payout paid');
+ }finally{depositPendingSnapshot.close()}
+ // Only provider-state reconciliation is permitted to mark a deposit released.
+ // Simulate a separate authoritative settlement fixture without calling Stripe.
+ const releasedDb=new Database(dbPath);
+ try{
+   releasedDb.prepare("UPDATE rental_bookings SET security_deposit_status='released' WHERE booking_id=?").run(unsettledDepositId);
+ }finally{releasedDb.close()}
+ const resolvedDepositFinish=await depositCompletion();
+ status(resolvedDepositFinish,200,'Settled deposit permits ordinary completion');
+ assert.equal(resolvedDepositFinish.body.booking.status,'completed');
+ assert.equal(resolvedDepositFinish.body.booking.securityDepositStatus,'released');
+ console.log('PASS HTTP deposit settlement gate: release_pending and claim_pending blocked; settled release permits completion');
+
  // Enforce the €0 refund rule at the actual HTTP boundary for unpaid bookings.
  const unpaidUrl='/api/rentals/bookings/'+unpaidCancelId+'/cancel';
  status(await api(unpaidUrl,{method:'POST',cookie:outsiderCookie,
