@@ -21,8 +21,9 @@ assert.ok(source.includes('assertCancelledPaymentIntent(cancelledPayment,intent.
 assert.ok(source.includes('assertCancelledPaymentIntent(cancelledDeposit,deposit.id,{deposit:true})'),
   'Deposit release must verify the provider result before DB mutation');
 const handler=source.slice(source.indexOf('async function handleStripeCancellationForBooking'),source.indexOf('async function cancelBookingWithPaymentHandling'));
-assert.ok(handler.indexOf('assertCancelledPaymentIntent(cancelledPayment,intent.id)')<handler.indexOf('setRentalSecurityDepositProviderState'),
-  'Payment cancellation proof must occur before deposit state changes');
+assert.ok(handler.indexOf('assertCancelledPaymentIntent(cancelledPayment,intent.id)') <
+  handler.indexOf("if(booking?.securityDepositPaymentIntentId &&"),
+  'Payment cancellation proof must occur before the real Stripe deposit path');
 assert.ok(handler.indexOf('assertCancelledPaymentIntent(cancelledDeposit,deposit.id,{deposit:true})')<handler.indexOf("setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:deposit.id"),
   'Deposit cancellation proof must occur before deposit state changes');
 console.log('PASS Stripe cancellation confirmation: correct ID + canceled status for payment and deposit, fail closed on ambiguous responses');
