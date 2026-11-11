@@ -32,14 +32,22 @@ let remote=null;
 if(s3BackupEnabled()){
   const {client,bucket}=createBackupS3();
   await uploadBackupObject(client,bucket,backupKey,output,'application/vnd.sqlite3');
-  // Clean old remote files before publishing the new verified pointer.
-  remote=await pruneBackupObjects(client,bucket,'sqlite/',retention);
+  // Never prune a backup referenced by the last verified pointer before
+  // the replacement pointer has been durably published. A failed metadata
+  // upload must leave the previous backup and evidence recoverable.
   fs.writeFileSync(tempEvidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});
   try {
     await uploadBackupObject(client,bucket,'metadata/last-verified-backup.json',tempEvidencePath,'application/json');
     fs.renameSync(tempEvidencePath,evidencePath);
   } finally {
     if(fs.existsSync(tempEvidencePath))fs.unlinkSync(tempEvidencePath);
+  }
+  // Retention is best-effort housekeeping after the new verified pointer exists.
+  // Do not report the backup as failed if pruning is temporarily unavailable.
+  try{
+    remote=await pruneBackupObjects(client,bucket,'sqlite/',retention);
+  }catch(error){
+    console.warn(JSON.stringify({type:'backup_retention',ok:false,code:String(error?.code||'PRUNE_FAILED')}));
   }
   fs.unlinkSync(output);
 }else{
