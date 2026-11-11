@@ -126,6 +126,7 @@ import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v
 import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-v276.js';
 import {assertPaymentCancellationConsistency} from './modules/stripe-cancellation-consistency-v277.js';
 import {assertExistingRefundCoversCancellation} from './modules/stripe-refund-coverage-v278.js';
+import {shouldApplyRefundStatus} from './modules/stripe-refund-status-order-v280.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -746,10 +747,9 @@ app.post('/api/stripe/webhook',
             console.warn('Ignoring unknown refund provider status',event.id);
             break;
           }
-          const previousStatus=String(booking.refundStatus||'').toLowerCase();
-          // Out-of-order updates must never downgrade a completed refund.
-          if(previousStatus==='succeeded' && providerStatus!=='succeeded') break;
-          if(previousStatus===providerStatus) break;
+          // Out-of-order refund updates must not reopen terminal states,
+          // including failed or canceled refunds requiring manual review.
+          if(!shouldApplyRefundStatus(booking.refundStatus,providerStatus)) break;
           setStripeRefundDetails(bookingId,{
             refundId:providerRefund.id,
             refundStatus:providerStatus,
