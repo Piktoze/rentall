@@ -33,6 +33,7 @@ for(const suite of [
   'connect-fee-settlement-v244.test.mjs',
   'deposit-payment-timing-v245.test.mjs',
   'backup-evidence-order-v235.test.mjs',
+  'backup-retention-order-v273.test.mjs',
   'expiration.test.js',
   'payment-ops-security.test.js',
   'payment-race.test.js',
