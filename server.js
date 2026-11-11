@@ -2577,6 +2577,13 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     if(requestedStatus==='completed' &&
       getRentalBookingById(req.params.bookingId)?.status==='active')
       return res.status(409).json({error:'Prieš užbaigdami nuomą patvirtinkite daikto grąžinimą vienkartiniu kodu.',code:'RETURN_CODE_REQUIRED'});
+    // Physical return does not resolve an outstanding dispute. Keep the
+    // booking in its returned state until the dispute is adjudicated.
+    if(requestedStatus==='completed'){
+      const unresolved=db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(req.params.bookingId);
+      if(unresolved)
+        return res.status(409).json({error:'Nuomos užbaigimas galimas tik išsprendus atvirą ginčą.',code:'OPEN_DISPUTE_BLOCKS_COMPLETION'});
+    }
 
     // Refresh expired requests before an approval can capture any funds.
     if(requestedStatus==='confirmed') await processExpiredBookings();
