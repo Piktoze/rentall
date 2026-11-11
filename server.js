@@ -383,6 +383,16 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
         const cents=Math.round(Math.min(requested,remaining)*100);
         if(cents>0){
           refund=await refundDirectCharge(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,amountCents:cents,bookingId:booking.bookingId,idempotencyKey:`booking:${booking.bookingId}:cancellation-refund:${cents}`});
+          // Stripe can return a failed, canceled or unexpected refund result.
+          // Do not report a booking as cancelled/refunded without provider proof.
+          if(!String(refund?.id||'').startsWith('re_') ||
+             String(refund.payment_intent||'')!==String(intent.id) ||
+             Number(refund.amount)!==cents ||
+             !new Set(['pending','succeeded']).has(String(refund.status||''))){
+            const error=new Error('Stripe refund is not confirmed; cancellation requires reconciliation');
+            error.code='REFUND_RECONCILIATION_REQUIRED';
+            throw error;
+          }
           setStripeRefundDetails(booking.bookingId,{refundId:refund.id,refundStatus:refund.status,refundAmount:cents/100});
         }
       }
