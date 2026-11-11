@@ -2550,13 +2550,20 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
     if(!result) return res.status(404).json({error:'Booking not found'});
     const booking=result.booking;
     const listing=booking ? getRentalListing(booking.listingId) : null;
+    // A Stripe refund may be pending after the rental is cancelled.
+    // Do not tell either party their money is already back before settlement.
+    const pendingRefund=String(booking?.refundStatus||'').toLowerCase()==='pending' &&
+      Number(result.refundAmount||0)>0;
+    const refundNotice=pendingRefund
+      ? `Refund initiated (awaiting Stripe confirmation): €${Number(result.refundAmount||0).toFixed(2)}.`
+      : `Refund: €${Number(result.refundAmount||0).toFixed(2)}.`;
 
     if(listing?.ownerEmail){
       createRentalNotification({
         uniqueKey:`booking:${booking.bookingId}:cancelled:supplier`,
         audience:'supplier',userEmail:listing.ownerEmail,bookingId:booking.bookingId,
         type:'booking.cancelled',title:'Booking cancelled',
-        message:`Booking ${booking.bookingId} was cancelled. Refund: €${Number(result.refundAmount||0).toFixed(2)}.`
+        message:`Booking ${booking.bookingId} was cancelled. ${refundNotice}`
       });
     }
     if(booking?.customerEmail){
@@ -2564,11 +2571,13 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
         uniqueKey:`booking:${booking.bookingId}:cancelled:customer`,
         audience:'customer',userEmail:booking.customerEmail,bookingId:booking.bookingId,
         type:'booking.cancelled',title:'Booking cancelled',
-        message:`Your booking was cancelled. Refund: €${Number(result.refundAmount||0).toFixed(2)}.`
+        message:`Your booking was cancelled. ${refundNotice}`
       });
     }
     try{
-      const refundText='€'+Number(result.refundAmount||0).toFixed(2);
+      const refundText=pendingRefund
+        ? 'Refund initiated (awaiting Stripe confirmation): €'+Number(result.refundAmount||0).toFixed(2)
+        : '€'+Number(result.refundAmount||0).toFixed(2);
       if(booking?.customerEmail && isEmail(booking.customerEmail)){
         enqueueTransactionalEmail({
           recipient:booking.customerEmail,
