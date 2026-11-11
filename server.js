@@ -2567,6 +2567,11 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       return res.status(403).json({error:'Forbidden'});
     }
     const requestedStatus=req.body?.status || 'confirmed';
+    // Cancellation must always pass through the dedicated provider-aware
+    // endpoint; a direct status change would bypass Stripe refund/deposit
+    // reconciliation and could release inventory without returning funds.
+    if(requestedStatus==='cancelled')
+      return res.status(409).json({error:'Atšaukimui naudokite rezervacijos atšaukimo veiksmą, kuris patikrina mokėjimą ir grąžinimą.',code:'CANCELLATION_FLOW_REQUIRED'});
     if(['active','returned'].includes(requestedStatus))
       return res.status(409).json({error:'Daikto išdavimui ir grąžinimui reikalingas vienkartinis nuomininko kodas.',code:'TRANSFER_CODE_REQUIRED'});
     if(requestedStatus==='completed' &&
