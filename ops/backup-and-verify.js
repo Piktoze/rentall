@@ -45,7 +45,7 @@ if(s3BackupEnabled()){
   // Retention is best-effort housekeeping after the new verified pointer exists.
   // Do not report the backup as failed if pruning is temporarily unavailable.
   try{
-    remote=await pruneBackupObjects(client,bucket,'sqlite/',retention);
+    remote=await pruneBackupObjects(client,bucket,'sqlite/',retention,{protectedKeys:[backupKey]});
   }catch(error){
     console.warn(JSON.stringify({type:'backup_retention',ok:false,code:String(error?.code||'PRUNE_FAILED')}));
   }
