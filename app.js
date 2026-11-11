@@ -3001,13 +3001,15 @@ function initSupplierCalendarDates(){
   const fromEl=document.getElementById('supplierCalendarFrom');
   const toEl=document.getElementById('supplierCalendarTo');
   if(!fromEl||!toEl) return;
-  if(!fromEl.value){
-    // Date inputs represent local calendar days, not UTC instants.
-    const today=new Date();
-    const localDay=(date)=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
-    fromEl.value=localDay(today);
-    const end=new Date(today.getFullYear(),today.getMonth(),today.getDate()+28);
-    toEl.value=localDay(end);
+  // Date inputs represent local calendar days, not UTC instants.
+  const localDay=(date)=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+  if(!fromEl.value)fromEl.value=localDay(new Date());
+  if(!toEl.value){
+    const parts=fromEl.value.split('-').map(Number);
+    const start=parts.length===3&&parts.every(Number.isInteger)
+      ? new Date(parts[0],parts[1]-1,parts[2])
+      : new Date();
+    toEl.value=localDay(new Date(start.getFullYear(),start.getMonth(),start.getDate()+28));
   }
 }
 
