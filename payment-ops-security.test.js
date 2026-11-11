@@ -106,4 +106,17 @@ assert(cancellationRoute.includes("String(booking?.refundStatus||'').toLowerCase
   cancellationRoute.includes('refundNotice') &&
   cancellationRoute.includes('const refundText=pendingRefund'),
   'Pending Stripe refunds must have truthful customer/supplier notifications and emails');
+// A late Stripe payment for a closed booking must not be advertised as
+// refunded until the provider refund object, amount and status are verified.
+const latePaymentWebhook=server.split("case 'payment_intent.succeeded':")[1]?.split("case 'payment_intent.payment_failed':")[0]||'';
+assert(latePaymentWebhook.includes("String(refund.payment_intent||'')!==String(pi.id)") &&
+  latePaymentWebhook.includes('Number(refund.amount)!==expectedRefundCents') &&
+  latePaymentWebhook.includes("new Set(['pending','succeeded']).has(String(refund.status||''))") &&
+  latePaymentWebhook.indexOf("Number(refund.amount)!==expectedRefundCents") <
+    latePaymentWebhook.indexOf('setStripeRefundDetails(bookingId,'),
+  'Late-payment refund must validate Stripe object before accounting mutation');
+assert(latePaymentWebhook.includes("lateTerminalRefundPending=String(refund.status)==='pending'") &&
+  latePaymentWebhook.includes('awaiting Stripe confirmation') &&
+  latePaymentWebhook.includes('Refund initiated'),
+  'Late-payment refund pending must not be described as settled');
 console.log('PASS: V47 payment operations privacy/security checks passed.');
