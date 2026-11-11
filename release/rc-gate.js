@@ -20,6 +20,7 @@ for(const suite of [
   'supplier-calendar-local-date-v269.test.mjs',
   'private-api-cache-v270.test.mjs',
   'rate-limit-bucket-cleanup-v271.test.mjs',
+  'booking-concurrent-race-v272.test.mjs',
   'live-launch-gate-v243.test.mjs',
   'legal-launch-gate-v246.test.mjs',
   'booking-agreement-v247.test.mjs',
