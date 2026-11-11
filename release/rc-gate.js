@@ -34,6 +34,7 @@ for(const suite of [
   'deposit-payment-timing-v245.test.mjs',
   'backup-evidence-order-v235.test.mjs',
   'backup-retention-order-v273.test.mjs',
+  'backup-s3-pagination-v274.test.mjs',
   'expiration.test.js',
   'payment-ops-security.test.js',
   'payment-race.test.js',
