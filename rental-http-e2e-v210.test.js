@@ -108,7 +108,7 @@ async function api(url,{method='GET',cookie='',data}={}){
  const response=await fetch(base+url,{method,headers:{...(cookie?{cookie}:{}),...(data?{'content-type':'application/json'}:{})},
    ...(data?{body:JSON.stringify(data)}:{})});
  const body=await response.json().catch(()=>({}));
- return {status:response.status,body,cookie:response.headers.get('set-cookie')?.split(';')[0]};
+ return {status:response.status,body,cookie:response.headers.get('set-cookie')?.split(';')[0],cacheControl:response.headers.get('cache-control')};
 }
 async function signIn(email){
  const r=await api('/api/auth/login',{method:'POST',data:{email,password}});
@@ -244,12 +244,15 @@ try{
  console.log('PASS HTTP trader traceability: supplier-only access, explicit compliance certification, persistence, unverified draft');
  const customerBookings=await api('/api/customer/bookings',{cookie:renterCookie});
  status(customerBookings,200,'Renter booking list');
+ assert.equal(customerBookings.cacheControl,'no-store, private','Renter bookings must never be cached');
  assert.ok(customerBookings.body.bookings.some(b=>b.bookingId===id),'Renter sees own rental');
  const unrelatedBookings=await api('/api/customer/bookings',{cookie:outsiderCookie});
  status(unrelatedBookings,200,'Unrelated account booking list');
+ assert.equal(unrelatedBookings.cacheControl,'no-store, private','Outsider booking list must never be cached');
  assert.ok(!unrelatedBookings.body.bookings.some(b=>b.bookingId===id),'Outsider must not see renter booking');
  const supplierBookings=await api('/api/rentals/bookings',{cookie:supplierCookie});
  status(supplierBookings,200,'Supplier booking list');
+ assert.equal(supplierBookings.cacheControl,'no-store, private','Supplier booking list must never be cached');
  assert.ok(supplierBookings.body.bookings.some(b=>b.bookingId===id),'Supplier sees booking for owned listing');
  const supplierWithForeignFilter=await api('/api/rentals/bookings?ownerEmail=not-the-supplier@example.invalid',{cookie:supplierCookie});
  status(supplierWithForeignFilter,200,'Supplier cannot override ownership via query');
