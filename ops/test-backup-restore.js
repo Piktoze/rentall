@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {resolveDatabaseConfig} from '../config.js';
 import Database from 'better-sqlite3';
-import {createBackupS3,downloadBackupObject,readBackupEvidence,s3BackupEnabled} from './backup-s3.js';
+import {createBackupS3,downloadBackupObject,loadVerifiedBackupEvidence,s3BackupEnabled} from './backup-s3.js';
 
 const dbConfig=resolveDatabaseConfig();
 if(!dbConfig.ok || !dbConfig.path || dbConfig.path===':memory:') throw new Error('Cannot resolve persistent SQLite database for backup');
@@ -16,9 +16,7 @@ const s3=remote?createBackupS3():null;
 // For remote backups the S3 metadata pointer is authoritative; a cached
 // local evidence file may be older than the most recently published backup.
 // Fail closed on remote metadata outage rather than silently restoring stale data.
-const evidence=remote
-  ?await readBackupEvidence(s3.client,s3.bucket,'metadata/last-verified-backup.json')
-  :JSON.parse(fs.readFileSync(evidencePath,'utf8'));
+const evidence=await loadVerifiedBackupEvidence({remote,evidencePath,client:s3?.client,bucket:s3?.bucket});
 if(!evidence.ok || evidence.integrity!=='ok') throw new Error('Latest backup evidence is not verified');
 const source=path.join(backupDir,path.basename(String(evidence.backupFile||'')));
 const restoreDir=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-restore-test-'));
