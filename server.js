@@ -1898,6 +1898,66 @@ app.get('/api/stripe/connect/booking-binding/:bookingId', requireRole('supplier'
   });
 });
 
+// Read-only staging preflight for reusing an existing Accounts v2 TEST account.
+// This deliberately does not create, attach, or update a Stripe connection.
+app.post('/api/admin/stripe/connect/verify-existing-binding', requireRole('admin'), async (req,res)=>{
+  res.setHeader('Cache-Control','private, no-store');
+  if(process.env.RENTINORBIT_STAGING!=='true') return res.status(404).json({error:'Not found'});
+  if(!stripe || String(process.env.STRIPE_MODE||'').toLowerCase()!=='test') {
+    return res.status(409).json({error:'Staging TEST Stripe configuration required'});
+  }
+  const bookingId=String(req.body?.bookingId||'').trim();
+  const accountId=String(req.body?.accountId||'').trim();
+  if(!/^RB-[a-zA-Z0-9_-]{5,90}$/.test(bookingId) || !/^acct_[a-zA-Z0-9]{8,80}$/.test(accountId)){
+    return res.status(400).json({error:'Valid bookingId and accountId required'});
+  }
+  const booking=getRentalBookingById(bookingId);
+  const listing=booking?getRentalListing(booking.listingId):null;
+  if(!booking||!listing) return res.status(404).json({error:'Booking not found'});
+  const ownerEmail=String(listing.ownerEmail||'').trim().toLowerCase();
+  const owner=db.prepare('SELECT user_id,role FROM app_users WHERE email=? COLLATE NOCASE').get(ownerEmail);
+  const byUser=owner?getDirectMerchantConnectionByUserId(db,owner.user_id):null;
+  const byEmail=getDirectMerchantConnectionByEmail(db,ownerEmail);
+  const byAccount=db.prepare('SELECT user_id FROM stripe_connections WHERE stripe_account_id=?').get(accountId);
+  try{
+    const account=await retrieveDirectMerchantAccountV2(stripe,accountId);
+    const parsed=directMerchantCapabilityStatus(account);
+    const contactEmail=String(account?.contact_email||'').trim().toLowerCase();
+    const responsibilities=account?.defaults?.responsibilities||{};
+    const ownerMatchesStripe=!!ownerEmail && !!contactEmail && ownerEmail===contactEmail;
+    const accountAlreadyAssigned=!!byAccount;
+    const ownerHasConnection=!!byUser || !!byEmail;
+    const providerCompatible=account?.livemode===false &&
+      account?.dashboard==='express' &&
+      parsed.merchantCapabilityStatus==='active' &&
+      responsibilities.fees_collector==='stripe' &&
+      responsibilities.losses_collector==='stripe';
+    // No owner email, identity information, Stripe tokens, or account details in response.
+    const eligibleForReview=Boolean(owner && owner.role==='supplier' &&
+      ownerMatchesStripe && !accountAlreadyAssigned && !ownerHasConnection &&
+      providerCompatible);
+    return res.json({
+      bookingFound:true,
+      bookingStatus:booking.status,
+      supplierUserExists:Boolean(owner),
+      supplierRoleValid:owner?.role==='supplier',
+      stripeAccountFound:true,
+      stripeAccountTestMode:account?.livemode===false,
+      ownerMatchesStripeContact:ownerMatchesStripe,
+      ownerHasConnection,
+      accountAlreadyAssigned,
+      providerCompatible,
+      capabilityStatus:parsed.merchantCapabilityStatus,
+      eligibleForReview,
+      writePerformed:false,
+      note:'Read-only result. No existing Stripe account was linked or modified.'
+    });
+  }catch(error){
+    console.warn('Staging Stripe binding preflight failed',safeOperationalError(error));
+    return res.status(502).json({error:'Could not verify existing Stripe account',writePerformed:false});
+  }
+});
+
 // Admin-only provider-state bridge for test fixtures and recovery tooling.
 // Only an authoritative, server-side Stripe response may change capabilities.
 // Never accept a caller-supplied account object as proof that payments are active.
