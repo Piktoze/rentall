@@ -17,6 +17,7 @@ execFileSync(process.execPath,['--check','e2e/privacy-requests-v261.spec.js'],{s
 // Source-only regression suites: safe during build, no Stripe or database mutations.
 for(const suite of [
   'staging-indexing-audit-coverage-v268.test.mjs',
+  'supplier-calendar-local-date-v269.test.mjs',
   'live-launch-gate-v243.test.mjs',
   'legal-launch-gate-v246.test.mjs',
   'booking-agreement-v247.test.mjs',
