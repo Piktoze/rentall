@@ -601,6 +601,22 @@ try{
    data:{bookingId:payId,outcome:'failed'}});
  status(downgrade,409,'Paid booking cannot be downgraded to failed');
  assert.equal(downgrade.body.code,'BOOKING_PAYMENT_FINAL');
+ // A generic supplier status update must never bypass the provider-aware
+ // cancellation endpoint, even for an already-paid €100 rental.
+ const bypassCancel=await api('/api/rentals/bookings/'+payId+'/status',{
+   method:'POST',cookie:supplierCookie,data:{status:'cancelled'}
+ });
+ status(bypassCancel,409,'Paid €100 booking cannot cancel via generic status route');
+ assert.equal(bypassCancel.body.code,'CANCELLATION_FLOW_REQUIRED');
+ const bypassRead=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=bypassRead.prepare('SELECT status,payment_status,refund_amount,stripe_refund_id FROM rental_bookings WHERE booking_id=?').get(payId);
+   assert.equal(row.status,'confirmed','Status bypass must not cancel the booking');
+   assert.equal(row.payment_status,'paid','Status bypass must preserve paid state');
+   assert.equal(row.refund_amount,null,'Status bypass must not invent a refund');
+   assert.equal(row.stripe_refund_id,null,'Status bypass must not invent a refund provider record');
+ }finally{bypassRead.close()}
+ console.log('PASS paid €100 generic status cancellation bypass blocked; dedicated refund flow remains required');
  // A supplier-initiated cancellation after a completed demo payment must
  // refund the full amount once and reject further cancellation/refund attempts.
  const refunded=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
