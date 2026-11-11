@@ -18,6 +18,7 @@ assert.equal(call().calls,1);
 assert.equal(call().status,429,'Rate limiting must preserve existing limits');
 assert.equal(context.globalBuckets.size,1);
 context.Date.now=()=>2000;
+context.globalBuckets.set('expired:inactive',{count:1,resetAt:1000});
 for(let i=0;i<253;i++)call();
 assert.equal(context.globalBuckets.size,1,'Expired buckets must be removed at periodic sweep, active bucket remains');
 console.log('PASS rate limiter maintains thresholds and sweeps expired buckets without timers');
