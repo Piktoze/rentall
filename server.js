@@ -765,6 +765,7 @@ app.post('/api/stripe/webhook',
           const pi=event.data.object;
           const bookingId=pi.metadata?.bookingId;
           let lateTerminalRefunded=false;
+          let lateTerminalRefundPending=false;
           if(bookingId){
             const booking=getRentalBookingById(bookingId);
             if(booking){
@@ -798,12 +799,20 @@ app.post('/api/stripe/webhook',
                   bookingId,
                   idempotencyKey:`booking:${bookingId}:late-terminal-refund`
                 });
+                const expectedRefundCents=Math.round(Math.max(0,Number(booking.orderValue||0))*100);
+                if(!String(refund?.id||'').startsWith('re_') ||
+                   String(refund.payment_intent||'')!==String(pi.id) ||
+                   Number(refund.amount)!==expectedRefundCents ||
+                   !new Set(['pending','succeeded']).has(String(refund.status||''))){
+                  throw new Error('Late payment refund requires provider reconciliation');
+                }
                 setStripeRefundDetails(bookingId,{
                   refundId:refund.id,
                   refundStatus:refund.status,
                   refundAmount:Number(booking.orderValue||0)
                 });
                 lateTerminalRefunded=true;
+                lateTerminalRefundPending=String(refund.status)==='pending';
               }
             }
           }
@@ -817,9 +826,11 @@ app.post('/api/stripe/webhook',
                 uniqueKey:`payment:${pi.id}:customer`,
                 audience:'customer',userEmail:paidBooking.customerEmail,bookingId,
                 type:lateTerminalRefunded?'payment.refunded':'payment.paid',
-                title:lateTerminalRefunded?'Payment automatically refunded':'Payment received',
+                title:lateTerminalRefunded?(lateTerminalRefundPending?'Refund initiated':'Payment automatically refunded'):'Payment received',
                 message:lateTerminalRefunded
-                  ? `Payment for booking ${bookingId} arrived after the booking closed and was automatically refunded.`
+                  ? (lateTerminalRefundPending
+                    ? `Payment for booking ${bookingId} arrived after closure. Refund initiated; awaiting Stripe confirmation.`
+                    : `Payment for booking ${bookingId} arrived after closure and was refunded.`)
                   : `Payment for booking ${bookingId} was received.`
               });
             }
@@ -846,9 +857,11 @@ app.post('/api/stripe/webhook',
                 uniqueKey:`payment:${pi.id}:supplier`,
                 audience:'supplier',userEmail:paidListing.ownerEmail,bookingId,
                 type:lateTerminalRefunded?'payment.refunded':'payment.paid',
-                title:lateTerminalRefunded?'Late payment refunded':'Booking payment received',
+                title:lateTerminalRefunded?(lateTerminalRefundPending?'Late payment refund initiated':'Late payment refunded'):'Booking payment received',
                 message:lateTerminalRefunded
-                  ? `A late payment for ${paidListing.title} booking ${bookingId} was automatically refunded.`
+                  ? (lateTerminalRefundPending
+                    ? `A late payment for ${paidListing.title} booking ${bookingId} triggered a refund awaiting Stripe confirmation.`
+                    : `A late payment for ${paidListing.title} booking ${bookingId} was refunded.`)
                   : `Payment for ${paidListing.title} booking ${bookingId} was received.`
               });
             }
