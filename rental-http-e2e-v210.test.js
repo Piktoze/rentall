@@ -12,7 +12,7 @@ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
 const dbPath=path.join(folder,'integration.sqlite');
 const env={...process.env,DB_PATH:dbPath,UPLOADS_DIR:path.join(folder,'uploads'),NODE_ENV:'test',RENTINORBIT_STAGING:'true',
   RENTINORBIT_DEMO_PAYMENTS:'true',RENTINORBIT_PREAUTH_ENABLED:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
-  RENTALL_SEED_DEMO_USERS:'false'};
+  RENTALL_SEED_DEMO_USERS:'false',TRUST_PROXY_HOPS:'1'};
 for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
   'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
   'STRIPE_SECRET_KEY','STRIPE_PUBLISHABLE_KEY','STRIPE_WEBHOOK_SECRET','RESEND_API_KEY',
@@ -132,8 +132,8 @@ let logs='';
 child.stdout.on('data',b=>logs+=String(b).slice(-3000));
 child.stderr.on('data',b=>logs+=String(b).slice(-3000));
 
-async function api(url,{method='GET',cookie='',data}={}){
- const response=await fetch(base+url,{method,headers:{...(cookie?{cookie}:{}),...(data?{'content-type':'application/json'}:{})},
+async function api(url,{method='GET',cookie='',data,syntheticClientIp=''}={}){
+ const response=await fetch(base+url,{method,headers:{...(cookie?{cookie}:{}),...(data?{'content-type':'application/json'}:{}),...(syntheticClientIp?{'x-forwarded-for':syntheticClientIp}:{})},
    ...(data?{body:JSON.stringify(data)}:{})});
  const body=await response.json().catch(()=>({}));
  return {status:response.status,body,cookie:response.headers.get('set-cookie')?.split(';')[0],cacheControl:response.headers.get('cache-control')};
@@ -241,7 +241,7 @@ try{
  console.log('PASS HTTP parallel unpaid cancellation: one 200, one 409, zero refund');
  const missingIntentCancellation=await api(
    '/api/rentals/bookings/'+missingIntentId+'/cancel',{
-     method:'POST',cookie:supplierCookie,data:{reason:'Missing Stripe intent reconciliation probe'}
+     method:'POST',cookie:supplierCookie,syntheticClientIp:'192.0.2.77',data:{reason:'Missing Stripe intent reconciliation probe'}
    });
  status(missingIntentCancellation,400,'Paid Stripe booking without PaymentIntent cannot be auto-refunded');
  assert.equal(missingIntentCancellation.body.code,'PAYMENT_INTENT_MISSING');
