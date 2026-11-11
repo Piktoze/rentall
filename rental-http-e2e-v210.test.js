@@ -65,6 +65,14 @@ createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2
   startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Instant test renter',orderValue:100});
 
+// Unpaid cancellation must release inventory with exactly zero refund.
+const unpaidCancelId='api-e2e-unpaid-cancel';
+upsertRentalListing({listingId:'api-e2e-unpaid-listing',ownerEmail:supplier,
+  title:'Synthetic unpaid cancellation item',totalQuantity:1});
+createRentalBookingAtomic({bookingId:unpaidCancelId,listingId:'api-e2e-unpaid-listing',
+  startDate:'2099-12-20',endDate:'2099-12-21',quantity:1,status:'pending',
+  customerEmail:renter,customerName:'Test Renter',orderValue:100});
+
 // Cancellation regression: synthetic provider-backed bookings, local test only.
 const offlinePaidId='api-e2e-offline-paid';
 createRentalBookingAtomic({bookingId:offlinePaidId,listingId:'api-e2e-listing',
@@ -153,6 +161,29 @@ try{
 
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // Enforce the €0 refund rule at the actual HTTP boundary for unpaid bookings.
+ const unpaidUrl='/api/rentals/bookings/'+unpaidCancelId+'/cancel';
+ status(await api(unpaidUrl,{method:'POST',cookie:outsiderCookie,
+   data:{reason:'Unauthorized unpaid cancellation'}}),403,
+   'Unrelated customer cannot cancel unpaid booking');
+ const unpaidCancellation=await api(unpaidUrl,{method:'POST',cookie:supplierCookie,
+   data:{reason:'Supplier cancels unpaid synthetic booking'}});
+ status(unpaidCancellation,200,'Supplier cancels unpaid booking without Stripe objects');
+ assert.equal(unpaidCancellation.body.refundAmount,0,'Unpaid cancellation must refund €0');
+ assert.equal(unpaidCancellation.body.booking?.status,'cancelled');
+ const unpaidSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=unpaidSnapshot.prepare(
+     'SELECT refund_amount,stripe_refund_id,payment_status,status FROM rental_bookings WHERE booking_id=?'
+   ).get(unpaidCancelId);
+   assert.equal(row.refund_amount,0,'Unpaid booking refund record must be zero');
+   assert.equal(row.stripe_refund_id,null,'Unpaid cancellation cannot create a refund object');
+   assert.equal(row.status,'cancelled');
+ }finally{unpaidSnapshot.close();}
+ status(await api(unpaidUrl,{method:'POST',cookie:supplierCookie,
+   data:{reason:'Repeated unpaid cancellation'}}),409,
+   'Repeated unpaid cancellation must be blocked');
+ console.log('PASS HTTP unpaid €100 booking: authorized cancellation, €0 refund, no Stripe object, replay blocked');
  // Stripe outage must not permit cancellation of a charged rental or
  // an authorized security deposit. Check persisted state, not only HTTP error.
  for(const bookingId of [offlinePaidId,offlineDepositId]){
