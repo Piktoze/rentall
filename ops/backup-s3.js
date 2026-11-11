@@ -67,3 +67,10 @@ export async function readBackupEvidence(client,bucket,key){
   const response=await client.send(new GetObjectCommand({Bucket:bucket,Key:key}));
   return JSON.parse(await response.Body.transformToString());
 }
+
+export async function loadVerifiedBackupEvidence({remote,evidencePath,client,bucket}){
+  // In remote mode the bucket metadata pointer wins, even if local evidence
+  // exists. Never fall back to a stale local file after an S3 failure.
+  if(remote) return readBackupEvidence(client,bucket,'metadata/last-verified-backup.json');
+  return JSON.parse(fs.readFileSync(evidencePath,'utf8'));
+}
