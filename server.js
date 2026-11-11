@@ -688,6 +688,57 @@ app.post('/api/stripe/webhook',
         case 'payout.failed':
           console.log('Payout event:', event.type, event.data.object.id);
           break;
+        case 'refund.updated':
+        case 'refund.failed': {
+          const providerRefund=event.data.object;
+          const bookingId=String(providerRefund?.metadata?.bookingId||'');
+          const booking=bookingId?getRentalBookingById(bookingId):null;
+          if(!booking || !booking.stripeRefundId || !booking.stripePaymentIntentId) break;
+          const accountBinding=validateDirectEventAccount(event.account,booking);
+          const amountCents=Math.round(Math.max(0,Number(booking.refundAmount||0))*100);
+          if(!accountBinding.ok ||
+             String(providerRefund.id||'')!==String(booking.stripeRefundId) ||
+             String(providerRefund.payment_intent||'')!==String(booking.stripePaymentIntentId) ||
+             String(providerRefund.metadata?.bookingId||'')!==String(bookingId) ||
+             !Number.isInteger(Number(providerRefund.amount)) ||
+             Number(providerRefund.amount)!==amountCents ||
+             (providerRefund.currency && String(providerRefund.currency).toLowerCase()!=='eur')){
+            console.warn('Ignoring unbound refund event',event.id,accountBinding.reason||'refund_identity_mismatch');
+            break;
+          }
+          const providerStatus=String(providerRefund.status||'').toLowerCase();
+          if(!new Set(['pending','succeeded','failed','canceled']).has(providerStatus)){
+            console.warn('Ignoring unknown refund provider status',event.id);
+            break;
+          }
+          const previousStatus=String(booking.refundStatus||'').toLowerCase();
+          // Out-of-order updates must never downgrade a completed refund.
+          if(previousStatus==='succeeded' && providerStatus!=='succeeded') break;
+          if(previousStatus===providerStatus) break;
+          setStripeRefundDetails(bookingId,{
+            refundId:providerRefund.id,
+            refundStatus:providerStatus,
+            refundAmount:amountCents/100
+          });
+          if(providerStatus==='succeeded' || providerStatus==='failed' || providerStatus==='canceled'){
+            const label=providerStatus==='succeeded'?'completed':'could not be completed';
+            const title=providerStatus==='succeeded'?'Refund completed':'Refund needs review';
+            const listing=getRentalListing(booking.listingId);
+            if(booking.customerEmail) createRentalNotification({
+              uniqueKey:`refund:${providerRefund.id}:${providerStatus}:customer`,
+              audience:'customer',userEmail:booking.customerEmail,bookingId,
+              type:'payment.refund_status',title,
+              message:`Your €${(amountCents/100).toFixed(2)} refund ${label}.`
+            });
+            if(listing?.ownerEmail) createRentalNotification({
+              uniqueKey:`refund:${providerRefund.id}:${providerStatus}:supplier`,
+              audience:'supplier',userEmail:listing.ownerEmail,bookingId,
+              type:'payment.refund_status',title,
+              message:`The €${(amountCents/100).toFixed(2)} refund for booking ${bookingId} ${label}.`
+            });
+          }
+          break;
+        }
         case 'payment_intent.amount_capturable_updated': {
           const pi=event.data.object;
           const bookingId=pi.metadata?.bookingId;
