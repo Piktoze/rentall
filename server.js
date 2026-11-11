@@ -182,6 +182,15 @@ if(Number.isInteger(trustProxyHops) && trustProxyHops>0){
 // ---- V36 security hardening ----
 app.disable('x-powered-by');
 
+// Staging must not be indexed or expose test listings to search crawlers.
+// This branch-only guard does not change public production SEO.
+app.use((req,res,next)=>{
+  if(process.env.RENTINORBIT_STAGING==='true'){
+    res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
+  }
+  next();
+});
+
 app.use((req,res,next)=>{
   const incoming=String(req.get('x-request-id')||'').replace(/[^a-zA-Z0-9._:-]/g,'').slice(0,80);
   req.requestId=incoming || `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,10)}`;
@@ -961,6 +970,7 @@ function publicOrigin(req){
 }
 
 app.get('/robots.txt',(req,res)=>{
+  if(process.env.RENTINORBIT_STAGING==='true') return res.type('text/plain').send('User-agent: *\nDisallow: /\n');
   const origin=publicOrigin(req);
   res.type('text/plain').send(
 `User-agent: *
@@ -972,6 +982,7 @@ Sitemap: ${origin}/sitemap.xml
 });
 
 app.get('/sitemap.xml',(req,res)=>{
+  if(process.env.RENTINORBIT_STAGING==='true') return res.status(404).type('text/plain').send('Not available in staging');
   const origin=publicOrigin(req);
   const updated=new Date().toISOString().slice(0,10);
   const fixed=['/','/help','/terms','/privacy','/cookies','/fees'];
