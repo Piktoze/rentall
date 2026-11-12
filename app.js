@@ -5971,7 +5971,7 @@ async function loadUnifiedCustomerBookings(){
       ${timeline.length?`<div class="booking-timeline">${timeline.map(t=>`<div class="booking-timeline-item"><b>${escapeHtml(uiText(t.title))}</b><span>${escapeHtml(localizeBookingTimelineMessage(t.message))} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span></div>`).join('')}</div>`:''}
       <div class="renter-alternatives-slot" data-booking-alternatives="${escapeHtml(b.bookingId)}"></div>
       <div class="customer-booking-actions">
-        <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View details'))}</button>
+        <button class="secondary v203-select-booking" type="button" data-id="${escapeHtml(b.bookingId)}" aria-expanded="false">${escapeHtml(uiText('View details'))}</button>
         ${canPayNow?`<button class="primary v231-pay-booking" type="button" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Pay now'))}</button>`:''}
         <details class="rio-extra-booking-actions"><summary>${escapeHtml(uiText('More actions'))}</summary><div class="rio-extra-actions-inner">
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
@@ -5983,6 +5983,11 @@ async function loadUnifiedCustomerBookings(){
         ${currentServerUser && guestAccess?.revoked?`<span class="muted">${escapeHtml(uiText('Guest link revoked'))}</span>`:''}
         </div></details>
       </div>
+      <section class="rio-selected-booking-details" hidden aria-live="polite" style="margin-top:12px;padding:14px 16px;border:1px solid #b9ccec;border-radius:12px;background:#eef4ff;color:#102550">
+        <strong class="rio-selected-booking-heading"></strong>
+        <p class="rio-selected-booking-summary" style="margin:8px 0 0"></p>
+        <p class="rio-selected-booking-note" style="margin:8px 0 0"></p>
+      </section>
     </div>`;
   }).join('');
   // Keep the supplementary status panel synchronized with the booking selected in this list.
@@ -5995,7 +6000,32 @@ async function loadUnifiedCustomerBookings(){
     list.querySelectorAll('.customer-booking-card').forEach(card=>{
       card.classList.toggle('v203-booking-selected',card.dataset.bookingId===window.rentinorbitSelectedBookingId);
     });
-    if(scroll)document.getElementById('v140BookingCommand')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    // Show the selected booking's details in its own card. Scrolling to the global
+    // command panel after every card previously landed beside unrelated alternatives.
+    if(scroll){
+      const card=[...list.querySelectorAll('.customer-booking-card')].find(el=>el.dataset.bookingId===String(bookingId));
+      list.querySelectorAll('.rio-selected-booking-details').forEach(el=>{el.hidden=true});
+      list.querySelectorAll('.v203-select-booking').forEach(el=>el.setAttribute('aria-expanded','false'));
+      const panel=card?.querySelector('.rio-selected-booking-details');
+      if(panel){
+        const b=row.booking;
+        const status=String(b.status||'pending').toLowerCase();
+        const payment=String(b.paymentStatus||b.payment_status||'unpaid').toLowerCase();
+        const next=status==='completed'?'Nuoma užbaigta. Galite palikti atsiliepimą.'
+          :status==='returned'?'Daiktas grąžintas. Laukiama nuomos užbaigimo.'
+          :status==='cancelled'||status==='canceled'?'Rezervacija atšaukta. Patikrinkite mokėjimo grąžinimo būseną.'
+          :status==='active'?'Nuoma vyksta. Grąžinkite daiktą sutartu laiku.'
+          :status==='confirmed'&&payment!=='paid'?'Rezervacija patvirtinta. Galite pereiti prie apmokėjimo.'
+          :status==='confirmed'?'Rezervacija patvirtinta. Peržiūrėkite perdavimo informaciją.'
+          :'Laukite tiekėjo patvirtinimo arba patikrinkite užsakymo būseną.';
+        panel.querySelector('.rio-selected-booking-heading').textContent=String(b.title||b.listingTitle||'Užsakymas')+' · '+String(b.bookingId||'');
+        panel.querySelector('.rio-selected-booking-summary').textContent='Būsena: '+uiText(status)+' · Mokėjimas: '+String(window.customerBookingPaymentCopy?.(b)||b.paymentStatus||'—');
+        panel.querySelector('.rio-selected-booking-note').textContent=next;
+        panel.hidden=false;
+        card.querySelector('.v203-select-booking')?.setAttribute('aria-expanded','true');
+        panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+      }
+    }
   };
   list.querySelectorAll('.v203-select-booking').forEach(button=>{
     button.addEventListener('click',()=>selectBookingForCommand(button.dataset.id,true));
