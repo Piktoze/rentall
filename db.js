@@ -566,16 +566,19 @@ export function assertRentalListingInventoryCapacity(listingId,totalQuantity){
 }
 
 export function upsertRentalListing({ listingId, ownerEmail=null, title, totalQuantity, cancellationPolicy='moderate' }) {
-  const existing=getRentalListing(listingId);
-  if(existing && Number(totalQuantity)<Number(existing.totalQuantity))assertRentalListingInventoryCapacity(listingId,totalQuantity);
-  upsertListingStmt.run({
-    listing_id: String(listingId),
-    owner_email: ownerEmail,
-    title: title || 'Rental item',
-    total_quantity: Number(totalQuantity || 0),
-    cancellation_policy: cancellationPolicy || 'moderate'
-  });
-  return listingStmt.get(String(listingId));
+  return db.transaction(()=>{
+    const existing=getRentalListing(listingId);
+    if(existing && Number(totalQuantity)<Number(existing.totalQuantity))
+      assertRentalListingInventoryCapacity(listingId,totalQuantity);
+    upsertListingStmt.run({
+      listing_id: String(listingId),
+      owner_email: ownerEmail,
+      title: title || 'Rental item',
+      total_quantity: Number(totalQuantity || 0),
+      cancellation_policy: cancellationPolicy || 'moderate'
+    });
+    return listingStmt.get(String(listingId));
+  }).immediate();
 }
 
 export function getRentalListing(listingId) {
