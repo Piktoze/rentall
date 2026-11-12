@@ -395,7 +395,7 @@ const listingStmt = db.prepare(`
 `);
 
 const overlappingBookedStmt = db.prepare(`
-  SELECT COALESCE(SUM(quantity), 0) AS booked
+  SELECT start_date AS startDate, end_date AS endDate, quantity
   FROM rental_bookings
   WHERE listing_id = @listing_id
     AND (
@@ -590,13 +590,27 @@ export function getAvailability({ listingId, startDate, endDate, requestedQuanti
     return {listingId:String(listingId),totalQuantity:Number(listing.totalQuantity||0),bookedQuantity:0,remainingQuantity:0,requestedQuantity:Number(requestedQuantity||1),available:false,unavailableReason:'listing_not_active'};
   }
 
-  const row = overlappingBookedStmt.get({
+  const rows = overlappingBookedStmt.all({
     listing_id: String(listingId),
     start_date: startDate,
     end_date: endDate,
     now: new Date().toISOString()
   });
-  const booked = Number(row?.booked || 0);
+  // Sum units at each interval boundary, not across all reservations that
+  // happen to touch the requested window. Adjacent holds cannot overlap.
+  const deltas=new Map();
+  for(const row of rows){
+    const from=row.startDate>startDate?row.startDate:startDate;
+    const to=row.endDate<endDate?row.endDate:endDate;
+    if(from>=to)continue;
+    deltas.set(from,(deltas.get(from)||0)+Number(row.quantity));
+    deltas.set(to,(deltas.get(to)||0)-Number(row.quantity));
+  }
+  let concurrent=0,booked=0;
+  for(const date of [...deltas.keys()].sort()){
+    concurrent+=deltas.get(date);
+    booked=Math.max(booked,concurrent);
+  }
   const remaining = Math.max(0, Number(listing.totalQuantity) - booked);
 
   return {
