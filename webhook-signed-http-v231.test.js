@@ -118,6 +118,13 @@ try{
  const invalid=await post(event('evt_webhook_e2e_bad_signature',accountId),{badSignature:true});
  assert.equal(invalid.status,400,'Unsigned/invalid event must be rejected');
  assert.equal(read().booking.payment_status,'requires_payment_method');
+ const wrongModeEvent={...event('evt_webhook_e2e_wrong_mode',accountId),livemode:true};
+ const wrongMode=await post(wrongModeEvent,{connect:true});
+ assert.equal(read().booking.payment_status,'requires_payment_method',
+   'An event from the wrong Stripe mode must not mark the booking paid');
+ assert.equal(wrongMode.status,400,'A signed event from the wrong Stripe mode must be rejected');
+ assert.ok(!read().events.some(row=>row.event_id===wrongModeEvent.id),
+   'Wrong-mode events must not claim a webhook idempotency record');
  const wrong=await post(event('evt_webhook_e2e_wrong_account','acct_different_merchant'));
  assert.equal(wrong.status,200,'Wrong-account event is accepted but ignored');
  assert.equal(read().booking.payment_status,'requires_payment_method','Wrong connected account cannot pay booking');

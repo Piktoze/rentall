@@ -86,7 +86,7 @@ export function resolveUploadsConfig(env=process.env){
   return {directory,source:explicit?'UPLOADS_DIR':(volumeRoot?'RAILWAY_VOLUME_MOUNT_PATH':'default-local'),volumeRoot:volumeRoot?path.resolve(volumeRoot):null};
 }
 
-function stripeModeFor(secret){
+export function stripeModeFor(secret){
   if(/^[sr]k_live_/.test(secret))return 'live';
   if(/^[sr]k_test_/.test(secret))return 'test';
   return 'unknown';

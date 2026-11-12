@@ -118,7 +118,7 @@ import {
   ,closeDatabase
   ,REQUIRED_SCHEMA_VERSION
 } from './db.js';
-import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig} from './config.js';
+import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig,stripeModeFor} from './config.js';
 import {HELP_CENTER_COPY,getPolicyPage} from './modules/help-center-content-v177.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
@@ -294,6 +294,7 @@ const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
+const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
 // Authorization/capture experiment is isolated to staging and a Stripe TEST secret.
@@ -711,6 +712,11 @@ app.post('/api/stripe/webhook',
         markWebhookFailed(syntheticId, err.message);
       }
       return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    const eventMode = event.livemode === true ? 'live' : event.livemode === false ? 'test' : null;
+    if (eventMode !== stripeMode) {
+      return res.status(400).send('Stripe webhook mode does not match the configured Stripe key');
     }
 
     // Idempotency gate:
