@@ -2561,6 +2561,12 @@ export function getRentalAgreementAcceptanceAudit(bookingId){
   return db.prepare('SELECT booking_id AS bookingId,party,actor_email AS actorEmail,auth_method AS authMethod,terms_version AS termsVersion,snapshot_sha256 AS snapshotSha256,accepted_at AS acceptedAt FROM rental_agreement_acceptance_audit WHERE booking_id=? ORDER BY accepted_at,party').all(String(bookingId));
 }
 
+// Optional client-generated idempotency key: retries of one message must not create copies.
+try{db.exec('ALTER TABLE rental_messages ADD COLUMN client_message_id TEXT')}catch(error){
+  if(!String(error.message).includes('duplicate column name'))throw error;
+}
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_rental_message_request ON rental_messages(conversation_id,sender_email,client_message_id) WHERE client_message_id IS NOT NULL');
+
 const conversationByIdStmt=db.prepare(`SELECT conversation_id AS conversationId,listing_id AS listingId,booking_id AS bookingId,
  customer_email AS customerEmail,supplier_email AS supplierEmail,created_at AS createdAt,updated_at AS updatedAt
  FROM rental_conversations WHERE conversation_id=?`);
@@ -2589,13 +2595,28 @@ export function listRentalMessages(conversationId){
   return db.prepare(`SELECT message_id AS messageId,conversation_id AS conversationId,sender_email AS senderEmail,sender_role AS senderRole,
     body,created_at AS createdAt FROM rental_messages WHERE conversation_id=? ORDER BY created_at ASC`).all(String(conversationId));
 }
-export function addRentalMessage({conversationId,senderEmail,senderRole,body}){
-  const clean=String(body||'').trim();if(!clean||clean.length>2000)throw new Error('Message must be 1–2000 characters');
-  const id=`MSG-${crypto.randomUUID()}`,now=new Date().toISOString();
-  db.prepare(`INSERT INTO rental_messages(message_id,conversation_id,sender_email,sender_role,body,created_at) VALUES(?,?,?,?,?,?)`)
-    .run(id,String(conversationId),String(senderEmail||'').toLowerCase(),String(senderRole),clean,now);
-  db.prepare(`UPDATE rental_conversations SET updated_at=? WHERE conversation_id=?`).run(now,String(conversationId));
-  return {messageId:id,conversationId:String(conversationId),senderEmail:String(senderEmail||'').toLowerCase(),senderRole,body:clean,createdAt:now};
+export function addRentalMessage({conversationId,senderEmail,senderRole,body,clientMessageId=null}){
+  const clean=String(body||'').trim();
+  if(!clean||clean.length>2000)throw Object.assign(new Error('Message must be 1–2000 characters'),{code:'INVALID_MESSAGE_BODY'});
+  const sender=String(senderEmail||'').trim().toLowerCase();
+  const key=clientMessageId==null?null:String(clientMessageId).trim();
+  if(key!==null && !/^[a-zA-Z0-9_-]{12,100}$/.test(key))
+    throw Object.assign(new Error('Invalid message request identifier'),{code:'INVALID_MESSAGE_REQUEST_ID'});
+  return db.transaction(()=>{
+    if(key){
+      const prior=db.prepare('SELECT message_id AS messageId,conversation_id AS conversationId,sender_email AS senderEmail,sender_role AS senderRole,body,created_at AS createdAt FROM rental_messages WHERE conversation_id=? AND sender_email=? COLLATE NOCASE AND client_message_id=?').get(String(conversationId),sender,key);
+      if(prior){
+        if(prior.body!==clean)
+          throw Object.assign(new Error('Message request identifier reused for different text'),{code:'MESSAGE_REQUEST_CONFLICT'});
+        return {...prior,idempotentReplay:true};
+      }
+    }
+    const id=`MSG-${crypto.randomUUID()}`,now=new Date().toISOString();
+    db.prepare('INSERT INTO rental_messages(message_id,conversation_id,sender_email,sender_role,body,created_at,client_message_id) VALUES(?,?,?,?,?,?,?)')
+      .run(id,String(conversationId),sender,String(senderRole),clean,now,key);
+    db.prepare('UPDATE rental_conversations SET updated_at=? WHERE conversation_id=?').run(now,String(conversationId));
+    return {messageId:id,conversationId:String(conversationId),senderEmail:sender,senderRole,body:clean,createdAt:now,idempotentReplay:false};
+  }).immediate();
 }
 
 export function createRenterReview({bookingId,reviewerEmail,revieweeEmail,rating,comment=null}){
