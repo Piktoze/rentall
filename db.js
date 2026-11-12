@@ -8,6 +8,7 @@ import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/sup
 import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
 import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
 import {policyVersion,refundFromBooking} from './modules/cancellation-policy-v197.js';
+import {validateAtomicBookingWindow} from './modules/atomic-booking-validation-v285.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -600,6 +601,10 @@ export function createRentalBookingAtomic({
   holdMinutes=30,
   rentalStartAt=null, rentalStartTime=null, rentalTimeZone=null
 }) {
+  // SQL CHECK(quantity > 0) would still accept 0.5. Validate prior to
+  // reserving stock so every internal caller receives identical guarantees.
+  const validWindow=validateAtomicBookingWindow({startDate,endDate,quantity});
+  quantity=validWindow.quantity;
   const paymentToken=crypto.randomBytes(24).toString('hex');
   const paymentTokenHash=crypto.createHash('sha256').update(paymentToken).digest('hex');
   const expiresAt=new Date(Date.now()+Math.max(5,Number(holdMinutes||30))*60000).toISOString();
