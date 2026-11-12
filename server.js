@@ -8,6 +8,7 @@ import {
   listWebhookEvents,
   insertSimulatedWebhook,
   upsertRentalListing,
+  assertRentalListingInventoryCapacity,
   getAvailability,
   createRentalBookingAtomic,
   updateRentalBookingStatus,
@@ -1679,6 +1680,8 @@ app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
       return res.status(409).json({error:'Instant Book is available after payout identity/account verification is complete.',code:'INSTANT_BOOK_REQUIRES_VERIFICATION'});
     }
     ensureSupplierOnboarding(req.appUser.email,{active:true});
+    if(safeListing.id && getRentalListing(safeListing.id))
+      assertRentalListingInventoryCapacity(safeListing.id,safeListing.quantity);
     const listing=saveFullRentalListing({...safeListing,lifecycleStatus:'active',availabilityConfirmedAt:new Date().toISOString()},req.appUser.email);
     // Keep inventory/availability table in sync.
     upsertRentalListing({
@@ -2361,6 +2364,7 @@ app.post('/api/rentals/listings/sync', requireRole('supplier','admin'), (req, re
          req.appUser.role!=='admin'){
         continue;
       }
+      if(existing)assertRentalListingInventoryCapacity(item.id,item.quantity);
       const saved=saveFullRentalListing(item,req.appUser.email);
       synced.push(upsertRentalListing({
         listingId:saved.id,
