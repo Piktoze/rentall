@@ -5153,8 +5153,8 @@ loadCustomerBookingsSecure=async function(){
         <div class="booking-timeline">
           ${timeline.map(t=>`
             <div class="booking-timeline-item">
-              <b>${t.title}</b>
-              <span>${t.message} · ${new Date(t.createdAt).toLocaleString()}</span>
+              <b>${escapeHtml(t.title)}</b>
+              <span>${escapeHtml(t.message)} · ${escapeHtml(new Date(t.createdAt).toLocaleString())}</span>
             </div>`).join('')}
         </div>
         <div class="customer-booking-actions">

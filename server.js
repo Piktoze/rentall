@@ -1617,13 +1617,19 @@ function validateSupplierListingInput(listing){
 }
 
 app.get('/api/listings', simpleRateLimit({windowMs:60000,max:180,keyPrefix:'public-listings'}), (req,res)=>{
-  res.json({listings:listPublicRentalListings().map(listing=>({
-    ...listing,
-    // Public classification only; never expose verification details or registration PII.
-    supplierTraderStatus:getSupplierTraderDisclosure(listing.ownerEmail).status,
-    supplierTraderVerified:getSupplierTraderDisclosure(listing.ownerEmail).verified,
-    supplierPublicIdentity:getVerifiedMarketplaceTraderPublicProfile(listing.ownerEmail)
-  }))});
+  const user=sessionUser(req);
+  res.set('Cache-Control','no-store, private');
+  res.json({listings:listPublicRentalListings().map(({ownerEmail,...listing})=>{
+    const ownsListing=user?.role==='supplier'&&String(user.email||'').toLowerCase()===ownerEmail;
+    const disclosure=getSupplierTraderDisclosure(ownerEmail);
+    return {
+      ...listing,
+      ...(ownsListing||user?.role==='admin'?{ownerEmail}:{}),
+      supplierTraderStatus:disclosure.status,
+      supplierTraderVerified:disclosure.verified,
+      supplierPublicIdentity:getVerifiedMarketplaceTraderPublicProfile(ownerEmail)
+    };
+  })});
 });
 
 // Trader/private classification is a marketplace declaration, not Stripe identity.

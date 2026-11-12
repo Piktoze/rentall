@@ -453,6 +453,14 @@ try{
  status(publicTraderListings,200,'Public listings available with trader disclosure');
  const publicListing=publicTraderListings.body.listings.find(item=>item.id===listingBase.id);
  assert.ok(publicListing,'Published supplier listing present publicly');
+ assert.equal(publicListing.ownerEmail,undefined,'The public catalog must not expose a supplier login email');
+ const supplierCatalog=await api('/api/listings',{cookie:supplierCookie});
+ assert.equal(supplierCatalog.body.listings.find(item=>item.id===listingBase.id)?.ownerEmail,supplier,
+   'The signed-in owner can still identify their listings for the calendar');
+ assert.equal(supplierCatalog.cacheControl,'no-store, private');
+ const foreignCatalog=await api('/api/listings',{cookie:otherSupplierCookie});
+ assert.equal(foreignCatalog.body.listings.find(item=>item.id===listingBase.id)?.ownerEmail,undefined,
+   'An unrelated signed-in supplier must not receive the owner login email');
  status(await api('/listing/'+listingBase.id),200,'Published listing has a public page');
  status(await api('/listing/private-prelaunch-test'),404,'Direct URL must not expose an unpublished listing');
  status(await api('/api/listings/private-prelaunch-test/reputation'),404,'Public reputation must not expose an unpublished listing');

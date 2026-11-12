@@ -2,7 +2,9 @@ import fs from 'fs';
 const server=fs.readFileSync('./server.js','utf8'),app=[fs.readFileSync('./app.js','utf8'),...fs.readdirSync('./modules',{withFileTypes:true}).filter(x=>x.isFile()&&x.name.endsWith('.js')).map(x=>fs.readFileSync('./modules/'+x.name,'utf8'))].join('\n');
 function assert(v,m){if(!v)throw new Error(m)}
 assert(server.includes("const booking=getRentalBookingById(bookingId)") && server.includes("String(booking.customerEmail||'').toLowerCase()===String(user.email).toLowerCase()"),'Customer session ownership check missing');
-assert(server.includes("if(!bookingAccessAllowed(req,bookingId))"),'Reviews must use unified booking access control');
+const reviewRoute=server.split("app.post('/api/rentals/reviews'")[1]?.split('\napp.')[0]||'';
+assert(reviewRoute.includes('if(!accountRenter&&!guestRenter)')&&reviewRoute.includes('const guestRenter=!user&&'),
+  'Listing reviews must require renter ownership or a guest link in a signed-out session');
 assert(server.includes("Rating must be an integer from 1 to 5"),'Review rating validation missing');
 assert(app.includes('async function loadUnifiedCustomerBookings()'),'Unified booking portal missing');
 assert(app.includes("loadCustomerBookingsSecure=loadUnifiedCustomerBookings"),'Legacy final loader must be superseded');

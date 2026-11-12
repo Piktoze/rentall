@@ -44,13 +44,16 @@ test.describe('Isolated CI real-browser safety gate',()=>{
 
   test('admin renders listing and dispute input as plain text',async({page})=>{
     const markup='<img src=x data-audit-injected>';
+    await page.route('**/api/auth/me',route=>route.fulfill({json:{user:{
+      userId:'synthetic-admin',email:'audit-admin@example.invalid',role:'admin'
+    }}}));
     await page.route('**/api/admin/dashboard',route=>route.fulfill({json:{
       kpis:{listings:1,activeListings:1,bookings:1,openDisputes:1,gmv:100},
       listings:[{listingId:'synthetic-listing',title:markup,moderationStatus:'active'}],
       disputes:[{disputeId:'synthetic-dispute',bookingId:'synthetic-booking',reason:markup,details:markup,status:'open'}]
     }}));
     await page.goto('/');
-    await page.evaluate(()=>window.loadAdminDashboard());
+    await expect(page.locator('body')).toHaveClass(/is-admin/);
     await expect(page.locator('#adminListingsBody b')).toHaveText(markup);
     await expect(page.locator('#adminDisputesBody b')).toHaveText(markup);
     await expect(page.locator('[data-audit-injected]')).toHaveCount(0);
@@ -65,11 +68,13 @@ for(const language of ['lt','en','es','de','ru']){
     await page.locator('#lang').selectOption(language);
     await expect(page.locator('html')).toHaveAttribute('lang',language);
     await expect(page.locator('a[data-legal-link="/terms"]').first()).toHaveAttribute('href',`/terms?lang=${language}`);
-    const listing=page.locator('[data-detail-id="ci-drill-discovery"]');
-    await listing.click();
+    await page.locator('#countrySelect').selectOption('LT');
+    await page.locator('#citySelect').selectOption('Klaipėda');
+    await page.locator('#keywordSearch').fill('drill');
+    await page.locator('#searchForm button[type="submit"]').click();
+    await page.locator('[data-detail-id="ci-drill-discovery"]').first().click({timeout:8000});
     await expect(page.locator('#listingDetailModal')).toBeVisible();
-    await page.locator('#closeListingDetailModal').click();
-    await page.locator('[data-availability-id="ci-drill-discovery"]').click();
+    await page.locator('#detailAvailabilityBtn').click({timeout:8000});
     await expect(page.locator('#availabilityModal')).toBeVisible();
     await page.locator('#closeAvailabilityModal').click();
     for(const name of ['terms','privacy','cookies','fees','help']){
