@@ -129,6 +129,7 @@ import {assertExistingRefundCoversCancellation} from './modules/stripe-refund-co
 import {assertProviderRefundCoversCancellation} from './modules/stripe-refund-provider-coverage-v281.js';
 import {createBookingCancellationSingleFlight} from './modules/booking-cancellation-singleflight-v282.js';
 import {shouldApplyRefundStatus} from './modules/stripe-refund-status-order-v280.js';
+import {assertConfirmedDepositCapture} from './modules/stripe-deposit-capture-proof-v283.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -3426,9 +3427,9 @@ app.post('/api/admin/bookings/:bookingId/deposit/capture', requireRole('admin'),
     const depositBinding=validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId);
     if(!depositBinding.ok || intent.status!=='requires_capture')return res.status(409).json({error:'Deposit authorization is not capture-ready or does not match booking'});
     const captured=await captureDirectSecurityDeposit(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,amountCents:captureCents,idempotencyKey:`booking:${booking.bookingId}:deposit-capture:${captureCents}`});
-    if(String(captured?.id||'')!==String(intent.id) || captured?.status!=='succeeded'){
-      throw new Error('Stripe deposit capture is not confirmed; reconciliation required');
-    }
+    assertConfirmedDepositCapture(captured,{
+      paymentIntentId:intent.id,bookingId:booking.bookingId,amountCents:captureCents
+    });
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:captured.status,depositStatus:'captured'});
     const updated=resolveRentalSecurityDeposit(booking.bookingId,{status:'captured',resolution:reason});
     if(updated.customerEmail)createRentalNotification({uniqueKey:`booking:${booking.bookingId}:deposit:captured:${captureCents}:customer`,audience:'customer',userEmail:updated.customerEmail,bookingId:booking.bookingId,type:'deposit.captured',title:'Security deposit claim resolved',message:`€${(captureCents/100).toFixed(2)} of the security deposit was captured after claim review. Resolution: ${reason}`});
