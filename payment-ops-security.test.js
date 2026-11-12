@@ -86,11 +86,11 @@ assert(depositReleaseRoute.includes('validateSecurityDepositIntentBinding(intent
   'Admin release must validate provider account, intent ID, booking, amount, and currency');
 assert(depositCaptureRoute.includes('validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId)'),
   'Admin capture must validate provider account, intent ID, booking, amount, and currency');
-assert(depositCaptureRoute.includes("String(captured?.id||'')!==String(intent.id)") &&
-  depositCaptureRoute.includes("captured?.status!=='succeeded'") &&
-  depositCaptureRoute.indexOf("captured?.status!=='succeeded'")<
+assert(depositCaptureRoute.includes('assertConfirmedDepositCapture(captured,{') &&
+  depositCaptureRoute.includes('amountCents:captureCents') &&
+  depositCaptureRoute.indexOf('assertConfirmedDepositCapture(captured,{')<
     depositCaptureRoute.indexOf("depositStatus:'captured'"),
-  'Admin capture cannot be recorded as successful without confirmed Stripe success');
+  'Admin capture must verify Stripe status, amount, booking, and currency before recording success');
 // Cancellation must reject a failed, wrong-payment or wrong-amount refund response
 // before updating DB refund state or finishing the booking cancellation.
 const refundGuard=server.split("refund=await refundDirectCharge(stripe,")[1]?.split("setStripeRefundDetails(booking.bookingId")[0]||'';
