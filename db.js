@@ -539,7 +539,35 @@ const listRentalBookingsStmt = db.prepare(`
   ORDER BY rb.start_date ASC, rb.created_at DESC
 `);
 
+// Prevent edits from reducing stock below the maximum overlapping live holds.
+// Sweep interval boundaries; bookings ending on a date release units that day.
+export function assertRentalListingInventoryCapacity(listingId,totalQuantity){
+  const capacity=Number(totalQuantity);
+  if(!Number.isInteger(capacity)||capacity<0||capacity>100000)
+    throw Object.assign(new Error('Invalid listing inventory quantity'),{code:'INVALID_LISTING_QUANTITY'});
+  const rows=db.prepare(`SELECT start_date AS startDate,end_date AS endDate,quantity
+    FROM rental_bookings WHERE listing_id=? AND
+    (status IN ('confirmed','active') OR
+      (status='pending' AND (payment_status='paid' OR expires_at IS NULL OR expires_at>?
+        OR stripe_payment_intent_id IS NOT NULL OR security_deposit_payment_intent_id IS NOT NULL)))`)
+    .all(String(listingId),new Date().toISOString());
+  const changes=new Map();
+  for(const row of rows){
+    changes.set(row.startDate,(changes.get(row.startDate)||0)+Number(row.quantity));
+    changes.set(row.endDate,(changes.get(row.endDate)||0)-Number(row.quantity));
+  }
+  let inUse=0;
+  for(const day of [...changes.keys()].sort()){
+    inUse+=changes.get(day);
+    if(inUse>capacity)
+      throw Object.assign(new Error('Cannot reduce quantity below reserved inventory'),{code:'INVENTORY_BELOW_RESERVED',reservedQuantity:inUse});
+  }
+  return capacity;
+}
+
 export function upsertRentalListing({ listingId, ownerEmail=null, title, totalQuantity, cancellationPolicy='moderate' }) {
+  const existing=getRentalListing(listingId);
+  if(existing && Number(totalQuantity)<Number(existing.totalQuantity))assertRentalListingInventoryCapacity(listingId,totalQuantity);
   upsertListingStmt.run({
     listing_id: String(listingId),
     owner_email: ownerEmail,
