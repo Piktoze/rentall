@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {liveLaunchReadinessReport,productionConfigReport} from './config.js';
+import {assertProductionConfig,liveLaunchReadinessReport,productionConfigReport} from './config.js';
 
 // No credential literals, provider calls, Railway volume access or real payments.
 const fake=(prefix,mode,name)=>[prefix,mode,name].join('_');
@@ -41,6 +41,10 @@ assert.equal(productionConfigReport(testMode).ready,true,
  'Legacy deployment gate intentionally supports test-mode configuration');
 assert.equal(liveLaunchReadinessReport(testMode).ready,false,
  'A production deployment with test keys must never be marked LIVE launch-ready');
+assert.doesNotThrow(()=>assertProductionConfig({...testMode,RENTINORBIT_STAGING:'true',LEGAL_TEXTS_REVIEWED:''}));
+assert.doesNotThrow(()=>assertProductionConfig(base));
+assert.throws(()=>assertProductionConfig({...base,LEGAL_TEXTS_REVIEWED:''}),
+ {code:'LIVE_LAUNCH_CONFIG_INVALID'},'LIVE startup must enforce the existing launch prerequisites');
 for(const [change,expected] of [
  [{RENTINORBIT_STAGING:'true'},'production_configuration'],
  [{STRIPE_SECRET_KEY:fake('rk','test','syntheticRestrictedKey123')},'stripe_live_secret'],

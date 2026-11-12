@@ -240,6 +240,15 @@ export function assertProductionConfig(env=process.env){
     error.blocking=report.blocking;
     throw error;
   }
+  if(report.deployment&&report.stripe.mode==='live'){
+    const live=liveLaunchReadinessReport(env);
+    if(!live.ready){
+      const error=new Error(`LIVE launch configuration blocked: ${live.blocking.join(', ')}`);
+      error.code='LIVE_LAUNCH_CONFIG_INVALID';
+      error.blocking=live.blocking;
+      throw error;
+    }
+  }
   return report;
 }
 
