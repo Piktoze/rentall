@@ -742,8 +742,12 @@ input:focus, select:focus, textarea:focus{
 .mobility-bg{background:linear-gradient(135deg,#122c45,#1f5078 50%,#65d3ff) !important}
 .adventure-bg{background:linear-gradient(135deg,#112d61,#1655a3 50%,#81bef8) !important}
 
-.listing-card h4,.product-body h3,.plan-price,.kpi-value,.booking-card h3,.customer-booking-head h3{
+.listing-card h4,.product-body h3,.plan-price,.kpi-value,.booking-card h3{
   color:#f4fdf8 !important;
+}
+/* Booking cards have white backgrounds; keep titles readable in all states. */
+.customer-booking-card .customer-booking-head h3{
+  color:#102550 !important;
 }
 .listing-card p,.booking-timeline-item span,.notification-item p,.webhook-filter-summary{
   color:var(--muted) !important;
