@@ -23,4 +23,11 @@ const transfer=src.split("app.post('/api/rentals/bookings/:bookingId/transfer-co
   ?.split("app.get('/api/rentals/bookings/:bookingId/agreement'")[0]||'';
 assert.ok(transfer.includes("requireRole('supplier')")&&transfer.includes("canSupplierManageBooking"),
   'Code-confirm endpoint must be supplier-authenticated and booking-bound');
+const db=fs.readFileSync('./db.js','utf8');
+assert.ok(db.includes("active: new Set(['returned'])"),
+  'Database state machine must not permit active to completed without physical return');
+assert.ok(!db.includes("active: new Set(['returned','completed'])"),
+  'Legacy direct completion transition must remain removed');
+assert.ok(status.includes("code:'DECLINE_REQUIRES_PENDING'"),
+  'Supplier decline must be restricted to pending requests, not approved paid rentals');
 console.log('PASS unconditional code-only rental status transitions');
