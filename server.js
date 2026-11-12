@@ -126,6 +126,7 @@ import {registerPrivacyRequestRoutes} from './modules/privacy-subject-requests-v
 import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-v276.js';
 import {assertPaymentCancellationConsistency} from './modules/stripe-cancellation-consistency-v277.js';
 import {assertExistingRefundCoversCancellation} from './modules/stripe-refund-coverage-v278.js';
+import {assertProviderRefundCoversCancellation} from './modules/stripe-refund-provider-coverage-v281.js';
 import {shouldApplyRefundStatus} from './modules/stripe-refund-status-order-v280.js';
 import {
   calculateBookingPricingForSupplier,
@@ -406,9 +407,21 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
       throw error;
     }
     if(intent.status==='succeeded'){
-      // Existing refund ID may represent only a partial refund. Never declare
-      // the full policy refund complete without covering the required amount.
-      assertExistingRefundCoversCancellation(booking,refundAmount);
+      // A local refund ID and amount cannot prove total settled refunds.
+      // Query all provider refunds for this direct charge before accepting
+      // an existing refund as covering the policy amount.
+      if(booking.stripeRefundId){
+        assertExistingRefundCoversCancellation(booking,refundAmount);
+        const refunds=await stripe.refunds.list(
+          {payment_intent:intent.id,limit:100},
+          {stripeAccount:connection.stripeAccountId}
+        );
+        assertProviderRefundCoversCancellation(booking,refundAmount,refunds);
+      }else if(Number(booking.refundAmount||0)>0){
+        const error=new Error('Untracked earlier refund requires manual Stripe reconciliation');
+        error.code='REFUND_RECONCILIATION_REQUIRED';
+        throw error;
+      }
       if(!booking.stripeRefundId){
         const alreadyRefunded=Math.max(0,Number(booking.refundAmount||0));
         const orderValue=Math.max(0,Number(booking.orderValue||0));
