@@ -3729,6 +3729,31 @@ openLiveSupplierOrder=function(bookingId){
       <div class="supplier-order-instructions"><span>${escapeHtml(uiText('Return notes'))}</span><b>${escapeHtml(String(b.returnNotes||'—'))}</b></div>
     </div>`;
   summary.appendChild(extra);
+  // Read-only audit summary: display only stored booking timestamps.
+  // Code consumption is stored separately and must not be inferred from status.
+  const audit=document.createElement('div');
+  audit.className='supplier-order-card';
+  const fmt=value=>{
+    if(!value)return 'Neužregistruota';
+    const parsed=new Date(value);
+    return Number.isNaN(parsed.getTime())?escapeHtml(String(value)):
+      escapeHtml(new Intl.DateTimeFormat('lt-LT',{dateStyle:'medium',timeStyle:'medium',timeZone:'Europe/Vilnius'}).format(parsed));
+  };
+  const lines=[
+    ['Rezervacija sukurta',fmt(b.createdAt)],
+    ['Užsakymas atnaujintas',fmt(b.updatedAt)],
+    ['Daikto grąžinimas',fmt(b.returnedAt)],
+    ['Atšaukimas',fmt(b.cancelledAt)],
+    ['Mokėjimo būsena',escapeHtml(String(b.paymentStatus||'Nežinoma'))],
+    ['Stripe mokėjimo ID',escapeHtml(String(b.stripePaymentIntentId||'Nėra'))],
+    ['Pinigų grąžinimo būsena',escapeHtml(String(b.refundStatus||'Neatlikta / nenurodyta'))],
+    ['Stripe grąžinimo ID',escapeHtml(String(b.stripeRefundId||'Nėra'))]
+  ];
+  audit.innerHTML='<h3>Užsakymo įvykių suvestinė</h3>'+
+    '<p class="muted">Rodomi saugomi duomenys. Kodo panaudojimo laikas ir veiksmų atlikėjai šioje suvestinėje nepatikrinti.</p>'+
+    '<div class="supplier-order-grid">'+lines.map(([label,value])=>
+      '<div><span>'+escapeHtml(label)+'</span><b>'+value+'</b></div>').join('')+'</div>';
+  summary.appendChild(audit);
 };
 
 // Review modal API.
