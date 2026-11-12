@@ -69,6 +69,7 @@ for(const suite of [
   'stripe-refund-provider-coverage-v281.test.mjs',
   'booking-cancellation-singleflight-v282.test.mjs',
   'stripe-deposit-capture-proof-v283.test.mjs',
+  'demo-payout-state-v284.test.mjs',
   'stripe-terminal-payment-ui-v238.test.mjs',
   'supplier-order-actions-layout-v239.test.mjs',
   'agreement-localization-state-v240.test.mjs',
