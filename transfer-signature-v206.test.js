@@ -88,6 +88,12 @@ try{
  assert.match(rotated.code,/^\d{6}$/);
  assert.equal(verifyAndConsumeRentalTransferCode(secondId,'pickup',rotated.code).ok,true);
  assert.equal(getRentalBookingById(secondId).status,'active');
+ // Reject re-signing after handover even when called directly from an internal code path.
+ const acceptedBefore=getRentalAgreementAcceptanceAudit(secondId);
+ errorCode(()=>acceptRentalAgreement(secondId,'customer',{actorEmail:'second@testing.invalid',authMethod:'session'}),'AGREEMENT_BOOKING_CLOSED');
+ errorCode(()=>acceptRentalAgreement(secondId,'supplier',{actorEmail:'supplier@testing.invalid',authMethod:'session'}),'AGREEMENT_BOOKING_CLOSED');
+ assert.deepEqual(getRentalAgreementAcceptanceAudit(secondId),acceptedBefore,
+   'Closed booking signatures and audit evidence must remain immutable');
  errorCode(()=>verifyAndConsumeRentalTransferCode(secondId,'pickup',rotated.code),'TRANSFER_NOT_READY');
  // Neither a second supplier PIN nor a wrong renter PIN can complete the transfer.
  errorCode(()=>issueRentalTransferCode(id,'pickup','supplier'),'INVALID_TRANSFER_PURPOSE');
