@@ -601,6 +601,13 @@ try{
    data:{purpose:'pickup',code:lifecyclePin.body.code}});
  status(handover,200,'Full-cycle item handover');
  assert.equal(handover.body.booking.status,'active');
+ const prematureCompletion=await api(fullRoute+'/status',{method:'POST',cookie:supplierCookie,
+   syntheticClientIp:'192.0.2.83',data:{status:'completed'}});
+ status(prematureCompletion,409,'Active rental cannot become completed without supplier return confirmation');
+ const beforeReturnSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{assert.equal(beforeReturnSnapshot.prepare('SELECT status FROM rental_bookings WHERE booking_id=?').get(pendingId).status,'active');}
+ finally{beforeReturnSnapshot.close()}
+
  status(await api(fullRoute+'/transfer-confirm',{method:'POST',cookie:supplierCookie,
    data:{purpose:'pickup',code:lifecyclePin.body.code}}),409,'Full-cycle pickup PIN replay denied');
  const fullReturn=await api(fullRoute+'/return-confirm',{method:'POST',cookie:supplierCookie,
@@ -683,6 +690,22 @@ try{
    assert.equal(row.stripe_refund_id,null,'Status bypass must not invent a refund provider record');
  }finally{bypassRead.close()}
  console.log('PASS paid €100 generic status cancellation bypass blocked; dedicated refund flow remains required');
+ // Supplier refusal belongs only to a pending request. Once approved, it
+ // must use dedicated cancellation and refund handling instead.
+ const lateDecline=await api('/api/rentals/bookings/'+payId+'/status',{
+   method:'POST',cookie:supplierCookie,syntheticClientIp:'192.0.2.84',
+   data:{status:'declined',reason:'Already-approved fixture'}
+ });
+ status(lateDecline,409,'Approved paid reservation cannot be declined instead of cancelled');
+ assert.equal(lateDecline.body.code,'DECLINE_REQUIRES_PENDING');
+ const declinedSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=declinedSnapshot.prepare('SELECT status,payment_status,refund_amount FROM rental_bookings WHERE booking_id=?').get(payId);
+   assert.equal(row.status,'confirmed');
+   assert.equal(row.payment_status,'paid');
+   assert.equal(row.refund_amount,null);
+ }finally{declinedSnapshot.close()}
+ console.log('PASS HTTP supplier decline restricted to pending: approved paid booking unchanged');
  // A supplier-initiated cancellation after a completed demo payment must
  // refund the full amount once and reject further cancellation/refund attempts.
  const refunded=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
