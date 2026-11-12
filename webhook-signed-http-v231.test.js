@@ -48,6 +48,15 @@ createRentalBookingAtomic({bookingId,listingId:'webhook-e2e-listing',
  customerEmail:'webhook-e2e-customer@example.invalid',orderValue:100});
 setBookingPaymentDetails({bookingId,paymentIntentId,paymentStatus:'requires_payment_method',
  platformFeeAmount:15,supplierAmount:85,paymentProvider:'stripe'});
+// Independent local security deposit fixture; no external Stripe API calls.
+const depositBookingId='webhook-e2e-deposit';
+const depositPi='pi_test_webhook_deposit';
+createRentalBookingAtomic({bookingId:depositBookingId,listingId:'webhook-e2e-listing',
+ startDate:'2099-11-01',endDate:'2099-11-02',quantity:1,status:'confirmed',
+ customerEmail:'webhook-deposit-customer@example.invalid',orderValue:100});
+db.prepare("UPDATE rental_bookings SET security_deposit_amount=50,security_deposit_payment_intent_id=?,security_deposit_status='authorized',security_deposit_provider_status='requires_capture' WHERE booking_id=?")
+ .run(depositPi,depositBookingId);
+
 // Persistent retry claims are conditional SQL updates, not a read/write race.
 const retryId='evt_retry_claim_atomic_e2e';
 assert.equal(beginWebhookEvent({eventId:retryId,type:'payment_intent.succeeded'}).duplicate,false);
@@ -239,6 +248,31 @@ try{
  assert.equal(refundState().payment_status,'paid',
    'Canceled refund must not falsely mark payment refunded');
 
+ const depositEvent=(id,type,account=accountId)=>({
+   id,type,account,livemode:false,
+   data:{object:{id:depositPi,object:'payment_intent',amount:5000,currency:'eur',
+     status:type==='payment_intent.canceled'?'canceled':'requires_capture',
+     metadata:{bookingId:depositBookingId,purpose:'security_deposit'}}}
+ });
+ const depositStatus=()=>{
+   const snapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+   try{return snapshot.prepare("SELECT security_deposit_status AS status,security_deposit_provider_status AS provider FROM rental_bookings WHERE booking_id=?").get(depositBookingId)}
+   finally{snapshot.close()}
+ };
+ assert.equal((await post(depositEvent('evt_dep_canceled','payment_intent.canceled'),{connect:true})).status,200);
+ assert.equal(depositStatus().status,'released','Verified cancellation releases deposit');
+ assert.equal((await post(depositEvent('evt_dep_stale_authorized','payment_intent.amount_capturable_updated'),{connect:true})).status,200);
+ assert.equal(depositStatus().status,'released','Late authorized event must not reopen released deposit');
+ assert.equal(depositStatus().provider,'canceled','Late authorized event must not downgrade provider status');
+ const capturedDb=new Database(dbPath);
+ try{capturedDb.prepare("UPDATE rental_bookings SET security_deposit_status='captured',security_deposit_provider_status='succeeded' WHERE booking_id=?").run(depositBookingId)}
+ finally{capturedDb.close()}
+ assert.equal((await post(depositEvent('evt_dep_stale_canceled_after_capture','payment_intent.canceled'),{connect:true})).status,200);
+ assert.equal(depositStatus().status,'captured','Late canceled event must not erase captured deposit');
+ assert.equal(depositStatus().provider,'succeeded');
+ assert.equal((await post(depositEvent('evt_dep_stale_authorized_after_capture','payment_intent.amount_capturable_updated'),{connect:true})).status,200);
+ assert.equal(depositStatus().status,'captured','Late authorized event must not reopen captured deposit');
+ console.log('PASS signed security deposit webhook ordering: released and captured remain terminal under stale events');
  console.log('PASS signed refund webhook HTTP: account, intent and amount binding; settled, failed and out-of-order states');
  const recorded=read().events;
  assert.equal(recorded.find(x=>x.event_id===valid.id)?.status,'processed');
