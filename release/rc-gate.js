@@ -72,6 +72,7 @@ for(const suite of [
   'demo-payout-state-v284.test.mjs',
   'atomic-booking-validation-v285.test.mjs',
   'inventory-reduction-v286.test.mjs',
+  'post-refund-status-gate-v287.test.mjs',
   'stripe-terminal-payment-ui-v238.test.mjs',
   'supplier-order-actions-layout-v239.test.mjs',
   'agreement-localization-state-v240.test.mjs',
