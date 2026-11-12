@@ -28,6 +28,12 @@ assert.ok(db.includes("active: new Set(['returned'])"),
   'Database state machine must not permit active to completed without physical return');
 assert.ok(!db.includes("active: new Set(['returned','completed'])"),
   'Legacy direct completion transition must remain removed');
+assert.ok(status.includes("code:'APPROVAL_REPLAY_BLOCKED'"),
+  'Repeated confirmation must not extend the payment deadline');
+const replayGuard=status.indexOf("code:'APPROVAL_REPLAY_BLOCKED'");
+const deadlineReset=status.indexOf("UPDATE rental_bookings SET expires_at=?");
+assert.ok(replayGuard>=0 && deadlineReset>replayGuard,
+  'Confirmation replay guard must precede payment deadline update');
 assert.ok(status.includes("code:'DECLINE_REQUIRES_PENDING'"),
   'Supplier decline must be restricted to pending requests, not approved paid rentals');
 console.log('PASS unconditional code-only rental status transitions');
