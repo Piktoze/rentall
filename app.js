@@ -6064,6 +6064,76 @@ async function loadUnifiedCustomerBookings(){
   list.querySelectorAll('.v203-select-booking').forEach(button=>{
     button.addEventListener('click',()=>selectBookingForCommand(button.dataset.id,true));
   });
+  // Booking-scoped renter messages. The authenticated server session chooses
+  // sender identity; never send a caller-supplied sender email or role.
+  list.querySelectorAll('.v172-booking-message').forEach(button=>{
+    button.addEventListener('click',async event=>{
+      event.preventDefault();
+      if(button.disabled)return;
+      const card=button.closest('.customer-booking-card');
+      if(!card)return;
+      let panel=card.querySelector('.rio-booking-chat');
+      if(panel){panel.hidden=!panel.hidden;return}
+      button.disabled=true;
+      panel=document.createElement('section');
+      panel.className='rio-booking-chat';
+      panel.setAttribute('aria-label','Rezervacijos žinutės');
+      panel.style.cssText='margin-top:12px;padding:14px;border:1px solid #b9ccec;border-radius:12px;background:#eef4ff;color:#102550';
+      panel.innerHTML='<h4>Žinutės nuomotojui</h4><div class="rio-chat-history" aria-live="polite"></div><form class="rio-chat-form"><label for="rio-chat-text-'+escapeHtml(button.dataset.id)+'">Jūsų žinutė</label><textarea id="rio-chat-text-'+escapeHtml(button.dataset.id)+'" required maxlength="2000" rows="3" style="width:100%"></textarea><div><button type="submit" class="primary">Siųsti</button> <span class="rio-chat-status" role="status"></span></div></form>';
+      card.appendChild(panel);
+      const history=panel.querySelector('.rio-chat-history');
+      const form=panel.querySelector('form');
+      const input=form.querySelector('textarea');
+      const send=form.querySelector('button');
+      const status=form.querySelector('.rio-chat-status');
+      const render=messages=>{
+        history.replaceChildren();
+        for(const msg of messages||[]){
+          const p=document.createElement('p');
+          const who=document.createElement('strong');
+          who.textContent=msg.senderEmail===String(currentServerUser?.email||'').toLowerCase()?'Jūs: ':'Kita šalis: ';
+          p.append(who,document.createTextNode(String(msg.body||'')));
+          history.appendChild(p);
+        }
+        if(!history.childNodes.length)history.textContent='Žinučių dar nėra.';
+      };
+      let conversationId='';
+      try{
+        const created=await apiJson('/api/conversations',{method:'POST',body:JSON.stringify({listingId:button.dataset.listingId,bookingId:button.dataset.id})});
+        conversationId=created.conversation?.conversationId||'';
+        if(!conversationId)throw new Error('Pokalbio sukurti nepavyko');
+        const data=await apiJson('/api/conversations/'+encodeURIComponent(conversationId)+'/messages');
+        render(data.messages);
+      }catch(err){
+        status.textContent=String(err.message||'Nepavyko atidaryti žinučių.');
+        form.hidden=true;
+      }finally{button.disabled=false}
+      let pendingKey=null,pendingBody='';
+      form.addEventListener('submit',async e=>{
+        e.preventDefault();
+        const body=input.value.trim();
+        if(!body||body.length>2000||!conversationId)return;
+        if(send.disabled)return;
+        if(!pendingKey||pendingBody!==body){
+          pendingKey='rio_'+crypto.randomUUID();
+          pendingBody=body;
+        }
+        send.disabled=true;
+        status.textContent='Siunčiama…';
+        try{
+          await apiJson('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
+            method:'POST',body:JSON.stringify({body,clientMessageId:pendingKey})
+          });
+          pendingKey=null;pendingBody='';
+          input.value='';
+          const data=await apiJson('/api/conversations/'+encodeURIComponent(conversationId)+'/messages');
+          render(data.messages);
+          status.textContent='Išsiųsta.';
+        }catch(err){status.textContent=String(err.message||'Nepavyko išsiųsti. Bandykite dar kartą.')}
+        finally{send.disabled=false}
+      });
+    });
+  });
   // A confirmed unpaid booking must remain payable when the customer returns
   // after supplier approval or reopens the page on another device.
   // Resume payment in the selected renter booking; never navigate away and
