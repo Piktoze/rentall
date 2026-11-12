@@ -130,6 +130,7 @@ import {assertProviderRefundCoversCancellation} from './modules/stripe-refund-pr
 import {createBookingCancellationSingleFlight} from './modules/booking-cancellation-singleflight-v282.js';
 import {shouldApplyRefundStatus} from './modules/stripe-refund-status-order-v280.js';
 import {assertConfirmedDepositCapture} from './modules/stripe-deposit-capture-proof-v283.js';
+import {demoPayoutStatus} from './modules/demo-payout-state-v284.js';
 import {
   calculateBookingPricingForSupplier,
   getBookingPricingSnapshot,
@@ -353,6 +354,18 @@ function canSupplierManageBooking(user, bookingId){
   return !!listing && String(listing.ownerEmail||'').toLowerCase()===String(user.email||'').toLowerCase();
 }
 
+
+function updateDemoPayoutAfterReturn(booking,{completed=false}={}){
+  if(booking?.paymentProvider!=='demo')return;
+  const hasOpenDispute=!!db.prepare(
+    "SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1"
+  ).get(booking.bookingId);
+  const status=demoPayoutStatus(booking,{hasOpenDispute,completed});
+  setBookingPayoutDetails(booking.bookingId,{
+    status,amount:Number(booking.supplierAmount||0),
+    reference:`demo_po_${booking.bookingId}`
+  });
+}
 
 async function handleStripeCancellationForBooking(booking, refundAmount){
   if(booking?.paymentProvider==='demo' || String(booking?.stripePaymentIntentId||'').startsWith('demo_pi_')){
@@ -2708,7 +2721,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       }
     }
     if(requestedStatus==='returned' && booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
-      setBookingPayoutDetails(booking.bookingId,{status:'ready',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
+      updateDemoPayoutAfterReturn(getRentalBookingById(booking.bookingId));
     }
     if(requestedStatus==='completed' && booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
       const latest=getRentalBookingById(booking.bookingId);
@@ -2716,7 +2729,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
         setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:latest.securityDepositPaymentIntentId||`demo_dep_${crypto.randomUUID()}`,providerStatus:'canceled',depositStatus:'released'});
         try{resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:'Demo deposit released at completion.'})}catch{}
       }
-      setBookingPayoutDetails(booking.bookingId,{status:'paid',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
+      updateDemoPayoutAfterReturn(getRentalBookingById(booking.bookingId),{completed:true});
     }
 
     const availability = getAvailability({
@@ -2873,7 +2886,7 @@ app.post('/api/rentals/bookings/:bookingId/return', requireRole('supplier','admi
       });
     }
     if(booking.paymentProvider==='demo' && booking.paymentStatus==='paid'){
-      setBookingPayoutDetails(booking.bookingId,{status:'ready',amount:Number(booking.supplierAmount||0),reference:`demo_po_${booking.bookingId}`});
+      updateDemoPayoutAfterReturn(getRentalBookingById(booking.bookingId));
     }
     if(booking.customerEmail) createRentalNotification({uniqueKey:`booking:${booking.bookingId}:returned:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId:booking.bookingId,type:'booking.returned',title:'Item return recorded',message:`Return recorded as ${booking.returnCondition||'good'}.`});
     if(listing?.ownerEmail) createRentalNotification({uniqueKey:`booking:${booking.bookingId}:returned:supplier`,audience:'supplier',userEmail:listing.ownerEmail,bookingId:booking.bookingId,type:'booking.returned',title:'Item return recorded',message:`Return recorded as ${booking.returnCondition||'good'}.`});
@@ -3344,6 +3357,11 @@ app.post('/api/rentals/disputes', simpleRateLimit({windowMs:60000,max:10,keyPref
 
     const safeOpenedBy=supplierAllowed ? 'supplier' : 'customer';
     const dispute=createRentalDispute({bookingId,openedBy:safeOpenedBy,reason:safeReason,details:safeDetails});
+    // A dispute filed AFTER physical return must revoke a premature demo
+    // payout-ready label. This never implies reversing a real Stripe payout.
+    if(booking.paymentProvider==='demo'){
+      updateDemoPayoutAfterReturn(getRentalBookingById(bookingId));
+    }
     // The dispute is already persisted. Failure to notify either party must
     // not erase that result or prevent the other party's notification.
     const listing=getRentalListing(booking.listingId);
