@@ -2,7 +2,7 @@
 (function(){
  let current=null;
  const tr=k=>window.RentInOrbitI18n?.t?.(k)||k;
- const text=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=tr(v)};
+ const text=(id,v)=>{const e=document.getElementById(id);if(e){e.removeAttribute('data-i18n-text');e.textContent=tr(v)}};
  const rawText=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=String(v??'')};
  function choose(b){
   current=b||null;
