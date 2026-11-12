@@ -3,6 +3,16 @@
 **Parengta:** 2026-11-09. **Statusas:** vykdymo instrukcija, NE įvykdytų E2E testų ataskaita.
 **Tikslas:** trečiadienį vienu valdomu Work seansu atlikti likusius realius įrodymus ir priimti tik įrodymais pagrįstą GO/NO-GO. Nebeplėsti kosmetinių darbų.
 
+## 2026-11-13 00:38 LT – naujausias read-only preflight (viršesnis už istorinius įrašus)
+
+- GitHub `staging/v203` HEAD: `5706bb6af92668eec6bd43755418b14612bb6117` (branch API); šio vykdymo metu naujų commit prieš šį dokumento atnaujinimą nebuvo.
+- Railway `nurturing-strength / staging`: deployment `ebb2cc02-397f-4881-a195-33fe7a617c2d` = SUCCESS, commit `5706bb6`, 1/1 replika online, 0 warning/critical, 0 nesėkmingų diegimų per 8 val., 0 pendingWork. Tai **nėra** Chromium ar Stripe TEST įrodymas.
+- Railway release gate **27/27 PASS** ankstesniame šio commit build žurnale, užfiksuota [issue #3](https://github.com/Piktoze/rentall/issues/3#issuecomment-6826703688). Šiame vykdyme testai iš naujo nepaleisti.
+- Chromium: tiesiogiai patikrintas istorinis [run 42686094634](https://github.com/Piktoze/rentall/actions/runs/42686094634), `head_sha=a49c2893`, `conclusion=failure` (13/14 pagal ankstesnę testo suvestinę). Visų naujesnių `push` vykdymų sąrašo per prieinamą GitHub fetch API gauti nepavyko (workflow runs collection endpoint neleidžiamas). **Dabartinio SHA Chromium 14/14 = NOT VERIFIED, ne FAIL.** Tikrinti pilną [Actions workflow](https://github.com/Piktoze/rentall/actions/workflows/isolated-browser-e2e.yml) sąrašą ir konkretų run/SHA/artefaktą; nepainioti su Railway.
+- [Issue #3](https://github.com/Piktoze/rentall/issues/3) ir [issue #2](https://github.com/Piktoze/rentall/issues/2) tebėra atviri. B1 gyvas €100 TEST Direct Charge / €15 fee / signed webhook / refund; B2 dviejų paskyrų naršyklinis ciklas; B3 galutinis restore ir operacinis preflight; B4 teisinis patvirtinimas; B5 GO sprendimas – **neužbaigti**.
+- **Work / vartotojos veiksmas:** autentifikuotas dviejų paskyrų UI, Stripe TEST mokėjimas/refundas, galutiniai juridiniai sprendimai. Be atskiro leidimo nieko iš šių veiksmų nevykdyti. Viešas mokamas MVP: **NO-GO**.
+- Šis įrašas tik dokumentacinis: nėra naujo Chromium PASS, Stripe operacijos, migracijos ar staging diegimo įrodymas. Toliau esantys istoriniai commit/deploy ID nekeičia šios būsenos.
+
 ## 2026-11-11 – patikrinta būsena šiame tęsinyje (naujausia, viršesnė už 2026-11-10 duomenis)
 
 - **GitHub**: tik `Piktoze/rentall` / `staging/v203`; naujausias Railway matytas commit `7c11105afe1e1947943ed7a48a2fc1f512c683e9`, keitęs tik šį Work preflight dokumentą. Šiame etape **jokių naujų kodo pakeitimų nepatvirtinta**.
