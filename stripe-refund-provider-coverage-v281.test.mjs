@@ -24,7 +24,7 @@ denied({...base,refundAmount:100},100,
 denied({...base,refundAmount:100},100,
   page(row('re_test_first',2000),row('re_test_second',8000,'canceled')),
   'Canceled 80 must not be considered refunded');
-denied({...base,refundAmount:100},100,
+denied({...base,refundAmount:99},100,
   page(row('re_test_first',2000),row('re_test_second',8000,'succeeded')),
   'Wrong local total cannot be accepted');
 denied(base,20,page(row('re_not_saved',2000)),'Saved refund ID must be present');
