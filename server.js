@@ -42,6 +42,7 @@ import {
   seedDefaultUsers,
   saveFullRentalListing,
   listPublicRentalListings,
+  getPublicRentalListing,
   listOwnerRentalListings,
   archiveOwnerRentalListing,
   deleteOwnerRentalListing,
@@ -1097,8 +1098,8 @@ function pageShell({req,title,description,body,canonicalPath}){
 }
 
 app.get('/listing/:listingId/:slug?',(req,res)=>{
-  const listing=getFullRentalListing(req.params.listingId);
-  if(!listing||listing.moderationStatus==='blocked'||listing.moderationStatus==='paused')return res.status(404).send('Listing not found');
+  const listing=getPublicRentalListing(req.params.listingId);
+  if(!listing)return res.status(404).send('Listing not found');
   const origin=publicOrigin(req),canonicalPath=`/listing/${encodeURIComponent(listing.id)}/${seoSlug(listing.title)}`;
   const lang=pageLanguage(req),seoCopy=LISTING_SEO_COPY[lang]||LISTING_SEO_COPY.en;
   const location=[listing.city,listing.country].filter(Boolean).join(', '),description=String(listing.description||seoCopy.fallbackDescription).slice(0,160);
@@ -1631,7 +1632,7 @@ app.get('/api/listings', simpleRateLimit({windowMs:60000,max:180,keyPrefix:'publ
 // Never trust cached ownerType or a caller-provided 'verified' attribute.
 app.get('/api/listings/:listingId/trader-disclosure',
  simpleRateLimit({windowMs:60000,max:120,keyPrefix:'public-trader-status'}),(req,res)=>{
- const listing=listPublicRentalListings().find(item=>String(item.id)===String(req.params.listingId));
+ const listing=getPublicRentalListing(req.params.listingId);
  if(!listing)return res.status(404).json({error:'Skelbimas nerastas.'});
  const trader=getSupplierTraderDisclosure(listing.ownerEmail);
  res.set('Cache-Control','no-store');
@@ -3198,7 +3199,7 @@ app.post('/api/conversations/:conversationId/messages',requireRole('customer','s
 });
 
 app.get('/api/listings/:listingId/reputation',(req,res)=>{
-  const listing=getFullRentalListing(req.params.listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
+  const listing=getPublicRentalListing(req.params.listingId);if(!listing)return res.status(404).json({error:'Listing not found'});
   const payoutConnection=getDirectMerchantConnectionByEmail(db,listing.ownerEmail);
   const verifiedSupplier=directMerchantReady(payoutConnection);
   res.json({supplier:getSupplierReputation(listing.ownerEmail),verifiedSupplier});
@@ -3221,7 +3222,8 @@ app.get('/api/rentals/reviews', (req, res) => {
   try {
     const listingId=req.query.listingId;
     if (!listingId) return res.status(400).json({ error:'listingId is required' });
-    res.json(listRentalReviews(listingId));
+    const {reviews,summary}=listRentalReviews(listingId);
+    res.json({reviews:reviews.map(({bookingId,...review})=>review),summary});
   } catch (err) {
     res.status(400).json({ error:err.message });
   }
@@ -3231,7 +3233,11 @@ app.post('/api/rentals/reviews', simpleRateLimit({windowMs:60000,max:20,keyPrefi
   try{
     const {bookingId,rating,comment=null}=req.body||{};
     if(!bookingId || !rating) return res.status(400).json({error:'bookingId and rating are required'});
-    if(!bookingAccessAllowed(req,bookingId)){
+    const user=sessionUser(req);
+    const booking=getRentalBookingById(bookingId);
+    const accountRenter=!!(user?.email&&String(booking?.customerEmail||'').toLowerCase()===String(user.email).toLowerCase());
+    const guestRenter=!user&&!!verifyBookingPaymentToken(bookingId,req.body?.accessToken||req.query?.accessToken||'');
+    if(!accountRenter&&!guestRenter){
       return res.status(403).json({error:'Booking access denied'});
     }
     const safeRating=Number(rating);

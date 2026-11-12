@@ -1505,13 +1505,16 @@ const upsertFullListingStmt=db.prepare(`
   WHERE rental_listings.owner_email = excluded.owner_email COLLATE NOCASE
 `);
 
-const listPublicFullListingsStmt=db.prepare(`
-  SELECT data_json
-  FROM rental_listings
-  WHERE COALESCE(moderation_status,'active')='active'
+const publicListingFilter=`COALESCE(moderation_status,'active')='active'
     AND COALESCE(lifecycle_status,'active')='active'
-    AND (availability_confirmed_at IS NULL OR datetime(availability_confirmed_at) >= datetime('now','-30 days'))
+    AND (availability_confirmed_at IS NULL OR datetime(availability_confirmed_at) >= datetime('now','-30 days'))`;
+
+const listPublicFullListingsStmt=db.prepare(`
+  SELECT data_json FROM rental_listings WHERE ${publicListingFilter}
   ORDER BY COALESCE(updated_at,created_at) DESC
+`);
+const getPublicFullListingStmt=db.prepare(`
+  SELECT data_json FROM rental_listings WHERE listing_id=? AND ${publicListingFilter}
 `);
 
 const listOwnerFullListingsStmt=db.prepare(`
@@ -1656,6 +1659,10 @@ export function getFullRentalListing(listingId){
 
 export function listPublicRentalListings(){
   return listPublicFullListingsStmt.all().map(parseListingRow).filter(Boolean);
+}
+
+export function getPublicRentalListing(listingId){
+  return parseListingRow(getPublicFullListingStmt.get(String(listingId)));
 }
 
 export function listOwnerRentalListings(ownerEmail){

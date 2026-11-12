@@ -1401,14 +1401,14 @@ function renderUniversalListings(items=loadUniversalListings()){
   grid.innerHTML=items.map(l=>`
     <div class="listing-card">
       <small>${escapeHtml(rioTraderDisclosureText(l).title)} · ${escapeHtml(l.city||'')}</small>
-      <h4>${l.title}</h4>
-      <p>${l.description||'Local rental listing'}</p>
+      <h4>${escapeHtml(l.title)}</h4>
+      <p>${escapeHtml(l.description||'Local rental listing')}</p>
       <div class="listing-meta">
-        <div><span>Available</span><b>${l.quantity}</b></div>
+        <div><span>Available</span><b>${Number(l.quantity||0)}</b></div>
         <div><span>Per day</span><b>€${Number(l.priceDay||0).toFixed(2)}</b></div>
         <div><span>Per week</span><b>${l.priceWeek?`€${Number(l.priceWeek).toFixed(2)}`:'—'}</b></div>
         <div><span>Deposit</span><b>${l.deposit?`€${Number(l.deposit).toFixed(0)}`:'—'}</b></div>
-        <div><span>Delivery</span><b>${l.delivery}</b></div>
+        <div><span>Delivery</span><b>${escapeHtml(l.delivery)}</b></div>
       </div>
     </div>`).join('');
 }
@@ -3803,25 +3803,25 @@ async function loadAdminDashboard(){
 
   document.getElementById('adminListingsBody').innerHTML=data.listings.map(l=>`
     <tr>
-      <td><b>${l.title}</b><small>${l.listingId}</small></td>
-      <td>${l.ownerEmail||'—'}</td>
-      <td><span class="status ${l.moderationStatus}">${l.moderationStatus}</span><small>${escapeHtml(l.lifecycleStatus||'active')} · ${escapeHtml(l.bookingMode||'request')}</small></td>
+      <td><b>${escapeHtml(l.title)}</b><small>${escapeHtml(l.listingId)}</small></td>
+      <td>${escapeHtml(l.ownerEmail||'—')}</td>
+      <td><span class="status ${escapeHtml(l.moderationStatus)}">${escapeHtml(l.moderationStatus)}</span><small>${escapeHtml(l.lifecycleStatus||'active')} · ${escapeHtml(l.bookingMode||'request')}</small></td>
       <td>
         <div class="moderation-actions">
-          <button class="mini-action admin-listing-status" data-id="${l.listingId}" data-status="active">Activate</button>
-          <button class="mini-action admin-listing-status" data-id="${l.listingId}" data-status="paused">Pause</button>
-          <button class="mini-action decline admin-listing-status" data-id="${l.listingId}" data-status="blocked">Block</button>
+          <button class="mini-action admin-listing-status" data-id="${escapeHtml(l.listingId)}" data-status="active">Activate</button>
+          <button class="mini-action admin-listing-status" data-id="${escapeHtml(l.listingId)}" data-status="paused">Pause</button>
+          <button class="mini-action decline admin-listing-status" data-id="${escapeHtml(l.listingId)}" data-status="blocked">Block</button>
         </div>
       </td>
     </tr>`).join('') || '<tr><td colspan="4">No listings.</td></tr>';
 
   document.getElementById('adminDisputesBody').innerHTML=data.disputes.map(d=>`
     <tr>
-      <td>${d.disputeId}</td>
-      <td>${d.bookingId}</td>
-      <td><b>${d.reason}</b><small>${d.details||''}</small></td>
-      <td>${d.status}</td>
-      <td>${d.status==='open'?`<button class="mini-action accept resolve-dispute-btn" data-id="${d.disputeId}">Resolve</button>`:'—'}</td>
+      <td>${escapeHtml(d.disputeId)}</td>
+      <td>${escapeHtml(d.bookingId)}</td>
+      <td><b>${escapeHtml(d.reason)}</b><small>${escapeHtml(d.details||'')}</small></td>
+      <td>${escapeHtml(d.status)}</td>
+      <td>${d.status==='open'?`<button class="mini-action accept resolve-dispute-btn" data-id="${escapeHtml(d.disputeId)}">Resolve</button>`:'—'}</td>
     </tr>`).join('') || '<tr><td colspan="5">No disputes.</td></tr>';
 
   document.querySelectorAll('.admin-listing-status').forEach(btn=>{

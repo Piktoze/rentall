@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {getPolicyPage,HELP_CENTER_COPY} from '../modules/help-center-content-v177.js';
 
 // Uses only the CI runner's temporary SQLite database and local HTTP server.
 // No Stripe key, staging server or external account is required.
@@ -40,4 +41,43 @@ test.describe('Isolated CI real-browser safety gate',()=>{
     const response=await request.get('/api/bookings/not-a-real-booking');
     expect([401,403,404]).toContain(response.status());
   });
+
+  test('admin renders listing and dispute input as plain text',async({page})=>{
+    const markup='<img src=x data-audit-injected>';
+    await page.route('**/api/admin/dashboard',route=>route.fulfill({json:{
+      kpis:{listings:1,activeListings:1,bookings:1,openDisputes:1,gmv:100},
+      listings:[{listingId:'synthetic-listing',title:markup,moderationStatus:'active'}],
+      disputes:[{disputeId:'synthetic-dispute',bookingId:'synthetic-booking',reason:markup,details:markup,status:'open'}]
+    }}));
+    await page.goto('/');
+    await page.evaluate(()=>window.loadAdminDashboard());
+    await expect(page.locator('#adminListingsBody b')).toHaveText(markup);
+    await expect(page.locator('#adminDisputesBody b')).toHaveText(markup);
+    await expect(page.locator('[data-audit-injected]')).toHaveCount(0);
+  });
 });
+
+for(const language of ['lt','en','es','de','ru']){
+  test(`mobile navigation and public pages support ${language}`,async({page})=>{
+    await page.setViewportSize({width:390,height:844});
+    await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
+    await page.goto('/');
+    await page.locator('#lang').selectOption(language);
+    await expect(page.locator('html')).toHaveAttribute('lang',language);
+    await expect(page.locator('a[data-legal-link="/terms"]').first()).toHaveAttribute('href',`/terms?lang=${language}`);
+    const listing=page.locator('[data-detail-id="ci-drill-discovery"]');
+    await listing.click();
+    await expect(page.locator('#listingDetailModal')).toBeVisible();
+    await page.locator('#closeListingDetailModal').click();
+    await page.locator('[data-availability-id="ci-drill-discovery"]').click();
+    await expect(page.locator('#availabilityModal')).toBeVisible();
+    await page.locator('#closeAvailabilityModal').click();
+    for(const name of ['terms','privacy','cookies','fees','help']){
+      const response=await page.goto(`/${name}?lang=${language}`);
+      expect(response.status()).toBe(200);
+      await expect(page.locator('html')).toHaveAttribute('lang',language);
+      const title=name==='help'?HELP_CENTER_COPY[language].pageTitle:getPolicyPage(language,name).title;
+      await expect(page.locator('h1')).toHaveText(title);
+    }
+  });
+}

@@ -21,12 +21,14 @@ const previous={...process.env};
 for(const k of Object.keys(process.env)){if(!(k in env))delete process.env[k];}
 Object.assign(process.env,env);
 const {db,createAppUser,upsertRentalListing,createRentalBookingAtomic,
-  setBookingPaymentDetails,createRentalAgreement}=await import('./db.js');
+  setBookingPaymentDetails,createRentalAgreement,saveFullRentalListing}=await import('./db.js');
 const administrator='api-e2e-admin@example.invalid',
   supplier='api-e2e-supplier@example.invalid',renter='api-e2e-renter@example.invalid',
   outsider='api-e2e-outsider@example.invalid',otherSupplier='api-e2e-second-supplier@example.invalid',password='Testing12345!',id='api-e2e-1';
 for(const [email,role] of [[administrator,'admin'],[supplier,'supplier'],[otherSupplier,'supplier'],[renter,'customer'],[outsider,'customer']])
   createAppUser({email,password,role,displayName:'E2E Test'});
+saveFullRentalListing({id:'private-prelaunch-test',title:'Synthetic unpublished listing',
+  quantity:1,priceDay:100,lifecycleStatus:'prelaunch'},supplier);
 upsertRentalListing({listingId:'api-e2e-listing',ownerEmail:supplier,title:'Temporary API test item',totalQuantity:1});
 createRentalBookingAtomic({bookingId:id,listingId:'api-e2e-listing',startDate:'2099-06-01',
   endDate:'2099-06-02',quantity:1,status:'confirmed',customerEmail:renter,customerName:'API Renter',orderValue:100});
@@ -451,6 +453,9 @@ try{
  status(publicTraderListings,200,'Public listings available with trader disclosure');
  const publicListing=publicTraderListings.body.listings.find(item=>item.id===listingBase.id);
  assert.ok(publicListing,'Published supplier listing present publicly');
+ status(await api('/listing/'+listingBase.id),200,'Published listing has a public page');
+ status(await api('/listing/private-prelaunch-test'),404,'Direct URL must not expose an unpublished listing');
+ status(await api('/api/listings/private-prelaunch-test/reputation'),404,'Public reputation must not expose an unpublished listing');
  assert.equal(publicListing.supplierTraderStatus,'trader');
  assert.equal(publicListing.supplierTraderVerified,false);
  assert.equal(publicListing.supplierPublicIdentity,null,'Unverified submitted trader contact data must stay private');
@@ -795,6 +800,21 @@ try{
  status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
    data:{returnCondition:'good'}}),409,'Return cannot be repeated');
  assert.equal(returned.body.booking.status,'returned');
+ const listingReview={bookingId:id,rating:5,comment:'Synthetic renter review'};
+ for(const cookie of [supplierCookie,adminCookie,outsiderCookie,'']){
+   status(await api('/api/rentals/reviews',{method:'POST',cookie,data:listingReview}),403,
+     'Only the renter or their unauthenticated guest link can review the rental');
+ }
+ status(await api('/api/rentals/reviews',{method:'POST',cookie:renterCookie,data:listingReview}),200,
+   'The renter can review a returned rental');
+ status(await api('/api/rentals/reviews',{method:'POST',cookie:renterCookie,data:listingReview}),409,
+   'The same booking cannot be reviewed twice');
+ const publicReviews=await api('/api/rentals/reviews?listingId=api-e2e-listing');
+ status(publicReviews,200,'Public listing reviews remain available');
+ assert.equal(publicReviews.body.reviews.length,1);
+ assert.equal(publicReviews.body.reviews[0].comment,listingReview.comment);
+ assert.equal(publicReviews.body.reviews[0].bookingId,undefined,'Public reviews must not expose private booking IDs');
+ console.log('PASS renter-only listing review, duplicate rejection and private booking ID redaction');
  // After handover or return, cancellation/refund must be blocked; disputes remain available.
  status(await api(route+'/cancel',{method:'POST',cookie:supplierCookie,
    data:{reason:'Attempt to cancel after physical return'}}),409,
