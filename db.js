@@ -676,7 +676,7 @@ const ALLOWED_BOOKING_STATUSES = new Set([
 const ALLOWED_TRANSITIONS = {
   pending: new Set(['confirmed','declined','cancelled']),
   confirmed: new Set(['active','cancelled']),
-  active: new Set(['returned','completed']),
+  active: new Set(['returned']),
   returned: new Set(['completed']),
   completed: new Set([]),
   cancelled: new Set([]),
