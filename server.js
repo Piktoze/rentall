@@ -2639,6 +2639,12 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     if(requestedStatus==='confirmed') await processExpiredBookings();
 
     if(requestedStatus==='declined'){
+      // Declining is a response to an unanswered request, not an alternative
+      // cancellation/refund action after the supplier has approved it.
+      const beforeDecline=getRentalBookingById(req.params.bookingId);
+      if(!beforeDecline) return res.status(404).json({error:'Booking not found'});
+      if(beforeDecline.status!=='pending')
+        return res.status(409).json({error:'Atmesti galima tik dar nepatvirtintą rezervacijos užklausą. Patvirtintai rezervacijai naudokite atšaukimo veiksmą.',code:'DECLINE_REQUIRES_PENDING'});
       markSupplierResponded(req.params.bookingId);
       const responseListing=getRentalListing(getRentalBookingById(req.params.bookingId)?.listingId);
       if(responseListing?.ownerEmail) resetSupplierMissedResponses(responseListing.ownerEmail);
