@@ -1930,12 +1930,23 @@ const setStatusAfterRefundStmt=db.prepare(`
 `);
 
 export function setRentalBookingStatusAfterRefund(bookingId,status){
-  setStatusAfterRefundStmt.run({
-    booking_id:bookingId,
-    status,
-    updated_at:new Date().toISOString()
-  });
-  return rentalBookingStmt.get(bookingId)||null;
+  // This operation is only for a supplier-declined request after the
+  // provider-aware cancellation/refund has already reached cancelled.
+  // Never expose an arbitrary state transition through this helper.
+  if(status!=='declined')
+    throw Object.assign(new Error('Invalid post-refund booking status'),{code:'INVALID_TRANSITION'});
+  return db.transaction(()=>{
+    const booking=rentalBookingStmt.get(bookingId);
+    if(!booking)return null;
+    if(booking.status!=='cancelled')
+      throw Object.assign(new Error('Post-refund decline requires cancelled booking'),{code:'INVALID_TRANSITION'});
+    setStatusAfterRefundStmt.run({
+      booking_id:bookingId,
+      status,
+      updated_at:new Date().toISOString()
+    });
+    return rentalBookingStmt.get(bookingId)||null;
+  }).immediate();
 }
 
 
