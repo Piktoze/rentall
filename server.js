@@ -3360,8 +3360,18 @@ app.post('/api/admin/bookings/:bookingId/deposit/release', requireRole('admin'),
     const intent=await retrieveDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:booking.securityDepositPaymentIntentId});
     const depositBinding=validateSecurityDepositIntentBinding(intent,booking,connection.stripeAccountId);
     if(!depositBinding.ok)return res.status(409).json({error:'Deposit authorization identity, amount or currency mismatch'});
-    if(intent.status==='requires_capture') await cancelDirectChargePaymentIntent(stripe,{accountId:connection.stripeAccountId,paymentIntentId:intent.id,idempotencyKey:`booking:${booking.bookingId}:deposit-release`});
-    else if(intent.status!=='canceled') return res.status(409).json({error:`Deposit cannot be released from provider status ${intent.status}`});
+    if(intent.status==='requires_capture'){
+      const cancelled=await cancelDirectChargePaymentIntent(stripe,{
+        accountId:connection.stripeAccountId,paymentIntentId:intent.id,
+        idempotencyKey:`booking:${booking.bookingId}:deposit-release`
+      });
+      // A successful API call is not evidence of a canceled authorization.
+      // Do not change local deposit accounting without the matching Stripe ID
+      // and the terminal canceled status.
+      assertCancelledPaymentIntent(cancelled,intent.id,{deposit:true});
+    }else if(intent.status!=='canceled'){
+      return res.status(409).json({error:`Deposit cannot be released from provider status ${intent.status}`});
+    }
     setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:intent.id,providerStatus:'canceled',depositStatus:'released'});
     const updated=resolveRentalSecurityDeposit(booking.bookingId,{status:'released',resolution:String(req.body?.resolution||'Deposit authorization released after satisfactory return.').slice(0,3000)});
     if(updated.customerEmail)createRentalNotification({uniqueKey:`booking:${booking.bookingId}:deposit:released:customer`,audience:'customer',userEmail:updated.customerEmail,bookingId:booking.bookingId,type:'deposit.released',title:'Security deposit released',message:`Your €${Number(updated.securityDepositAmount||0).toFixed(2)} security deposit authorization has been released.`});
