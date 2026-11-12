@@ -5991,6 +5991,7 @@ async function loadUnifiedCustomerBookings(){
     if(!row)return;
     window.rentinorbitSelectedBookingId=String(row.booking.bookingId);
     window.rentinorbitBookingCommandSelect?.(row.booking);
+    document.dispatchEvent(new CustomEvent('rentinorbit:booking-selected',{detail:{booking:row.booking}}));
     list.querySelectorAll('.customer-booking-card').forEach(card=>{
       card.classList.toggle('v203-booking-selected',card.dataset.bookingId===window.rentinorbitSelectedBookingId);
     });
