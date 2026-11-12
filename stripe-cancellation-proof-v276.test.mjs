@@ -26,4 +26,18 @@ assert.ok(handler.indexOf('assertCancelledPaymentIntent(cancelledPayment,intent.
   'Payment cancellation proof must occur before the real Stripe deposit path');
 assert.ok(handler.indexOf('assertCancelledPaymentIntent(cancelledDeposit,deposit.id,{deposit:true})')<handler.indexOf("setRentalSecurityDepositProviderState(booking.bookingId,{paymentIntentId:deposit.id"),
   'Deposit cancellation proof must occur before deposit state changes');
+// The admin-only deposit release endpoint must not declare settlement when
+// Stripe did not acknowledge cancellation of this exact PaymentIntent.
+const adminRelease=source.slice(
+  source.indexOf("app.post('/api/admin/bookings/:bookingId/deposit/release'"),
+  source.indexOf("app.post('/api/admin/bookings/:bookingId/deposit/capture'")
+);
+assert.ok(adminRelease.includes('assertCancelledPaymentIntent(cancelled,intent.id,{deposit:true})'),
+  'Admin deposit release must verify Stripe cancellation identity and status');
+assert.ok(adminRelease.indexOf('assertCancelledPaymentIntent(cancelled,intent.id,{deposit:true})') <
+          adminRelease.indexOf('setRentalSecurityDepositProviderState('),
+  'Provider cancellation proof must precede the local released state');
+assert.ok(adminRelease.indexOf('assertCancelledPaymentIntent(cancelled,intent.id,{deposit:true})') <
+          adminRelease.indexOf("resolveRentalSecurityDeposit(booking.bookingId,{status:'released'"),
+  'Provider cancellation proof must precede the recorded deposit resolution');
 console.log('PASS Stripe cancellation confirmation: correct ID + canceled status for payment and deposit, fail closed on ambiguous responses');
