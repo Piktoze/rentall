@@ -848,6 +848,24 @@ try{
  const sent=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{
    method:'POST',cookie:supplierCookie,data:{body:'Sveiki, daiktas jau paruoštas.'}});
  status(sent,200,'Supplier can send a booking message');
+ // One HTTP retry id must result in one stored message and one original ID.
+ const chatUrl='/api/conversations/'+encodeURIComponent(conversationId)+'/messages';
+ const retryPayload={body:'Vieną kartą išsiųstas patikrinimas',clientMessageId:'rio_http_test_retry_000001'};
+ const sentOnce=await api(chatUrl,{method:'POST',cookie:supplierCookie,data:retryPayload});
+ const sentTwice=await api(chatUrl,{method:'POST',cookie:supplierCookie,data:retryPayload});
+ status(sentOnce,200,'First idempotent supplier message');
+ status(sentTwice,200,'Repeated supplier message');
+ assert.equal(sentOnce.body.message.messageId,sentTwice.body.message.messageId);
+ assert.equal(sentTwice.body.message.idempotentReplay,true);
+ const chatSnapshot=await api(chatUrl,{cookie:supplierCookie});
+ status(chatSnapshot,200,'Message dedupe inbox');
+ assert.equal(chatSnapshot.body.messages.filter(m=>m.body===retryPayload.body).length,1);
+ const conflicting=await api(chatUrl,{method:'POST',cookie:supplierCookie,
+   data:{...retryPayload,body:'Kitas tekstas su tuo pačiu raktu'}});
+ status(conflicting,400,'Cannot reuse a message identifier for a different body');
+ assert.equal(conflicting.body.code,'MESSAGE_REQUEST_CONFLICT');
+ console.log('PASS HTTP message retries: same ID, one inbox record, conflicting payload denied');
+
  const inbox=await api('/api/conversations/'+encodeURIComponent(conversationId)+'/messages',{cookie:renterCookie});
  status(inbox,200,'Renter receives the supplier conversation');
  assert.ok(inbox.body.messages.some(m=>m.body==='Sveiki, daiktas jau paruoštas.'));
