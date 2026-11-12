@@ -2469,6 +2469,9 @@ export function acceptRentalAgreement(bookingId,role,evidence=null){
   if(!['customer','supplier'].includes(role))throw new Error('Invalid agreement actor');
   const field=role==='customer'?'customer_accepted_at':'supplier_accepted_at';
   return db.transaction(()=>{
+    const booking=getRentalBookingById(bookingId);
+    if(!booking || !['pending','confirmed'].includes(String(booking.status||'')))
+      throw Object.assign(new Error('Šios rezervacijos sutarties patvirtinti nebegalima.'),{code:'AGREEMENT_BOOKING_CLOSED'});
     const agreement=agreementByBookingStmt.get(String(bookingId));
     if(!agreement)throw Object.assign(new Error('Sutartis nerasta.'),{code:'AGREEMENT_NOT_FOUND'});
     const existing=agreement[role==='customer'?'customerAcceptedAt':'supplierAcceptedAt'];
