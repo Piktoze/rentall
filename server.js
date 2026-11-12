@@ -2640,7 +2640,15 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
     }
 
     // Refresh expired requests before an approval can capture any funds.
-    if(requestedStatus==='confirmed') await processExpiredBookings();
+    if(requestedStatus==='confirmed'){
+      await processExpiredBookings();
+      // A repeated supplier approval must not refresh the payment deadline.
+      // Check after expiry processing so stale requests cannot be revived.
+      const approvalState=getRentalBookingById(req.params.bookingId);
+      if(!approvalState)return res.status(404).json({error:'Booking not found'});
+      if(approvalState.status!=='pending')
+        return res.status(409).json({error:'Ši rezervacija jau patvirtinta arba nebegali būti patvirtinta.',code:'APPROVAL_REPLAY_BLOCKED'});
+    }
 
     if(requestedStatus==='declined'){
       // Declining is a response to an unanswered request, not an alternative
