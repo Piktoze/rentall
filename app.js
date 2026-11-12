@@ -3339,6 +3339,7 @@ renderBookings=async function(){
   const rows=filtered.map(b=>`
     <tr>
       <td><b>${escapeHtml(b.customerName||b.contactPerson||uiText('Customer'))}</b></td>
+      <td><code style="font-size:12px;overflow-wrap:anywhere;user-select:all">${escapeHtml(b.bookingId||'—')}</code><button class="secondary admin-copy-booking-id" type="button" data-booking-id="${escapeHtml(b.bookingId||'')}" aria-label="Kopijuoti užsakymo numerį" title="Kopijuoti užsakymo numerį" style="margin-left:6px;padding:5px 7px;font-size:12px">Kopijuoti</button></td>
       <td>${escapeHtml(b.title||uiText('Rental item'))} × ${b.quantity}</td>
       <td class="hotel-cell">
         <b>${b.accommodationName||'—'}</b>
@@ -3352,13 +3353,21 @@ renderBookings=async function(){
     </tr>`).join('');
 
   document.getElementById('bookingTableBody').innerHTML=
-    rows || `<tr><td colspan="8">${escapeHtml(uiText('No live bookings match the selected filters.'))}</td></tr>`;
+    rows || `<tr><td colspan="9">${escapeHtml(uiText('No live bookings match the selected filters.'))}</td></tr>`;
 
   const summary=document.getElementById('bookingFilterSummary');
   if(summary) summary.textContent=`${uiText('Showing')} ${filtered.length} ${uiText('of')} ${liveSupplierBookings.length} ${uiText('live bookings')}`;
 
   document.querySelectorAll('[data-live-view-order]').forEach(btn=>{
     btn.addEventListener('click',()=>openLiveSupplierOrder(btn.dataset.liveViewOrder));
+  });
+  document.querySelectorAll('.admin-copy-booking-id').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const id=btn.dataset.bookingId;
+      if(!id)return;
+      try{await navigator.clipboard.writeText(id);btn.textContent='Nukopijuota';}
+      catch{btn.textContent='Pažymėkite numerį';}
+    });
   });
 };
 
