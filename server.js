@@ -3176,11 +3176,11 @@ app.post('/api/conversations/:conversationId/messages',requireRole('customer','s
     const booking=conversation.bookingId?getRentalBookingById(conversation.bookingId):null;
     const contactAllowed=booking&&booking.paymentStatus==='paid'&&['confirmed','active','returned','completed'].includes(booking.status);
     if(!contactAllowed&&containsOffPlatformContact(body))return res.status(400).json({error:'Contact details can be shared after the booking is confirmed',code:'CONTACT_DETAILS_BLOCKED'});
-    const message=addRentalMessage({conversationId:conversation.conversationId,senderEmail:req.appUser.email,senderRole:req.appUser.role,body});
+    const message=addRentalMessage({conversationId:conversation.conversationId,senderEmail:req.appUser.email,senderRole:req.appUser.role,body,clientMessageId:req.body?.clientMessageId??null});
     const recipient=String(req.appUser.email).toLowerCase()===String(conversation.customerEmail).toLowerCase()?conversation.supplierEmail:conversation.customerEmail;
     // The message is already persisted. A notification-store failure must not
     // falsely tell the sender it failed, which would encourage duplicate sends.
-    if(recipient){
+    if(recipient && !message.idempotentReplay){
       try{
         createRentalNotification({uniqueKey:`message:${message.messageId}`,audience:String(recipient).toLowerCase()===String(conversation.supplierEmail).toLowerCase()?'supplier':'customer',userEmail:recipient,bookingId:conversation.bookingId||null,type:'message.received',title:'New message',message:'You have a new RentInOrbit message.'});
       }catch(error){
