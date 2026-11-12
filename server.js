@@ -127,6 +127,7 @@ import {assertCancelledPaymentIntent} from './modules/stripe-cancellation-proof-
 import {assertPaymentCancellationConsistency} from './modules/stripe-cancellation-consistency-v277.js';
 import {assertExistingRefundCoversCancellation} from './modules/stripe-refund-coverage-v278.js';
 import {assertProviderRefundCoversCancellation} from './modules/stripe-refund-provider-coverage-v281.js';
+import {createBookingCancellationSingleFlight} from './modules/booking-cancellation-singleflight-v282.js';
 import {shouldApplyRefundStatus} from './modules/stripe-refund-status-order-v280.js';
 import {
   calculateBookingPricingForSupplier,
@@ -475,7 +476,9 @@ async function handleStripeCancellationForBooking(booking, refundAmount){
   return refund;
 }
 
+const cancelBookingSingleFlight=createBookingCancellationSingleFlight();
 async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefund=false}={}){
+  return cancelBookingSingleFlight(bookingId,async()=>{
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
   // Check before calling Stripe: a terminal or handed-over rental must
@@ -544,6 +547,7 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
     refundAmountOverride:refundAmount
   });
   return {...result,refundAmount};
+  });
 }
 
 function bookingAccessAllowed(req, bookingId){
@@ -2727,7 +2731,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
 
     res.json({ booking, availability });
   } catch (err) {
-    const code = err.code === 'INVALID_TRANSITION' || err.code === 'INVALID_STATUS' ? 409 : 400;
+    const code = ['INVALID_TRANSITION','INVALID_STATUS','BOOKING_CANCELLATION_IN_PROGRESS'].includes(err.code) ? 409 : 400;
     res.status(code).json({ error: err.message, code: err.code || null });
   }
 });
@@ -2817,7 +2821,7 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
     }catch(err){ console.warn('Could not queue cancellation emails',err.message); }
     res.json(result);
   }catch(err){
-    res.status(err.code==='INVALID_TRANSITION'?409:400)
+    res.status(['INVALID_TRANSITION','BOOKING_CANCELLATION_IN_PROGRESS'].includes(err.code)?409:400)
       .json({error:err.message,code:err.code||null});
   }
 });
