@@ -610,9 +610,21 @@ try{
    data:{accepted:true}}),409,'Returned rental cannot be re-signed after handover');
 
  assert.equal(fullReturn.body.booking.status,'returned');
+ const payoutAfterGoodReturn=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=payoutAfterGoodReturn.prepare('SELECT payout_status FROM rental_bookings WHERE booking_id=?').get(pendingId);
+   assert.equal(row.payout_status,'ready','Clean demo return without hold may be marked ready, not paid');
+ }finally{payoutAfterGoodReturn.close()}
  const fullDispute=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
    data:{bookingId:pendingId,reason:'Lifecycle test of return dispute'}});
  status(fullDispute,200,'Full-cycle renter can open dispute after return');
+ const payoutAfterDispute=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const row=payoutAfterDispute.prepare('SELECT payout_status,payout_completed_at FROM rental_bookings WHERE booking_id=?').get(pendingId);
+   assert.equal(row.payout_status,'pending','Open dispute revokes previously ready demo payout');
+   assert.equal(row.payout_completed_at,null,'No actual payout completion may be recorded');
+ }finally{payoutAfterDispute.close()}
+ console.log('PASS HTTP supplier payout ledger: a post-return dispute revokes demo readiness');
  const disputedCompletion=await api(fullRoute+'/status',{method:'POST',cookie:supplierCookie,
    data:{status:'completed'}});
  status(disputedCompletion,409,'Open dispute blocks rental completion');
