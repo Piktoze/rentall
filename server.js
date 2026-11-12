@@ -799,6 +799,12 @@ app.post('/api/stripe/webhook',
           const binding=booking?validateSecurityDepositIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
           if(!booking||!binding.ok){console.warn('Ignoring unbound security deposit authorization',pi.id,bookingId,binding.reason);break;}
           if(pi.status!=='requires_capture'){console.warn('Ignoring non-capturable deposit update',pi.id,pi.status);break;}
+          // A delayed authorization event must never reopen a released or
+          // captured security deposit after final provider settlement.
+          if(['released','captured'].includes(String(booking.securityDepositStatus||'').toLowerCase())){
+            console.warn('Ignoring stale security deposit authorization',event.id,bookingId);
+            break;
+          }
           setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:pi.id,providerStatus:pi.status,depositStatus:'authorized'});
           if(booking.customerEmail)createRentalNotification({uniqueKey:`deposit:${pi.id}:authorized:customer`,audience:'customer',userEmail:booking.customerEmail,bookingId,type:'deposit.authorized',title:'Security deposit authorized',message:`Your €${Number(booking.securityDepositAmount||0).toFixed(2)} security deposit is authorized, not charged, and will be released after a satisfactory return.`});
           break;
@@ -810,6 +816,11 @@ app.post('/api/stripe/webhook',
           const booking=bookingId?getRentalBookingById(bookingId):null;
           const binding=booking?validateSecurityDepositIntentBinding(pi,booking,event.account):{ok:false,reason:'booking_not_found'};
           if(!booking||!binding.ok){console.warn('Ignoring unbound security deposit cancellation',pi.id,bookingId,binding.reason);break;}
+          // A stale cancel event must not erase an already captured deposit.
+          if(String(booking.securityDepositStatus||'').toLowerCase()==='captured'){
+            console.warn('Ignoring deposit cancellation after capture',event.id,bookingId);
+            break;
+          }
           setRentalSecurityDepositProviderState(bookingId,{paymentIntentId:pi.id,providerStatus:'canceled',depositStatus:'released'});
           break;
         }
