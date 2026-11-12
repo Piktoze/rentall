@@ -3036,6 +3036,9 @@ app.post('/api/rentals/bookings/:bookingId/return-confirm',
         });
       }catch(err){console.error('Return deposit review failed',id,err.message);}
     }
+    // Recompute synthetic payout readiness after the authoritative return
+    // condition and any deposit hold are persisted. Never claim a real payout.
+    updateDemoPayoutAfterReturn(getRentalBookingById(id));
     try{
       if(booking.customerEmail)createRentalNotification({
         uniqueKey:`return-confirm:${id}:customer`,audience:'customer',
