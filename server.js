@@ -82,6 +82,8 @@ import {
   getAccountingSupplierProfile,
   saveAccountingSupplierProfile,
   issueAccountingSyntheticInvoice,
+  addAccountingExpenseDraft,
+  listAccountingExpenses,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -1392,6 +1394,31 @@ const safeInvoiceCsv=value=>{
  const protectedValue=/^[\s]*[=+\-@]/.test(str)?"'"+str:str;
  return '"'+protectedValue.replaceAll('"','""')+'"';
 };
+
+
+app.get('/api/admin/accounting/expenses',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({vatAssessment:'pending_review',items:listAccountingExpenses({limit:req.query?.limit})});
+});
+app.post('/api/admin/accounting/expenses/test',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true'||process.env.STRIPE_MODE!=='test')return res.status(404).end();
+ if(req.body?.acknowledgeSynthetic!==true)return res.status(400).json({error:'Explicit synthetic acknowledgement required'});
+ try{
+  const row=addAccountingExpenseDraft(req.body);
+  res.setHeader('Cache-Control','no-store, private');
+  res.status(201).json({expense:row,realExpensesEnabled:false});
+ }catch(err){res.status(400).json({error:String(err.message||'Invalid expense').slice(0,180)});}
+});
+app.get('/api/admin/accounting/expenses.csv',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const keys=['record_key','supplier_name','supplier_country','category','invoice_date','currency',
+  'gross_amount_cents','expense_owner','vat_review_status','reverse_charge_assessed','source_reference'];
+ const csv=[keys.join(','),...listAccountingExpenses({limit:200}).map(row=>keys.map(k=>safeInvoiceCsv(row[k])).join(','))].join('\r\n');
+ res.setHeader('Cache-Control','no-store, private');
+ res.setHeader('Content-Disposition','attachment; filename="rentinorbit-iv-test-expenses.csv"');
+ res.type('text/csv; charset=utf-8').send('\ufeff'+csv);
+});
 
 app.get('/api/admin/accounting',requireRole('admin'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
