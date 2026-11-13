@@ -13,7 +13,10 @@ const {
   cancelRentalBookingWithRefund,
   setBookingPaymentDetails,
   updateRentalBookingStatus,
-  markRentalReturned
+  markRentalReturned,
+  createAccountingInvoiceDraft,
+  listAccountingInvoiceDrafts,
+  accountingInvoiceSummary
 }=await import('./db.js');
 
 try{
@@ -74,6 +77,32 @@ try{
   assert.match(railwayIac,/bucket\('rentinorbit-staging-backups'/);
   assert.match(railwayIac,/BACKUP_S3_SECRET_ACCESS_KEY:ref\(backups,'secretAccessKey'\)/);
   assert.match(scheduler,/BACKUP_STORAGE_NOT_SEPARATE/);
+
+
+  // Safe accounting staging foundation: drafts never become issued invoices.
+  const invoice=createAccountingInvoiceDraft({
+    documentKey:'TEST-invoice-v286-00001',issuerKey:'TEST-PLATFORM',
+    recipientKey:'TEST-SUPPLIER',kind:'platform_fee',
+    amountCents:1500,taxMode:'pending_review',
+    payload:{synthetic:true}
+  });
+  assert.equal(invoice.amount_cents,1500);
+  assert.equal(invoice.status,'draft');
+  assert.equal(invoice.invoice_number,null);
+  assert.equal(createAccountingInvoiceDraft({
+    documentKey:'TEST-invoice-v286-00001',issuerKey:'TEST-PLATFORM',
+    recipientKey:'TEST-SUPPLIER',kind:'platform_fee',
+    amountCents:1500,taxMode:'pending_review',payload:{synthetic:true}
+  }).id,invoice.id,'Repeated event must not create another invoice');
+  assert.throws(()=>createAccountingInvoiceDraft({
+    documentKey:'TEST-invoice-v286-00001',issuerKey:'TEST-PLATFORM',
+    recipientKey:'TEST-SUPPLIER',kind:'platform_fee',
+    amountCents:1200,taxMode:'pending_review'
+  }),/idempotency/);
+  assert.equal(listAccountingInvoiceDrafts({issuerKey:'TEST-PLATFORM'}).length,1);
+  assert.equal(accountingInvoiceSummary().automatedIssuanceEnabled,false);
+  assert.equal(accountingInvoiceSummary().realEmailsEnabled,false);
+  console.log('PASS SF V286: isolated draft ledger, duplicate protection, issuance/email gates');
 
   console.log('PASS V203: unpaid cancellation, controlled return dialog and terminal cancellation guards');
 }finally{
