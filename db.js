@@ -2897,3 +2897,46 @@ export function voidAccountingInvoiceDraftOnFullRefund({bookingId,actor='stripe-
   return {voided,requiresReview};
  })();
 }
+
+
+// SF_SUPPLIER_PROFILE_V286 – collected from authenticated supplier, never assumed verified.
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounting_supplier_profiles (
+ supplier_email TEXT PRIMARY KEY COLLATE NOCASE,
+ legal_kind TEXT NOT NULL CHECK(legal_kind IN ('private','individual','company')),
+ legal_name TEXT NOT NULL,
+ business_address TEXT,
+ registration_number TEXT,
+ vat_mode TEXT NOT NULL CHECK(vat_mode IN ('not_vat_registered','lt_svs','vat_registered','pending_review')),
+ can_issue_on_behalf INTEGER NOT NULL DEFAULT 0 CHECK(can_issue_on_behalf IN (0,1)),
+ reviewed INTEGER NOT NULL DEFAULT 0 CHECK(reviewed IN (0,1)),
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+`);
+export function getAccountingSupplierProfile(email){
+ const e=String(email||'').trim().toLowerCase();
+ if(!e)return null;
+ return db.prepare('SELECT * FROM accounting_supplier_profiles WHERE supplier_email=? COLLATE NOCASE').get(e)||null;
+}
+export function saveAccountingSupplierProfile(email,input={}){
+ const e=String(email||'').trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))throw new Error('Authenticated supplier email required');
+ const legalKind=String(input.legalKind||'').trim();
+ const legalName=String(input.legalName||'').trim();
+ const address=String(input.businessAddress||'').trim();
+ const registration=String(input.registrationNumber||'').trim();
+ const vatMode=String(input.vatMode||'pending_review').trim();
+ if(!['private','individual','company'].includes(legalKind))throw new Error('Invalid legal kind');
+ if(!legalName||legalName.length>180||address.length>240||registration.length>60)throw new Error('Invalid business profile values');
+ if(!['not_vat_registered','lt_svs','vat_registered','pending_review'].includes(vatMode))throw new Error('Invalid VAT mode');
+ const authorization=input.canIssueOnBehalf===true?1:0;
+ db.prepare(`INSERT INTO accounting_supplier_profiles
+ (supplier_email,legal_kind,legal_name,business_address,registration_number,vat_mode,can_issue_on_behalf,reviewed)
+ VALUES(?,?,?,?,?,?,?,0)
+ ON CONFLICT(supplier_email) DO UPDATE SET
+ legal_kind=excluded.legal_kind,legal_name=excluded.legal_name,business_address=excluded.business_address,
+ registration_number=excluded.registration_number,vat_mode=excluded.vat_mode,
+ can_issue_on_behalf=excluded.can_issue_on_behalf,reviewed=0,updated_at=CURRENT_TIMESTAMP`)
+ .run(e,legalKind,legalName,address||null,registration||null,vatMode,authorization);
+ return getAccountingSupplierProfile(e);
+}
