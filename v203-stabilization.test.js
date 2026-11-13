@@ -20,7 +20,8 @@ const {
   accountingInvoiceSummary,
   saveAccountingSupplierProfile,
   getAccountingSupplierProfile,
-  voidAccountingInvoiceDraftOnFullRefund
+  voidAccountingInvoiceDraftOnFullRefund,
+  issueAccountingSyntheticInvoice
 }=await import('./db.js');
 
 try{
@@ -123,6 +124,16 @@ try{
   assert.equal(profile.reviewed,0,'Supplier declarations are never automatically verified');
   assert.equal(getAccountingSupplierProfile('supplier-v203@example.test').can_issue_on_behalf,1);
   assert.deepEqual(voidAccountingInvoiceDraftOnFullRefund({bookingId:'nonexistent'}),{voided:0,requiresReview:0});
+  const numbered=issueAccountingSyntheticInvoice('TEST-invoice-v286-00001');
+  assert.match(numbered.invoice_number,/^TEST-RIO-\d{4}-000001$/);
+  assert.equal(numbered.status,'issued');
+  assert.equal(issueAccountingSyntheticInvoice('TEST-invoice-v286-00001').invoice_number,numbered.invoice_number);
+  const numberedPdf=await renderTestInvoicePdf({...numbered,document_key:'TEST-invoice-v286-00001'},{
+    issuer:{issuerName:'TEST – Ieva'}
+  });
+  assert.equal(numberedPdf.subarray(0,5).toString('ascii'),'%PDF-');
+  assert.throws(()=>issueAccountingSyntheticInvoice('LIVE-invoice-v286'),/synthetic TEST/);
+
 
   console.log('PASS SF V286: isolated draft ledger, duplicate protection, issuance/email gates');
 
