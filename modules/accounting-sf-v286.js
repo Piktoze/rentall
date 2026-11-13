@@ -59,3 +59,23 @@ export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TES
  doc.end();
  return await finished;
 }
+
+
+const escapeEmail=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+// Email preview is intentionally inert. The actual sender must be enabled only after
+// operator VAT status, issuance authority, legal documents and delivery ownership are verified.
+export function renderTestInvoiceEmailPreview(invoice,{recipientName='TEST – gavėjas'}={}){
+ if(!invoice||!String(invoice.document_key||'').startsWith('TEST-'))throw new Error('Only TEST invoice email preview supported');
+ const name=escapeEmail(clean(recipientName));
+ const key=escapeEmail(clean(invoice.document_key));
+ const amount=escapeEmail(money(invoice.amount_cents));
+ return '<!doctype html><html lang="lt"><head><meta charset="utf-8"><title>RentInOrbit TEST SF</title></head>'+
+  '<body style="font-family:Arial,sans-serif;color:#18324b;background:#f5f8ff;padding:26px">'+
+  '<main style="background:white;max-width:620px;margin:auto;padding:26px;border-radius:14px">'+
+  '<h1 style="color:#164cab">RentInOrbit</h1>'+
+  '<p><strong>TEST – negaliojantis apskaitos dokumentas</strong></p>'+
+  '<p>Sveiki, '+name+'.</p><p>Sukurtas sąskaitos juodraštis: '+key+'.</p>'+
+  '<p>Suma: <strong>'+amount+'</strong></p>'+
+  '<p>Šis laiškas yra tik peržiūra. Tikrų SF išrašymas ir siuntimas išjungti.</p>'+
+  '</main></body></html>';
+}
