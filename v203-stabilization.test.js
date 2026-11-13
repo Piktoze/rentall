@@ -21,7 +21,9 @@ const {
   saveAccountingSupplierProfile,
   getAccountingSupplierProfile,
   voidAccountingInvoiceDraftOnFullRefund,
-  issueAccountingSyntheticInvoice
+  issueAccountingSyntheticInvoice,
+  addAccountingExpenseDraft,
+  listAccountingExpenses
 }=await import('./db.js');
 
 try{
@@ -133,6 +135,26 @@ try{
   });
   assert.equal(numberedPdf.subarray(0,5).toString('ascii'),'%PDF-');
   assert.throws(()=>issueAccountingSyntheticInvoice('LIVE-invoice-v286'),/synthetic TEST/);
+  const expense=addAccountingExpenseDraft({
+    recordKey:'TEST-expense-v286-0001',supplierName:'Stripe TEST',supplierCountry:'IE',
+    category:'stripe',invoiceDate:'2026-11-13',currency:'EUR',
+    grossAmountCents:340,expenseOwner:'supplier'
+  });
+  assert.equal(expense.gross_amount_cents,340);
+  assert.equal(expense.vat_review_status,'pending_review');
+  assert.equal(expense.reverse_charge_assessed,0);
+  assert.equal(addAccountingExpenseDraft({
+    recordKey:'TEST-expense-v286-0001',supplierName:'Stripe TEST',supplierCountry:'IE',
+    category:'stripe',invoiceDate:'2026-11-13',currency:'EUR',
+    grossAmountCents:340,expenseOwner:'supplier'
+  }).id,expense.id);
+  assert.throws(()=>addAccountingExpenseDraft({
+    recordKey:'TEST-expense-v286-0001',supplierName:'Stripe TEST',supplierCountry:'IE',
+    category:'stripe',invoiceDate:'2026-11-13',currency:'EUR',
+    grossAmountCents:100,expenseOwner:'supplier'
+  }),/idempotency/);
+  assert.equal(listAccountingExpenses().length,1);
+
 
 
   console.log('PASS SF V286: isolated draft ledger, duplicate protection, issuance/email gates');
