@@ -1428,7 +1428,8 @@ function trustedRentalInvoicePreflight(bookingId){
   booking,listing,
   profile:getAccountingSupplierProfile(supplierEmail),
   mandate:getAccountingInvoiceMandate(supplierEmail),
-  terms:invoiceDelegationTerms()
+  terms:invoiceDelegationTerms(),
+  hasOpenDispute:!!db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(booking.bookingId)
  });
 }
 app.get('/api/admin/accounting/bookings/:bookingId/invoice-preflight',requireRole('admin'),(req,res)=>{
