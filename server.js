@@ -1,4 +1,5 @@
 import express from 'express';
+import {renderTestInvoicePdf,invoiceOperatorProfile} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import {
@@ -1349,6 +1350,22 @@ app.get('/api/admin/accounting/invoices.csv',requireRole('admin'),(req,res)=>{
  res.setHeader('Content-Disposition','attachment; filename="rentinorbit-sf-test-register.csv"');
  res.type('text/csv; charset=utf-8').send('\ufeff'+csv);
 });
+
+app.get('/api/admin/accounting/test-drafts/:id.pdf',requireRole('admin'),async(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const row=listAccountingInvoiceDrafts({limit:100}).find(item=>item.id===Number(req.params.id));
+ if(!row||!row.document_key.startsWith('TEST-'))return res.status(404).end();
+ try{
+  const pdf=await renderTestInvoicePdf(row,{issuer:invoiceOperatorProfile()});
+  res.setHeader('Cache-Control','no-store, private');
+  res.setHeader('Content-Disposition','attachment; filename="rentinorbit-sf-test-draft.pdf"');
+  res.type('application/pdf').send(pdf);
+ }catch(err){
+  console.warn(JSON.stringify({type:'invoice_pdf_error',error:safeOperationalError(err)}));
+  res.status(500).json({error:'Invoice TEST PDF unavailable'});
+ }
+});
+
 app.get('/api/admin/accounting/test-drafts/:id/print',requireRole('admin'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).send('Not found');
  const row=listAccountingInvoiceDrafts({limit:100}).find(item=>item.id===Number(req.params.id));
