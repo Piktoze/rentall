@@ -115,7 +115,9 @@ for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN room_number TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN contact_person TEXT`,
   `ALTER TABLE rental_bookings ADD COLUMN delivery_instructions TEXT`,
-  `ALTER TABLE rental_bookings ADD COLUMN order_value REAL`
+  `ALTER TABLE rental_bookings ADD COLUMN order_value REAL`,
+  `ALTER TABLE rental_bookings ADD COLUMN customer_legal_kind TEXT NOT NULL DEFAULT 'individual'`,
+  `ALTER TABLE rental_bookings ADD COLUMN customer_company_name TEXT`
 ]) {
   try { db.exec(sql); } catch (err) {
     if (!String(err.message).includes('duplicate column name')) throw err;
@@ -421,14 +423,14 @@ const insertRentalBookingStmt = db.prepare(`
     booking_id, listing_id, start_date, end_date, quantity, status, created_at,
     customer_name, customer_email, customer_phone, accommodation_name,
     delivery_city, delivery_address, room_number, contact_person,
-    delivery_instructions, order_value, payment_token_hash, expires_at,
+    delivery_instructions, order_value, customer_legal_kind, customer_company_name, payment_token_hash, expires_at,
     supplier_response_due_at, supplier_reminder_stage
   )
   VALUES (
     @booking_id, @listing_id, @start_date, @end_date, @quantity, @status, @created_at,
     @customer_name, @customer_email, @customer_phone, @accommodation_name,
     @delivery_city, @delivery_address, @room_number, @contact_person,
-    @delivery_instructions, @order_value, @payment_token_hash, @expires_at,
+    @delivery_instructions, @order_value, @customer_legal_kind, @customer_company_name, @payment_token_hash, @expires_at,
     @supplier_response_due_at, 0
   )
 `);
@@ -442,6 +444,7 @@ const rentalBookingStmt = db.prepare(`
          end_date AS endDate, quantity, status, created_at AS createdAt,
          updated_at AS updatedAt, cancelled_at AS cancelledAt,
          returned_at AS returnedAt, cancellation_reason AS cancellationReason,
+         customer_legal_kind AS customerLegalKind, customer_company_name AS customerCompanyName,
          customer_name AS customerName, customer_email AS customerEmail,
          customer_phone AS customerPhone, accommodation_name AS accommodationName,
          delivery_city AS deliveryCity, delivery_address AS deliveryAddress,
@@ -636,6 +639,8 @@ export function createRentalBookingAtomic({
   customerName=null,
   customerEmail=null,
   customerPhone=null,
+  customerLegalKind='individual',
+  customerCompanyName=null,
   accommodationName=null,
   deliveryCity=null,
   deliveryAddress=null,
@@ -650,6 +655,8 @@ export function createRentalBookingAtomic({
   // reserving stock so every internal caller receives identical guarantees.
   const validWindow=validateAtomicBookingWindow({startDate,endDate,quantity});
   quantity=validWindow.quantity;
+  if(!['individual','company'].includes(customerLegalKind))throw new Error('Invalid renter legal kind');
+  if(customerLegalKind==='company' && (!String(customerCompanyName||'').trim() || String(customerCompanyName).length>180))throw new Error('Company renter name required');
   const paymentToken=crypto.randomBytes(24).toString('hex');
   const paymentTokenHash=crypto.createHash('sha256').update(paymentToken).digest('hex');
   const expiresAt=new Date(Date.now()+Math.max(5,Number(holdMinutes||30))*60000).toISOString();
@@ -691,6 +698,8 @@ export function createRentalBookingAtomic({
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
+      customer_legal_kind:customerLegalKind,
+      customer_company_name:customerLegalKind==='company'?String(customerCompanyName).trim():null,
       accommodation_name: accommodationName,
       delivery_city: deliveryCity,
       delivery_address: deliveryAddress,
