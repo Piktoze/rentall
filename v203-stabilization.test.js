@@ -12,6 +12,7 @@ const {
   closeDatabase,
   upsertRentalListing,
   createRentalBookingAtomic,
+  getRentalBookingById,
   cancelRentalBookingWithRefund,
   setBookingPaymentDetails,
   updateRentalBookingStatus,
@@ -71,6 +72,21 @@ try{
     error=>error?.code==='INVALID_TRANSITION'
   );
 
+  createRentalBookingAtomic({
+    bookingId:'v287-company-booking',listingId:'v203-item',
+    startDate:'2099-03-01',endDate:'2099-03-02',quantity:1,
+    status:'pending',orderValue:100,customerEmail:'business@example.test',
+    customerLegalKind:'company',customerCompanyName:'Bandomoji UAB'
+  });
+  const businessBooking=getRentalBookingById('v287-company-booking');
+  assert.equal(businessBooking.customerLegalKind,'company');
+  assert.equal(businessBooking.customerCompanyName,'Bandomoji UAB');
+  assert.throws(()=>createRentalBookingAtomic({
+    bookingId:'v287-company-no-name',listingId:'v203-item',
+    startDate:'2099-03-03',endDate:'2099-03-04',quantity:1,
+    customerLegalKind:'company'
+  }),/Company renter name required/);
+
   const server=fs.readFileSync('./server.js','utf8');
   const app=fs.readFileSync('./app.js','utf8');
   const html=fs.readFileSync('./index.html','utf8');
@@ -81,6 +97,11 @@ try{
   assert.ok(!/function returnLiveBooking[\s\S]{0,400}window\.prompt/.test(app),'return flow must not use chained prompts');
   assert.match(app,/collectReturnBookingDetails/);
   assert.match(html,/id="returnBookingModal"/);
+  assert.match(server,/PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED|b2bPaymentGate/);
+  assert.match(server,/corporateDepositGate/);
+  assert.match(html,/id="customerLegalKind"/);
+  assert.match(app,/customerLegalKind:document\.getElementById/);
+
   assert.match(html,/option value="missing"/);
   assert.match(railwayIac,/staging\?'staging\/v203':'main'/);
   assert.match(railwayIac,/bucket\('rentinorbit-staging-backups'/);
