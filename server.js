@@ -1,5 +1,5 @@
 import express from 'express';
-import {renderTestInvoicePdf,invoiceOperatorProfile} from './modules/accounting-sf-v286.js';
+import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import {
@@ -1467,6 +1467,16 @@ app.post('/api/admin/accounting/test-drafts/:id/number',requireRole('admin'),(re
   res.setHeader('Cache-Control','no-store, private');
   res.status(200).json({document:numbered,realIssuanceEnabled:false});
  }catch(err){res.status(409).json({error:String(err?.message||'Synthetic numbering failed').slice(0,180)});}
+});
+
+
+app.get('/api/admin/accounting/test-drafts/:id/email-preview',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const draft=listAccountingInvoiceDrafts({limit:100}).find(row=>row.id===Number(req.params.id));
+ if(!draft || !draft.document_key.startsWith('TEST-'))return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+ res.type('html').send(renderTestInvoiceEmailPreview(draft));
 });
 
 app.get('/api/admin/accounting/test-drafts/:id.pdf',requireRole('admin'),async(req,res)=>{
