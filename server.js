@@ -85,6 +85,13 @@ import {
   reviewAccountingSupplierProfile,
   listAccountingSupplierProfilesForReview,
   listAccountingSupplierReviewAudit,
+  getAccountingInvoiceMandate,
+  listAccountingInvoiceMandateAudit,
+  acceptAccountingInvoiceMandate,
+  reviewAccountingInvoiceMandate,
+  revokeAccountingInvoiceMandate,
+  invoiceIssuanceAuthorityStatus,
+  invoiceDelegationTerms,
   scheduleAccountingInvoicePreview,
   listAccountingInvoiceDeliveryPreviews,
   issueAccountingSyntheticInvoice,
@@ -1408,6 +1415,52 @@ app.put('/api/supplier/accounting/profile',
  }catch(err){res.status(400).json({error:String(err.message||'Invalid profile').slice(0,180)});}
 });
 
+
+
+/* V291: Two-sided delegated invoice authority, TEST-only. No fiscal issuance. */
+app.get('/api/supplier/accounting/delegation',requireRole('supplier'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({terms:invoiceDelegationTerms(),mandate:getAccountingInvoiceMandate(req.appUser.email),
+  authority:invoiceIssuanceAuthorityStatus(req.appUser.email)});
+});
+app.post('/api/supplier/accounting/delegation/accept',
+ requireRole('supplier'),simpleRateLimit({windowMs:15*60*1000,max:8,keyPrefix:'invoice-delegation-accept'}),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true'||process.env.STRIPE_MODE!=='test')return res.status(404).end();
+ if(req.body?.explicitConsent!==true)return res.status(400).json({error:'Supplier explicit consent required'});
+ try{
+  const mandate=acceptAccountingInvoiceMandate({supplierEmail:req.appUser.email,actorUserId:req.appUser.userId,
+   version:req.body?.version,termsDigest:req.body?.termsDigest});
+  res.setHeader('Cache-Control','no-store, private');
+  res.json({mandate,realInvoiceIssuanceEnabled:false});
+ }catch(err){res.status(409).json({error:String(err.message||'Delegation unavailable').slice(0,180)});}
+});
+app.post('/api/supplier/accounting/delegation/revoke',
+ requireRole('supplier'),simpleRateLimit({windowMs:15*60*1000,max:8,keyPrefix:'invoice-delegation-revoke'}),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ try{
+  const mandate=revokeAccountingInvoiceMandate({supplierEmail:req.appUser.email,actorUserId:req.appUser.userId});
+  res.setHeader('Cache-Control','no-store, private');
+  res.json({mandate,realInvoiceIssuanceEnabled:false});
+ }catch(err){res.status(409).json({error:String(err.message||'Delegation unavailable').slice(0,180)});}
+});
+app.get('/api/admin/accounting/delegations/:email',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({mandate:getAccountingInvoiceMandate(req.params.email),
+   audit:listAccountingInvoiceMandateAudit(req.params.email),authority:invoiceIssuanceAuthorityStatus(req.params.email)});
+});
+app.post('/api/admin/accounting/delegations/:email/review',
+ requireRole('admin'),simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'invoice-delegation-review'}),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true'||process.env.STRIPE_MODE!=='test')return res.status(404).end();
+ if(req.body?.confirmEvidenceReviewed!==true)return res.status(400).json({error:'Independent legal evidence review required'});
+ try{
+  const mandate=reviewAccountingInvoiceMandate({supplierEmail:req.params.email,adminUserId:req.appUser.userId,
+   decision:req.body?.decision,evidenceReference:req.body?.evidenceReference,reason:req.body?.reason});
+  res.setHeader('Cache-Control','no-store, private');
+  res.json({mandate,realInvoiceIssuanceEnabled:false});
+ }catch(err){res.status(409).json({error:String(err.message||'Delegation review unavailable').slice(0,180)});}
+});
 
 /* B2B_ACCOUNTING_REVIEW_V288: admin-only, staging-only, explicit evidence. */
 app.get('/api/admin/accounting/supplier-profiles',requireRole('admin'),(req,res)=>{
