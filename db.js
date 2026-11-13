@@ -2948,6 +2948,8 @@ export function saveAccountingSupplierProfile(email,input={}){
  registration_number=excluded.registration_number,vat_mode=excluded.vat_mode,
  can_issue_on_behalf=excluded.can_issue_on_behalf,reviewed=0,updated_at=CURRENT_TIMESTAMP`)
  .run(e,legalKind,legalName,address||null,registration||null,vatMode,authorization);
+ // Editing the legal identity invalidates any previously approved delegation.
+ db.prepare("UPDATE accounting_invoice_mandates SET status='revoked',revoked_at=CURRENT_TIMESTAMP WHERE supplier_email=? COLLATE NOCASE AND status IN ('pending_review','approved')").run(e);
  return getAccountingSupplierProfile(e);
 }
 
@@ -3153,4 +3155,119 @@ export function voidAccountingInvoicePreviewsForDocument(documentKey){
  if(!key.startsWith('TEST-'))throw new Error('Synthetic document key required');
  return db.prepare(`UPDATE accounting_invoice_delivery_previews SET status='void',voided_at=CURRENT_TIMESTAMP
   WHERE status='preview_only' AND document_id IN (SELECT id FROM accounting_invoice_documents WHERE document_key=?)`).run(key).changes;
+}
+
+
+// ACCOUNTING_INVOICE_MANDATE_V291 - explicit independently reviewed delegation.
+// Nothing here enables fiscal invoice issuance. Production issuance stays disabled.
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounting_invoice_mandates (
+ supplier_email TEXT PRIMARY KEY COLLATE NOCASE,
+ version TEXT NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('pending_review','approved','rejected','revoked')),
+ terms_digest TEXT NOT NULL,
+ accepted_at TEXT NOT NULL,
+ approved_at TEXT,
+ approved_by TEXT,
+ revoked_at TEXT,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(supplier_email) REFERENCES accounting_supplier_profiles(supplier_email)
+);
+CREATE TABLE IF NOT EXISTS accounting_invoice_mandate_audit (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ supplier_email TEXT NOT NULL COLLATE NOCASE,
+ event TEXT NOT NULL CHECK(event IN ('accepted','approved','rejected','revoked')),
+ actor_user_id TEXT NOT NULL,
+ version TEXT NOT NULL,
+ terms_digest TEXT NOT NULL,
+ evidence_reference TEXT,
+ reason TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_mandate_audit_supplier
+ ON accounting_invoice_mandate_audit(supplier_email,id);
+`);
+const INVOICE_MANDATE_VERSION='LT-SUPPLIER-INVOICE-DELEGATION-V1';
+const INVOICE_MANDATE_TERMS_DIGEST='delegation_scope_commission_excluded_rental_invoice_supplier_is_issuer_v1';
+export function getAccountingInvoiceMandate(supplierEmail){
+ const e=String(supplierEmail||'').trim().toLowerCase();
+ return e?db.prepare('SELECT * FROM accounting_invoice_mandates WHERE supplier_email=? COLLATE NOCASE').get(e)||null:null;
+}
+export function listAccountingInvoiceMandateAudit(supplierEmail,{limit=100}={}){
+ return db.prepare('SELECT * FROM accounting_invoice_mandate_audit WHERE supplier_email=? COLLATE NOCASE ORDER BY id DESC LIMIT ?')
+   .all(String(supplierEmail||'').trim().toLowerCase(),Math.max(1,Math.min(100,Math.floor(Number(limit)||100))));
+}
+export function acceptAccountingInvoiceMandate({supplierEmail,actorUserId,version,termsDigest}={}){
+ const email=String(supplierEmail||'').trim().toLowerCase(),actor=String(actorUserId||'').trim();
+ if(version!==INVOICE_MANDATE_VERSION||termsDigest!==INVOICE_MANDATE_TERMS_DIGEST)
+  throw new Error('Current supplier delegation terms must be explicitly accepted');
+ return db.transaction(()=>{
+  const user=db.prepare('SELECT user_id,role,email FROM app_users WHERE user_id=?').get(actor);
+  if(!user||user.role!=='supplier'||user.email.toLowerCase()!==email)throw new Error('Only the authenticated supplier may accept its delegation');
+  const p=getAccountingSupplierProfile(email);
+  if(!p || p.reviewed!==1 || p.can_issue_on_behalf!==1 || !['company','individual'].includes(p.legal_kind))
+   throw new Error('Independently reviewed business seller and supplier opt-in required');
+  const current=getAccountingInvoiceMandate(email);
+  if(current?.status==='pending_review' && current.version===version && current.terms_digest===termsDigest)return current;
+  if(current?.status==='approved')return current;
+  db.prepare(`INSERT INTO accounting_invoice_mandates(supplier_email,version,status,terms_digest,accepted_at,approved_at,approved_by,revoked_at,updated_at)
+   VALUES(?,?,'pending_review',?,CURRENT_TIMESTAMP,NULL,NULL,NULL,CURRENT_TIMESTAMP)
+   ON CONFLICT(supplier_email) DO UPDATE SET
+   version=excluded.version,status='pending_review',terms_digest=excluded.terms_digest,
+   accepted_at=CURRENT_TIMESTAMP,approved_at=NULL,approved_by=NULL,revoked_at=NULL,updated_at=CURRENT_TIMESTAMP`)
+   .run(email,version,termsDigest);
+  db.prepare(`INSERT INTO accounting_invoice_mandate_audit(supplier_email,event,actor_user_id,version,terms_digest)
+   VALUES(?,'accepted',?,?,?)`).run(email,actor,version,termsDigest);
+  return getAccountingInvoiceMandate(email);
+ })();
+}
+export function reviewAccountingInvoiceMandate({supplierEmail,adminUserId,decision,evidenceReference,reason}={}){
+ const email=String(supplierEmail||'').trim().toLowerCase(),admin=String(adminUserId||'').trim();
+ const evidence=String(evidenceReference||'').trim(),note=String(reason||'').trim();
+ if(!['approve','reject'].includes(decision)||evidence.length<8||evidence.length>220||note.length<12||note.length>700)
+  throw new Error('Admin delegation decision, evidence and review note required');
+ return db.transaction(()=>{
+  const user=db.prepare('SELECT role FROM app_users WHERE user_id=?').get(admin);
+  if(user?.role!=='admin')throw new Error('Independent platform admin required');
+  const current=getAccountingInvoiceMandate(email);
+  if(!current||current.status!=='pending_review')throw new Error('No pending supplier delegation available');
+  const profile=getAccountingSupplierProfile(email);
+  if(!profile||profile.reviewed!==1||profile.can_issue_on_behalf!==1||
+     !['company','individual'].includes(profile.legal_kind))
+    throw new Error('Supplier profile no longer meets delegation requirements');
+  const status=decision==='approve'?'approved':'rejected';
+  db.prepare(`UPDATE accounting_invoice_mandates SET status=?,approved_at=?,approved_by=?,updated_at=CURRENT_TIMESTAMP
+   WHERE supplier_email=? COLLATE NOCASE AND status='pending_review'`)
+   .run(status,decision==='approve'?new Date().toISOString():null,decision==='approve'?admin:null,email);
+  db.prepare(`INSERT INTO accounting_invoice_mandate_audit
+   (supplier_email,event,actor_user_id,version,terms_digest,evidence_reference,reason)
+   VALUES(?,?,?,?,?,?,?)`).run(email,decision==='approve'?'approved':'rejected',admin,current.version,current.terms_digest,evidence,note);
+  return getAccountingInvoiceMandate(email);
+ })();
+}
+export function revokeAccountingInvoiceMandate({supplierEmail,actorUserId}={}){
+ const email=String(supplierEmail||'').trim().toLowerCase(),actor=String(actorUserId||'').trim();
+ return db.transaction(()=>{
+  const user=db.prepare('SELECT role,email FROM app_users WHERE user_id=?').get(actor);
+  if(!user||!((user.role==='supplier'&&user.email.toLowerCase()===email)||user.role==='admin'))
+   throw new Error('Only owning supplier or platform administrator may revoke delegation');
+  const mandate=getAccountingInvoiceMandate(email);
+  if(!mandate)return null;
+  if(mandate.status==='revoked')return mandate;
+  db.prepare("UPDATE accounting_invoice_mandates SET status='revoked',revoked_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE supplier_email=? COLLATE NOCASE").run(email);
+  db.prepare(`INSERT INTO accounting_invoice_mandate_audit
+   (supplier_email,event,actor_user_id,version,terms_digest)
+   VALUES(?,'revoked',?,?,?)`).run(email,actor,mandate.version,mandate.terms_digest);
+  return getAccountingInvoiceMandate(email);
+ })();
+}
+export function invoiceIssuanceAuthorityStatus(supplierEmail){
+ const profile=getAccountingSupplierProfile(supplierEmail),mandate=getAccountingInvoiceMandate(supplierEmail);
+ return {profileReviewed:profile?.reviewed===1,delegationApproved:mandate?.status==='approved'&&
+   mandate.version===INVOICE_MANDATE_VERSION&&mandate.terms_digest===INVOICE_MANDATE_TERMS_DIGEST,
+   realInvoiceIssuanceEnabled:false};
+}
+export function invoiceDelegationTerms(){
+ return {version:INVOICE_MANDATE_VERSION,termsDigest:INVOICE_MANDATE_TERMS_DIGEST,
+  explanation:'Nuomotojas lieka nuomos paslaugos teikėjas ir jo vardu išrašomos nuomos SF išrašytojas. RentInOrbit tik techninis įgaliotas išrašytojas; jo tarpininkavimo mokestis apskaitomas atskirai. Įgaliojimas įsigalioja tik po abiejų šalių aiškaus patvirtinimo ir nepanaikina teisinių bei PVM reikalavimų. TEST režime tikros SF neišrašomos.'};
 }
