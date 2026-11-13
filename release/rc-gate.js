@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
-execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit'});
+const invoiceTestEnv={...process.env,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
+ DATABASE_URL:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:'',
+ RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
+execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
 
 // Guard all source-marked Lithuanian UI labels and booking completion accessibility.
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});
