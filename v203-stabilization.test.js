@@ -125,7 +125,7 @@ try{
   assert.match(html,/id="returnBookingModal"/);
   assert.match(server,/PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED|b2bPaymentGate/);
   assert.match(server,/corporateDepositGate/);
-  assert.match(server,/transaction-confirmation\\.pdf/);
+  assert.ok(server.includes('transaction-confirmation.pdf'));
   assert.match(server,/scheduleAccountingInvoicePreview/);
   assert.match(server,/api\/admin\/accounting\/delivery-previews/);
   assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
