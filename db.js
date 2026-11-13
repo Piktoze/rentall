@@ -3019,3 +3019,12 @@ export function listAccountingExpenses({limit=100}={}){
  return db.prepare('SELECT * FROM accounting_expenses ORDER BY invoice_date DESC,id DESC LIMIT ?')
    .all(Math.max(1,Math.min(200,Math.floor(Number(limit)||100))));
 }
+
+
+export function listAccountingRecipientDrafts(email,{limit=100}={}){
+ const recipient=String(email||'').trim().toLowerCase();
+ if(!recipient)return [];
+ const n=Math.max(1,Math.min(100,Math.floor(Number(limit)||100)));
+ return db.prepare("SELECT * FROM accounting_invoice_documents WHERE recipient_key=? COLLATE NOCASE AND document_key LIKE 'TEST-%' ORDER BY id DESC LIMIT ?")
+   .all(recipient,n).map(row=>({...row,payload:JSON.parse(row.payload_json),payload_json:undefined}));
+}
