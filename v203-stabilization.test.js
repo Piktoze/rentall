@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import {renderTestInvoicePdf} from './modules/accounting-sf-v286.js';
+import {renderTestInvoicePdf,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
 
 const dbFile=':memory:';
 process.env.DB_PATH=dbFile;
@@ -154,6 +154,12 @@ try{
     grossAmountCents:100,expenseOwner:'supplier'
   }),/idempotency/);
   assert.equal(listAccountingExpenses().length,1);
+  const emailPreview=renderTestInvoiceEmailPreview(invoice,{recipientName:'<p>neleistina</p>'});
+  assert.match(emailPreview,/&lt;p&gt;neleistina&lt;\/p&gt;/);
+  assert.ok(!emailPreview.includes('<p>neleistina</p>'),'Email template must escape supplied recipient text');
+  assert.match(emailPreview,/siuntimas išjungti/);
+  assert.throws(()=>renderTestInvoiceEmailPreview({...invoice,document_key:'LIVE-demo'}),/TEST invoice/);
+
 
 
 
