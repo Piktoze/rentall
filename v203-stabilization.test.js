@@ -301,6 +301,11 @@ try{
   assert.equal(readyInvoice.realInvoiceIssuanceAllowed,false);
   assert.equal(readyInvoice.realEmailDeliveryAllowed,false);
   assert.equal(readyInvoice.invoiceNumberAllocated,false);
+  const disputedInvoice=assessRentalInvoicePreflight({...invoiceContext,hasOpenDispute:true});
+  assert.equal(disputedInvoice.technicalPreflightPassed,false);
+  assert.ok(disputedInvoice.blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+  assert.match(server,/hasOpenDispute:!!db\.prepare/);
+  assert.match(server,/rental_disputes WHERE booking_id=\? AND status='open'/);
   assert.ok(assessRentalInvoicePreflight({...invoiceContext,
     booking:{...invoiceBooking,paymentStatus:'unpaid'}}).blockers.includes('RENTAL_NOT_PAID'));
   assert.ok(assessRentalInvoicePreflight({...invoiceContext,
