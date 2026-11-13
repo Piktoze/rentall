@@ -2804,3 +2804,79 @@ installSupplierPricingSchema(db);
 // prepared statement above initialized successfully. Startup readiness requires it.
 db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
   .run(REQUIRED_SCHEMA_VERSION,'v195-direct-charges-accounts-v2');
+
+
+// SF_LEDGER_V286_SAFE_DRAFTS
+// Invoice documents remain DRAFT ONLY until an independent accounting and tax review.
+// No legacy bookings are backfilled. No automatic customer-facing invoices are issued.
+db.exec(\`
+CREATE TABLE IF NOT EXISTS accounting_invoice_documents (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ document_key TEXT NOT NULL UNIQUE,
+ issuer_key TEXT NOT NULL,
+ recipient_key TEXT NOT NULL,
+ booking_id TEXT,
+ kind TEXT NOT NULL CHECK(kind IN ('platform_fee','rental','rental_confirmation','credit')),
+ status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','issued','void')),
+ currency TEXT NOT NULL DEFAULT 'EUR',
+ amount_cents INTEGER NOT NULL CHECK(amount_cents>=0),
+ tax_mode TEXT NOT NULL CHECK(tax_mode IN ('not_vat_registered','lt_svs','vat_registered','pending_review')),
+ payload_json TEXT NOT NULL,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ issued_at TEXT,
+ invoice_number TEXT UNIQUE,
+ CHECK(status!='issued' OR (invoice_number IS NOT NULL AND issued_at IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_accounting_invoice_documents_issuer ON accounting_invoice_documents(issuer_key,created_at);
+CREATE INDEX IF NOT EXISTS idx_accounting_invoice_documents_booking ON accounting_invoice_documents(booking_id);
+CREATE TABLE IF NOT EXISTS accounting_invoice_number_sequences (
+ issuer_key TEXT NOT NULL,
+ series TEXT NOT NULL,
+ last_number INTEGER NOT NULL DEFAULT 0 CHECK(last_number>=0),
+ PRIMARY KEY(issuer_key,series)
+);
+CREATE TABLE IF NOT EXISTS accounting_invoice_audit (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ document_id INTEGER NOT NULL,
+ action TEXT NOT NULL,
+ actor TEXT NOT NULL,
+ happened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ details_json TEXT NOT NULL DEFAULT '{}',
+ FOREIGN KEY(document_id) REFERENCES accounting_invoice_documents(id)
+);
+\`);
+const cleanInvoiceKey=v=>String(v||'').trim().slice(0,160);
+export function createAccountingInvoiceDraft({documentKey,issuerKey,recipientKey,bookingId=null,kind='platform_fee',amountCents,taxMode='pending_review',payload={},actor='system'}={}){
+ const key=cleanInvoiceKey(documentKey),issuer=cleanInvoiceKey(issuerKey),recipient=cleanInvoiceKey(recipientKey);
+ const amount=Number(amountCents);
+ if(!key||!issuer||!recipient||!Number.isSafeInteger(amount)||amount<0)throw new Error('Invalid invoice draft metadata');
+ if(!['platform_fee','rental','rental_confirmation','credit'].includes(kind))throw new Error('Invalid invoice draft kind');
+ if(!['not_vat_registered','lt_svs','vat_registered','pending_review'].includes(taxMode))throw new Error('Invalid tax mode');
+ if(typeof payload!=='object'||payload===null||Array.isArray(payload))throw new Error('Invalid invoice payload');
+ if(JSON.stringify(payload).length>20000)throw new Error('Invoice draft payload too large');
+ return db.transaction(()=>{
+  db.prepare(\`INSERT OR IGNORE INTO accounting_invoice_documents
+   (document_key,issuer_key,recipient_key,booking_id,kind,amount_cents,tax_mode,payload_json)
+   VALUES(?,?,?,?,?,?,?,?)\`).run(key,issuer,recipient,bookingId?String(bookingId):null,kind,amount,taxMode,JSON.stringify(payload));
+  const row=db.prepare('SELECT * FROM accounting_invoice_documents WHERE document_key=?').get(key);
+  if(row.issuer_key!==issuer||row.recipient_key!==recipient||row.kind!==kind||row.amount_cents!==amount||row.tax_mode!==taxMode||row.booking_id!==(bookingId?String(bookingId):null)){
+   throw new Error('Invoice idempotency key was reused with different metadata');
+  }
+  if(!db.prepare('SELECT id FROM accounting_invoice_audit WHERE document_id=? AND action=?').get(row.id,'created')){
+   db.prepare('INSERT INTO accounting_invoice_audit(document_id,action,actor) VALUES(?,?,?)').run(row.id,'created',cleanInvoiceKey(actor)||'system');
+  }
+  return {...row,payload:JSON.parse(row.payload_json),payload_json:undefined};
+ })();
+}
+export function listAccountingInvoiceDrafts({limit=50,issuerKey=null}={}){
+ const n=Math.max(1,Math.min(100,Math.floor(Number(limit)||50)));
+ return (issuerKey?
+  db.prepare('SELECT * FROM accounting_invoice_documents WHERE issuer_key=? ORDER BY id DESC LIMIT ?').all(cleanInvoiceKey(issuerKey),n):
+  db.prepare('SELECT * FROM accounting_invoice_documents ORDER BY id DESC LIMIT ?').all(n))
+  .map(row=>({...row,payload:JSON.parse(row.payload_json),payload_json:undefined}));
+}
+export function accountingInvoiceSummary(){
+ const totals=db.prepare(\`SELECT kind,status,currency,COUNT(*) AS count,SUM(amount_cents) AS amount_cents
+ FROM accounting_invoice_documents GROUP BY kind,status,currency ORDER BY kind,status\`).all();
+ return {automatedIssuanceEnabled:false,realEmailsEnabled:false,totals};
+}
