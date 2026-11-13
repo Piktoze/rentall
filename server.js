@@ -81,6 +81,7 @@ import {
   voidAccountingInvoiceDraftOnFullRefund,
   getAccountingSupplierProfile,
   saveAccountingSupplierProfile,
+  issueAccountingSyntheticInvoice,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -1426,6 +1427,19 @@ app.get('/api/admin/accounting/invoices.csv',requireRole('admin'),(req,res)=>{
  res.setHeader('Cache-Control','no-store, private');
  res.setHeader('Content-Disposition','attachment; filename="rentinorbit-sf-test-register.csv"');
  res.type('text/csv; charset=utf-8').send('\ufeff'+csv);
+});
+
+
+app.post('/api/admin/accounting/test-drafts/:id/number',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true'||process.env.STRIPE_MODE!=='test')return res.status(404).end();
+ if(req.body?.acknowledgeSynthetic!==true)return res.status(400).json({error:'Explicit synthetic acknowledgement required'});
+ const row=listAccountingInvoiceDrafts({limit:100}).find(item=>item.id===Number(req.params.id));
+ if(!row||!row.document_key.startsWith('TEST-'))return res.status(404).end();
+ try{
+  const numbered=issueAccountingSyntheticInvoice(row.document_key,{actor:'staging-admin'});
+  res.setHeader('Cache-Control','no-store, private');
+  res.status(200).json({document:numbered,realIssuanceEnabled:false});
+ }catch(err){res.status(409).json({error:String(err?.message||'Synthetic numbering failed').slice(0,180)});}
 });
 
 app.get('/api/admin/accounting/test-drafts/:id.pdf',requireRole('admin'),async(req,res)=>{
