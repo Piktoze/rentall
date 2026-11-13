@@ -3096,3 +3096,60 @@ export function listAccountingSupplierReviewAudit(supplierEmail,{limit=100}={}){
  FROM accounting_supplier_review_audit WHERE supplier_email=? COLLATE NOCASE ORDER BY id DESC LIMIT ?`)
  .all(String(supplierEmail||'').trim().toLowerCase(),Math.max(1,Math.min(100,Math.floor(Number(limit)||100))));
 }
+
+// ACCOUNTING_INVOICE_PREVIEW_OUTBOX_V289
+// This isolated table is NOT email_outbox. No worker delivers these records.
+// It proves recipient isolation, idempotency and cancellation of invalidated drafts.
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounting_invoice_delivery_previews (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ document_id INTEGER NOT NULL,
+ recipient_email TEXT NOT NULL COLLATE NOCASE,
+ purpose TEXT NOT NULL CHECK(purpose IN ('platform_fee')),
+ status TEXT NOT NULL DEFAULT 'preview_only' CHECK(status IN ('preview_only','void')),
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ voided_at TEXT,
+ UNIQUE(document_id,recipient_email,purpose),
+ FOREIGN KEY(document_id) REFERENCES accounting_invoice_documents(id)
+);
+CREATE INDEX IF NOT EXISTS idx_accounting_invoice_previews_recipient
+ ON accounting_invoice_delivery_previews(recipient_email,status);
+`);
+export function scheduleAccountingInvoicePreview({documentKey,recipientEmail}={}){
+ const key=String(documentKey||'').trim();
+ const email=String(recipientEmail||'').trim().toLowerCase();
+ if(!/^TEST-[A-Za-z0-9_-]{8,140}$/.test(key))throw new Error('Only synthetic invoice previews allowed');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Valid recipient email required');
+ return db.transaction(()=>{
+  const doc=db.prepare('SELECT * FROM accounting_invoice_documents WHERE document_key=?').get(key);
+  if(!doc || doc.kind!=='platform_fee' || doc.status!=='draft' || String(doc.recipient_key).trim().toLowerCase()!==email)
+   throw new Error('Preview recipient and draft state must match the invoice');
+  db.prepare(`INSERT OR IGNORE INTO accounting_invoice_delivery_previews
+   (document_id,recipient_email,purpose) VALUES(?,?,'platform_fee')`).run(doc.id,email);
+  const row=db.prepare(`SELECT * FROM accounting_invoice_delivery_previews
+   WHERE document_id=? AND recipient_email=? AND purpose='platform_fee'`).get(doc.id,email);
+  if(row.status!=='preview_only')throw new Error('Voided delivery preview cannot be reopened');
+  return row;
+ })();
+}
+export function listAccountingInvoiceDeliveryPreviews({recipientEmail=null,limit=100}={}){
+ const n=Math.max(1,Math.min(100,Math.floor(Number(limit)||100)));
+ const email=recipientEmail?String(recipientEmail).trim().toLowerCase():null;
+ return (email?
+  db.prepare(`SELECT d.id,d.document_id AS documentId,d.recipient_email AS recipientEmail,
+   d.purpose,d.status,d.created_at AS createdAt,d.voided_at AS voidedAt,
+   i.document_key AS documentKey,i.status AS invoiceStatus,i.amount_cents AS amountCents
+   FROM accounting_invoice_delivery_previews d JOIN accounting_invoice_documents i ON i.id=d.document_id
+   WHERE d.recipient_email=? COLLATE NOCASE ORDER BY d.id DESC LIMIT ?`).all(email,n):
+  db.prepare(`SELECT d.id,d.document_id AS documentId,d.recipient_email AS recipientEmail,
+   d.purpose,d.status,d.created_at AS createdAt,d.voided_at AS voidedAt,
+   i.document_key AS documentKey,i.status AS invoiceStatus,i.amount_cents AS amountCents
+   FROM accounting_invoice_delivery_previews d JOIN accounting_invoice_documents i ON i.id=d.document_id
+   ORDER BY d.id DESC LIMIT ?`).all(n));
+}
+export function voidAccountingInvoicePreviewsForDocument(documentKey){
+ const key=String(documentKey||'').trim();
+ if(!key.startsWith('TEST-'))throw new Error('Synthetic document key required');
+ return db.prepare(`UPDATE accounting_invoice_delivery_previews SET status='void',voided_at=CURRENT_TIMESTAMP
+  WHERE status='preview_only' AND document_id IN (SELECT id FROM accounting_invoice_documents WHERE document_key=?)`).run(key).changes;
+}
