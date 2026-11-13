@@ -45,3 +45,13 @@ Deployment build runs `node release/rc-gate.js`.
 - **Before enabling this B2B private-supplier category:** obtain accountant/VMI-reviewed documentary flow, determine responsibility for withholding and declarations, implement a compliant Stripe funds flow, capture required identities and evidence, and verify accounting entries. Do not switch off the guard to facilitate launch.
 - The payer-selected buyer type is self-declared. Before broader LIVE B2B use, add independently verified company-identity and authorized purchasing evidence to avoid buyers misclassifying purchases.
 - Production and Stripe LIVE are unchanged. This block covers only new staging changes until a separately approved LIVE release.
+
+## V288 – audituojama verslo nuomotojo patikra (staging)
+
+- Nuomotojo rekvizitų deklaracija nėra verslo statuso įrodymas. Savarankiškas profilio redagavimas visada atšaukia ankstesnę patikrą.
+- Tik prisijungęs administratorius gali peržiūrėti `GET /api/admin/accounting/supplier-profiles`, istoriją `GET /api/admin/accounting/supplier-profiles/:email/audit` ir pateikti `POST /api/admin/accounting/supplier-profiles/:email/review`.
+- Patvirtinimui reikalingi `confirmEvidenceReviewed=true`, `decision=approve`, dokumentais pagrįstas `evidenceReference` ir `reviewNote`. Leidžiami tik pakankamai užpildyti IV / juridinio asmens profiliai. Privataus fizinio asmens patvirtinimas kaip verslo nuomotojo neleidžiamas.
+- Tik po tokios administratoriaus peržiūros juridinio nuomininko užsakymas su atitinkamu verslo nuomotoju gali pereiti į įprastą rezervacijos ir TEST apmokėjimo procesą.
+- Peržiūros žurnalas yra papildomas; ankstesni įrašai netaisomi. Patvirtinimas nereiškia teisės automatiškai išrašyti nuomos SF pardavėjo vardu.
+- Administratoriaus patikra turi būti atliekama pagal realius dokumentus, ne su TEST pateikiamais fiktyviais duomenimis.
+- Dar lieka neįgyvendinta juridinio pirkėjo tapatybės / įgaliojimų verifikacija, todėl LIVE B2B paleidimo sprendimas tebėra atskiras blokatorius.
