@@ -1391,8 +1391,9 @@ app.get('/api/supplier/accounting/documents/:id.pdf',requireRole('supplier'),asy
 
 app.get('/api/supplier/accounting/profile',requireRole('supplier'),(req,res)=>{
  res.setHeader('Cache-Control','no-store, private');
- res.json({profile:getAccountingSupplierProfile(req.appUser.email),reviewed:false,
-   notice:'Sąskaitos išrašymas nuomotojo vardu neįjungtas, kol nepatikrintas statusas ir įgaliojimas.'});
+ const profile=getAccountingSupplierProfile(req.appUser.email);
+ res.json({profile,reviewed:profile?.reviewed===1,
+   notice:'Sąskaitų automatinis išrašymas nuomotojo vardu dar neįjungtas; tapatybės patikra nėra SF išrašymo įgaliojimų patvirtinimas.'});
 });
 app.put('/api/supplier/accounting/profile',
  requireRole('supplier'),simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'supplier-invoice-profile'}),(req,res)=>{
