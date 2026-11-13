@@ -86,3 +86,12 @@ Deployment build runs `node release/rc-gate.js`.
 - Įgaliojimą atšaukti gali pats tiekėjas, taip pat platformos administratorius apskaitos funkcijos lygmeniu. Tiekėjui pasikeitus juridiniams rekvizitams, įgaliojimas automatiškai pažymimas atšauktu.
 - Visų sprendimų įvykiai saugomi audito žurnale, pakartotinis to paties laukiančio įgaliojimo priėmimas nekuriamas antrą kartą.
 - Svarbu: `realInvoiceIssuanceEnabled=false` išlieka net patvirtinus TEST įgaliojimą. Prieš LIVE būtinas teisiškai tinkamas įgaliojimo sutarties tekstas, PVM/apskaitos režimo patvirtinimas, tikrų SF numeravimas, nekintamos kopijos, el. laiškų siuntimas ir dokumentų taisymo procesas.
+
+## V292 – vieno užsakymo SF išrašymo patikra („fail closed“)
+
+- Nauja izoliuota **tik skaitymo** taisyklė `modules/rental-invoice-preflight-v292.js` vertina tik patikimus duomenų bazės įrašus, ne iš kliento užklausos gautą mokėjimo sumą ar patvirtinimo būseną.
+- Pasiekiama tik prisijungusiam administratoriui: `GET /api/admin/accounting/bookings/:bookingId/invoice-preflight`; nuomotojui – `GET /api/supplier/accounting/bookings/:bookingId/invoice-preflight` tik savo užsakymams.
+- Tikrinama rezervacijos ir skelbimo sąsaja, nuomotojo juridinis statusas ir rekvizitai, PVM režimo klasifikacija, įgaliojimo patvirtinimas bei versijos SHA-256, nuomininko identifikacija, faktinis apmokėjimas, atšaukimas ir pinigų grąžinimas.
+- Net jei visos techninės patikros praėjo, `realInvoiceIssuanceAllowed=false`, `realEmailDeliveryAllowed=false`, `invoiceNumberAllocated=false`. Privalomas blokatorius `LIVE_ACCOUNTING_LEGAL_SIGNOFF_REQUIRED` pašalinamas tik po atskiro teisinio/apskaitos patvirtinimo ir ateityje savarankiškai realizuoto tikrų SF išrašymo proceso.
+- TEST versijoje nėra API, kuri šios patikros pagrindu pradėtų sąskaitos numeravimą, tikrą išrašymą ar siuntimą.
+- Testuose yra mokėjimo nebuvimo, refund, neteisingo nuomotojo, trūkstamų įmonės rekvizitų, nepatvirtinto PVM režimo ir pasenusio įgaliojimo atvejai.
