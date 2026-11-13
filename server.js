@@ -1,5 +1,6 @@
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
+import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
 import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
@@ -1416,6 +1417,35 @@ app.put('/api/supplier/accounting/profile',
 });
 
 
+
+/* V292: read-only admin/supplier preflight. Never accepts caller-provided invoice amounts. */
+function trustedRentalInvoicePreflight(bookingId){
+ const booking=getRentalBookingById(String(bookingId||''));
+ if(!booking)return null;
+ const listing=getRentalListing(booking.listingId);
+ const supplierEmail=String(listing?.ownerEmail||'').trim().toLowerCase();
+ return assessRentalInvoicePreflight({
+  booking,listing,
+  profile:getAccountingSupplierProfile(supplierEmail),
+  mandate:getAccountingInvoiceMandate(supplierEmail),
+  terms:invoiceDelegationTerms()
+ });
+}
+app.get('/api/admin/accounting/bookings/:bookingId/invoice-preflight',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const preflight=trustedRentalInvoicePreflight(req.params.bookingId);
+ if(!preflight)return res.status(404).json({error:'Booking not found'});
+ res.setHeader('Cache-Control','no-store, private');
+ res.json(preflight);
+});
+app.get('/api/supplier/accounting/bookings/:bookingId/invoice-preflight',requireRole('supplier'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ if(!canSupplierManageBooking(req.appUser,req.params.bookingId))return res.status(404).end();
+ const preflight=trustedRentalInvoicePreflight(req.params.bookingId);
+ if(!preflight)return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json(preflight);
+});
 
 /* V291: Two-sided delegated invoice authority, TEST-only. No fiscal issuance. */
 app.get('/api/supplier/accounting/delegation',requireRole('supplier'),(req,res)=>{
