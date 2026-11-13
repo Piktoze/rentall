@@ -24,7 +24,8 @@ export function assessRentalInvoicePreflight({booking,listing,profile,mandate,te
  add('RENTAL_NOT_PAID',!!booking&&payment==='paid'&&!!booking.stripePaymentIntentId);
  add('RENTAL_REFUNDED_OR_DISPUTED',!!booking&&
    !['cancelled','canceled','declined','expired'].includes(String(booking.status||'').toLowerCase())&&
-   !['refunded','partially_refunded'].includes(payment)&&
+   !['refunded','partially_refunded','refund_pending','refund_processing','disputed','chargeback','chargeback_pending'].includes(payment)&&
+   !['disputed','chargeback','refund_pending','refund_processing'].includes(String(booking.status||'').toLowerCase())&&
    !booking.stripeRefundId&&Number(booking.refundAmount||0)===0);
  const amount=Math.round(Number(booking?.orderValue)*100);
  add('RENTAL_AMOUNT_INVALID',!!booking&&Number.isSafeInteger(amount)&&amount>0);
