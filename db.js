@@ -2966,3 +2966,56 @@ export function issueAccountingSyntheticInvoice(documentKey,{actor='staging-test
   return db.prepare('SELECT * FROM accounting_invoice_documents WHERE id=?').get(row.id);
  })();
 }
+
+
+// ACCOUNTING_EXPENSES_V286 - staging-only preparation for IV expense records.
+// Foreign-vendor VAT treatment is always pending an accountant's review.
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounting_expenses (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ record_key TEXT NOT NULL UNIQUE,
+ supplier_name TEXT NOT NULL,
+ supplier_country TEXT,
+ category TEXT NOT NULL CHECK(category IN ('stripe','railway','domain','resend','advertising','other')),
+ invoice_date TEXT NOT NULL,
+ currency TEXT NOT NULL,
+ gross_amount_cents INTEGER NOT NULL CHECK(gross_amount_cents>=0),
+ expense_owner TEXT NOT NULL CHECK(expense_owner IN ('platform','supplier','undetermined')),
+ vat_review_status TEXT NOT NULL DEFAULT 'pending_review' CHECK(vat_review_status IN ('pending_review','reviewed')),
+ reverse_charge_assessed INTEGER NOT NULL DEFAULT 0 CHECK(reverse_charge_assessed IN (0,1)),
+ source_reference TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_accounting_expenses_invoice_date ON accounting_expenses(invoice_date);
+`);
+export function addAccountingExpenseDraft({
+ recordKey,supplierName,supplierCountry='',category,invoiceDate,
+ currency='EUR',grossAmountCents,expenseOwner='undetermined',sourceReference=''
+}={}){
+ const key=String(recordKey||'').trim(),supplier=String(supplierName||'').trim();
+ const country=String(supplierCountry||'').trim().toUpperCase();
+ const date=String(invoiceDate||'').trim(),unit=String(currency||'').trim().toUpperCase();
+ const amount=Number(grossAmountCents),ref=String(sourceReference||'').trim();
+ if(!/^TEST-[a-zA-Z0-9_-]{8,90}$/.test(key))throw new Error('Only synthetic TEST expense entries are enabled');
+ if(!supplier||supplier.length>160||country.length>2||ref.length>240)throw new Error('Invalid expense supplier');
+ if(!['stripe','railway','domain','resend','advertising','other'].includes(category))throw new Error('Invalid expense category');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(new Date(date+'T00:00:00Z').getTime()))throw new Error('Invalid expense date');
+ if(!/^[A-Z]{3}$/.test(unit)||!Number.isSafeInteger(amount)||amount<0)throw new Error('Invalid expense amount');
+ if(!['platform','supplier','undetermined'].includes(expenseOwner))throw new Error('Invalid expense owner');
+ return db.transaction(()=>{
+  db.prepare(`INSERT OR IGNORE INTO accounting_expenses
+  (record_key,supplier_name,supplier_country,category,invoice_date,currency,gross_amount_cents,expense_owner,source_reference)
+  VALUES(?,?,?,?,?,?,?,?,?)`).run(key,supplier,country||null,category,date,unit,amount,expenseOwner,ref||null);
+  const row=db.prepare('SELECT * FROM accounting_expenses WHERE record_key=?').get(key);
+  if(row.supplier_name!==supplier||row.category!==category||row.invoice_date!==date||row.currency!==unit||
+      row.gross_amount_cents!==amount||row.expense_owner!==expenseOwner||row.supplier_country!==(country||null)){
+    throw new Error('Expense idempotency key was reused with different values');
+  }
+  return row;
+ })();
+}
+export function listAccountingExpenses({limit=100}={}){
+ return db.prepare('SELECT * FROM accounting_expenses ORDER BY invoice_date DESC,id DESC LIMIT ?')
+   .all(Math.max(1,Math.min(200,Math.floor(Number(limit)||100))));
+}
