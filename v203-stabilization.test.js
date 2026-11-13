@@ -244,6 +244,9 @@ try{
   assert.equal(listAccountingSupplierProfilesForReview().some(x=>x.supplier_email===syntheticSupplier.email),true);
   assert.equal(listAccountingSupplierReviewAudit(syntheticSupplier.email).length,1);
   const mandateTerms=invoiceDelegationTerms();
+  assert.match(mandateTerms.termsDigest,/^[a-f0-9]{64}$/);
+  assert.ok(mandateTerms.explanation.includes('komisinis'));
+
   assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).realInvoiceIssuanceEnabled,false);
   assert.throws(()=>acceptAccountingInvoiceMandate({
     supplierEmail:syntheticSupplier.email,actorUserId:syntheticAdmin.userId,
@@ -282,6 +285,7 @@ try{
   });
   assert.equal(getAccountingSupplierProfile(syntheticSupplier.email).reviewed,0);
   assert.equal(getAccountingInvoiceMandate(syntheticSupplier.email).status,'revoked');
+  assert.equal(listAccountingInvoiceMandateAudit(syntheticSupplier.email).at(0).event,'revoked');
   assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).delegationApproved,false);
   assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:getAccountingSupplierProfile(syntheticSupplier.email)}).allowed,false);
   assert.throws(()=>reviewAccountingSupplierProfile({
