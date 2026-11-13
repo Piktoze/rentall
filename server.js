@@ -85,6 +85,8 @@ import {
   reviewAccountingSupplierProfile,
   listAccountingSupplierProfilesForReview,
   listAccountingSupplierReviewAudit,
+  scheduleAccountingInvoicePreview,
+  listAccountingInvoiceDeliveryPreviews,
   issueAccountingSyntheticInvoice,
   addAccountingExpenseDraft,
   listAccountingExpenses,
@@ -1012,6 +1014,7 @@ app.post('/api/stripe/webhook',
                   payload:{synthetic:true,piId:pi.id,description:'TEST commission draft; NOT a tax invoice'},
                   actor:'stripe-test-webhook'
                 });
+                scheduleAccountingInvoicePreview({documentKey:'TEST-FEE-'+pi.id,recipientEmail:listing.ownerEmail});
               }
             }catch(err){console.warn(JSON.stringify({type:'invoice_draft_requires_review',bookingId,error:safeOperationalError(err)}));}
           }
@@ -1433,6 +1436,31 @@ app.post('/api/admin/accounting/supplier-profiles/:email/review',
   });
   res.json({result,realInvoiceIssuanceEnabled:false,companyRenterReviewGate:'evaluates supplier business status'});
  }catch(err){res.status(400).json({error:String(err?.message||'Review invalid').slice(0,180)});}
+});
+
+
+/* Invoice delivery previews are NOT real emails; never submitted to email_outbox. */
+app.get('/api/admin/accounting/delivery-previews',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({mode:'preview_only',deliveryEnabled:false,items:listAccountingInvoiceDeliveryPreviews({limit:req.query?.limit})});
+});
+app.get('/api/supplier/accounting/delivery-previews',requireRole('supplier'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({mode:'preview_only',deliveryEnabled:false,items:listAccountingInvoiceDeliveryPreviews({recipientEmail:req.appUser.email})});
+});
+app.post('/api/admin/accounting/test-drafts/:id/prepare-delivery',
+ requireRole('admin'),simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'invoice-preview'}),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true'||process.env.STRIPE_MODE!=='test')return res.status(404).end();
+ if(req.body?.acknowledgeSynthetic!==true)return res.status(400).json({error:'Explicit synthetic preview acknowledgement required'});
+ const doc=listAccountingInvoiceDrafts({limit:100}).find(x=>x.id===Number(req.params.id));
+ if(!doc||!doc.document_key.startsWith('TEST-'))return res.status(404).end();
+ try{
+   const result=scheduleAccountingInvoicePreview({documentKey:doc.document_key,recipientEmail:doc.recipient_key});
+   res.setHeader('Cache-Control','no-store, private');
+   res.status(200).json({deliveryPreview:result,realEmailSent:false,mode:'preview_only'});
+ }catch(err){res.status(409).json({error:String(err?.message||'Preview preparation failed').slice(0,180)});}
 });
 
 app.get('/api/admin/accounting/invoices',requireRole('admin'),(req,res)=>{
