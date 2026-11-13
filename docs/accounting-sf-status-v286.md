@@ -104,3 +104,11 @@ Deployment build runs `node release/rc-gate.js`.
 - Pridėti izoliuoti regresijos scenarijai šioms būsenoms; tikros SF, numeracija ir pristatymas lieka uždrausti.
 - Prieigos peržiūra: administratoriaus API reikalauja `admin` rolės, o nuomotojo API papildomai tikrina, kad rezervacijos skelbimas priklausytų prisijungusiam nuomotojui. Nenustatyta naujo prieigos kontrolės trūkumo.
 - Railway staging diegimas `730e613f2` patvirtintas `SUCCESS`; aplinkos būsena `online`, aktyvių įspėjimų ir kritinių pranešimų nėra. Tai **nereiškia**, kad atliktas tikras Stripe TEST E2E ar patvirtintas LIVE apskaitos paleidimas.
+
+## V294 – atviro nuomos ginčo blokavimas (staging)
+
+- Sąskaitos parengimo patikra nebeleidžia techninio patvirtinimo, kai patikimoje `rental_disputes` lentelėje yra `status='open'` įrašas, susijęs su tuo pačiu `booking_id`.
+- API šią informaciją skaito tik iš serverio duomenų bazės, ne iš kliento perduoto `hasOpenDispute`.
+- Izoliuotas regresijos testas tikrina `hasOpenDispute:true` neigiamą scenarijų ir serverio DB susiejimą.
+- **Likęs trūkumas:** `charge.dispute.*` Stripe webhook šiuo metu tik registruoja įvykį; jis automatiškai nesukuria `rental_disputes` įrašo. Todėl ši pataisa apsaugo nuo platformoje atidarytų nuomos ginčų, bet savaime neišsprendžia Stripe kortelės ginčų. Prieš LIVE būtina saugiai susieti Stripe dispute su `payment_intent`, `charge`, Connect paskyra ir rezervacija, užtikrinti idempotentiškumą ir ginčo uždarymo būsenas.
+- Tikrų SF ir laiškų siuntimas lieka išjungtas.
