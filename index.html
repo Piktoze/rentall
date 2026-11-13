@@ -1241,6 +1241,18 @@
         <div class="eyebrow" data-i18n-text="Review &amp; terms">Review & terms</div>
         <h2 data-i18n-text="Review your booking">Review your booking</h2>
 
+        <label class="full" for="customerLegalKind"><strong>Nuomininko tipas</strong>
+          <select id="customerLegalKind" required>
+            <option value="individual" selected>Privatus asmuo</option>
+            <option value="company">Įmonė (juridinis asmuo)</option>
+          </select>
+        </label>
+        <label class="full" for="customerCompanyName" id="customerCompanyNameLabel" hidden>Įmonės pavadinimas
+          <input id="customerCompanyName" maxlength="180" autocomplete="organization" placeholder="Įveskite juridinio asmens pavadinimą">
+        </label>
+        <p class="checkout-b2b-tax-note" id="checkoutB2bTaxNotice" hidden role="status" aria-live="polite">
+          Nuomojantis įmonės vardu iš privataus arba nepatikrinto nuomotojo, užsakymas negalimas iki GPM išskaičiavimo tvarkos suderinimo. RentInOrbit įmonės vardu nuomos sąskaitos neišrašo.
+        </p>
         <div class="review-card" id="reviewCard"></div>
 
         <aside class="renter-response-info" id="renterResponseInfo" aria-live="polite"></aside>
