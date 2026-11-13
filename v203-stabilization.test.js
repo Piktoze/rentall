@@ -31,6 +31,13 @@ const {
   reviewAccountingSupplierProfile,
   listAccountingSupplierProfilesForReview,
   listAccountingSupplierReviewAudit,
+  getAccountingInvoiceMandate,
+  listAccountingInvoiceMandateAudit,
+  acceptAccountingInvoiceMandate,
+  reviewAccountingInvoiceMandate,
+  revokeAccountingInvoiceMandate,
+  invoiceIssuanceAuthorityStatus,
+  invoiceDelegationTerms,
   scheduleAccountingInvoicePreview,
   listAccountingInvoiceDeliveryPreviews,
   listEmailOutbox
@@ -127,6 +134,9 @@ try{
   assert.match(server,/corporateDepositGate/);
   assert.ok(server.includes('transaction-confirmation.pdf'));
   assert.match(server,/scheduleAccountingInvoicePreview/);
+  assert.ok(server.includes('/api/supplier/accounting/delegation/accept'));
+  assert.ok(server.includes('/api/admin/accounting/delegations/:email/review'));
+
   assert.match(server,/api\/admin\/accounting\/delivery-previews/);
   assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
   assert.match(html,/id="customerLegalKind"/);
@@ -233,10 +243,46 @@ try{
   assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:review.reviewedProfile}).allowed,true);
   assert.equal(listAccountingSupplierProfilesForReview().some(x=>x.supplier_email===syntheticSupplier.email),true);
   assert.equal(listAccountingSupplierReviewAudit(syntheticSupplier.email).length,1);
+  const mandateTerms=invoiceDelegationTerms();
+  assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).realInvoiceIssuanceEnabled,false);
+  assert.throws(()=>acceptAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,actorUserId:syntheticAdmin.userId,
+    version:mandateTerms.version,termsDigest:mandateTerms.termsDigest
+  }),/Only the authenticated supplier/);
+  assert.throws(()=>acceptAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,actorUserId:syntheticSupplier.userId,
+    version:'obsolete-terms',termsDigest:mandateTerms.termsDigest
+  }),/Current supplier delegation terms/);
+  const mandate=acceptAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,actorUserId:syntheticSupplier.userId,
+    version:mandateTerms.version,termsDigest:mandateTerms.termsDigest
+  });
+  assert.equal(mandate.status,'pending_review');
+  assert.equal(acceptAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,actorUserId:syntheticSupplier.userId,
+    version:mandateTerms.version,termsDigest:mandateTerms.termsDigest
+  }).accepted_at,mandate.accepted_at);
+  assert.equal(listAccountingInvoiceMandateAudit(syntheticSupplier.email).length,1);
+  assert.throws(()=>reviewAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,adminUserId:syntheticSupplier.userId,
+    decision:'approve',evidenceReference:'TEST-SIGNED-AUTH-V291',
+    reason:'Supplier must not review itself'
+  }),/Independent platform admin/);
+  const approved=reviewAccountingInvoiceMandate({
+    supplierEmail:syntheticSupplier.email,adminUserId:syntheticAdmin.userId,
+    decision:'approve',evidenceReference:'TEST-SIGNED-AUTH-V291',
+    reason:'Independent synthetic contract reviewed'
+  });
+  assert.equal(approved.status,'approved');
+  assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).delegationApproved,true);
+  assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).realInvoiceIssuanceEnabled,false);
+  assert.equal(listAccountingInvoiceMandateAudit(syntheticSupplier.email).length,2);
   saveAccountingSupplierProfile(syntheticSupplier.email,{
     legalKind:'private',legalName:'TEST Privatus žmogus',vatMode:'pending_review'
   });
   assert.equal(getAccountingSupplierProfile(syntheticSupplier.email).reviewed,0);
+  assert.equal(getAccountingInvoiceMandate(syntheticSupplier.email).status,'revoked');
+  assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).delegationApproved,false);
   assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:getAccountingSupplierProfile(syntheticSupplier.email)}).allowed,false);
   assert.throws(()=>reviewAccountingSupplierProfile({
     supplierEmail:syntheticSupplier.email,reviewerUserId:syntheticAdmin.userId,
