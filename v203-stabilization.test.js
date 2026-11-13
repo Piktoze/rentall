@@ -30,7 +30,9 @@ const {
   createAppUser,
   reviewAccountingSupplierProfile,
   listAccountingSupplierProfilesForReview,
-  listAccountingSupplierReviewAudit
+  listAccountingSupplierReviewAudit,
+  scheduleAccountingInvoicePreview,
+  listAccountingInvoiceDeliveryPreviews
 }=await import('./db.js');
 
 try{
@@ -103,6 +105,8 @@ try{
   assert.match(html,/id="returnBookingModal"/);
   assert.match(server,/PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED|b2bPaymentGate/);
   assert.match(server,/corporateDepositGate/);
+  assert.match(server,/scheduleAccountingInvoicePreview/);
+  assert.match(server,/api\/admin\/accounting\/delivery-previews/);
   assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
   assert.match(html,/id="customerLegalKind"/);
   assert.match(app,/customerLegalKind:document\.getElementById/);
@@ -137,6 +141,30 @@ try{
   assert.equal(listAccountingInvoiceDrafts({issuerKey:'TEST-PLATFORM'}).length,1);
   assert.equal(listAccountingRecipientDrafts('TEST-SUPPLIER').length,1);
   assert.equal(listAccountingRecipientDrafts('wrong-user@example.test').length,0);
+  assert.throws(()=>scheduleAccountingInvoicePreview({documentKey:'TEST-invoice-v286-00001',recipientEmail:'other@example.test'}),/recipient/);
+  // Staging email-previews are durable entries, not transactional messages.
+  // This example uses an email-matched draft rather than the non-email recipient TEST-SUPPLIER.
+  const emailDraft=createAccountingInvoiceDraft({
+    documentKey:'TEST-email-preview-v289-00001',issuerKey:'TEST-PLATFORM',
+    recipientKey:'supplier-v203@example.test',kind:'platform_fee',
+    bookingId:'v289-refunded',amountCents:1500,taxMode:'pending_review',
+    payload:{synthetic:true}
+  });
+  const preview=scheduleAccountingInvoicePreview({
+    documentKey:emailDraft.document_key,recipientEmail:'supplier-v203@example.test'
+  });
+  assert.equal(preview.status,'preview_only');
+  assert.equal(scheduleAccountingInvoicePreview({
+    documentKey:emailDraft.document_key,recipientEmail:'supplier-v203@example.test'
+  }).id,preview.id,'Repeated webhook must not duplicate a delivery preview');
+  assert.equal(listAccountingInvoiceDeliveryPreviews({recipientEmail:'supplier-v203@example.test'}).length,1);
+  assert.equal(listAccountingInvoiceDeliveryPreviews({recipientEmail:'outsider@example.test'}).length,0);
+  assert.deepEqual(voidAccountingInvoiceDraftOnFullRefund({bookingId:'v289-refunded'}),{voided:1,requiresReview:0});
+  assert.equal(listAccountingInvoiceDeliveryPreviews({recipientEmail:'supplier-v203@example.test'})[0].status,'void');
+  assert.throws(()=>scheduleAccountingInvoicePreview({
+    documentKey:emailDraft.document_key,recipientEmail:'supplier-v203@example.test'
+  }),/draft state/);
+
 
   assert.equal(accountingInvoiceSummary().automatedIssuanceEnabled,false);
   assert.equal(accountingInvoiceSummary().realEmailsEnabled,false);
