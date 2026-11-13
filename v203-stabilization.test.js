@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import {assessCompanyRentalCheckout,PRIVATE_TO_COMPANY_REVIEW_CODE} from './modules/b2b-private-rental-gate-v287.js';
 import {renderTestInvoicePdf,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
 
 const dbFile=':memory:';
@@ -158,6 +159,16 @@ try{
     grossAmountCents:100,expenseOwner:'supplier'
   }),/idempotency/);
   assert.equal(listAccountingExpenses().length,1);
+  const privateRenter=assessCompanyRentalCheckout({customerLegalKind:'individual'});
+  assert.equal(privateRenter.allowed,true);
+  const blockedPrivate=assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:{legal_kind:'private',reviewed:1}});
+  assert.equal(blockedPrivate.allowed,false);
+  assert.equal(blockedPrivate.code,PRIVATE_TO_COMPANY_REVIEW_CODE);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:null}).allowed,false);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:{legal_kind:'company',reviewed:0}}).allowed,false);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:{legal_kind:'individual',reviewed:1}}).allowed,true);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:{legal_kind:'company',reviewed:1}}).allowed,true);
+
   const emailPreview=renderTestInvoiceEmailPreview(invoice,{recipientName:'<p>neleistina</p>'});
   assert.match(emailPreview,/&lt;p&gt;neleistina&lt;\/p&gt;/);
   assert.ok(!emailPreview.includes('<p>neleistina</p>'),'Email template must escape supplied recipient text');
