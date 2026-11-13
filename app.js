@@ -4727,6 +4727,19 @@ function wireAuthoritativeCheckout(){
     document.getElementById(id)?.addEventListener('input',saveDeliveryFormData);
   });
 
+  const renterKindField=document.getElementById('customerLegalKind');
+  function updateRenterBusinessCheckout(){
+    const company=renterKindField?.value==='company';
+    const nameLabel=document.getElementById('customerCompanyNameLabel');
+    const companyInput=document.getElementById('customerCompanyName');
+    const notice=document.getElementById('checkoutB2bTaxNotice');
+    if(nameLabel)nameLabel.hidden=!company;
+    if(companyInput)companyInput.required=company;
+    if(notice)notice.hidden=!company;
+  }
+  renterKindField?.addEventListener('change',updateRenterBusinessCheckout);
+  updateRenterBusinessCheckout();
+
   cleanForm.addEventListener('submit',async e=>{
     e.preventDefault();
     if(!lockBookingSubmit(cleanForm)) return;
@@ -4764,6 +4777,8 @@ function wireAuthoritativeCheckout(){
           customerName:customer.name,
           customerEmail:customer.email,
           customerPhone:customer.phone,
+          customerLegalKind:document.getElementById('customerLegalKind')?.value||'individual',
+          customerCompanyName:document.getElementById('customerLegalKind')?.value==='company'?(document.getElementById('customerCompanyName')?.value.trim()||''):null,
           // For pickup, optional meeting details must not be billed as delivery.
           accommodationName:pickupOnly?null:delivery.accommodationName,
           deliveryCity:document.getElementById('deliveryArea')?.value?.trim()||'',
