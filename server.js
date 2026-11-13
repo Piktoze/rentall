@@ -74,6 +74,9 @@ import {
   saveRentalSearch,
   listSavedSearches,
   deleteRentalSavedSearch,
+  createAccountingInvoiceDraft,
+  listAccountingInvoiceDrafts,
+  accountingInvoiceSummary,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -1318,6 +1321,36 @@ app.get('/api/admin/email-outbox', requireRole('admin'), (req,res)=>{
   const limit=Math.max(1,Math.min(200,Number(req.query.limit)||100));
   res.setHeader('Cache-Control','no-store, private');
   res.json({deliveryMode:process.env.EMAIL_DELIVERY_MODE||'outbox',items:listEmailOutbox(limit)});
+});
+
+
+/* SF_LEDGER_V286_ADMIN_DRAFT_API
+ * All routes are restricted to staging admins. No issued invoices or email side effects.
+ */
+app.get('/api/admin/accounting/invoices',requireRole('admin'),(req,res)=>{
+  res.setHeader('Cache-Control','no-store, private');
+  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).json({error:'Not found'});
+  const limit=Math.max(1,Math.min(100,Number(req.query?.limit)||50));
+  res.json({summary:accountingInvoiceSummary(),documents:listAccountingInvoiceDrafts({limit})});
+});
+app.post('/api/admin/accounting/test-drafts',requireRole('admin'),(req,res)=>{
+  res.setHeader('Cache-Control','no-store, private');
+  if(process.env.RENTINORBIT_STAGING!=='true' || process.env.STRIPE_MODE!=='test')return res.status(404).json({error:'Not found'});
+  if(req.body?.acknowledgeSynthetic!==true)return res.status(400).json({error:'Explicit synthetic data acknowledgement required'});
+  try{
+    const amountCents=Number(req.body?.amountCents);
+    if(!Number.isSafeInteger(amountCents)||amountCents<0||amountCents>10000000)return res.status(400).json({error:'Invalid test amount'});
+    const kind=String(req.body?.kind||'platform_fee');
+    const key=String(req.body?.documentKey||'');
+    if(!/^TEST-[A-Za-z0-9_-]{8,80}$/.test(key))return res.status(400).json({error:'Synthetic documentKey required'});
+    const invoice=createAccountingInvoiceDraft({
+      documentKey:key,issuerKey:'TEST-RENTOBIT-OPERATOR',recipientKey:'TEST-RECIPIENT',
+      kind,amountCents,taxMode:'pending_review',
+      payload:{synthetic:true,description:'TEST - negaliojantis apskaitos dokumentas'},
+      actor:'staging-admin'
+    });
+    return res.status(201).json({invoice,automatedIssuanceEnabled:false});
+  }catch(err){return res.status(400).json({error:String(err?.message||'Invoice draft failed').slice(0,180)});}
 });
 
 app.get('/api/admin/diagnostics', requireRole('admin'), (req,res)=>{
