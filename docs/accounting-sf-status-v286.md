@@ -55,3 +55,14 @@ Deployment build runs `node release/rc-gate.js`.
 - Peržiūros žurnalas yra papildomas; ankstesni įrašai netaisomi. Patvirtinimas nereiškia teisės automatiškai išrašyti nuomos SF pardavėjo vardu.
 - Administratoriaus patikra turi būti atliekama pagal realius dokumentus, ne su TEST pateikiamais fiktyviais duomenimis.
 - Dar lieka neįgyvendinta juridinio pirkėjo tapatybės / įgaliojimų verifikacija, todėl LIVE B2B paleidimo sprendimas tebėra atskiras blokatorius.
+
+## V289 – patikimas TEST SF pristatymo paruošimas
+
+- Po patvirtinto naujo Stripe TEST mokėjimo saugomas komisinių sąskaitos juodraštis ir atskiras `accounting_invoice_delivery_previews` įrašas.
+- Pristatymo įrašas turi unikalią `(document_id,recipient_email,purpose)` kombinaciją; pakartotiniai webhook įvykiai nekuria naujo pranešimo.
+- Ši lentelė nesujungta su `email_outbox`, todėl TEST sąskaitos laiškas fiziškai **nesiunčiamas**, net jei staging el. laiškų siuntimo worker būtų įjungtas.
+- Atšaukus juodraštį dėl patvirtinto pilno refund, susietas pristatymo peržiūros įrašas taip pat atšaukiamas.
+- Admin: `GET /api/admin/accounting/delivery-previews`; saugus tik TEST paruošimas `POST /api/admin/accounting/test-drafts/:id/prepare-delivery`. Tiekėjas: `GET /api/supplier/accounting/delivery-previews` tik savo įrašams.
+- Administratoriaus sąskaitų peržiūroje matoma būsena ir nuorodos į PDF bei el. laiško peržiūrą.
+- PDF viršuje naudojamas tas pats esamas `assets/brand/rentinorbit-logo-horizontal-dark-web.png` logotipas su R, kaip ir pačioje platformoje. PDF el. pašto adreso nespausdina.
+- Tikras dokumentų išrašymas, PVM taisyklės, el. pašto gavėjo identifikavimas, tikrų PDF priedų pristatymas ir LIVE siuntimas lieka išjungti iki teisinių/apskaitos sąlygų patvirtinimo.
