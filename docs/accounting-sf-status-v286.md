@@ -66,3 +66,13 @@ Deployment build runs `node release/rc-gate.js`.
 - Administratoriaus sąskaitų peržiūroje matoma būsena ir nuorodos į PDF bei el. laiško peržiūrą.
 - PDF viršuje naudojamas tas pats esamas `assets/brand/rentinorbit-logo-horizontal-dark-web.png` logotipas su R, kaip ir pačioje platformoje. PDF el. pašto adreso nespausdina.
 - Tikras dokumentų išrašymas, PVM taisyklės, el. pašto gavėjo identifikavimas, tikrų PDF priedų pristatymas ir LIVE siuntimas lieka išjungti iki teisinių/apskaitos sąlygų patvirtinimo.
+
+## V290 – apmokėtos nuomos sandorio patvirtinimas nuomininkui ir nuomotojui
+
+- `GET /api/rentals/bookings/:bookingId/transaction-confirmation.pdf` – autentifikuotiems sandorio dalyviams, jų teisės tikrinamos pagal realų užsakymą ir nuomotojo paskyrą. Jis nepateikia dokumento neprisijungusiam asmeniui.
+- Dokumentas yra neutralus **nuomos sandorio patvirtinimas**, ne RentInOrbit vardu išrašoma nuomos sąskaita faktūra. RentInOrbit komisinis yra atskiras dokumentas.
+- PDF generuojamas tik už negrąžintą, apmokėtą nuomą, ne už pending, unpaid, cancelled arba refunded užsakymus.
+- Naudojamas tikras platformos R logotipas, lietuviškas šriftas, užsakymo numeris, sutarties šalys, daiktas, laikotarpis ir bendra nuomos sandorio suma.
+- Kai nuomotojo verslo duomenys patikrinti administratoriaus, PDF gali rodyti jo teisinį vardą; kitu atveju paliekama nuoroda į abiejų šalių nuomos sutartį, ne išgalvoti rekvizitai.
+- Nuomininkas savo prisijungimo užsakymų sąraše mato PDF nuorodą tik kai užsakymas apmokėtas ir negrąžintas.
+- Šis patvirtinimas nepakeičia apskaitos SF, kai pagal konkrečios šalies veiklos statusą ir teisės aktus būtinas toks dokumentas. LIVE automatinės SF, PVM ir el. pašto pristatymas toliau užblokuoti.
