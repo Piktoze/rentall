@@ -169,6 +169,7 @@ try{
   assert.equal(accountingInvoiceSummary().automatedIssuanceEnabled,false);
   assert.equal(accountingInvoiceSummary().realEmailsEnabled,false);
 
+  assert.ok(fs.existsSync('./assets/brand/rentinorbit-logo-horizontal-dark-web.png'),'The real R logo asset must ship with invoice PDFs');
   const pdf=await renderTestInvoicePdf(invoice,{issuer:{
     issuerName:'TEST – individuali veikla',issuerAddress:'Vilniaus g. 1, Klaipėda',
     individualActivityCertificate:'TEST-0001'
