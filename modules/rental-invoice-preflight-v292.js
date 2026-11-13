@@ -1,6 +1,6 @@
 // V292: read-only delegated rental-invoice preflight. Never issues, numbers or sends documents.
 // All data must originate from the trusted database, not a request's self-declared metadata.
-export function assessRentalInvoicePreflight({booking,listing,profile,mandate,terms}={}){
+export function assessRentalInvoicePreflight({booking,listing,profile,mandate,terms,hasOpenDispute=false}={}){
  const blocks=[];
  const add=(code,ok)=>{if(!ok)blocks.push(code)};
  add('BOOKING_MISSING',!!booking);
@@ -26,7 +26,7 @@ export function assessRentalInvoicePreflight({booking,listing,profile,mandate,te
    !['cancelled','canceled','declined','expired'].includes(String(booking.status||'').toLowerCase())&&
    !['refunded','partially_refunded','refund_pending','refund_processing','disputed','chargeback','chargeback_pending'].includes(payment)&&
    !['disputed','chargeback','refund_pending','refund_processing'].includes(String(booking.status||'').toLowerCase())&&
-   !booking.stripeRefundId&&Number(booking.refundAmount||0)===0);
+   !booking.stripeRefundId&&Number(booking.refundAmount||0)===0&&hasOpenDispute===false);
  const amount=Math.round(Number(booking?.orderValue)*100);
  add('RENTAL_AMOUNT_INVALID',!!booking&&Number.isSafeInteger(amount)&&amount>0);
  add('RENTER_IDENTITY_INCOMPLETE',!!booking&&
