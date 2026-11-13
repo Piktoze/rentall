@@ -2940,3 +2940,29 @@ export function saveAccountingSupplierProfile(email,input={}){
  .run(e,legalKind,legalName,address||null,registration||null,vatMode,authorization);
  return getAccountingSupplierProfile(e);
 }
+
+
+// Only synthetic TEST documents may receive a mock number.
+// This is NOT a legal issuance mechanism and cannot issue real tax invoices.
+export function issueAccountingSyntheticInvoice(documentKey,{actor='staging-test-admin',date=new Date()}={}){
+ const key=String(documentKey||'').trim();
+ if(!/^TEST-[A-Za-z0-9_-]{8,120}$/.test(key))throw new Error('Only synthetic TEST documents may be numbered');
+ const year=new Date(date).getUTCFullYear();
+ if(!Number.isInteger(year)||year<2020||year>2100)throw new Error('Invalid TEST invoice date');
+ return db.transaction(()=>{
+  const row=db.prepare('SELECT * FROM accounting_invoice_documents WHERE document_key=?').get(key);
+  if(!row)throw new Error('Invoice draft not found');
+  if(row.status==='issued')return row;
+  if(row.status!=='draft')throw new Error('Only invoice drafts may be numbered');
+  if(row.tax_mode!=='pending_review')throw new Error('Only review-only synthetic invoices supported');
+  const series='TEST-RIO-'+year;
+  db.prepare('INSERT OR IGNORE INTO accounting_invoice_number_sequences(issuer_key,series,last_number) VALUES(?,?,0)').run(row.issuer_key,series);
+  const seq=db.prepare('UPDATE accounting_invoice_number_sequences SET last_number=last_number+1 WHERE issuer_key=? AND series=? RETURNING last_number').get(row.issuer_key,series);
+  const number=series+'-'+String(seq.last_number).padStart(6,'0');
+  db.prepare('UPDATE accounting_invoice_documents SET status=?,invoice_number=?,issued_at=CURRENT_TIMESTAMP WHERE id=? AND status=?')
+    .run('issued',number,row.id,'draft');
+  db.prepare('INSERT INTO accounting_invoice_audit(document_id,action,actor,details_json) VALUES(?,?,?,?)')
+    .run(row.id,'synthetic_number_assigned',String(actor).slice(0,120),JSON.stringify({number}));
+  return db.prepare('SELECT * FROM accounting_invoice_documents WHERE id=?').get(row.id);
+ })();
+}
