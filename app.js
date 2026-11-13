@@ -6026,6 +6026,10 @@ async function loadUnifiedCustomerBookings(){
         ${canCancel?`<button class="secondary v46-cancel-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Cancel booking'))}</button>`:''}
         ${canReview?`<button class="primary v46-review-booking" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Leave review'))}</button>`:''}
         <button class="secondary v172-view-agreement" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('View agreement'))}</button>
+        ${currentServerUser && ['paid','succeeded'].includes(paymentStatus) &&
+        !['cancelled','declined','expired'].includes(bookingStatus) &&
+        !b.stripeRefundId && !(Number(b.refundAmount||0)>0)?
+          `<a class="secondary" href="/api/rentals/bookings/${encodeURIComponent(b.bookingId)}/transaction-confirmation.pdf" target="_blank" rel="noopener">Nuomos sandorio patvirtinimas (PDF)</a>`:''}
         ${currentServerUser?`<button class="secondary v172-booking-message" data-id="${escapeHtml(b.bookingId)}" data-listing-id="${escapeHtml(b.listingId||'')}">${escapeHtml(uiText('Messages'))}</button>`:''}
         ${canDispute?`<button class="secondary v89-open-dispute" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Report a problem'))}</button>`:''}
         ${currentServerUser && !guestAccess?.revoked?`<button class="secondary v88-revoke-guest" data-id="${escapeHtml(b.bookingId)}">${escapeHtml(uiText('Revoke guest link'))}</button>`:''}
