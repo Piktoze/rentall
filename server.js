@@ -1,6 +1,6 @@
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
-import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
+import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import {
@@ -3415,6 +3415,33 @@ app.post('/api/rentals/bookings/:bookingId/return-confirm',
     res.set('Cache-Control','no-store, private');
     res.json({ok:true,booking:getRentalBookingById(id)});
   }catch(err){res.status(err.code==='INVALID_TRANSITION'?409:400).json({error:err.message,code:err.code||null});}
+});
+
+
+/* V290 – neutral proof of a paid rental, NOT a RentInOrbit rental invoice. */
+app.get('/api/rentals/bookings/:bookingId/transaction-confirmation.pdf',requireRole('customer','supplier','admin'),async(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const bookingId=String(req.params.bookingId||'');
+ if(!bookingAccessAllowed(req,bookingId))return res.status(404).end();
+ const booking=getRentalBookingById(bookingId);
+ const listing=booking?getRentalListing(booking.listingId):null;
+ if(!booking||!listing)return res.status(404).end();
+ if(!['paid','succeeded'].includes(String(booking.paymentStatus||'').toLowerCase()) ||
+    booking.stripeRefundId || Number(booking.refundAmount||0)>0 ||
+    ['cancelled','declined','expired'].includes(String(booking.status||'')))
+   return res.status(409).json({error:'Sandorio patvirtinimas pasiekiamas tik už apmokėtą ir negrąžintą nuomą.',code:'TRANSACTION_CONFIRMATION_NOT_READY'});
+ const supplier=getAccountingSupplierProfile(listing.ownerEmail);
+ const supplierName=(supplier?.reviewed===1 && ['individual','company'].includes(supplier.legal_kind))?
+  supplier.legal_name:'Nuomotojas nurodytas nuomos sutartyje';
+ try{
+  const pdf=await renderRentalTransactionConfirmationPdf({booking,listing,supplierName});
+  res.setHeader('Cache-Control','no-store, private');
+  res.setHeader('Content-Disposition','attachment; filename="rentinorbit-nuomos-sandorio-patvirtinimas.pdf"');
+  res.type('application/pdf').send(pdf);
+ }catch(err){
+  console.warn(JSON.stringify({type:'rental_transaction_pdf_error',error:safeOperationalError(err)}));
+  res.status(500).json({error:'Nuomos sandorio dokumentas laikinai nepasiekiamas'});
+ }
 });
 
 app.get('/api/rentals/bookings/:bookingId/agreement',(req,res)=>{
