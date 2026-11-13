@@ -23,7 +23,7 @@ export function invoiceOperatorProfile(env=process.env){
 }
 
 export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TEST – nuomotojas'}={}){
- if(!invoice || !String(invoice.document_key||'').startsWith('TEST-') || invoice.status!=='draft'){
+ if(!invoice || !String(invoice.document_key||'').startsWith('TEST-') || !['draft','issued'].includes(invoice.status)){
   throw new Error('Only isolated synthetic invoice drafts may be rendered');
  }
  if(!fs.existsSync(fontFile))throw new Error('PDF Lithuanian font package not installed');
