@@ -82,6 +82,9 @@ import {
   voidAccountingInvoiceDraftOnFullRefund,
   getAccountingSupplierProfile,
   saveAccountingSupplierProfile,
+  reviewAccountingSupplierProfile,
+  listAccountingSupplierProfilesForReview,
+  listAccountingSupplierReviewAudit,
   issueAccountingSyntheticInvoice,
   addAccountingExpenseDraft,
   listAccountingExpenses,
@@ -1399,6 +1402,36 @@ app.put('/api/supplier/accounting/profile',
   const profile=saveAccountingSupplierProfile(req.appUser.email,req.body);
   res.json({profile,reviewed:false,automaticInvoicing:false});
  }catch(err){res.status(400).json({error:String(err.message||'Invalid profile').slice(0,180)});}
+});
+
+
+/* B2B_ACCOUNTING_REVIEW_V288: admin-only, staging-only, explicit evidence. */
+app.get('/api/admin/accounting/supplier-profiles',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({profiles:listAccountingSupplierProfilesForReview({limit:req.query?.limit}),automaticInvoiceIssuance:false});
+});
+app.get('/api/admin/accounting/supplier-profiles/:email/audit',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({reviews:listAccountingSupplierReviewAudit(req.params.email)});
+});
+app.post('/api/admin/accounting/supplier-profiles/:email/review',
+ requireRole('admin'),simpleRateLimit({windowMs:15*60*1000,max:20,keyPrefix:'supplier-accounting-review'}),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ if(req.body?.confirmEvidenceReviewed!==true)
+  return res.status(400).json({error:'Independent identity review confirmation required'});
+ try{
+  const result=reviewAccountingSupplierProfile({
+   supplierEmail:req.params.email,
+   reviewerUserId:req.appUser.userId,
+   decision:req.body?.decision,
+   evidenceReference:req.body?.evidenceReference,
+   reviewNote:req.body?.reviewNote
+  });
+  res.json({result,realInvoiceIssuanceEnabled:false,companyRenterReviewGate:'evaluates supplier business status'});
+ }catch(err){res.status(400).json({error:String(err?.message||'Review invalid').slice(0,180)});}
 });
 
 app.get('/api/admin/accounting/invoices',requireRole('admin'),(req,res)=>{
