@@ -3037,3 +3037,62 @@ export function listAccountingRecipientDrafts(email,{limit=100}={}){
  return db.prepare("SELECT * FROM accounting_invoice_documents WHERE recipient_key=? COLLATE NOCASE AND document_key LIKE 'TEST-%' ORDER BY id DESC LIMIT ?")
    .all(recipient,n).map(row=>({...row,payload:JSON.parse(row.payload_json),payload_json:undefined}));
 }
+
+
+// B2B_ACCOUNTING_REVIEW_V288
+// Only a separately authenticated platform admin can call this function through
+// a staging-only endpoint. Audit entries are append-only and supplier edits reset review.
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounting_supplier_review_audit (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ supplier_email TEXT NOT NULL COLLATE NOCASE,
+ reviewer_user_id TEXT NOT NULL,
+ decision TEXT NOT NULL CHECK(decision IN ('approve','reject')),
+ evidence_reference TEXT NOT NULL,
+ review_note TEXT NOT NULL,
+ legal_kind_snapshot TEXT NOT NULL,
+ registration_number_snapshot TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_supplier_review_audit_supplier
+ ON accounting_supplier_review_audit(supplier_email,created_at);
+`);
+export function reviewAccountingSupplierProfile({supplierEmail,reviewerUserId,decision,evidenceReference,reviewNote}={}){
+ const email=String(supplierEmail||'').trim().toLowerCase();
+ const reviewer=String(reviewerUserId||'').trim();
+ const evidence=String(evidenceReference||'').trim();
+ const note=String(reviewNote||'').trim();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !reviewer || reviewer.length>160)throw new Error('Supplier and reviewer required');
+ if(!['approve','reject'].includes(decision))throw new Error('Explicit review decision required');
+ if(evidence.length<8 || evidence.length>220 || note.length<12 || note.length>700)throw new Error('Review evidence and reason are required');
+ return db.transaction(()=>{
+  const supplier=db.prepare('SELECT role FROM app_users WHERE email=? COLLATE NOCASE').get(email);
+  const reviewerRow=db.prepare('SELECT role FROM app_users WHERE user_id=?').get(reviewer);
+  if(!supplier || !['supplier','admin'].includes(supplier.role) || reviewerRow?.role!=='admin')throw new Error('Admin review and valid supplier required');
+  const profile=getAccountingSupplierProfile(email);
+  if(!profile)throw new Error('Supplier invoice profile not found');
+  if(decision==='approve'){
+   if(!['individual','company'].includes(profile.legal_kind))throw new Error('Private person cannot be approved for B2B business supplier checkout');
+   if(!profile.business_address || !profile.registration_number || profile.vat_mode==='pending_review')
+    throw new Error('Complete business identity and VAT classification required before approval');
+  }
+  db.prepare('UPDATE accounting_supplier_profiles SET reviewed=?,updated_at=CURRENT_TIMESTAMP WHERE supplier_email=? COLLATE NOCASE')
+    .run(decision==='approve'?1:0,email);
+  db.prepare(`INSERT INTO accounting_supplier_review_audit
+   (supplier_email,reviewer_user_id,decision,evidence_reference,review_note,legal_kind_snapshot,registration_number_snapshot)
+   VALUES(?,?,?,?,?,?,?)`)
+   .run(email,reviewer,decision,evidence,note,profile.legal_kind,profile.registration_number);
+  return {supplierEmail:email,decision,reviewed:decision==='approve',reviewedProfile:getAccountingSupplierProfile(email)};
+ })();
+}
+export function listAccountingSupplierProfilesForReview({limit=100}={}){
+ const n=Math.max(1,Math.min(100,Math.floor(Number(limit)||100)));
+ return db.prepare(`SELECT supplier_email,legal_kind,legal_name,business_address,registration_number,vat_mode,can_issue_on_behalf,reviewed,updated_at
+ FROM accounting_supplier_profiles ORDER BY reviewed ASC,updated_at DESC LIMIT ?`).all(n);
+}
+export function listAccountingSupplierReviewAudit(supplierEmail,{limit=100}={}){
+ return db.prepare(`SELECT id,supplier_email,reviewer_user_id,decision,evidence_reference,review_note,
+ legal_kind_snapshot,registration_number_snapshot,created_at
+ FROM accounting_supplier_review_audit WHERE supplier_email=? COLLATE NOCASE ORDER BY id DESC LIMIT ?`)
+ .all(String(supplierEmail||'').trim().toLowerCase(),Math.max(1,Math.min(100,Math.floor(Number(limit)||100))));
+}
