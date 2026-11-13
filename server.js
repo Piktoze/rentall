@@ -1,4 +1,5 @@
 import express from 'express';
+import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
@@ -2403,6 +2404,8 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     }
 
     const listing=getRentalListing(booking.listingId);
+    const b2bPaymentGate=assessCompanyRentalCheckout({customerLegalKind:booking.customerLegalKind,supplierProfile:getAccountingSupplierProfile(listing?.ownerEmail)});
+    if(!b2bPaymentGate.allowed)return res.status(409).json({error:b2bPaymentGate.message,code:b2bPaymentGate.code});
     // Payment, authorization and Stripe intent creation are forbidden until
     // the supplier confirms a request booking, in ALL environments.
     const preauthorizeRequest=false;
@@ -2683,7 +2686,8 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       customerName = null, customerEmail = null, customerPhone = null,
       accommodationName = null, deliveryCity = null, deliveryAddress = null,
       roomNumber = null, contactPerson = null, deliveryInstructions = null,
-      orderValue = null, termsAccepted = false, rentalStartTime = null
+      orderValue = null, termsAccepted = false, rentalStartTime = null,
+      customerLegalKind = 'individual', customerCompanyName = null
     } = req.body || {};
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
@@ -2709,6 +2713,12 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     if(!inventoryListing || !listingForBooking || listingForBooking.moderationStatus==='blocked' || inventoryListing.lifecycleStatus!=='active'){
       return res.status(404).json({error:'Listing not found'});
     }
+    const legalKind=String(customerLegalKind||'');
+    if(!['individual','company'].includes(legalKind))return res.status(400).json({error:'Pasirinkite, ar nuomininkas yra privatus asmuo, ar įmonė.',code:'CUSTOMER_LEGAL_KIND_INVALID'});
+    if(legalKind==='company' && (!String(customerCompanyName||'').trim()||String(customerCompanyName).length>180))return res.status(400).json({error:'Įrašykite įmonės pavadinimą.',code:'CUSTOMER_COMPANY_NAME_REQUIRED'});
+    const sellerForTax=getAccountingSupplierProfile(listingForBooking.ownerEmail);
+    const b2bGate=assessCompanyRentalCheckout({customerLegalKind:legalKind,supplierProfile:sellerForTax});
+    if(!b2bGate.allowed)return res.status(409).json({error:b2bGate.message,code:b2bGate.code});
     const authenticatedUser=sessionUser(req);
     const effectiveCustomerEmail=authenticatedUser?.email || customerEmail || null;
     const effectiveCustomerName=authenticatedUser?.displayName || authenticatedUser?.name || customerName || null;
@@ -2732,6 +2742,8 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       customerName:effectiveCustomerName,
       customerEmail:effectiveCustomerEmail,
       customerPhone,
+      customerLegalKind:legalKind,
+      customerCompanyName:legalKind==='company'?String(customerCompanyName).trim():null,
       accommodationName,
       deliveryCity,
       deliveryAddress,
@@ -2751,6 +2763,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       snapshot:{
         platform:'RentInOrbit',bookingId,listingId,listingTitle:listingForBooking.title,
         supplierEmail:listingForBooking.ownerEmail||null,customerName:effectiveCustomerName||null,customerEmail:effectiveCustomerEmail||null,
+        customerLegalKind:legalKind, customerCompanyName:legalKind==='company'?String(customerCompanyName).trim():null,
         startDate,endDate,rentalStartAt,rentalStartTime:rentalStartTime||null,rentalTimeZone:supplierTimezone,quantity:qty,currency:'EUR',rentalAmount:authoritativePrice.rental,deliveryFee:authoritativePrice.delivery,
         total:authoritativePrice.total,securityDeposit:authoritativePrice.securityDeposit,
         cancellationPolicy:result.booking.cancellationPolicySnapshot||listingForBooking.cancellationPolicy||'moderate',
