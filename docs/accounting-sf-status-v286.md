@@ -76,3 +76,13 @@ Deployment build runs `node release/rc-gate.js`.
 - Kai nuomotojo verslo duomenys patikrinti administratoriaus, PDF gali rodyti jo teisinį vardą; kitu atveju paliekama nuoroda į abiejų šalių nuomos sutartį, ne išgalvoti rekvizitai.
 - Nuomininkas savo prisijungimo užsakymų sąraše mato PDF nuorodą tik kai užsakymas apmokėtas ir negrąžintas.
 - Šis patvirtinimas nepakeičia apskaitos SF, kai pagal konkrečios šalies veiklos statusą ir teisės aktus būtinas toks dokumentas. LIVE automatinės SF, PVM ir el. pašto pristatymas toliau užblokuoti.
+
+## V291 – saugus nuomotojo įgaliojimas SF išrašymui jo vardu
+
+- Tiekėjo administratoriui patikrintas veiklos profilis **nėra** automatinis leidimas išrašyti jo vardu nuomos sąskaitas. Reikalingas atskiras, aiškus tiekėjo sutikimas su konkrečia įgaliojimo redakcija.
+- Tiekėjas `GET /api/supplier/accounting/delegation` gali perskaityti aktualias įgaliojimo sąlygas ir matyti patvirtinimo būseną.
+- `POST /api/supplier/accounting/delegation/accept` reikalauja prisijungusio tiekėjo, `explicitConsent=true`, dabartinės versijos ir tikslaus `termsDigest`. Priėmimas sukuria `pending_review`, **ne automatinį patvirtinimą**.
+- Administratorius `GET /api/admin/accounting/delegations/:email` mato istoriją, o `POST /api/admin/accounting/delegations/:email/review` reikalauja nepriklausomai patikrinto įgaliojimo dokumento nuorodos, pastabos ir aiškaus patvirtinimo.
+- Įgaliojimą atšaukti gali pats tiekėjas, taip pat platformos administratorius apskaitos funkcijos lygmeniu. Tiekėjui pasikeitus juridiniams rekvizitams, įgaliojimas automatiškai pažymimas atšauktu.
+- Visų sprendimų įvykiai saugomi audito žurnale, pakartotinis to paties laukiančio įgaliojimo priėmimas nekuriamas antrą kartą.
+- Svarbu: `realInvoiceIssuanceEnabled=false` išlieka net patvirtinus TEST įgaliojimą. Prieš LIVE būtinas teisiškai tinkamas įgaliojimo sutarties tekstas, PVM/apskaitos režimo patvirtinimas, tikrų SF numeravimas, nekintamos kopijos, el. laiškų siuntimas ir dokumentų taisymo procesas.
