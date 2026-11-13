@@ -23,7 +23,8 @@ const {
   voidAccountingInvoiceDraftOnFullRefund,
   issueAccountingSyntheticInvoice,
   addAccountingExpenseDraft,
-  listAccountingExpenses
+  listAccountingExpenses,
+  listAccountingRecipientDrafts
 }=await import('./db.js');
 
 try{
@@ -107,6 +108,9 @@ try{
     amountCents:1200,taxMode:'pending_review'
   }),/idempotency/);
   assert.equal(listAccountingInvoiceDrafts({issuerKey:'TEST-PLATFORM'}).length,1);
+  assert.equal(listAccountingRecipientDrafts('TEST-SUPPLIER').length,1);
+  assert.equal(listAccountingRecipientDrafts('wrong-user@example.test').length,0);
+
   assert.equal(accountingInvoiceSummary().automatedIssuanceEnabled,false);
   assert.equal(accountingInvoiceSummary().realEmailsEnabled,false);
 
