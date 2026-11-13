@@ -87,3 +87,49 @@ export function renderTestInvoiceEmailPreview(invoice,{recipientName='TEST – g
   '<p>Šis laiškas yra tik peržiūra. Tikrų SF išrašymas ir siuntimas išjungti.</p>'+
   '</main></body></html>';
 }
+
+// V290: a neutral proof of transaction for the actual rental parties.
+// Never represents a platform-issued rental invoice, tax invoice or fiscal receipt.
+export async function renderRentalTransactionConfirmationPdf({booking,listing,supplierName='Nuomotojas nurodytas nuomos sutartyje'}={}){
+ if(!booking||!listing||String(booking.listingId)!==String(listing.listingId||listing.id))
+  throw new Error('Matching booking and listing required');
+ const status=String(booking.paymentStatus||'').toLowerCase();
+ if(!['paid','succeeded'].includes(status) || booking.stripeRefundId || Number(booking.refundAmount||0)>0 ||
+    ['cancelled','declined','expired'].includes(String(booking.status||'')))
+  throw new Error('Completed payment without refund required for transaction confirmation');
+ const cents=Math.round(Number(booking.orderValue||0)*100);
+ if(!Number.isSafeInteger(cents)||cents<=0)throw new Error('Invalid rental amount');
+ if(!fs.existsSync(fontFile))throw new Error('PDF Lithuanian font package not installed');
+ const renter=clean(booking.customerLegalKind==='company'?
+  (booking.customerCompanyName||'Įmonės pavadinimas nepatvirtintas'):
+  (booking.customerName||'Nuomininkas pagal sutartį'));
+ const supplier=clean(supplierName);
+ const doc=new PDFDocument({size:'A4',margin:48,compress:true,info:{
+   Title:'RentInOrbit – nuomos sandorio patvirtinimas',Author:'RentInOrbit',
+   Subject:'Informacinis nuomos sandorio patvirtinimas – ne sąskaita faktūra'
+ }});
+ const chunks=[];
+ doc.on('data',part=>chunks.push(part));
+ const ended=new Promise((resolve,reject)=>{doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)))});
+ doc.registerFont('Lithuanian',fontFile);
+ doc.font('Lithuanian');
+ if(fs.existsSync(brandLogoFile)){doc.image(brandLogoFile,48,36,{fit:[220,62]});doc.x=48;doc.y=110;}
+ else doc.fillColor('#164cab').fontSize(18).text('RentInOrbit').moveDown(.7);
+ doc.fillColor('#142437').fontSize(19).text('Nuomos sandorio patvirtinimas');
+ doc.moveDown(.35).fontSize(10).fillColor('#b42a2a')
+   .text('NE SĄSKAITA FAKTŪRA. RentInOrbit nėra nuomojamo daikto pardavėjas.');
+ doc.moveDown(1).fontSize(11).fillColor('#142437')
+   .text('Užsakymo numeris: '+clean(booking.bookingId))
+   .text('Nuomotojas: '+supplier)
+   .text('Nuomininkas: '+renter)
+   .text('Daiktas: '+clean(listing.title||'Nuomojamas daiktas'))
+   .text('Nuomos laikotarpis: '+clean(booking.startDate)+' – '+clean(booking.endDate))
+   .text('Apmokėjimo būsena: apmokėta')
+   .moveDown(.8)
+   .fontSize(13).text('Nuomos sandorio suma: '+money(cents))
+   .moveDown(1.2).fontSize(10).fillColor('#64748b')
+   .text('Šis dokumentas patvirtina platformoje užregistruotą nuomos sandorį. Jis nepatvirtina jokios asmens mokestinės registracijos ir nepakeičia teisės aktų nustatyta tvarka išrašomos nuomos sąskaitos ar sutarties. RentInOrbit tarpininkavimo mokestis yra atskiras platformos sandoris.')
+   .moveDown(.6).text('Norėdami pagrįsti įmonės apskaitos išlaidas, išsaugokite nuomos sutartį, mokėjimo įrodymą ir tinkamą nuomotojo apskaitos dokumentą, kai jo reikalaujama.');
+ doc.end();
+ return await ended;
+}
