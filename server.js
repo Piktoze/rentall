@@ -84,6 +84,7 @@ import {
   issueAccountingSyntheticInvoice,
   addAccountingExpenseDraft,
   listAccountingExpenses,
+  listAccountingRecipientDrafts,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -1365,6 +1366,24 @@ app.get('/api/admin/email-outbox', requireRole('admin'), (req,res)=>{
 /* SF_LEDGER_V286_ADMIN_DRAFT_API
  * All routes are restricted to staging admins. No issued invoices or email side effects.
  */
+
+
+app.get('/api/supplier/accounting/documents',requireRole('supplier'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({automatedIssuance:false,documents:listAccountingRecipientDrafts(req.appUser.email)});
+});
+app.get('/api/supplier/accounting/documents/:id.pdf',requireRole('supplier'),async(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const doc=listAccountingRecipientDrafts(req.appUser.email).find(d=>d.id===Number(req.params.id));
+ if(!doc)return res.status(404).end();
+ try{
+  const pdf=await renderTestInvoicePdf(doc,{issuer:invoiceOperatorProfile(),recipientName:req.appUser.email});
+  res.setHeader('Cache-Control','no-store, private');
+  res.setHeader('Content-Disposition','attachment; filename="rentinorbit-test-commission-draft.pdf"');
+  res.type('application/pdf').send(pdf);
+ }catch(err){console.warn(JSON.stringify({type:'invoice_recipient_pdf_error',error:safeOperationalError(err)}));res.status(500).json({error:'Invoice TEST PDF unavailable'});}
+});
 
 app.get('/api/supplier/accounting/profile',requireRole('supplier'),(req,res)=>{
  res.setHeader('Cache-Control','no-store, private');
