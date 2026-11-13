@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 
+// Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
+execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit'});
+
 // Guard all source-marked Lithuanian UI labels and booking completion accessibility.
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['supplier-i18n-v203.test.mjs'],{stdio:'inherit'});
