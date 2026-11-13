@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {assessCompanyRentalCheckout,PRIVATE_TO_COMPANY_REVIEW_CODE} from './modules/b2b-private-rental-gate-v287.js';
+import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
 import {renderTestInvoicePdf,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 
 const dbFile=':memory:';
@@ -136,6 +137,9 @@ try{
   assert.match(server,/scheduleAccountingInvoicePreview/);
   assert.ok(server.includes('/api/supplier/accounting/delegation/accept'));
   assert.ok(server.includes('/api/admin/accounting/delegations/:email/review'));
+  assert.ok(server.includes('/api/admin/accounting/bookings/:bookingId/invoice-preflight'));
+  assert.ok(server.includes('/api/supplier/accounting/bookings/:bookingId/invoice-preflight'));
+
 
   assert.match(server,/api\/admin\/accounting\/delivery-previews/);
   assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
@@ -280,6 +284,36 @@ try{
   assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).delegationApproved,true);
   assert.equal(invoiceIssuanceAuthorityStatus(syntheticSupplier.email).realInvoiceIssuanceEnabled,false);
   assert.equal(listAccountingInvoiceMandateAudit(syntheticSupplier.email).length,2);
+  const invoiceBooking={
+    bookingId:'RB-V292-PAID',listingId:'v203-item',customerName:'TEST pirkėjas',
+    customerEmail:'customer-v203@example.test',customerLegalKind:'individual',
+    orderValue:100,paymentStatus:'paid',status:'confirmed',
+    stripePaymentIntentId:'pi_test_v292',refundAmount:0,stripeRefundId:null
+  };
+  const invoiceListing={listingId:'v203-item',ownerEmail:syntheticSupplier.email};
+  const invoiceContext={booking:invoiceBooking,listing:invoiceListing,
+    profile:getAccountingSupplierProfile(syntheticSupplier.email),
+    mandate:getAccountingInvoiceMandate(syntheticSupplier.email),
+    terms:invoiceDelegationTerms()};
+  const readyInvoice=assessRentalInvoicePreflight(invoiceContext);
+  assert.equal(readyInvoice.technicalPreflightPassed,true);
+  assert.deepEqual(readyInvoice.blockers,['LIVE_ACCOUNTING_LEGAL_SIGNOFF_REQUIRED']);
+  assert.equal(readyInvoice.realInvoiceIssuanceAllowed,false);
+  assert.equal(readyInvoice.realEmailDeliveryAllowed,false);
+  assert.equal(readyInvoice.invoiceNumberAllocated,false);
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    booking:{...invoiceBooking,paymentStatus:'unpaid'}}).blockers.includes('RENTAL_NOT_PAID'));
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    booking:{...invoiceBooking,stripeRefundId:'re_test_v292'}}).blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    listing:{...invoiceListing,ownerEmail:'outsider@example.test'}}).blockers.includes('SUPPLIER_PROFILE_UNVERIFIED'));
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    booking:{...invoiceBooking,customerLegalKind:'company',customerCompanyName:''}}).blockers.includes('RENTER_IDENTITY_INCOMPLETE'));
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    profile:{...invoiceContext.profile,vat_mode:'pending_review'}}).blockers.includes('SUPPLIER_TAX_MODE_UNVERIFIED'));
+  assert.ok(assessRentalInvoicePreflight({...invoiceContext,
+    mandate:{...invoiceContext.mandate,terms_digest:'outdated'}}).blockers.includes('MANDATE_TERMS_OUTDATED'));
+
   saveAccountingSupplierProfile(syntheticSupplier.email,{
     legalKind:'private',legalName:'TEST Privatus žmogus',vatMode:'pending_review'
   });
