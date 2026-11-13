@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {assessCompanyRentalCheckout,PRIVATE_TO_COMPANY_REVIEW_CODE} from './modules/b2b-private-rental-gate-v287.js';
-import {renderTestInvoicePdf,renderTestInvoiceEmailPreview} from './modules/accounting-sf-v286.js';
+import {renderTestInvoicePdf,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 
 const dbFile=':memory:';
 process.env.DB_PATH=dbFile;
@@ -74,6 +74,25 @@ try{
     error=>error?.code==='INVALID_TRANSITION'
   );
   assert.equal(updateRentalBookingStatus('v203-lifecycle','completed').status,'completed');
+  const paidRental=getRentalBookingById('v203-lifecycle');
+  const paidRentalDoc=await renderRentalTransactionConfirmationPdf({
+    booking:paidRental,listing:{listingId:'v203-item',title:'V203 item'},
+    supplierName:'Nuomotojas pagal sutartį'
+  });
+  assert.equal(paidRentalDoc.subarray(0,5).toString('ascii'),'%PDF-');
+  assert.ok(paidRentalDoc.length>5000);
+  await assert.rejects(()=>renderRentalTransactionConfirmationPdf({
+    booking:{...paidRental,paymentStatus:'unpaid'},
+    listing:{listingId:'v203-item',title:'V203 item'}
+  }),/Completed payment/);
+  await assert.rejects(()=>renderRentalTransactionConfirmationPdf({
+    booking:{...paidRental,refundAmount:100},
+    listing:{listingId:'v203-item',title:'V203 item'}
+  }),/Completed payment/);
+  await assert.rejects(()=>renderRentalTransactionConfirmationPdf({
+    booking:paidRental,listing:{listingId:'other-item'}
+  }),/Matching booking/);
+
   assert.throws(
     ()=>cancelRentalBookingWithRefund('v203-lifecycle','must remain final'),
     error=>error?.code==='INVALID_TRANSITION'
@@ -106,6 +125,7 @@ try{
   assert.match(html,/id="returnBookingModal"/);
   assert.match(server,/PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED|b2bPaymentGate/);
   assert.match(server,/corporateDepositGate/);
+  assert.match(server,/transaction-confirmation\\.pdf/);
   assert.match(server,/scheduleAccountingInvoicePreview/);
   assert.match(server,/api\/admin\/accounting\/delivery-previews/);
   assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
