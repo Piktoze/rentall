@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'url';
-import {assertProductionConfig,assertProductionStorage,runtimeConfig} from './config.js';
+import {assertProductionConfig,assertProductionStorage,isDeploymentEnvironment,isStagingEnvironment,runtimeConfig} from './config.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
 import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
@@ -1575,9 +1575,18 @@ export function enableSupplierForUser(userId){
   return publicUser(userByIdStmt.get(row.user_id));
 }
 
+const demoSupplierEmail='demo@rentinorbit.test';
+const demoAdminEmail='admin@rentinorbit.test';
+
+function demoAccountAllowed(email){
+  if(!isDeploymentEnvironment()) return true;
+  if(email===demoAdminEmail) return false;
+  return email!==demoSupplierEmail || isStagingEnvironment();
+}
+
 export function authenticateAppUser(email,password){
   const row=userByEmailStmt.get(String(email||'').trim().toLowerCase());
-  if(!row) return null;
+  if(!row || !demoAccountAllowed(row.email)) return null;
   const supplied=Buffer.from(hashPassword(password,row.password_salt),'hex');
   const expected=Buffer.from(row.password_hash,'hex');
   if(supplied.length!==expected.length || !crypto.timingSafeEqual(supplied,expected)) return null;
@@ -1601,7 +1610,8 @@ export function createAppSession(userId,{days=14}={}){
 export function getAppUserBySessionToken(token){
   if(!token) return null;
   const hash=crypto.createHash('sha256').update(String(token)).digest('hex');
-  return publicUser(sessionUserStmt.get(hash,new Date().toISOString()));
+  const row=sessionUserStmt.get(hash,new Date().toISOString());
+  return row && demoAccountAllowed(row.email) ? publicUser(row) : null;
 }
 
 export function deleteAppSession(token){
@@ -1612,11 +1622,11 @@ export function deleteAppSession(token){
 
 export function seedDefaultUsers(){
   const seeds=[
-    {email:'demo@rentinorbit.test',password:'demo123',role:'supplier',displayName:'Demo Supplier',businessName:'RentInOrbit Demo Rentals',country:'LT',city:'Klaipėda'},
-    {email:'admin@rentinorbit.test',password:'admin123',role:'admin',displayName:'RentInOrbit Admin',businessName:'RentInOrbit',country:'LT',city:'Vilnius'}
+    {email:demoSupplierEmail,password:'demo123',role:'supplier',displayName:'Demo Supplier',businessName:'RentInOrbit Demo Rentals',country:'LT',city:'Klaipėda'},
+    {email:demoAdminEmail,password:'admin123',role:'admin',displayName:'RentInOrbit Admin',businessName:'RentInOrbit',country:'LT',city:'Vilnius'}
   ];
   for(const s of seeds){
-    if(!userByEmailStmt.get(s.email)) createAppUser(s);
+    if(demoAccountAllowed(s.email) && !userByEmailStmt.get(s.email)) createAppUser(s);
   }
 }
 
