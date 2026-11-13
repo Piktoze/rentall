@@ -2327,6 +2327,8 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
     const amount=Math.round(Math.max(0,Number(booking.securityDepositAmount||0))*100);
     if(amount<=0)return res.status(409).json({error:'This booking does not require a security deposit'});
     const listing=getRentalListing(booking.listingId);
+    const corporateDepositGate=assessCompanyRentalCheckout({customerLegalKind:booking.customerLegalKind,supplierProfile:getAccountingSupplierProfile(listing?.ownerEmail)});
+    if(!corporateDepositGate.allowed)return res.status(409).json({error:corporateDepositGate.message,code:corporateDepositGate.code});
     const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
     if(!connection || !requireSupplierDirectChargeCapability(connection,res)) return;
     let intent;
