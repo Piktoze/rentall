@@ -26,7 +26,11 @@ const {
   issueAccountingSyntheticInvoice,
   addAccountingExpenseDraft,
   listAccountingExpenses,
-  listAccountingRecipientDrafts
+  listAccountingRecipientDrafts,
+  createAppUser,
+  reviewAccountingSupplierProfile,
+  listAccountingSupplierProfilesForReview,
+  listAccountingSupplierReviewAudit
 }=await import('./db.js');
 
 try{
@@ -99,6 +103,7 @@ try{
   assert.match(html,/id="returnBookingModal"/);
   assert.match(server,/PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED|b2bPaymentGate/);
   assert.match(server,/corporateDepositGate/);
+  assert.match(server,/api\/admin\/accounting\/supplier-profiles\/.*review/);
   assert.match(html,/id="customerLegalKind"/);
   assert.match(app,/customerLegalKind:document\.getElementById/);
 
@@ -151,6 +156,41 @@ try{
   });
   assert.equal(profile.reviewed,0,'Supplier declarations are never automatically verified');
   assert.equal(getAccountingSupplierProfile('supplier-v203@example.test').can_issue_on_behalf,1);
+  const syntheticSupplier=createAppUser({email:'supplier-v203@example.test',password:'synthetic-only-pwd-8',role:'supplier'});
+  const syntheticAdmin=createAppUser({email:'reviewer-v288@example.test',password:'synthetic-review-password',role:'admin'});
+  assert.ok(syntheticSupplier.userId&&syntheticAdmin.userId);
+  assert.throws(()=>reviewAccountingSupplierProfile({
+    supplierEmail:syntheticSupplier.email,reviewerUserId:syntheticAdmin.userId,
+    decision:'approve',evidenceReference:'TEST-EVIDENCE-V288',reviewNote:'Reviewed synthetic status'
+  }),/Complete business identity/);
+  assert.equal(getAccountingSupplierProfile(syntheticSupplier.email).reviewed,0);
+  assert.throws(()=>reviewAccountingSupplierProfile({
+    supplierEmail:syntheticSupplier.email,reviewerUserId:syntheticSupplier.userId,
+    decision:'approve',evidenceReference:'TEST-EVIDENCE-V288',reviewNote:'Self approval must be blocked'
+  }),/Admin review/);
+  saveAccountingSupplierProfile(syntheticSupplier.email,{
+    legalKind:'individual',legalName:'TEST Tiekėjas',businessAddress:'Sintetinė gatvė 12, Vilnius',
+    registrationNumber:'SYNTHETIC-1234',vatMode:'not_vat_registered',canIssueOnBehalf:true
+  });
+  const review=reviewAccountingSupplierProfile({
+    supplierEmail:syntheticSupplier.email,reviewerUserId:syntheticAdmin.userId,
+    decision:'approve',evidenceReference:'TEST-EVIDENCE-V288',
+    reviewNote:'Independent synthetic business identity checked'
+  });
+  assert.equal(review.reviewed,true);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:review.reviewedProfile}).allowed,true);
+  assert.equal(listAccountingSupplierProfilesForReview().some(x=>x.supplier_email===syntheticSupplier.email),true);
+  assert.equal(listAccountingSupplierReviewAudit(syntheticSupplier.email).length,1);
+  saveAccountingSupplierProfile(syntheticSupplier.email,{
+    legalKind:'private',legalName:'TEST Privatus žmogus',vatMode:'pending_review'
+  });
+  assert.equal(getAccountingSupplierProfile(syntheticSupplier.email).reviewed,0);
+  assert.equal(assessCompanyRentalCheckout({customerLegalKind:'company',supplierProfile:getAccountingSupplierProfile(syntheticSupplier.email)}).allowed,false);
+  assert.throws(()=>reviewAccountingSupplierProfile({
+    supplierEmail:syntheticSupplier.email,reviewerUserId:syntheticAdmin.userId,
+    decision:'approve',evidenceReference:'TEST-EVIDENCE-V288',reviewNote:'Private renter must be rejected'
+  }),/Private person/);
+
   assert.deepEqual(voidAccountingInvoiceDraftOnFullRefund({bookingId:'nonexistent'}),{voided:0,requiresReview:0});
   const numbered=issueAccountingSyntheticInvoice('TEST-invoice-v286-00001');
   assert.match(numbered.invoice_number,/^TEST-RIO-\d{4}-000001$/);
