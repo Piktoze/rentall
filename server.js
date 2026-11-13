@@ -79,6 +79,8 @@ import {
   listAccountingInvoiceDrafts,
   accountingInvoiceSummary,
   voidAccountingInvoiceDraftOnFullRefund,
+  getAccountingSupplierProfile,
+  saveAccountingSupplierProfile,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -1360,6 +1362,22 @@ app.get('/api/admin/email-outbox', requireRole('admin'), (req,res)=>{
 /* SF_LEDGER_V286_ADMIN_DRAFT_API
  * All routes are restricted to staging admins. No issued invoices or email side effects.
  */
+
+app.get('/api/supplier/accounting/profile',requireRole('supplier'),(req,res)=>{
+ res.setHeader('Cache-Control','no-store, private');
+ res.json({profile:getAccountingSupplierProfile(req.appUser.email),reviewed:false,
+   notice:'Sąskaitos išrašymas nuomotojo vardu neįjungtas, kol nepatikrintas statusas ir įgaliojimas.'});
+});
+app.put('/api/supplier/accounting/profile',
+ requireRole('supplier'),simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'supplier-invoice-profile'}),(req,res)=>{
+ res.setHeader('Cache-Control','no-store, private');
+ try{
+  if(!req.body||typeof req.body!=='object'||Array.isArray(req.body))return res.status(400).json({error:'Invalid profile'});
+  const profile=saveAccountingSupplierProfile(req.appUser.email,req.body);
+  res.json({profile,reviewed:false,automaticInvoicing:false});
+ }catch(err){res.status(400).json({error:String(err.message||'Invalid profile').slice(0,180)});}
+});
+
 app.get('/api/admin/accounting/invoices',requireRole('admin'),(req,res)=>{
   res.setHeader('Cache-Control','no-store, private');
   if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).json({error:'Not found'});
