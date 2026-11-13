@@ -32,7 +32,8 @@ const {
   listAccountingSupplierProfilesForReview,
   listAccountingSupplierReviewAudit,
   scheduleAccountingInvoicePreview,
-  listAccountingInvoiceDeliveryPreviews
+  listAccountingInvoiceDeliveryPreviews,
+  listEmailOutbox
 }=await import('./db.js');
 
 try{
@@ -150,9 +151,11 @@ try{
     bookingId:'v289-refunded',amountCents:1500,taxMode:'pending_review',
     payload:{synthetic:true}
   });
+  const emailsBeforePreview=listEmailOutbox(200).length;
   const preview=scheduleAccountingInvoicePreview({
     documentKey:emailDraft.document_key,recipientEmail:'supplier-v203@example.test'
   });
+  assert.equal(listEmailOutbox(200).length,emailsBeforePreview,'TEST invoice preview must never enter real email outbox');
   assert.equal(preview.status,'preview_only');
   assert.equal(scheduleAccountingInvoicePreview({
     documentKey:emailDraft.document_key,recipientEmail:'supplier-v203@example.test'
