@@ -33,3 +33,15 @@
 ## Run
 `NODE_ENV=test DB_PATH=:memory: node v203-stabilization.test.js` outside the Railway deployment environment.
 Deployment build runs `node release/rc-gate.js`.
+
+## P0: company rents from private person – withholding and document safety (V287)
+
+- The checkout asks whether the renter is a natural person or a company and captures company name if selected.
+- The server persists renter legal kind and company name in the booking record.
+- If the renter is a company, the server rejects a reservation and any subsequent rental PaymentIntent or security-deposit intent unless the supplier has an independently reviewed business accounting profile (individual activity/company). Supplier-only self-declaration is insufficient.
+- Error code: `PRIVATE_TO_COMPANY_TAX_REVIEW_REQUIRED` (HTTP 409).
+- Existing private-person-to-private-person rental checkout remains permitted; it is not the platform's role to issue 100% of the underlying rental invoice under the platform operator's name.
+- Rationale: a Lithuanian company paying rent to a natural person without a business activity status can have A-class income withholding/reporting obligations; Stripe Direct Charges do not automatically fulfill the company's obligations.
+- **Before enabling this B2B private-supplier category:** obtain accountant/VMI-reviewed documentary flow, determine responsibility for withholding and declarations, implement a compliant Stripe funds flow, capture required identities and evidence, and verify accounting entries. Do not switch off the guard to facilitate launch.
+- The payer-selected buyer type is self-declared. Before broader LIVE B2B use, add independently verified company-identity and authorized purchasing evidence to avoid buyers misclassifying purchases.
+- Production and Stripe LIVE are unchanged. This block covers only new staging changes until a separately approved LIVE release.
