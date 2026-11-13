@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import {renderTestInvoicePdf} from './modules/accounting-sf-v286.js';
 
 const dbFile=':memory:';
 process.env.DB_PATH=dbFile;
@@ -16,7 +17,10 @@ const {
   markRentalReturned,
   createAccountingInvoiceDraft,
   listAccountingInvoiceDrafts,
-  accountingInvoiceSummary
+  accountingInvoiceSummary,
+  saveAccountingSupplierProfile,
+  getAccountingSupplierProfile,
+  voidAccountingInvoiceDraftOnFullRefund
 }=await import('./db.js');
 
 try{
@@ -102,6 +106,24 @@ try{
   assert.equal(listAccountingInvoiceDrafts({issuerKey:'TEST-PLATFORM'}).length,1);
   assert.equal(accountingInvoiceSummary().automatedIssuanceEnabled,false);
   assert.equal(accountingInvoiceSummary().realEmailsEnabled,false);
+
+  const pdf=await renderTestInvoicePdf(invoice,{issuer:{
+    issuerName:'TEST – individuali veikla',issuerAddress:'Vilniaus g. 1, Klaipėda',
+    individualActivityCertificate:'TEST-0001'
+  }});
+  assert.equal(pdf.subarray(0,5).toString('ascii'),'%PDF-');
+  assert.ok(pdf.length>5000,'Unicode invoice PDF should contain embedded font');
+  assert.throws(()=>saveAccountingSupplierProfile('supplier-v203@example.test',{
+    legalKind:'unknown',legalName:'Test'
+  }),/legal kind/);
+  const profile=saveAccountingSupplierProfile('supplier-v203@example.test',{
+    legalKind:'individual',legalName:'Tiekėjas Bandymas',businessAddress:'Bandomasis adresas',
+    vatMode:'not_vat_registered',canIssueOnBehalf:true
+  });
+  assert.equal(profile.reviewed,0,'Supplier declarations are never automatically verified');
+  assert.equal(getAccountingSupplierProfile('supplier-v203@example.test').can_issue_on_behalf,1);
+  assert.deepEqual(voidAccountingInvoiceDraftOnFullRefund({bookingId:'nonexistent'}),{voided:0,requiresReview:0});
+
   console.log('PASS SF V286: isolated draft ledger, duplicate protection, issuance/email gates');
 
   console.log('PASS V203: unpaid cancellation, controlled return dialog and terminal cancellation guards');
