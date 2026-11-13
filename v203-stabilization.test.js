@@ -305,6 +305,18 @@ try{
     booking:{...invoiceBooking,paymentStatus:'unpaid'}}).blockers.includes('RENTAL_NOT_PAID'));
   assert.ok(assessRentalInvoicePreflight({...invoiceContext,
     booking:{...invoiceBooking,stripeRefundId:'re_test_v292'}}).blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+  for(const paymentStatus of ['disputed','chargeback','chargeback_pending','refund_pending','refund_processing','partially_refunded']){
+    const result=assessRentalInvoicePreflight({...invoiceContext,
+      booking:{...invoiceBooking,paymentStatus}});
+    assert.equal(result.technicalPreflightPassed,false,`Invoice preflight must fail for ${paymentStatus}`);
+    assert.ok(result.blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+  }
+  for(const status of ['disputed','chargeback','refund_pending']){
+    const result=assessRentalInvoicePreflight({...invoiceContext,
+      booking:{...invoiceBooking,status}});
+    assert.equal(result.technicalPreflightPassed,false,`Invoice preflight must fail for booking status ${status}`);
+    assert.ok(result.blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+  }
   assert.ok(assessRentalInvoicePreflight({...invoiceContext,
     listing:{...invoiceListing,ownerEmail:'outsider@example.test'}}).blockers.includes('SUPPLIER_PROFILE_UNVERIFIED'));
   assert.ok(assessRentalInvoicePreflight({...invoiceContext,
