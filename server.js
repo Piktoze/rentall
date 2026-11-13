@@ -763,6 +763,7 @@ app.post('/api/stripe/webhook',
         case 'payout.failed':
           console.log('Payout event:', event.type, event.data.object.id);
           break;
+        case 'refund.created':
         case 'refund.updated':
         case 'refund.failed': {
           const providerRefund=event.data.object;
@@ -1016,6 +1017,10 @@ app.post('/api/stripe/webhook',
       }
 
       markWebhookProcessed(event.id);
+      console.log(JSON.stringify({
+        type:'stripe_webhook_processed',eventId:event.id,eventType:event.type,
+        account:event.account||null,objectId:event.data?.object?.id||null
+      }));
 
       return res.json({
         received: true,

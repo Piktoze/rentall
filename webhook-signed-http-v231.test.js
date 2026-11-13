@@ -218,10 +218,15 @@ try{
  assert.equal((await post(refundEvent('evt_refund_wrong_amount',accountId,'succeeded',
    {amount:9999}),{connect:true})).status,200);
  assert.equal(refundState().refund_status,'pending','Wrong refund amount cannot settle refund');
- assert.equal((await post(refundEvent('evt_refund_succeeded',accountId,'succeeded'),{connect:true})).status,200);
+ const createdRefund={...refundEvent('evt_refund_succeeded',accountId,'succeeded'),type:'refund.created'};
+ assert.equal((await post(createdRefund,{connect:true})).status,200);
  assert.equal(refundState().refund_status,'succeeded','Signed refund success must settle refund');
  assert.equal(refundState().payment_status,'refunded','Fully refunded charge must be marked refunded');
  const countAfterRefund=read().notifications.length;
+ const createdReplay=await post(createdRefund,{connect:true});
+ assert.equal(createdReplay.status,200);
+ assert.equal(JSON.parse(createdReplay.body).duplicate,true,'Refund creation replay must be deduplicated');
+ assert.equal(read().notifications.length,countAfterRefund,'Refund creation replay must not duplicate notifications');
  assert.equal((await post(refundEvent('evt_refund_stale_pending',accountId,'pending'),{connect:true})).status,200);
  assert.equal(refundState().refund_status,'succeeded','Stale pending update must not downgrade succeeded refund');
  assert.equal((await post(refundEvent('evt_refund_stale_failed',accountId,'failed'),{connect:true})).status,200);
