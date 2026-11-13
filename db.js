@@ -2900,6 +2900,7 @@ export function voidAccountingInvoiceDraftOnFullRefund({bookingId,actor='stripe-
    if(row.status==='draft'){
     db.prepare("UPDATE accounting_invoice_documents SET status='void' WHERE id=? AND status='draft'").run(row.id);
     db.prepare("INSERT INTO accounting_invoice_audit(document_id,action,actor) VALUES(?,?,?)").run(row.id,'full_refund_void',String(actor).slice(0,160));
+    db.prepare("UPDATE accounting_invoice_delivery_previews SET status='void',voided_at=CURRENT_TIMESTAMP WHERE document_id=? AND status='preview_only'").run(row.id);
     voided++;
    }else if(row.status==='issued'){requiresReview++;}
   }
