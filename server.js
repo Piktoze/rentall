@@ -78,6 +78,7 @@ import {
   createAccountingInvoiceDraft,
   listAccountingInvoiceDrafts,
   accountingInvoiceSummary,
+  voidAccountingInvoiceDraftOnFullRefund,
   enqueueTransactionalEmail,
   listEmailOutbox,
   claimTransactionalEmails,
@@ -799,6 +800,13 @@ app.post('/api/stripe/webhook',
             refundStatus:providerStatus,
             refundAmount:amountCents/100
           });
+
+          if(process.env.RENTINORBIT_STAGING==='true' && process.env.STRIPE_MODE==='test' &&
+             providerRefund.livemode===false && providerStatus==='succeeded' &&
+             amountCents===Math.round(Number(booking.orderValue||0)*100)){
+            try{voidAccountingInvoiceDraftOnFullRefund({bookingId,actor:'stripe-test-refund'});}
+            catch(err){console.warn(JSON.stringify({type:'invoice_refund_review_required',bookingId,error:safeOperationalError(err)}));}
+          }
           if(providerStatus==='succeeded' || providerStatus==='failed' || providerStatus==='canceled'){
             const label=providerStatus==='succeeded'?'completed':'could not be completed';
             const title=providerStatus==='succeeded'?'Refund completed':'Refund needs review';
@@ -972,6 +980,30 @@ app.post('/api/stripe/webhook',
                 }
               });
             }
+          }
+
+          // SF V286: only a non-legal synthetic commission DRAFT for new Stripe TEST payments.
+          // No issued document, email or mutation of existing bookings.
+          if(process.env.RENTINORBIT_STAGING==='true' && process.env.STRIPE_MODE==='test' &&
+             pi.livemode===false && !lateTerminalRefunded && bookingId){
+            try{
+              const confirmed=getRentalBookingById(bookingId);
+              const listing=confirmed?getRentalListing(confirmed.listingId):null;
+              const cents=Math.round(Number(confirmed?.platformFeeAmount||0)*100);
+              if(confirmed?.paymentStatus==='paid' && listing?.ownerEmail && Number.isSafeInteger(cents) && cents>0){
+                createAccountingInvoiceDraft({
+                  documentKey:'TEST-FEE-'+pi.id,
+                  issuerKey:'TEST-RENTOBIT-OPERATOR',
+                  recipientKey:listing.ownerEmail,
+                  bookingId,
+                  kind:'platform_fee',
+                  amountCents:cents,
+                  taxMode:'pending_review',
+                  payload:{synthetic:true,piId:pi.id,description:'TEST commission draft; NOT a tax invoice'},
+                  actor:'stripe-test-webhook'
+                });
+              }
+            }catch(err){console.warn(JSON.stringify({type:'invoice_draft_requires_review',bookingId,error:safeOperationalError(err)}));}
           }
           console.log('Payment succeeded:', pi.id);
           break;
