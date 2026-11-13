@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const fontFile=path.resolve('node_modules','dejavu-fonts-ttf','ttf','DejaVuSans.ttf');
+const brandLogoFile=path.resolve('assets','brand','rentinorbit-logo-horizontal-dark-web.png');
 const money=cents=>{
   if(!Number.isSafeInteger(Number(cents)) || Number(cents)<0)throw new Error('Invalid invoice amount');
   return (Number(cents)/100).toFixed(2).replace('.',',')+' EUR';
@@ -38,8 +39,15 @@ export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TES
  doc.on('data',part=>chunks.push(part));
  const finished=new Promise((resolve,reject)=>{doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)))});
  doc.registerFont('Lithuanian',fontFile);
- doc.font('Lithuanian').fontSize(17).fillColor('#164cab').text('RentInOrbit');
- doc.moveDown(.8).fontSize(20).fillColor('#142437').text('TEST – sąskaitos faktūros JUODRAŠTIS');
+ doc.font('Lithuanian');
+ if(fs.existsSync(brandLogoFile)){
+   doc.image(brandLogoFile,48,36,{fit:[220,62],align:'left',valign:'center'});
+   doc.x=48;doc.y=110;
+ }else{
+   doc.fontSize(17).fillColor('#164cab').text('RentInOrbit');
+   doc.moveDown(.8);
+ }
+ doc.fontSize(20).fillColor('#142437').text('TEST – sąskaitos faktūros JUODRAŠTIS');
  doc.moveDown(.4).fontSize(10).fillColor('#b42a2a')
    .text('NEGALIOJANTIS APSKAITOS DOKUMENTAS. NEGALIMA NAUDOTI MOKESČIŲ APSKAITOJE.');
  doc.moveDown(1).fillColor('#142437').fontSize(11)
