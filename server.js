@@ -1505,11 +1505,16 @@ app.get('/api/admin/accounting/expenses.csv',requireRole('admin'),(req,res)=>{
 app.get('/api/admin/accounting',requireRole('admin'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
  const documents=listAccountingInvoiceDrafts({limit:100});
+ const deliveryPreviews=listAccountingInvoiceDeliveryPreviews({limit:100});
+ const deliveryByDocumentId=new Map(deliveryPreviews.map(p=>[Number(p.documentId),p.status]));
  const trs=documents.map(d=>{
    const id=Number(d.id);
    const cols=[d.id,d.document_key,d.kind,d.status,(d.amount_cents/100).toFixed(2)+' EUR',d.created_at];
+   const deliveryStatus=deliveryByDocumentId.get(id)||'nesuplanuota';
    return '<tr>'+cols.map(value=>'<td>'+safeInvoiceText(value)+'</td>').join('')+
-      '<td><a href="/api/admin/accounting/test-drafts/'+id+'.pdf">PDF TEST</a></td></tr>';
+      '<td>'+safeInvoiceText(deliveryStatus)+'</td>'+
+      '<td><a href="/api/admin/accounting/test-drafts/'+id+'.pdf">PDF TEST</a> · '+
+      '<a href="/api/admin/accounting/test-drafts/'+id+'/email-preview">Laiško peržiūra</a></td></tr>';
  }).join('');
  const page='<!doctype html><html lang="lt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
  '<title>RentInOrbit – SF registras (TEST)</title>'+
@@ -1518,10 +1523,10 @@ app.get('/api/admin/accounting',requireRole('admin'),(req,res)=>{
  'a{color:#164cab}small{color:#7a3445}.wrap{overflow-x:auto}</style></head><body>'+
  '<h1>RentInOrbit – SF TEST registras</h1>'+
  '<p><strong>Neišrašyti juodraščiai. Tikrų sąskaitų automatinis išrašymas išjungtas.</strong></p>'+
- '<p><a href="/api/admin/accounting/invoices.csv">Atsisiųsti CSV</a></p>'+
+ '<p><a href="/api/admin/accounting/invoices.csv">Atsisiųsti CSV</a> · <a href="/api/admin/accounting/delivery-previews">Pristatymo peržiūrų įrašai</a></p>'+
  '<div class="wrap"><table><thead><tr><th>ID</th><th>Raktas</th><th>Tipas</th><th>Būsena</th>'+
- '<th>Suma</th><th>Data</th><th>Dokumentas</th></tr></thead><tbody>'+
- (trs||'<tr><td colspan="7">Kol kas nėra TEST dokumentų.</td></tr>')+
+ '<th>Suma</th><th>Data</th><th>Pristatymo būklė</th><th>Dokumentas</th></tr></thead><tbody>'+
+ (trs||'<tr><td colspan="8">Kol kas nėra TEST dokumentų.</td></tr>')+
  '</tbody></table></div><p><small>TEST peržiūra nėra teisiškai galiojanti sąskaita faktūra.</small></p></body></html>';
  res.setHeader('Cache-Control','no-store, private');
  res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
