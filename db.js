@@ -2809,7 +2809,7 @@ db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(?,?)')
 // SF_LEDGER_V286_SAFE_DRAFTS
 // Invoice documents remain DRAFT ONLY until an independent accounting and tax review.
 // No legacy bookings are backfilled. No automatic customer-facing invoices are issued.
-db.exec(\`
+db.exec(`
 CREATE TABLE IF NOT EXISTS accounting_invoice_documents (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  document_key TEXT NOT NULL UNIQUE,
@@ -2844,7 +2844,7 @@ CREATE TABLE IF NOT EXISTS accounting_invoice_audit (
  details_json TEXT NOT NULL DEFAULT '{}',
  FOREIGN KEY(document_id) REFERENCES accounting_invoice_documents(id)
 );
-\`);
+`);
 const cleanInvoiceKey=v=>String(v||'').trim().slice(0,160);
 export function createAccountingInvoiceDraft({documentKey,issuerKey,recipientKey,bookingId=null,kind='platform_fee',amountCents,taxMode='pending_review',payload={},actor='system'}={}){
  const key=cleanInvoiceKey(documentKey),issuer=cleanInvoiceKey(issuerKey),recipient=cleanInvoiceKey(recipientKey);
@@ -2855,9 +2855,9 @@ export function createAccountingInvoiceDraft({documentKey,issuerKey,recipientKey
  if(typeof payload!=='object'||payload===null||Array.isArray(payload))throw new Error('Invalid invoice payload');
  if(JSON.stringify(payload).length>20000)throw new Error('Invoice draft payload too large');
  return db.transaction(()=>{
-  db.prepare(\`INSERT OR IGNORE INTO accounting_invoice_documents
+  db.prepare(`INSERT OR IGNORE INTO accounting_invoice_documents
    (document_key,issuer_key,recipient_key,booking_id,kind,amount_cents,tax_mode,payload_json)
-   VALUES(?,?,?,?,?,?,?,?)\`).run(key,issuer,recipient,bookingId?String(bookingId):null,kind,amount,taxMode,JSON.stringify(payload));
+   VALUES(?,?,?,?,?,?,?,?)`).run(key,issuer,recipient,bookingId?String(bookingId):null,kind,amount,taxMode,JSON.stringify(payload));
   const row=db.prepare('SELECT * FROM accounting_invoice_documents WHERE document_key=?').get(key);
   if(row.issuer_key!==issuer||row.recipient_key!==recipient||row.kind!==kind||row.amount_cents!==amount||row.tax_mode!==taxMode||row.booking_id!==(bookingId?String(bookingId):null)){
    throw new Error('Invoice idempotency key was reused with different metadata');
@@ -2876,7 +2876,7 @@ export function listAccountingInvoiceDrafts({limit=50,issuerKey=null}={}){
   .map(row=>({...row,payload:JSON.parse(row.payload_json),payload_json:undefined}));
 }
 export function accountingInvoiceSummary(){
- const totals=db.prepare(\`SELECT kind,status,currency,COUNT(*) AS count,SUM(amount_cents) AS amount_cents
- FROM accounting_invoice_documents GROUP BY kind,status,currency ORDER BY kind,status\`).all();
+ const totals=db.prepare(`SELECT kind,status,currency,COUNT(*) AS count,SUM(amount_cents) AS amount_cents
+ FROM accounting_invoice_documents GROUP BY kind,status,currency ORDER BY kind,status`).all();
  return {automatedIssuanceEnabled:false,realEmailsEnabled:false,totals};
 }
