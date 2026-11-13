@@ -1333,6 +1333,49 @@ app.get('/api/admin/accounting/invoices',requireRole('admin'),(req,res)=>{
   const limit=Math.max(1,Math.min(100,Number(req.query?.limit)||50));
   res.json({summary:accountingInvoiceSummary(),documents:listAccountingInvoiceDrafts({limit})});
 });
+
+const safeInvoiceText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeInvoiceCsv=value=>{
+ const str=String(value??'');
+ const protectedValue=/^[\s]*[=+\-@]/.test(str)?"'"+str:str;
+ return '"'+protectedValue.replaceAll('"','""')+'"';
+};
+app.get('/api/admin/accounting/invoices.csv',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
+ const rows=listAccountingInvoiceDrafts({limit:100});
+ const keys=['id','document_key','kind','status','issuer_key','recipient_key','amount_cents','currency','tax_mode','invoice_number','created_at'];
+ const csv=[keys.join(','),...rows.map(row=>keys.map(key=>safeInvoiceCsv(row[key])).join(','))].join('\r\n');
+ res.setHeader('Cache-Control','no-store, private');
+ res.setHeader('Content-Disposition','attachment; filename="rentinorbit-sf-test-register.csv"');
+ res.type('text/csv; charset=utf-8').send('\ufeff'+csv);
+});
+app.get('/api/admin/accounting/test-drafts/:id/print',requireRole('admin'),(req,res)=>{
+ if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).send('Not found');
+ const row=listAccountingInvoiceDrafts({limit:100}).find(item=>item.id===Number(req.params.id));
+ if(!row||!row.document_key.startsWith('TEST-'))return res.status(404).send('Not found');
+ res.setHeader('Cache-Control','no-store, private');
+ res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+ const amount=(row.amount_cents/100).toFixed(2);
+ const issueName=safeInvoiceText(process.env.LEGAL_OPERATOR_NAME||'[operatoriaus rekvizitai dar nepatvirtinti]');
+ const issueAddress=safeInvoiceText(process.env.LEGAL_OPERATOR_ADDRESS||'[VMI registruotas adresas įrašomas saugioje konfigūracijoje]');
+ const invoiceHtml=`<!doctype html><html lang="lt"><head><meta charset="utf-8"><title>TEST – sąskaitos juodraštis</title>
+ <style>body{font:16px system-ui,Arial,sans-serif;max-width:760px;margin:48px auto;color:#10223c;padding:0 20px}
+ h1{font-size:28px}header{border-bottom:2px solid #164cab;padding-bottom:20px}
+ .warn{background:#fff4da;padding:14px;font-weight:bold;margin-top:22px}
+ table{width:100%;border-collapse:collapse;margin-top:32px}td,th{text-align:left;padding:12px;border-bottom:1px solid #ccc}
+ td:last-child,th:last-child{text-align:right}@media print{body{margin:22px}.warn{border:1px solid #111}}</style></head>
+ <body><header><strong>RentInOrbit</strong><h1>TEST – negaliojantis apskaitos dokumentas</h1></header>
+ <div class="warn">DOKUMENTO JUODRAŠTIS. NE SĄSKAITA FAKTŪRA. NENAUDOTI APSKAITOJE.</div>
+ <p>Juodraščio raktas: ${safeInvoiceText(row.document_key)}</p>
+ <p>Išrašytojas: ${issueName}<br>Adresas: ${issueAddress}</p>
+ <p>Gavėjas: ${safeInvoiceText(row.recipient_key)}</p>
+ <table><thead><tr><th>Paslauga</th><th>Suma</th></tr></thead>
+ <tbody><tr><td>Platformos tarpininkavimo paslauga (TEST)</td><td>${amount} EUR</td></tr></tbody></table>
+ <p><strong>Iš viso: ${amount} EUR</strong></p><p>PVM statusas: nepatvirtintas TEST režimu.</p>
+ </body></html>`;
+ res.type('html').send(invoiceHtml);
+});
+
 app.post('/api/admin/accounting/test-drafts',requireRole('admin'),(req,res)=>{
   res.setHeader('Cache-Control','no-store, private');
   if(process.env.RENTINORBIT_STAGING!=='true' || process.env.STRIPE_MODE!=='test')return res.status(404).json({error:'Not found'});
