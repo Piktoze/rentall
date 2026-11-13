@@ -2948,7 +2948,11 @@ export function saveAccountingSupplierProfile(email,input={}){
  registration_number=excluded.registration_number,vat_mode=excluded.vat_mode,
  can_issue_on_behalf=excluded.can_issue_on_behalf,reviewed=0,updated_at=CURRENT_TIMESTAMP`)
  .run(e,legalKind,legalName,address||null,registration||null,vatMode,authorization);
- // Editing the legal identity invalidates any previously approved delegation.
+ // Record an immutable revocation before invalidating an accepted/approved mandate.
+ db.prepare(`INSERT INTO accounting_invoice_mandate_audit
+ (supplier_email,event,actor_user_id,version,terms_digest,reason)
+ SELECT m.supplier_email,'revoked',COALESCE((SELECT u.user_id FROM app_users u WHERE u.email=m.supplier_email COLLATE NOCASE LIMIT 1),'supplier-profile-edit'),m.version,m.terms_digest,'Supplier business profile changed'
+ FROM accounting_invoice_mandates m WHERE m.supplier_email=? COLLATE NOCASE AND m.status IN ('pending_review','approved')`).run(e);
  db.prepare("UPDATE accounting_invoice_mandates SET status='revoked',revoked_at=CURRENT_TIMESTAMP WHERE supplier_email=? COLLATE NOCASE AND status IN ('pending_review','approved')").run(e);
  return getAccountingSupplierProfile(e);
 }
@@ -3188,7 +3192,8 @@ CREATE INDEX IF NOT EXISTS idx_invoice_mandate_audit_supplier
  ON accounting_invoice_mandate_audit(supplier_email,id);
 `);
 const INVOICE_MANDATE_VERSION='LT-SUPPLIER-INVOICE-DELEGATION-V1';
-const INVOICE_MANDATE_TERMS_DIGEST='delegation_scope_commission_excluded_rental_invoice_supplier_is_issuer_v1';
+const INVOICE_MANDATE_TERMS='RentInOrbit gali parengti ir techniniu būdu išrašyti nuomos sąskaitą tik patikrinto nuomotojo vardu, kai galioja atskiras patikrintas įgaliojimas. Nuomotojas yra nuomos paslaugos teikėjas, atsako už rekvizitus, sąskaitos išrašymo pagrindą ir mokesčius. RentInOrbit platformos tarpininkavimo komisinis yra atskira platformos paslauga, o visa nuomos suma nelaikoma platformos paslaugos suma. Įgaliojimą nuomotojas gali atšaukti. Ši TEST redakcija neįjungia tikro SF išrašymo.';
+const INVOICE_MANDATE_TERMS_DIGEST=crypto.createHash('sha256').update(INVOICE_MANDATE_TERMS,'utf8').digest('hex');
 export function getAccountingInvoiceMandate(supplierEmail){
  const e=String(supplierEmail||'').trim().toLowerCase();
  return e?db.prepare('SELECT * FROM accounting_invoice_mandates WHERE supplier_email=? COLLATE NOCASE').get(e)||null:null;
@@ -3269,5 +3274,5 @@ export function invoiceIssuanceAuthorityStatus(supplierEmail){
 }
 export function invoiceDelegationTerms(){
  return {version:INVOICE_MANDATE_VERSION,termsDigest:INVOICE_MANDATE_TERMS_DIGEST,
-  explanation:'Nuomotojas lieka nuomos paslaugos teikėjas ir jo vardu išrašomos nuomos SF išrašytojas. RentInOrbit tik techninis įgaliotas išrašytojas; jo tarpininkavimo mokestis apskaitomas atskirai. Įgaliojimas įsigalioja tik po abiejų šalių aiškaus patvirtinimo ir nepanaikina teisinių bei PVM reikalavimų. TEST režime tikros SF neišrašomos.'};
+  explanation:INVOICE_MANDATE_TERMS};
 }
