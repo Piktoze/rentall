@@ -37,6 +37,15 @@ test.describe('Isolated CI real-browser safety gate',()=>{
     expect(listing.lifecycleStatus).toBe('active');
   });
 
+  test('public static delivery excludes server code and deployment files',async({request})=>{
+    for(const path of ['/db.js','/server.js','/package.json','/ops/start.js','/modules/accounting-sf-v286.js']){
+      expect((await request.get(path)).status(),path).toBe(404);
+    }
+    for(const path of ['/','/app.js','/modules/customer-handoff-v145.js','/assets/brand/rentinorbit-logo-horizontal-dark-web.png']){
+      expect((await request.get(path)).status(),path).toBe(200);
+    }
+  });
+
   test('unknown booking cannot be read without authorization',async({request})=>{
     const response=await request.get('/api/bookings/not-a-real-booking');
     expect([401,403,404]).toContain(response.status());

@@ -4132,7 +4132,24 @@ app.post('/api/uploads/image', simpleRateLimit({windowMs:60000,max:30,keyPrefix:
   }
 });
 
-app.use(express.static(__dirname));
+// Serve only browser entry points and assets. The application directory also
+// contains backend code, test fixtures and deployment files.
+const publicRootFiles=new Set([
+  '/', '/index.html', '/app.js', '/service-worker.js', '/manifest.webmanifest',
+  '/styles.css', '/light-premium-v161.css', '/brand-v193.css', '/icon-192.svg', '/icon-512.svg'
+]);
+const publicBrowserModules=new Set(
+  [...fs.readFileSync(path.join(__dirname,'index.html'),'utf8')
+    .matchAll(/<script\b[^>]*\bsrc="(\/?modules\/[a-z0-9-]+\.js)(?:\?[^"]*)?"/gi)]
+    .map(([,url])=>'/'+url.replace(/^\//,''))
+);
+const servePublicFile=express.static(__dirname);
+app.use((req,res,next)=>{
+  if(publicRootFiles.has(req.path) || publicBrowserModules.has(req.path) || /^\/assets\/brand\/[a-z0-9-]+\.(?:png|svg)$/i.test(req.path)){
+    return servePublicFile(req,res,next);
+  }
+  next();
+});
 
 
 let supplierMaintenanceRunning=false;
