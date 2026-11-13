@@ -95,3 +95,12 @@ Deployment build runs `node release/rc-gate.js`.
 - Net jei visos techninės patikros praėjo, `realInvoiceIssuanceAllowed=false`, `realEmailDeliveryAllowed=false`, `invoiceNumberAllocated=false`. Privalomas blokatorius `LIVE_ACCOUNTING_LEGAL_SIGNOFF_REQUIRED` pašalinamas tik po atskiro teisinio/apskaitos patvirtinimo ir ateityje savarankiškai realizuoto tikrų SF išrašymo proceso.
 - TEST versijoje nėra API, kuri šios patikros pagrindu pradėtų sąskaitos numeravimą, tikrą išrašymą ar siuntimą.
 - Testuose yra mokėjimo nebuvimo, refund, neteisingo nuomotojo, trūkstamų įmonės rekvizitų, nepatvirtinto PVM režimo ir pasenusio įgaliojimo atvejai.
+
+
+## V293 – mokėjimų ginčų ir grąžinimų apsauga
+
+- Sąskaitos išrašymo techninė patikra papildomai atmeta mokėjimo būsenas `disputed`, `chargeback`, `chargeback_pending`, `refund_pending`, `refund_processing` ir `partially_refunded`, net jeigu rezervacijoje išliko anksčiau įrašytas `paid` mokėjimo identifikatorius.
+- Rezervacijos ginčo arba inicijuoto grąžinimo būsenos taip pat sustabdo patikrą, kai mokėjimo būsena dar neatnaujinta.
+- Pridėti izoliuoti regresijos scenarijai šioms būsenoms; tikros SF, numeracija ir pristatymas lieka uždrausti.
+- Prieigos peržiūra: administratoriaus API reikalauja `admin` rolės, o nuomotojo API papildomai tikrina, kad rezervacijos skelbimas priklausytų prisijungusiam nuomotojui. Nenustatyta naujo prieigos kontrolės trūkumo.
+- Railway staging diegimas `730e613f2` patvirtintas `SUCCESS`; aplinkos būsena `online`, aktyvių įspėjimų ir kritinių pranešimų nėra. Tai **nereiškia**, kad atliktas tikras Stripe TEST E2E ar patvirtintas LIVE apskaitos paleidimas.
