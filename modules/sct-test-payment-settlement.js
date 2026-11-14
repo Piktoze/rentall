@@ -61,9 +61,8 @@ export function applyVerifiedSctTestPayment(db,{bookingId,verification,eventId}=
       VALUES (?,?,?,?,?,?,?)`).run(bookingId,eventId,verification.paymentIntentId,
         verification.chargeId,verification.amountCents,verification.feeCents,
         verification.supplierCents);
-    db.prepare(`UPDATE sct_payment_reconciliation_inbox SET status='reconciled'
-      WHERE booking_id=? AND payment_intent_id=? AND status='reconciliation_required'`)
-      .run(bookingId,verification.paymentIntentId);
+    // Inbox schema intentionally allows only reconciliation_required; settlement
+    // is independently recorded in the unique payment_settlements table.
     return {status:'paid',bookingId,paymentIntentId:verification.paymentIntentId,
       chargeId:verification.chargeId,supplierCents:verification.supplierCents};
   }).immediate();
