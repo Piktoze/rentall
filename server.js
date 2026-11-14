@@ -1,5 +1,6 @@
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
-import {installSctPaymentReconciliationInbox,recordSctPaymentReconciliationSignal} from './modules/sct-payment-reconciliation-inbox.js';
+import {installSctPaymentReconciliationInbox,recordBoundSctPaymentReconciliationSignal} from './modules/sct-payment-reconciliation-inbox.js';
+import {getSctBookingBinding} from './modules/sct-booking-binding.js';
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
@@ -895,12 +896,17 @@ app.post('/api/stripe/webhook',
           // legacy connected-account Direct Charges and falsely marking them paid.
           if(pi?.metadata?.paymentFlow==='separate_charges_and_transfers'){
             const inboxBooking=pi?.metadata?.bookingId?getRentalBookingById(pi.metadata.bookingId):null;
-            const recorded=recordSctPaymentReconciliationSignal(db,event,inboxBooking);
+            const immutableBinding=pi?.metadata?.bookingId?getSctBookingBinding(db,pi.metadata.bookingId):null;
+            const recorded=recordBoundSctPaymentReconciliationSignal(db,event,inboxBooking,immutableBinding);
             console.info(JSON.stringify({type:'sct_payment_signal',eventId:event.id,
               result:recorded.status||recorded.blocked}));
-            const error=new Error('SCT payment webhook requires separate reconciliation handler');
-            error.code='SCT_WEBHOOK_HANDLER_NOT_ENABLED';
-            throw error;
+            if(recorded.blocked){
+              // Do not acknowledge an unbound payment or enter the legacy Direct Charges path.
+              throw new Error('SCT payment binding requires financial review');
+            }
+            // Acknowledge only the durable inbox write. Do not mark booking paid,
+            // release funds, issue invoices, or send settlement notifications here.
+            break;
           }
           const bookingId=pi.metadata?.bookingId;
           let lateTerminalRefunded=false;
