@@ -1,4 +1,5 @@
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
+import {installSctPaymentReconciliationInbox,recordSctPaymentReconciliationSignal} from './modules/sct-payment-reconciliation-inbox.js';
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
@@ -190,6 +191,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 assertProductionConfig();
+// Additive SCT audit inbox. No changes to existing reservations or Stripe payments.
+installSctPaymentReconciliationInbox(db);
 
 const app = express();
 
@@ -891,6 +894,10 @@ app.post('/api/stripe/webhook',
           // Fail closed and retain retry visibility rather than processing them as
           // legacy connected-account Direct Charges and falsely marking them paid.
           if(pi?.metadata?.paymentFlow==='separate_charges_and_transfers'){
+            const inboxBooking=pi?.metadata?.bookingId?getRentalBookingById(pi.metadata.bookingId):null;
+            const recorded=recordSctPaymentReconciliationSignal(db,event,inboxBooking);
+            console.info(JSON.stringify({type:'sct_payment_signal',eventId:event.id,
+              result:recorded.status||recorded.blocked}));
             const error=new Error('SCT payment webhook requires separate reconciliation handler');
             error.code='SCT_WEBHOOK_HANDLER_NOT_ENABLED';
             throw error;
