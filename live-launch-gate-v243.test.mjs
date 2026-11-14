@@ -32,8 +32,8 @@ const base={
  LEGAL_TEXTS_REVIEWED:'true'
 };
 const report=liveLaunchReadinessReport(base);
-assert.equal(report.ready,true,'Synthetic complete LIVE configuration passes local checks');
-assert.deepEqual(report.blocking,[]);
+assert.equal(report.ready,false,'LIVE stays blocked until deferred supplier transfers are implemented');
+assert.deepEqual(report.blocking,['deferred_supplier_transfer_implemented']);
 assert.ok(report.externalVerificationRequired.includes('platform_charges_enabled'));
 const testMode={...base,STRIPE_MODE:'test',STRIPE_SECRET_KEY:fake('rk','test','syntheticRestrictedKey123'),
  STRIPE_PUBLISHABLE_KEY:fake('pk','test','syntheticPublicKey123')};
@@ -42,7 +42,7 @@ assert.equal(productionConfigReport(testMode).ready,true,
 assert.equal(liveLaunchReadinessReport(testMode).ready,false,
  'A production deployment with test keys must never be marked LIVE launch-ready');
 assert.doesNotThrow(()=>assertProductionConfig({...testMode,RENTINORBIT_STAGING:'true',LEGAL_TEXTS_REVIEWED:''}));
-assert.doesNotThrow(()=>assertProductionConfig(base));
+assert.throws(()=>assertProductionConfig(base),{code:'LIVE_LAUNCH_CONFIG_INVALID'});
 assert.throws(()=>assertProductionConfig({...base,LEGAL_TEXTS_REVIEWED:''}),
  {code:'LIVE_LAUNCH_CONFIG_INVALID'},'LIVE startup must enforce the existing launch prerequisites');
 for(const [change,expected] of [

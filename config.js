@@ -165,6 +165,8 @@ export function liveLaunchReadinessReport(env=process.env){
   const publishable=value('STRIPE_PUBLISHABLE_KEY',env);
   const checks=[
     {id:'production_configuration',ready:config.ready&&config.production&&config.deployment&&!config.staging},
+    // Remove this blocker only when the deferred transfer flow is wired and verified.
+    {id:'deferred_supplier_transfer_implemented',ready:false},
     {id:'stripe_live_mode',ready:value('STRIPE_MODE',env).toLowerCase()==='live'},
     {id:'stripe_live_secret',ready:/^[sr]k_live_[A-Za-z0-9_\\-]{12,}$/.test(secret)},
     {id:'stripe_live_publishable',ready:/^pk_live_[A-Za-z0-9_\\-]{12,}$/.test(publishable)},

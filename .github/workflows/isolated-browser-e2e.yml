@@ -74,6 +74,8 @@ jobs:
         run: node rental-http-e2e-v210.test.js
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
+      - name: Verify deferred supplier transfer policy and LIVE payment gate
+        run: node --test deferred-supplier-transfer.test.mjs live-launch-gate-v243.test.mjs
       - name: Run real Chromium browser E2E, no live services
         # Collect independent browser evidence even if a prior HTTP regression fails.
         # The workflow still fails overall when any critical step fails.
