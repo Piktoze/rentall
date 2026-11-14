@@ -198,6 +198,7 @@ function showStep(n){
   document.querySelectorAll('.progress-step[data-phase]').forEach(s=>s.classList.toggle('active', Number(s.dataset.phase)<=phase));
   document.dispatchEvent(new CustomEvent('rentinorbit:checkout-step',{detail:{step:n,phase}}));
   if(n===4) renderReview();
+  if(n===5) rioRefreshCheckoutTraderDisclosure().catch(()=>{});
 }
 
 function validateStep(n){
@@ -3529,11 +3530,6 @@ async function rioRefreshCheckoutTraderDisclosure(){
   notice.textContent='Nepavyko patikrinti nuomotojo statuso. Rezervacijos pateikti negalima.';
  }
 }
-document.getElementById('bookingForm')?.addEventListener('click',()=>{rioRefreshCheckoutTraderDisclosure().catch(()=>{});},true);
-const rioCheckoutItems=document.getElementById('checkoutItems');
-if(rioCheckoutItems)new MutationObserver(()=>{rioRefreshCheckoutTraderDisclosure().catch(()=>{});})
- .observe(rioCheckoutItems,{childList:true,subtree:true});
-
 async function openListingDetail(listingId){
   const listing=loadUniversalListings().find(l=>String(l.id)===String(listingId)); if(!listing) return;
   let reviewData={reviews:[],summary:{reviewCount:0,averageRating:null}};
