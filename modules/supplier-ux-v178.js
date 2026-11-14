@@ -1,7 +1,6 @@
 // RentInOrbit V178 — simplified supplier experience and right-side action drawer.
 (function supplierUxV178(){
   const $=id=>document.getElementById(id);
-  const safeJson=value=>{try{return JSON.parse(value||'null')}catch{return null}};
   const lang=()=>window.RentInOrbitI18n?.getLanguage?.()||document.documentElement.lang||'lt';
   const copy={
     lt:{center:'Tiekėjo centras',intro:'Valdyk nuomą paprastai. Pradėk nuo skelbimo, o kitus įrankius atverk tik tada, kai jų reikia.',add:'+ Įkelti skelbimą',menu:'Atidaryti tiekėjo meniu',drawer:'Tiekėjo meniu',listings:'Mano skelbimai',orders:'Užsakymai',calendar:'Kalendorius',messages:'Žinutės',earnings:'Pajamos',payouts:'Išmokos',profile:'Verslo profilis',help:'Pagalba ir DUK',logout:'Atsijungti',close:'Uždaryti',chooseConversation:'Pasirink pokalbį, kad galėtum rašyti.',send:'Siųsti',noConversation:'Pokalbių dar nėra. Atidaryk skelbimą ir pasirink „Parašyti tiekėjui“.',back:'Grįžti į tiekėjo centrą',featureListings:'Mano skelbimai',featureOrders:'Užsakymai',featureCalendar:'Kalendorius',featureEarnings:'Pajamos',featurePayouts:'Išmokos'},
@@ -11,11 +10,7 @@
     ru:{center:'Центр поставщика',intro:'Управляйте арендой проще. Сначала добавьте объявление, а остальные инструменты открывайте только при необходимости.',add:'+ Добавить объявление',menu:'Открыть меню поставщика',drawer:'Меню поставщика',listings:'Мои объявления',orders:'Заказы',calendar:'Календарь',messages:'Сообщения',earnings:'Доходы',payouts:'Выплаты',profile:'Профиль бизнеса',help:'Помощь и вопросы',logout:'Выйти',close:'Закрыть',chooseConversation:'Выберите диалог, чтобы начать писать.',send:'Отправить',noConversation:'Диалогов пока нет. Откройте объявление и выберите «Написать поставщику».',back:'Вернуться в центр поставщика',featureListings:'Мои объявления',featureOrders:'Заказы',featureCalendar:'Календарь',featureEarnings:'Доходы',featurePayouts:'Выплаты'}
   };
   const t=key=>(copy[lang()]||copy.lt)[key]||key;
-  const getCachedUser=()=>safeJson(localStorage.getItem('rentinorbit_server_user'));
-  const isSupplier=()=>{
-    const u=getCachedUser();
-    return !!u && ['supplier','admin'].includes(u.role);
-  };
+  const isSupplier=()=>document.body.classList.contains('rio-supplier') || document.body.classList.contains('is-admin');
 
   function createDrawer(){
     if($('supplierActionDrawer')) return;
@@ -173,10 +168,12 @@
     }else if(auth){
       auth.classList.remove('supplier-account-trigger');
       auth.removeAttribute('aria-haspopup');
-      auth.setAttribute('data-i18n-text','Log in');
+      if(document.body.classList.contains('rio-authenticated')) auth.removeAttribute('data-i18n-text');
+      else auth.setAttribute('data-i18n-text','Log in');
     }
   }
   document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeSupplierRoots();sync();},0));
+  document.addEventListener('rentinorbit:auth-ui-updated',sync);
   const authObserver=new MutationObserver(()=>sync());const auth=$('supplierAuthBtn');if(auth)authObserver.observe(auth,{childList:true,subtree:true,characterData:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();
