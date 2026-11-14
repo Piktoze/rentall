@@ -53,3 +53,25 @@ export function recordSctPaymentReconciliationSignal(db,event,booking){
     return {status:'reconciliation_required',duplicate:false};
   }).immediate();
 }
+
+export function recordBoundSctPaymentReconciliationSignal(db,event,booking,binding) {
+  const pi=event?.data?.object;
+  if(!booking || !binding ||
+     booking.bookingId!==binding.id ||
+     booking.listingId!==binding.listingId ||
+     Math.round(Number(booking.orderValue||0)*100)!==binding.amountCents ||
+     binding.paymentIntentId!==pi?.id ||
+     binding.livemode!==false ||
+     booking.stripePaymentIntentId!==pi?.id ||
+     !['confirmed','active','returned'].includes(booking.status) ||
+     ['paid','refunded','partially_refunded'].includes(String(booking.paymentStatus||'').toLowerCase()) ||
+     booking.stripeRefundId ||
+     pi?.metadata?.supplierStripeAccountId!==binding.destination ||
+     pi?.metadata?.commissionCents!==String(binding.feeCents) ||
+     !Number.isSafeInteger(binding.feeCents) ||
+     binding.feeCents<0 || binding.feeCents>=binding.amountCents)
+    return {blocked:'immutable_sct_binding_mismatch'};
+  // ACKing a verified event means only the durable inbox record is saved;
+  // a separate reconciliation worker must verify current Stripe state.
+  return recordSctPaymentReconciliationSignal(db,event,booking);
+}
