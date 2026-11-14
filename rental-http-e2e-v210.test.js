@@ -449,6 +449,32 @@ try{
  const published=await publish(photos);
  status(published,200,'Two uploaded photos permit listing publication');
  assert.equal(published.body.listing.photos.length,2);
+ const reviewPath='/api/admin/listings/'+listingBase.id+'/review';
+ const pendingReview=async()=> (await api('/api/admin/listing-reviews',{cookie:adminCookie})).body.listings.find(x=>x.listingId===listingBase.id);
+ const decide=(revision,statusValue,reason,cookie=adminCookie)=>api(reviewPath,{
+   method:'POST',cookie,data:{revision,status:statusValue,reason}});
+ assert.equal(published.body.listing.reviewStatus,'pending_review');
+ const pending=await pendingReview();
+ assert.equal(pending.listing.photos.length,2);
+ status(await api('/listing/'+listingBase.id),404,'Unreviewed direct listing hidden');
+ assert.ok(!(await api('/api/listings')).body.listings.some(x=>x.id===listingBase.id));
+ status(await api('/api/rentals/bookings',{method:'POST',cookie:renterCookie,data:{
+   listingId:listingBase.id,startDate:new Date(Date.now()+86400000).toISOString().slice(0,10),endDate:new Date(Date.now()+172800000).toISOString().slice(0,10),termsAccepted:true
+ }}),404,'Unreviewed listing cannot be booked');
+ status(await decide(pending.revision,'approved',null,supplierCookie),403,'Supplier cannot approve');
+ status(await decide(pending.revision,'rejected',''),400,'Rejection requires reason');
+ status(await decide(pending.revision,'rejected','Patikslinkite aprašymą'),200,'Admin can reject');
+ const rejectedListing=(await api('/api/supplier/listings',{cookie:supplierCookie})).body.listings.find(x=>x.id===listingBase.id);
+ assert.equal(rejectedListing.reviewStatus,'rejected');
+ assert.equal(rejectedListing.reviewReason,'Patikslinkite aprašymą');
+ status(await publish(photos),200,'Rejected listing can be resubmitted');
+ const resubmitted=await pendingReview();
+ status(await decide(pending.revision,'approved'),409,'Stale revision cannot be approved');
+ status(await decide(resubmitted.revision,'approved'),200,'Admin approves exact revision');
+ const sync=await api('/api/rentals/listings/sync',{method:'POST',cookie:supplierCookie,
+   data:{listings:[{...listingBase,title:'Unreviewed sync edit',photos}]}});
+ status(sync,200,'Legacy inventory sync cannot publish changes');
+ assert.equal((await api('/api/listings')).body.listings.find(item=>item.id===listingBase.id).title,listingBase.title);
  const publicTraderListings=await api('/api/listings');
  status(publicTraderListings,200,'Public listings available with trader disclosure');
  const publicListing=publicTraderListings.body.listings.find(item=>item.id===listingBase.id);
@@ -547,6 +573,22 @@ try{
    data:{listing:{...listingBase,title:'Owner updated title',photos,coverPhoto:photos[0]}}});
  status(updated,200,'Owner can edit listing with valid photos');
  assert.equal(updated.body.listing.title,'Owner updated title');
+ assert.equal(updated.body.listing.reviewStatus,'pending_review');
+ const oldVersion=(await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id);
+ assert.equal(oldVersion.title,listingBase.title,'Only the previously approved version stays public');
+ status(await decide((await pendingReview()).revision,'approved'),200,'Updated listing approved');
+ assert.equal((await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id).title,'Owner updated title');
+ const audit=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const decisions=audit.prepare('SELECT * FROM listing_review_history WHERE listing_id=?').all(listingBase.id);
+   assert.equal(decisions.length,3);
+   assert.ok(decisions.every(row=>row.admin_id&&row.decided_at));
+   assert.equal(JSON.parse(decisions.find(row=>row.status==='approved').reviewed_json).title,listingBase.title);
+ }finally{audit.close();}
+ const notifications=await api('/api/supplier/notifications',{cookie:supplierCookie});
+ assert.match(JSON.stringify(notifications.body),/Skelbimas atmestas/);
+ assert.match(JSON.stringify(notifications.body),/Skelbimas patvirtintas/);
+ console.log('PASS mandatory listing moderation: pending, public gates, authorization, reasons, version history and notifications');
  console.log('PASS HTTP listing create/edit, photo count, account ownership, archive/delete access');
 
 

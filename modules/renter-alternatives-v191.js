@@ -24,7 +24,7 @@
       const items=typeof loadUniversalListings==='function'?loadUniversalListings():[];
       const idx=items.findIndex(x=>String(x.id)===String(l.id));
       if(idx>=0)items[idx]={...items[idx],...l};else items.unshift(l);
-      localStorage.setItem('rentinorbit_listings',JSON.stringify(items));
+      saveUniversalListings(items);
     }catch{}
   }
   function setField(id,value){const el=document.getElementById(id);if(!el||value==null||value==='')return;el.value=String(value);el.dispatchEvent(new Event('change',{bubbles:true}))}

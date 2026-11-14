@@ -61,6 +61,7 @@ test.describe('Isolated CI real-browser safety gate',()=>{
       listings:[{listingId:'synthetic-listing',title:markup,moderationStatus:'active'}],
       disputes:[{disputeId:'synthetic-dispute',bookingId:'synthetic-booking',reason:markup,details:markup,status:'open'}]
     }}));
+    await page.route('**/api/admin/listing-reviews',route=>route.fulfill({json:{listings:[]}}));
     await page.goto('/');
     await expect(page.locator('body')).toHaveClass(/is-admin/);
     await expect(page.locator('#adminListingsBody b')).toHaveText(markup);

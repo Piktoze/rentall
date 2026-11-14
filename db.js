@@ -665,6 +665,8 @@ export function createRentalBookingAtomic({
   const tx = db.transaction(() => {
     const listing = getRentalListing(listingId);
     if (!listing) throw new Error('Listing not found');
+    if(getFullRentalListing(listingId) && !getPublicRentalListing(listingId))
+      throw Object.assign(new Error('Listing is not available for booking'),{code:'LISTING_NOT_ACTIVE'});
     if (listing.moderationStatus !== 'active' || listing.lifecycleStatus !== 'active') {
       const err=new Error('Listing is not available for booking'); err.code='LISTING_NOT_ACTIVE'; throw err;
     }
@@ -1515,7 +1517,30 @@ const upsertFullListingStmt=db.prepare(`
   WHERE rental_listings.owner_email = excluded.owner_email COLLATE NOCASE
 `);
 
-const publicListingFilter=`COALESCE(moderation_status,'active')='active'
+// Existing inventory and booking rows stay intact. Publication is opt-in per revision.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS listing_reviews (
+    listing_id TEXT PRIMARY KEY REFERENCES rental_listings(listing_id),
+    revision TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending_review','approved','rejected')),
+    draft_json TEXT NOT NULL,
+    reason TEXT,
+    approved_revision TEXT
+  );
+  CREATE TABLE IF NOT EXISTS listing_review_history (
+    revision TEXT PRIMARY KEY,
+    listing_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    reviewed_json TEXT NOT NULL,
+    admin_id TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    reason TEXT
+  );
+`);
+
+const publicListingFilter=`EXISTS (SELECT 1 FROM listing_reviews r WHERE r.listing_id=rental_listings.listing_id
+      AND r.approved_revision IS NOT NULL)
+    AND COALESCE(moderation_status,'active')='active'
     AND COALESCE(lifecycle_status,'active')='active'
     AND (availability_confirmed_at IS NULL OR datetime(availability_confirmed_at) >= datetime('now','-30 days'))`;
 
@@ -1532,10 +1557,6 @@ const listOwnerFullListingsStmt=db.prepare(`
   FROM rental_listings
   WHERE owner_email=? COLLATE NOCASE
   ORDER BY COALESCE(updated_at,created_at) DESC
-`);
-
-const deleteOwnerListingStmt=db.prepare(`
-  DELETE FROM rental_listings WHERE listing_id=? AND owner_email=? COLLATE NOCASE
 `);
 
 export function createAppUser({
@@ -1686,7 +1707,76 @@ export function getPublicRentalListing(listingId){
 }
 
 export function listOwnerRentalListings(ownerEmail){
-  return listOwnerFullListingsStmt.all(String(ownerEmail||'')).map(parseListingRow).filter(Boolean);
+  return listOwnerFullListingsStmt.all(String(ownerEmail||'')).map(parseListingRow).filter(Boolean).map(listing=>{
+    const review=db.prepare('SELECT * FROM listing_reviews WHERE listing_id=?').get(listing.id);
+    return {...(review?JSON.parse(review.draft_json):listing),
+      lifecycleStatus:listing.lifecycleStatus, moderationStatus:listing.moderationStatus,
+      reviewStatus:review?.status||'pending_review', reviewReason:review?.reason||null};
+  });
+}
+
+const reviewedContent=listing=>JSON.stringify(Object.keys(listing).sort()
+  .filter(key=>!['id','ownerEmail','moderationStatus','lifecycleStatus','availabilityConfirmedAt','createdAt','reviewStatus','reviewReason'].includes(key))
+  .map(key=>[key,listing[key]]));
+
+export function submitListingReview(listing,ownerEmail){
+  return db.transaction(()=>{
+    const id=String(listing.id||`L-${crypto.randomUUID()}`);
+    const existing=getRentalListing(id);
+    if(existing && (existing.ownerEmail?.toLowerCase()!==ownerEmail.toLowerCase() || ['archived','deleted'].includes(existing.lifecycleStatus)))
+      throw new Error('Skelbimo redaguoti negalima.');
+    if(existing)assertRentalListingInventoryCapacity(id,listing.quantity);
+    const draft={...listing,id,ownerEmail};
+    const review=db.prepare('SELECT * FROM listing_reviews WHERE listing_id=?').get(id);
+    if(review && review.status!=='rejected' && reviewedContent(JSON.parse(review.draft_json))===reviewedContent(draft))
+      return {...draft,reviewStatus:review.status};
+    if(!existing) saveFullRentalListing({...draft,moderationStatus:'active'},ownerEmail);
+    db.prepare(`INSERT INTO listing_reviews(listing_id,revision,status,draft_json,reason) VALUES (?,?,'pending_review',?,NULL)
+      ON CONFLICT(listing_id) DO UPDATE SET revision=excluded.revision,status=excluded.status,draft_json=excluded.draft_json,reason=NULL`)
+      .run(id,crypto.randomUUID(),JSON.stringify(draft));
+    return {...draft,reviewStatus:'pending_review'};
+  }).immediate();
+}
+
+export function listPendingListingReviews(){
+  return db.prepare(`SELECT l.listing_id AS listingId,l.owner_email AS ownerEmail,l.title,
+      r.revision,r.draft_json AS draftJson,l.data_json AS savedJson
+    FROM rental_listings l LEFT JOIN listing_reviews r ON r.listing_id=l.listing_id
+    WHERE l.data_json IS NOT NULL AND COALESCE(l.lifecycle_status,'active') NOT IN ('archived','deleted')
+      AND (r.status='pending_review' OR r.status IS NULL) ORDER BY l.updated_at DESC`).all()
+    .map(({draftJson,savedJson,...row})=>({...row,listing:JSON.parse(draftJson||savedJson)}));
+}
+
+export function decideListingReview({listingId,revision,status,reason,adminId,validate}){
+  return db.transaction(()=>{
+    const current=getRentalListing(listingId);
+    const review=db.prepare('SELECT * FROM listing_reviews WHERE listing_id=?').get(listingId);
+    const published=getFullRentalListing(listingId);
+    if(!current||!published||['archived','deleted'].includes(current.lifecycleStatus))
+      throw Object.assign(new Error('Skelbimas nerastas.'),{status:404});
+    if((review?.status && review.status!=='pending_review') || revision!==(review?.revision||null))
+      throw Object.assign(new Error('Skelbimas pasikeitė. Atnaujinkite peržiūrą.'),{status:409});
+    const draft=review?JSON.parse(review.draft_json):published;
+    if(status==='approved'){
+      const approved=validate(draft);
+      assertRentalListingInventoryCapacity(listingId,draft.quantity);
+      saveFullRentalListing({...approved,id:listingId,moderationStatus:current.moderationStatus,
+        lifecycleStatus:current.lifecycleStatus,availabilityConfirmedAt:current.availabilityConfirmedAt},current.ownerEmail);
+    }
+    const decidedAt=new Date().toISOString();
+    const decidedRevision=review?.revision||crypto.randomUUID();
+    db.prepare(`INSERT INTO listing_reviews(listing_id,revision,status,draft_json,reason,approved_revision) VALUES (?,?,?,?,?,?)
+      ON CONFLICT(listing_id) DO UPDATE SET status=excluded.status,reason=excluded.reason,approved_revision=excluded.approved_revision`)
+      .run(listingId,decidedRevision,status,JSON.stringify(draft),reason,status==='approved'?decidedRevision:review?.approved_revision||null);
+    db.prepare('INSERT INTO listing_review_history VALUES (?,?,?,?,?,?,?)')
+      .run(decidedRevision,listingId,status,JSON.stringify(draft),adminId,decidedAt,reason);
+    createRentalNotification({
+      uniqueKey:'listing-review:'+decidedRevision,audience:'supplier',userEmail:current.ownerEmail,
+      type:'listing.'+status,title:status==='approved'?'Skelbimas patvirtintas':'Skelbimas atmestas',
+      message:draft.title+(reason?' · '+reason:'')
+    });
+    return {listingId,status,decidedAt};
+  }).immediate();
 }
 
 // Archive rather than physically delete a listing referenced by historical rentals.
@@ -1703,8 +1793,7 @@ export function archiveOwnerRentalListing(listingId,ownerEmail){
 }
 
 export function deleteOwnerRentalListing(listingId,ownerEmail){
-  const result=deleteOwnerListingStmt.run(String(listingId),String(ownerEmail||''));
-  return result.changes>0;
+  return !!archiveOwnerRentalListing(listingId,ownerEmail);
 }
 
 
@@ -2747,7 +2836,7 @@ export function activateSupplierInvite(token,{password}={}){
   }
   const now=new Date().toISOString();
   db.prepare(`UPDATE supplier_onboarding SET status='active',activated_at=COALESCE(activated_at,?),invite_token_hash=NULL,invite_expires_at=NULL,updated_at=? WHERE email=? COLLATE NOCASE`).run(now,now,row.email);
-  const listingRows=db.prepare(`SELECT listing_id FROM rental_listings WHERE owner_email=? COLLATE NOCASE`).all(row.email);
+  const listingRows=db.prepare(`SELECT listing_id FROM rental_listings WHERE owner_email=? COLLATE NOCASE AND COALESCE(lifecycle_status,'active')!='archived'`).all(row.email);
   for(const l of listingRows){
     db.prepare(`UPDATE rental_listings SET lifecycle_status='pending_confirmation',availability_confirmed_at=NULL,updated_at=? WHERE listing_id=?`).run(now,l.listing_id);
     patchListingLifecycleJson(l.listing_id,{lifecycleStatus:'pending_confirmation',availabilityConfirmedAt:null});
@@ -2756,7 +2845,7 @@ export function activateSupplierInvite(token,{password}={}){
 }
 export function confirmSupplierListings(email,{listingIds=null}={}){
   const e=normalizeSupplierEmail(email), now=new Date().toISOString();
-  const all=db.prepare(`SELECT listing_id FROM rental_listings WHERE owner_email=? COLLATE NOCASE AND COALESCE(moderation_status,'active')!='blocked'`).all(e);
+  const all=db.prepare(`SELECT listing_id FROM rental_listings WHERE owner_email=? COLLATE NOCASE AND COALESCE(moderation_status,'active')!='blocked' AND COALESCE(lifecycle_status,'active')!='archived'`).all(e);
   const allowed=new Set(Array.isArray(listingIds)?listingIds.map(String):all.map(x=>String(x.listing_id)));
   let count=0;
   for(const row of all){

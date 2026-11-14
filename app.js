@@ -1383,18 +1383,12 @@ function purgeLegacyDemoListings(items){
   return Array.isArray(items)?items.filter(item=>!isLegacyDemoListing(item)):[];
 }
 
+let reviewedCatalog=[];
 function loadUniversalListings(){
-  let saved=null;
-  try{saved=JSON.parse(localStorage.getItem('rentinorbit_listings')||'null');}catch{}
-  const source=Array.isArray(saved)?saved:defaultListings;
-  const cleaned=purgeLegacyDemoListings(source);
-  if(Array.isArray(saved) && cleaned.length!==saved.length){
-    localStorage.setItem('rentinorbit_listings',JSON.stringify(cleaned));
-  }
-  return cleaned;
+  return purgeLegacyDemoListings(reviewedCatalog);
 }
 function saveUniversalListings(items){
-  localStorage.setItem('rentinorbit_listings',JSON.stringify(items));
+  reviewedCatalog=items;
 }
 function renderUniversalListings(items=loadUniversalListings()){
   const grid=document.getElementById('listingPreviewGrid');
@@ -1426,6 +1420,11 @@ function closeListingModalAccessible(){
 document.getElementById('navListItemBtn')?.addEventListener('click',()=>document.getElementById('openListingFormBtn')?.click());
 document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
   if(!currentSupplier()){ openAuth('register'); return; }
+  editingListing=null;
+  document.getElementById('listingForm').reset();
+  pendingListingPhotoUrls=[];
+  document.getElementById('listingPhotoPreview').textContent='';
+  document.getElementById('listingMsg').textContent='';
   refreshInstantBookEligibility().catch(()=>{});
   listingModalReturnFocus=document.activeElement;
   listingModal.classList.add('open');
@@ -1457,7 +1456,8 @@ listingModal?.addEventListener('keydown',e=>{
   else if(!e.shiftKey && (document.activeElement===last || !listingModal.contains(document.activeElement))){e.preventDefault();first.focus();}
 });
 
-document.getElementById('listingForm')?.addEventListener('submit',e=>{
+let editingListing=null;
+document.getElementById('listingForm')?.addEventListener('submit',async e=>{
   e.preventDefault();
   const photoInput=document.getElementById('listingPhotos');
   if(photoInput?.dataset.uploading==='true' || pendingListingPhotoUrls.length<2 || pendingListingPhotoUrls.length>5){
@@ -1473,9 +1473,11 @@ document.getElementById('listingForm')?.addEventListener('submit',e=>{
     return;
   }
   const s=currentSupplier(); if(!s) return;
-  const items=loadUniversalListings();
+  const form=e.currentTarget;
+  const submit=form.querySelector('button[type="submit"]');
   const listing={
-    id:Date.now(),
+    ...editingListing,
+    id:editingListing?.id||crypto.randomUUID(),
     title:document.getElementById('listingTitle').value.trim(),
     category:document.getElementById('listingCategory').value,
     quantity:Number(document.getElementById('listingQuantity').value||1),
@@ -1496,12 +1498,32 @@ document.getElementById('listingForm')?.addEventListener('submit',e=>{
     photos:[...pendingListingPhotoUrls],
     coverPhoto:pendingListingPhotoUrls[0]||''
   };
-  items.unshift(listing);
-  saveUniversalListings(items);
-  renderUniversalListings(items);
-  document.getElementById('listingMsg').textContent='Listing published.';
-  e.target.reset();
-  setTimeout(closeListingModalAccessible,450);
+  const fields={cancellationPolicy:'listingCancellationPolicy',accommodationDelivery:'listingAccommodationDelivery',
+    deliveryLeadTime:'listingDeliveryLeadTime',deliveryWindow:'listingDeliveryWindow'};
+  for(const [key,id] of Object.entries(fields)) listing[key]=document.getElementById(id)?.value||'';
+  for(const [key,id] of Object.entries({hotelDeliveryFee:'listingHotelDeliveryFee',minOrder:'listingMinOrder',
+    latitude:'listingLatitude',longitude:'listingLongitude'})){
+    const value=document.getElementById(id)?.value;
+    listing[key]=value?Number(value):null;
+  }
+  listing.deliveryZones=normalizeDeliveryZones(document.getElementById('listingDeliveryZones')?.value||'');
+  if(submit)submit.disabled=true;
+  const message=document.getElementById('listingMsg');
+  try{
+    await apiJson('/api/supplier/listings',{method:'POST',body:JSON.stringify({listing})});
+    message.textContent='Skelbimas pateiktas peržiūrai.';
+    closeListingModalAccessible();
+    editingListing=null;
+    form.reset();
+    pendingListingPhotoUrls=[];
+    await loadSupplierInventoryV94();
+    await hydrateListingsFromServer();
+    showToast('Skelbimas pateiktas peržiūrai.','success');
+  }catch(error){
+    message.textContent=error.message;
+  }finally{
+    if(submit)submit.disabled=false;
+  }
 });
 
 document.getElementById('searchForm')?.addEventListener('submit',e=>{
@@ -1622,21 +1644,7 @@ document.getElementById('tripSearchForm')?.addEventListener('submit',e=>{
   document.getElementById('list-item')?.scrollIntoView({behavior:'smooth'});
 });
 
-// Extend listing creation with accommodation-delivery settings.
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  const accommodationDelivery=document.getElementById('listingAccommodationDelivery')?.value||'no';
-  const deliveryZones=(document.getElementById('listingDeliveryZones')?.value||'')
-    .split(',').map(s=>s.trim()).filter(Boolean);
-  setTimeout(()=>{
-    const items=loadUniversalListings();
-    if(!items.length) return;
-    const newest=items[0];
-    newest.accommodationDelivery=accommodationDelivery;
-    newest.deliveryZones=deliveryZones;
-    saveUniversalListings(items);
-    renderUniversalListings(items);
-  },0);
-}, true);
+
 
 // Default listings are intentionally empty in production; delivery settings come from supplier data.
 
@@ -1686,24 +1694,7 @@ renderUniversalListings = function(items=loadUniversalListings()){
   }).join('');
 };
 
-// Extend listing submit persistence.
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  const snapshot={
-    accommodationDelivery:document.getElementById('listingAccommodationDelivery')?.value||'no',
-    deliveryZones:normalizeDeliveryZones(document.getElementById('listingDeliveryZones')?.value||''),
-    hotelDeliveryFee:Number(document.getElementById('listingHotelDeliveryFee')?.value||0),
-    minOrder:Number(document.getElementById('listingMinOrder')?.value||0),
-    deliveryLeadTime:document.getElementById('listingDeliveryLeadTime')?.value||'same day',
-    deliveryWindow:document.getElementById('listingDeliveryWindow')?.value||'08:00–20:00'
-  };
-  setTimeout(()=>{
-    const items=loadUniversalListings();
-    if(!items.length) return;
-    Object.assign(items[0],snapshot);
-    saveUniversalListings(items);
-    renderUniversalListings(items);
-  },20);
-}, true);
+
 
 // Trip search: require selected location to be in supported zones and enrich summary.
 const oldTripForm = document.getElementById('tripSearchForm');
@@ -1731,25 +1722,7 @@ oldTripForm?.addEventListener('submit',()=>{
   },50);
 }, true);
 
-// Enrich defaults once for demo.
-(function enrichV14Defaults(){
-  const current=JSON.parse(localStorage.getItem('rentinorbit_listings')||'null');
-  if(current){
-    let changed=false;
-    current.forEach(l=>{
-      if(l.accommodationDelivery==='yes' || l.accommodationDelivery===true){
-        if(l.hotelDeliveryFee===undefined){ l.hotelDeliveryFee=10; changed=true; }
-        if(l.minOrder===undefined){ l.minOrder=25; changed=true; }
-        if(!l.deliveryLeadTime){ l.deliveryLeadTime='same day'; changed=true; }
-        if(!l.deliveryWindow){ l.deliveryWindow='08:00–20:00'; changed=true; }
-      }
-    });
-    if(changed){
-      saveUniversalListings(current);
-      renderUniversalListings(current);
-    }
-  }
-})();
+
 
 
 // --- V15 automatic delivery pricing in checkout ---
@@ -3480,18 +3453,7 @@ function cancellationPolicyText(policy,version){
   return uiText('Moderate: 100% refund ≥48h; 75% 24–48h; 50% 12–24h; 0% <12h. No automatic cancellation after item handover.');
 }
 
-// Capture cancellation policy in newly created/edited listings.
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  const cancellationPolicy=document.getElementById('listingCancellationPolicy')?.value || 'moderate';
-  setTimeout(()=>{
-    const listings=loadUniversalListings();
-    const latest=listings[0];
-    if(latest){
-      latest.cancellationPolicy=cancellationPolicy;
-      localStorage.setItem('rentinorbit_listings',JSON.stringify(listings));
-    }
-  },20);
-}, true);
+
 
 // Trader status is a separate marketplace declaration, not Stripe legal form.
 function rioTraderDisclosureText(record){
@@ -3811,6 +3773,50 @@ async function loadAdminDashboard(){
       </td>
     </tr>`).join('') || '<tr><td colspan="4">No listings.</td></tr>';
 
+  const reviewQueue=document.getElementById('adminListingReviewQueue');
+  if(reviewQueue){
+    const {listings}=await apiJson('/api/admin/listing-reviews');
+    reviewQueue.replaceChildren();
+    if(!listings.length)reviewQueue.textContent='Skelbimų, laukiančių patvirtinimo, nėra.';
+    for(const {listingId,revision,listing} of listings){
+      const item=document.createElement('details');
+      const heading=document.createElement('summary');
+      heading.textContent=listing.title;
+      const details=document.createElement('pre');
+      details.textContent=JSON.stringify(listing,null,2);
+      details.style.whiteSpace='pre-wrap';
+      item.append(heading,details);
+      for(const url of listing.photos||[]){
+        if(!/^\/uploads\/[a-zA-Z0-9_-]+\.(png|jpe?g|webp)$/.test(url))continue;
+        const img=document.createElement('img');
+        img.src=url;img.alt=listing.title;img.loading='lazy';img.width=180;
+        item.append(img);
+      }
+      const reason=document.createElement('textarea');
+      reason.placeholder='Atmetimo priežastis';
+      reason.setAttribute('aria-label','Atmetimo priežastis');
+      reason.maxLength=1000;
+      const result=document.createElement('p');
+      result.setAttribute('role','status');
+      item.append(reason,result);
+      for(const [status,label] of [['approved','Patvirtinti'],['rejected','Atmesti']]){
+        const button=document.createElement('button');
+        button.type='button';button.textContent=label;
+        button.addEventListener('click',async()=>{
+          try{
+            if(status==='rejected'&&!reason.value.trim()){reason.focus();result.textContent='Nurodykite priežastį.';return;}
+            await apiJson('/api/admin/listings/'+encodeURIComponent(listingId)+'/review',{
+              method:'POST',body:JSON.stringify({revision,status,reason:reason.value})
+            });
+            await loadAdminDashboard();
+          }catch(error){result.textContent=error.message;}
+        });
+        item.append(button);
+      }
+      reviewQueue.append(item);
+    }
+  }
+
   document.getElementById('adminDisputesBody').innerHTML=data.disputes.map(d=>`
     <tr>
       <td>${escapeHtml(d.disputeId)}</td>
@@ -4012,16 +4018,7 @@ document.getElementById('listingPhotos')?.addEventListener('change',async e=>{
   }
 });
 
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  // Photos were added to the listing synchronously before saving it.
-  setTimeout(()=>{
-    pendingListingPhotoUrls=[];
-    const input=document.getElementById('listingPhotos');
-    if(input)input.value='';
-    const preview=document.getElementById('listingPhotoPreview');
-    if(preview)preview.innerHTML='';
-  },300);
-}, true);
+
 
 function favoriteIds(){
   try{return JSON.parse(localStorage.getItem('rentinorbit_favorites')||'[]');}
@@ -4253,7 +4250,7 @@ async function hydrateListingsFromServer(){
     const data=await apiJson('/api/listings');
     const listings=purgeLegacyDemoListings(Array.isArray(data.listings)?data.listings:[]);
     // Server inventory is authoritative even when empty: stale demo/local listings must disappear.
-    localStorage.setItem('rentinorbit_listings',JSON.stringify(listings));
+    saveUniversalListings(listings);
     if(typeof renderGeoAwareListings==='function') renderGeoAwareListings(listings);
     else renderUniversalListings(listings);
     return listings;
@@ -4261,30 +4258,6 @@ async function hydrateListingsFromServer(){
     return loadUniversalListings();
   }
 }
-
-async function persistLatestListingToServer(){
-  if(!currentSupplier()) return;
-  const listings=loadUniversalListings();
-  const latest=listings[0];
-  if(!latest) return;
-  latest.ownerEmail=currentSupplier().email;
-  try{
-    const result=await apiJson('/api/supplier/listings',{
-      method:'POST',
-      body:JSON.stringify({listing:latest})
-    });
-    const idx=listings.findIndex(l=>String(l.id)===String(latest.id));
-    if(idx>=0) listings[idx]=result.listing;
-    localStorage.setItem('rentinorbit_listings',JSON.stringify(listings));
-  }catch(err){
-    console.warn('Server listing save failed',err);
-  }
-}
-
-// Persist listings after existing listing form completes.
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  setTimeout(()=>persistLatestListingToServer(),180);
-}, true);
 
 // Enhance auth UI to show role and protect supplier sections.
 const v31RefreshAuthUI=refreshAuthUI;
@@ -5523,23 +5496,7 @@ document.querySelectorAll('[data-results-view]').forEach(btn=>{
   });
 });
 
-// Persist exact coordinates onto the newest listing after existing listing creation.
-document.getElementById('listingForm')?.addEventListener('submit',()=>{
-  const lat=Number(document.getElementById('listingLatitude')?.value);
-  const lng=Number(document.getElementById('listingLongitude')?.value);
-  const validCoords=Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180;
-  setTimeout(()=>{
-    const listings=loadUniversalListings();
-    const latest=listings[0];
-    if(!latest) return;
-    if(validCoords){
-      latest.latitude=lat;
-      latest.longitude=lng;
-      localStorage.setItem('rentinorbit_listings',JSON.stringify(listings));
-    }
-    renderGeoAwareListings(listings);
-  },220);
-},true);
+
 
 // Use selected city center as a fallback for distance-sort if the user has not shared precise location.
 function setGeoFromSelectedCity(){
@@ -6546,16 +6503,35 @@ async function loadSupplierInventoryV94(){
     set('v94AvgRate',money(avg));set('v94DailyCapacity',money(capacity));
     window.dispatchEvent(new CustomEvent('rentinorbit:supplier-inventory',{detail:{listings:v94SupplierListings.map(l=>({id:l.id,title:l.title,status:l.status,active:l.active,quantity:Number(l.quantity||0),priceDay:Number(l.priceDay||0)}))}}));
     body.innerHTML=v94SupplierListings.map(l=>`<tr>
-      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small></td>
+      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small><small>${escapeHtml(({pending_review:'Laukia patvirtinimo',approved:'Patvirtintas',rejected:'Atmestas'})[l.reviewStatus]||'Laukia patvirtinimo')}</small>${l.reviewReason?'<small>'+escapeHtml(l.reviewReason)+'</small>':''}</td>
       <td><b>${Math.max(0,Number(l.quantity||0))}</b> vnt.</td>
       <td>${money(Number(l.priceDay||0))}</td><td>${Number(l.priceWeek||0)>0?money(Number(l.priceWeek)):'—'}</td>
       <td>${Number(l.deposit||0)>0?money(Number(l.deposit)):'Nėra'}</td>
       <td>${escapeHtml([l.city,l.country].filter(Boolean).join(', ')||'—')}</td>
       <td><div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="secondary v94-edit-listing" data-listing="${escapeHtml(l.id)}" type="button">Redaguoti ir pateikti peržiūrai</button>
         <button class="secondary v94-calendar-jump" data-listing="${escapeHtml(l.id)}" type="button">Atidaryti kalendorių</button>
         <button class="secondary v94-archive-listing" data-listing="${escapeHtml(l.id)}" type="button">Pašalinti skelbimą</button>
       </div></td>
     </tr>`).join('')||'<tr><td colspan="7">Aktyvių skelbimų nėra.</td></tr>';
+    body.querySelectorAll('.v94-edit-listing').forEach(btn=>btn.addEventListener('click',()=>{
+      const listing=v94SupplierListings.find(l=>String(l.id)===btn.dataset.listing);
+      if(!listing)return;
+      document.getElementById('openListingFormBtn').click();
+      editingListing=listing;
+      const fields={title:'Title',category:'Category',quantity:'Quantity',country:'Country',city:'City',
+        priceDay:'PriceDay',priceWeek:'PriceWeek',deposit:'Deposit',delivery:'Delivery',
+        description:'Description',bookingMode:'BookingMode',supplierResponseHours:'ResponseHours',
+        cancellationPolicy:'CancellationPolicy',accommodationDelivery:'AccommodationDelivery',deliveryZones:'DeliveryZones',
+        hotelDeliveryFee:'HotelDeliveryFee',minOrder:'MinOrder',deliveryLeadTime:'DeliveryLeadTime',
+        deliveryWindow:'DeliveryWindow',latitude:'Latitude',longitude:'Longitude'};
+      for(const [key,suffix] of Object.entries(fields)){
+        const field=document.getElementById('listing'+suffix);
+        if(field&&listing[key]!=null)field.value=listing[key];
+      }
+      pendingListingPhotoUrls=[...(listing.photos||[])];
+      document.getElementById('listingPhotoPreview').textContent=pendingListingPhotoUrls.length+' išsaugotos nuotraukos';
+    }));
     body.querySelectorAll('.v94-calendar-jump').forEach(btn=>btn.addEventListener('click',async()=>{
       const section=document.getElementById('supplierAvailabilitySection');
       if(!section)return;

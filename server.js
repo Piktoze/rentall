@@ -11,8 +11,6 @@ import {
   markWebhookFailed,
   listWebhookEvents,
   insertSimulatedWebhook,
-  upsertRentalListing,
-  assertRentalListingInventoryCapacity,
   getAvailability,
   createRentalBookingAtomic,
   updateRentalBookingStatus,
@@ -44,7 +42,9 @@ import {
   getAppUserBySessionToken,
   deleteAppSession,
   seedDefaultUsers,
-  saveFullRentalListing,
+  submitListingReview,
+  listPendingListingReviews,
+  decideListingReview,
   listPublicRentalListings,
   getPublicRentalListing,
   listOwnerRentalListings,
@@ -2010,7 +2010,11 @@ function validateSupplierListingInput(listing){
   if(listing.coverPhoto && listing.coverPhoto!==photos[0])
     throw Object.assign(new Error('Pagrindinė nuotrauka turi sutapti su pirmąja.'),{code:'LISTING_PHOTO_INVALID'});
   return {
-    ...listing,
+    ...Object.fromEntries(['id','category','country','latitude','longitude','delivery','deliveryEnabled',
+      'pickupEnabled','accommodationDelivery','deliveryZones','hotelDeliveryFee','minOrder',
+      'deliveryLeadTime','deliveryWindow','bookingMode','supplierResponseHours','supplierTimezone',
+      'cancellationPolicy','sourceLanguage','ownerType'].filter(key=>Object.hasOwn(listing,key))
+      .map(key=>[key,listing[key]])),
     title,
     city,
     description:String(listing.description||'').slice(0,3000),
@@ -2100,17 +2104,7 @@ app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
       return res.status(409).json({error:'Instant Book is available after payout identity/account verification is complete.',code:'INSTANT_BOOK_REQUIRES_VERIFICATION'});
     }
     ensureSupplierOnboarding(req.appUser.email,{active:true});
-    if(safeListing.id && getRentalListing(safeListing.id))
-      assertRentalListingInventoryCapacity(safeListing.id,safeListing.quantity);
-    const listing=saveFullRentalListing({...safeListing,lifecycleStatus:'active',availabilityConfirmedAt:new Date().toISOString()},req.appUser.email);
-    // Keep inventory/availability table in sync.
-    upsertRentalListing({
-      listingId:listing.id,
-      ownerEmail:req.appUser.email,
-      title:listing.title,
-      totalQuantity:Number(listing.quantity||0),
-      cancellationPolicy:listing.cancellationPolicy||'moderate'
-    });
+    const listing=submitListingReview({...safeListing,lifecycleStatus:'active'},req.appUser.email);
     res.json({listing});
   }catch(err){res.status(400).json({error:err.message});}
 });
@@ -2793,15 +2787,9 @@ app.post('/api/rentals/listings/sync', requireRole('supplier','admin'), (req, re
          req.appUser.role!=='admin'){
         continue;
       }
-      if(existing)assertRentalListingInventoryCapacity(item.id,item.quantity);
-      const saved=saveFullRentalListing(item,req.appUser.email);
-      synced.push(upsertRentalListing({
-        listingId:saved.id,
-        ownerEmail:req.appUser.email,
-        title:saved.title,
-        totalQuantity:Number(saved.quantity||0),
-        cancellationPolicy:saved.cancellationPolicy||'moderate'
-      }));
+      // Legacy cache sync cannot create, edit, or submit moderation revisions.
+      if(existing && existing.ownerEmail?.toLowerCase()===req.appUser.email.toLowerCase()) synced.push(existing);
+
     }
     res.json({ synced });
   } catch (err) {
@@ -2815,6 +2803,11 @@ app.get('/api/rentals/availability', simpleRateLimit({windowMs:60000,max:120,key
     if (!listingId || !startDate || !endDate) {
       return res.status(400).json({ error: 'listingId, startDate and endDate are required' });
     }
+    const listing=getRentalListing(listingId);
+    const actor=sessionUser(req);
+    if(!getPublicRentalListing(listingId) && !(listing && actor &&
+      (actor.role==='admin'||(actor.role==='supplier'&&actor.email===listing.ownerEmail))))
+      return res.status(404).json({error:'Listing not found'});
     validateAvailabilityWindow(startDate,endDate);
     const requestedQuantity=validateRequestedQuantity(quantity);
     const availability = getAvailability({
@@ -2837,6 +2830,11 @@ app.get('/api/rentals/calendar', simpleRateLimit({windowMs:60000,max:60,keyPrefi
     if (!listingId || !fromDate || !toDate) {
       return res.status(400).json({ error: 'listingId, fromDate and toDate are required' });
     }
+    const listing=getRentalListing(listingId);
+    const actor=sessionUser(req);
+    if(!getPublicRentalListing(listingId) && !(listing && actor &&
+      (actor.role==='admin'||(actor.role==='supplier'&&actor.email===listing.ownerEmail))))
+      return res.status(404).json({error:'Listing not found'});
     validateAvailabilityWindow(fromDate,toDate,{maxDays:93});
     const calendar = getAvailabilityCalendar({ listingId, fromDate, toDate });
     if (!calendar) return res.status(404).json({ error: 'Listing not found' });
@@ -2877,7 +2875,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       return res.status(400).json({error:'Customer phone is too long'});
     }
     const inventoryListing=getRentalListing(listingId);
-    const listingForBooking=getFullRentalListing(listingId);
+    const listingForBooking=getPublicRentalListing(listingId);
     if(!inventoryListing || !listingForBooking || listingForBooking.moderationStatus==='blocked' || inventoryListing.lifecycleStatus!=='active'){
       return res.status(404).json({error:'Listing not found'});
     }
@@ -3605,6 +3603,8 @@ app.post('/api/conversations',requireRole('customer','supplier','admin'),simpleR
     let customerEmail=null,supplierEmail=String(listing.ownerEmail||'').toLowerCase(),bookingId=req.body?.bookingId?String(req.body.bookingId):null;
     const actorEmail=String(req.appUser.email||'').toLowerCase();
     const actorOwnsListing=supplierEmail===actorEmail;
+    if(!bookingId&&!actorOwnsListing&&req.appUser.role!=='admin'&&!getPublicRentalListing(listingId))
+      return res.status(404).json({error:'Listing not found'});
     if(req.appUser.role==='admin'){
       customerEmail=String(req.body?.customerEmail||'').toLowerCase();
     }else if(actorOwnsListing){
@@ -3781,8 +3781,7 @@ app.post('/api/admin/suppliers/:email/listings', requireRole('admin'), (req,res)
     const supplierEmail=decodeURIComponent(req.params.email).trim().toLowerCase();
     upsertPrelaunchSupplier({email:supplierEmail});
     const safe=validateSupplierListingInput(req.body?.listing||{});
-    const listing=saveFullRentalListing({...safe,lifecycleStatus:'prelaunch',availabilityConfirmedAt:null,bookingMode:req.body?.listing?.bookingMode==='instant'?'instant':'request',supplierResponseHours:Number(req.body?.listing?.supplierResponseHours||4)},supplierEmail);
-    upsertRentalListing({listingId:listing.id,ownerEmail:supplierEmail,title:listing.title,totalQuantity:Number(listing.quantity||0),cancellationPolicy:listing.cancellationPolicy||'moderate'});
+    const listing=submitListingReview({...safe,lifecycleStatus:'prelaunch',availabilityConfirmedAt:null},supplierEmail);
     res.json({listing});
   }catch(err){res.status(400).json({error:err.message});}
 });
@@ -3810,6 +3809,21 @@ app.post('/api/supplier/listings/confirm-current', requireRole('supplier','admin
 app.get('/api/admin/dashboard', requireRole('admin'), (req,res)=>{
   try { res.json(getAdminDashboardData()); }
   catch(err){ res.status(400).json({error:err.message}); }
+});
+
+app.get('/api/admin/listing-reviews',requireRole('admin'),(req,res)=>{
+  res.set('Cache-Control','no-store, private').json({listings:listPendingListingReviews()});
+});
+app.post('/api/admin/listings/:listingId/review',requireRole('admin'),(req,res)=>{
+  const {revision=null,status}=req.body||{};
+  const reason=String(req.body?.reason||'').trim();
+  if(!['approved','rejected'].includes(status)||reason.length>1000||(status==='rejected'&&!reason))
+    return res.status(400).json({error:'Atmetant būtina nurodyti priežastį (iki 1000 simbolių).'});
+  try{
+    const decision=decideListingReview({listingId:req.params.listingId,revision,status,
+      reason:reason||null,adminId:req.appUser.userId,validate:validateSupplierListingInput});
+    res.json({decision});
+  }catch(err){res.status(err.status||400).json({error:err.message});}
 });
 
 app.post('/api/admin/listings/:listingId/moderation', requireRole('admin'), (req,res)=>{

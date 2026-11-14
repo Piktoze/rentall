@@ -112,3 +112,7 @@ Deployment build runs `node release/rc-gate.js`.
 - Izoliuotas regresijos testas tikrina `hasOpenDispute:true` neigiamą scenarijų ir serverio DB susiejimą.
 - **Likęs trūkumas:** `charge.dispute.*` Stripe webhook šiuo metu tik registruoja įvykį; jis automatiškai nesukuria `rental_disputes` įrašo. Todėl ši pataisa apsaugo nuo platformoje atidarytų nuomos ginčų, bet savaime neišsprendžia Stripe kortelės ginčų. Prieš LIVE būtina saugiai susieti Stripe dispute su `payment_intent`, `charge`, Connect paskyra ir rezervacija, užtikrinti idempotentiškumą ir ginčo uždarymo būsenas.
 - Tikrų SF ir laiškų siuntimas lieka išjungtas.
+
+## Patvirtintas dokumentų principas
+
+Kai nuomos kaina yra 100 € ir taikomas 15 % planas, nuomotojas pateikia nuomininkui 100 € nuomos dokumentą pagal savo veiklos statusą. „RentInOrbit“ nuomotojui išrašo atskirą 15 € tarpininkavimo komisinių sąskaitą. 85 € yra nuomotojo dalis prieš mokėjimo paslaugos mokesčius. Privatus nuomotojas dokumentus pateikia pagal jam taikomą tvarką. Kol nepatvirtinta teisės ir apskaitos procedūra, LIVE sąskaitų generavimas ir siuntimas išjungti.

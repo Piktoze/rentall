@@ -28,7 +28,7 @@ try{
   assert(!getAppUserBySessionToken(session.token),'Deleted session must be invalid');
 
   saveFullRentalListing({id:'L1',title:'10 chairs',quantity:10,cancellationPolicy:'moderate'},user.email);
-  assert(listPublicRentalListings().length===1,'Public listing expected');
+  assert(listPublicRentalListings().length===0,'Legacy listing must await explicit review');
   assert(listOwnerRentalListings(user.email).length===1,'Owner listing expected');
 
   const demoAdmin='admin@rentinorbit.test';
