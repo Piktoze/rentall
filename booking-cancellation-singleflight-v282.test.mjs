@@ -24,6 +24,6 @@ assert.ok(path.includes('cancelBookingSingleFlight(bookingId,async()=>{'),
 assert.ok(path.indexOf('cancelBookingSingleFlight(bookingId,async()=>{')<
   path.indexOf('await handleStripeCancellationForBooking(booking,refundAmount)'),
   'Guard must be entered before any Stripe refund calls');
-assert.ok(server.includes("'BOOKING_CANCELLATION_IN_PROGRESS'].includes(err.code)?409:400"),
+assert.ok(server.includes("'BOOKING_CANCELLATION_IN_PROGRESS','STRIPE_DISPUTE_RECONCILIATION_REQUIRED'].includes(err.code)?409:400"),
   'HTTP cancellation conflict must be reported as 409');
 console.log('PASS concurrent cancellation guard: one booking operation at a time, conflict, independent IDs, cleanup on errors');

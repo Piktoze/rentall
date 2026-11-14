@@ -1,3 +1,4 @@
+import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
@@ -523,6 +524,11 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
   return cancelBookingSingleFlight(bookingId,async()=>{
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
+  if(hasStripeRentalDisputeHold(db,bookingId)){
+    const error=new Error('Stripe dispute requires manual financial reconciliation');
+    error.code='STRIPE_DISPUTE_RECONCILIATION_REQUIRED';
+    throw error;
+  }
   // Check before calling Stripe: a terminal or handed-over rental must
   // never trigger an automatic cancellation/refund, even through other routes.
   if(!['pending','confirmed'].includes(String(booking.status||''))){
@@ -909,7 +915,7 @@ app.post('/api/stripe/webhook',
 
               // A legacy pending payment must never count as supplier approval.
               const terminalNonPayable=new Set(['pending','expired','cancelled','declined']);
-              if(terminalNonPayable.has(booking.status) && !booking.stripeRefundId){
+              if(terminalNonPayable.has(booking.status) && !booking.stripeRefundId && !hasStripeRentalDisputeHold(db,bookingId)){
                 const refund=await refundDirectCharge(stripe,{
                   accountId:String(event.account),
                   paymentIntentId:pi.id,
@@ -1010,7 +1016,7 @@ app.post('/api/stripe/webhook',
               const confirmed=getRentalBookingById(bookingId);
               const listing=confirmed?getRentalListing(confirmed.listingId):null;
               const cents=Math.round(Number(confirmed?.platformFeeAmount||0)*100);
-              if(confirmed?.paymentStatus==='paid' && listing?.ownerEmail && Number.isSafeInteger(cents) && cents>0){
+              if(confirmed?.paymentStatus==='paid' && !hasStripeRentalDisputeHold(db,bookingId) && listing?.ownerEmail && Number.isSafeInteger(cents) && cents>0){
                 createAccountingInvoiceDraft({
                   documentKey:'TEST-FEE-'+pi.id,
                   issuerKey:'TEST-RENTOBIT-OPERATOR',
@@ -1060,13 +1066,13 @@ app.post('/api/stripe/webhook',
         case 'charge.dispute.created':
         case 'charge.dispute.updated':
         case 'charge.dispute.closed': {
-          const dispute=event.data.object;
-          if(!event.account){
-            console.warn('Ignoring dispute without connected account context',event.id);
-            break;
-          }
-          console.warn('Connected-account dispute event',event.type,dispute.id,'account',event.account);
-          // Direct charges belong to the supplier account. Do not reverse any destination transfer here.
+          const result=recordStripeRentalDispute(db,event,{
+            getBooking:getRentalBookingById,accountForBooking:expectedStripeAccountForBooking
+          });
+          console[result==='recorded'||result==='stale'?'info':'warn'](JSON.stringify({
+            type:'stripe_rental_dispute',eventId:event.id,disputeId:event.data?.object?.id,
+            account:event.account||null,result
+          }));
           break;
         }
         default:
@@ -1429,7 +1435,7 @@ function trustedRentalInvoicePreflight(bookingId){
   profile:getAccountingSupplierProfile(supplierEmail),
   mandate:getAccountingInvoiceMandate(supplierEmail),
   terms:invoiceDelegationTerms(),
-  hasOpenDispute:!!db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(booking.bookingId)
+  hasOpenDispute:hasStripeRentalDisputeHold(db,bookingId)||!!db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(booking.bookingId)
  });
 }
 app.get('/api/admin/accounting/bookings/:bookingId/invoice-preflight',requireRole('admin'),(req,res)=>{
@@ -1540,6 +1546,8 @@ app.post('/api/admin/accounting/test-drafts/:id/prepare-delivery',
  if(req.body?.acknowledgeSynthetic!==true)return res.status(400).json({error:'Explicit synthetic preview acknowledgement required'});
  const doc=listAccountingInvoiceDrafts({limit:100}).find(x=>x.id===Number(req.params.id));
  if(!doc||!doc.document_key.startsWith('TEST-'))return res.status(404).end();
+ if(doc.booking_id&&hasStripeRentalDisputeHold(db,doc.booking_id))
+   return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
  try{
    const result=scheduleAccountingInvoicePreview({documentKey:doc.document_key,recipientEmail:doc.recipient_key});
    res.setHeader('Cache-Control','no-store, private');
@@ -1634,6 +1642,8 @@ app.post('/api/admin/accounting/test-drafts/:id/number',requireRole('admin'),(re
  const row=listAccountingInvoiceDrafts({limit:100}).find(item=>item.id===Number(req.params.id));
  if(!row||!row.document_key.startsWith('TEST-'))return res.status(404).end();
  try{
+  if(row.booking_id&&hasStripeRentalDisputeHold(db,row.booking_id))
+    return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
   const numbered=issueAccountingSyntheticInvoice(row.document_key,{actor:'staging-admin'});
   res.setHeader('Cache-Control','no-store, private');
   res.status(200).json({document:numbered,realIssuanceEnabled:false});
@@ -2472,6 +2482,8 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
     if(!accountOwner&&!guestOwner)return res.status(403).json({error:'Booking access denied'});
+    if(hasStripeRentalDisputeHold(db,bookingId))
+      return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     // Security-deposit holds must not precede supplier approval or rental payment.
     if(booking.status!=='confirmed')return res.status(409).json({error:'Supplier confirmation required before deposit authorization',code:'SUPPLIER_CONFIRMATION_REQUIRED'});
     if(booking.paymentStatus!=='paid')return res.status(409).json({error:'Rental must be paid before deposit authorization',code:'RENTAL_PAYMENT_REQUIRED'});
@@ -2499,6 +2511,7 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
 async function processExpiredBookings(){
   const expiredIds=expireStalePendingBookings();
   for(const bookingId of expiredIds){
+    if(hasStripeRentalDisputeHold(db,bookingId)) continue;
     try{
       const booking=getRentalBookingById(bookingId); if(!booking)continue;
       const listing=getRentalListing(booking.listingId);
@@ -2547,6 +2560,8 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!paymentUser&&!!verifyBookingPaymentToken(bookingId,paymentToken);
     if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'}); /* STAGING_PAYMENT_OWNER_ACCESS_V2 */
+    if(hasStripeRentalDisputeHold(db,bookingId))
+      return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     if(!['pending','confirmed'].includes(booking.status)){
       return res.status(409).json({error:`Booking cannot be paid in status ${booking.status}`});
     }
@@ -3198,7 +3213,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
 
     res.json({ booking, availability });
   } catch (err) {
-    const code = ['INVALID_TRANSITION','INVALID_STATUS','BOOKING_CANCELLATION_IN_PROGRESS'].includes(err.code) ? 409 : 400;
+    const code = ['INVALID_TRANSITION','INVALID_STATUS','BOOKING_CANCELLATION_IN_PROGRESS','STRIPE_DISPUTE_RECONCILIATION_REQUIRED'].includes(err.code) ? 409 : 400;
     res.status(code).json({ error: err.message, code: err.code || null });
   }
 });
@@ -3288,7 +3303,7 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
     }catch(err){ console.warn('Could not queue cancellation emails',err.message); }
     res.json(result);
   }catch(err){
-    res.status(['INVALID_TRANSITION','BOOKING_CANCELLATION_IN_PROGRESS'].includes(err.code)?409:400)
+    res.status(['INVALID_TRANSITION','BOOKING_CANCELLATION_IN_PROGRESS','STRIPE_DISPUTE_RECONCILIATION_REQUIRED'].includes(err.code)?409:400)
       .json({error:err.message,code:err.code||null});
   }
 });
@@ -3876,6 +3891,8 @@ app.post('/api/admin/bookings/:bookingId/deposit/release', requireRole('admin'),
   try{
     const booking=getRentalBookingById(req.params.bookingId);
     if(!booking)return res.status(404).json({error:'Booking not found'});
+    if(hasStripeRentalDisputeHold(db,booking.bookingId))
+      return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     if(booking.securityDepositStatus!=='release_pending')return res.status(409).json({error:'Deposit is not pending release'});
     if(!booking.securityDepositPaymentIntentId)return res.status(409).json({error:'No deposit authorization exists'});
     const listing=getRentalListing(booking.listingId);
@@ -3907,6 +3924,8 @@ app.post('/api/admin/bookings/:bookingId/deposit/capture', requireRole('admin'),
   try{
     const booking=getRentalBookingById(req.params.bookingId);
     if(!booking)return res.status(404).json({error:'Booking not found'});
+    if(hasStripeRentalDisputeHold(db,booking.bookingId))
+      return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     if(booking.securityDepositStatus!=='claim_pending')return res.status(409).json({error:'Deposit claim is not pending review'});
     if(!booking.securityDepositPaymentIntentId)return res.status(409).json({error:'No deposit authorization exists'});
     const reason=String(req.body?.resolution||'').trim();

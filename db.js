@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'url';
 import {assertProductionConfig,assertProductionStorage,isDeploymentEnvironment,isStagingEnvironment,runtimeConfig} from './config.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
+import {installStripeRentalDisputes} from './modules/stripe-rental-disputes.js';
 import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
 import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
 import {policyVersion,refundFromBooking} from './modules/cancellation-policy-v197.js';
@@ -1728,6 +1729,7 @@ for (const sql of [
 }
 
 installStripeDirectChargeSchema(db);
+installStripeRentalDisputes(db);
 
 for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN payment_token_hash TEXT`,

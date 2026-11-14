@@ -284,6 +284,54 @@ try{
  assert.equal(depositStatus().provider,'succeeded');
  assert.equal((await post(depositEvent('evt_dep_stale_authorized_after_capture','payment_intent.amount_capturable_updated'),{connect:true})).status,200);
  assert.equal(depositStatus().status,'captured','Late authorized event must not reopen captured deposit');
+ const disputeEvent=(id,type,status,created,overrides={})=>({
+   id,type,account:accountId,created,livemode:false,data:{object:{
+     id:'dp_test_rental',object:'dispute',charge:'ch_test_rental',
+     payment_intent:paymentIntentId,amount:10000,currency:'eur',status,...overrides
+   }}
+ });
+ const disputeState=()=>{
+   const snapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+   try{return snapshot.prepare('SELECT * FROM stripe_rental_disputes').all();}
+   finally{snapshot.close();}
+ };
+ const opened=disputeEvent('evt_dispute_open','charge.dispute.created','needs_response',100);
+ assert.equal((await post(opened,{badSignature:true,connect:true})).status,400);
+ assert.equal((await post({...opened,id:'evt_dispute_wrong',account:'acct_wrong'},{connect:true})).status,200);
+ assert.equal(disputeState().length,0);
+ assert.equal((await post(opened,{connect:true})).status,200);
+ assert.equal(disputeState()[0].provider_status,'needs_response');
+ assert.equal(disputeState()[0].booking_id,bookingId);
+ assert.equal(JSON.parse((await post(opened,{connect:true})).body).duplicate,true);
+ assert.equal((await post(disputeEvent('evt_dispute_wrong_charge','charge.dispute.updated','under_review',101,{charge:'ch_other'}),{connect:true})).status,200);
+ assert.equal(disputeState()[0].charge_id,'ch_test_rental');
+ assert.equal((await post(disputeEvent('evt_dispute_update','charge.dispute.updated','under_review',101),{connect:true})).status,200);
+ assert.equal(disputeState()[0].provider_status,'under_review');
+ assert.equal((await post(disputeEvent('evt_dispute_close','charge.dispute.closed','lost',102),{connect:true})).status,200);
+ assert.equal((await post(disputeEvent('evt_dispute_reordered','charge.dispute.updated','needs_response',103),{connect:true})).status,200);
+ assert.equal(disputeState()[0].provider_status,'lost');
+ assert.equal(disputeState()[0].closed,1);
+ assert.equal(disputeState().length,1);
+ const supplierLogin=await fetch(base+'/api/auth/login',{method:'POST',
+   headers:{'content-type':'application/json'},
+   body:JSON.stringify({email,password:'TestLocalOnly1!'})});
+ assert.equal(supplierLogin.status,200);
+ const cookie=supplierLogin.headers.get('set-cookie').split(';',1)[0];
+ const preflight=await fetch(base+'/api/supplier/accounting/bookings/'+bookingId+'/invoice-preflight',{headers:{cookie}});
+ assert.equal(preflight.status,200);
+ assert.ok((await preflight.json()).blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
+ const cancellation=await fetch(base+'/api/rentals/bookings/'+bookingId+'/cancel',{
+   method:'POST',headers:{cookie,'content-type':'application/json'},body:'{}'
+ });
+ assert.equal(cancellation.status,409);
+ assert.equal((await cancellation.json()).code,'STRIPE_DISPUTE_RECONCILIATION_REQUIRED');
+ const {hasStripeRentalDisputeHold}=await import('./modules/stripe-rental-disputes.js');
+ const disputeDb=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   assert.equal(hasStripeRentalDisputeHold(disputeDb,bookingId),true);
+   assert.equal(hasStripeRentalDisputeHold(disputeDb,depositBookingId),false);
+ }finally{disputeDb.close();}
+ console.log('PASS signed Connect disputes: signature, account, Charge binding, duplicate, lifecycle and closed reconciliation hold');
  console.log('PASS signed security deposit webhook ordering: released and captured remain terminal under stale events');
  console.log('PASS signed refund webhook HTTP: account, intent and amount binding; settled, failed and out-of-order states');
  const recorded=read().events;
