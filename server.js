@@ -887,6 +887,14 @@ app.post('/api/stripe/webhook',
         }
         case 'payment_intent.succeeded': {
           const pi=event.data.object;
+          // SCT platform payments require a separate authoritative reconciliation flow.
+          // Fail closed and retain retry visibility rather than processing them as
+          // legacy connected-account Direct Charges and falsely marking them paid.
+          if(pi?.metadata?.paymentFlow==='separate_charges_and_transfers'){
+            const error=new Error('SCT payment webhook requires separate reconciliation handler');
+            error.code='SCT_WEBHOOK_HANDLER_NOT_ENABLED';
+            throw error;
+          }
           const bookingId=pi.metadata?.bookingId;
           let lateTerminalRefunded=false;
           let lateTerminalRefundPending=false;
