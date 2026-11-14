@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import {assertProductionConfig,assertProductionStorage,isDeploymentEnvironment,isStagingEnvironment,runtimeConfig} from './config.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {installStripeRentalDisputes} from './modules/stripe-rental-disputes.js';
+import {installSctPaymentSettlements} from './modules/sct-test-payment-settlement.js';
 import {installSctBookingBindings} from './modules/sct-booking-binding.js';
 import {installStripeDirectChargeSchema} from './modules/stripe-connect-store-v195.js';
 import {installSupplierPricingSchema} from './modules/pricing-store-v194.js';
@@ -1822,6 +1823,8 @@ installStripeDirectChargeSchema(db);
 installStripeRentalDisputes(db);
 // Additive SCT TEST snapshot table. Does not activate or convert Direct Charges.
 installSctBookingBindings(db);
+// Additive audit ledger; no SCT payment settlement is activated on public routes.
+installSctPaymentSettlements(db);
 
 for (const sql of [
   `ALTER TABLE rental_bookings ADD COLUMN payment_token_hash TEXT`,
