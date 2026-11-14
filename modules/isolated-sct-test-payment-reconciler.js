@@ -6,7 +6,7 @@ const objectId=v=>typeof v==='string'?v:v?.id;
 const completeList=v=>Array.isArray(v?.data)&&v.has_more===false;
 
 export function verifySctTestPaymentEvidence(binding,evidence){
-  if(!binding||binding.livemode!==false||!id(binding.id,'RB-')||
+  if(!binding||binding.livemode!==false||!/^RB-[A-Za-z0-9-]+$/.test(binding.id||'')||
      !id(binding.paymentIntentId,'pi_')||!id(binding.destination,'acct_')||
      !Number.isSafeInteger(binding.amountCents)||binding.amountCents<50||
      !Number.isSafeInteger(binding.feeCents)||binding.feeCents<0||
