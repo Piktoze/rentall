@@ -12,7 +12,7 @@ on:
       - "modules/**"
       - "privacy-requests-http-v255.test.mjs"
       - "sct-payment-reconciliation-inbox.test.mjs"
-      - "isolated-sct-test-payment-reconciler.test.mjs"
+      - "isolated-sct-test-payment-reconciler.test.mjs sct-test-payment-settlement.test.mjs"
       - "rental-http-e2e-v210.test.js"
       - "webhook-signed-http-v231.test.js"
       - "package.json"
