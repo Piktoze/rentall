@@ -2,7 +2,7 @@
 // with an SCT TEST binding. Until full SCT refunds, deposit and expiry handling
 // exist, do not create connected-account charges or refunds for those bookings.
 export function assessLegacyDirectChargeOperation(db,bookingId){
-  if(typeof bookingId!=='string'||!/^RB-[A-Za-z0-9-]+$/.test(bookingId))
+  if(typeof bookingId!=='string'||!bookingId.trim())
     return {blocked:'invalid_booking_id'};
   if(!db?.prepare)return {blocked:'database_required'};
   const hasTable=db.prepare(`SELECT 1 FROM sqlite_master
