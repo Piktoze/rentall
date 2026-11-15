@@ -53,6 +53,9 @@ test('pending transfer capability, missing requirements or old account ID block'
       stripe_balance:{stripe_transfers:{status:'pending'}},
     }}}},'recipient_stripe_transfers_not_active'],
     [{...individual,requirements:null},'recipient_requirements_unresolved'],
+    [{...individual,requirements:{}},'recipient_requirements_unresolved'],
+    [{...individual,requirements:{entries:[{type:'identity'}]}},
+      'recipient_requirements_unresolved'],
     [{...individual,requirements:{currently_due:['identity'],past_due:[]}},
       'recipient_requirements_unresolved'],
     [{...individual,requirements:{currently_due:[],past_due:['external_account']}},
@@ -62,4 +65,10 @@ test('pending transfer capability, missing requirements or old account ID block'
       'recipient_country_or_entity_mismatch'],
   ];
   for(const [account,expected] of cases)assert.equal(inspect(account,opts).blocked,expected);
+});
+
+test('Accounts v2 empty requirements entries can establish capability-only readiness',()=>{
+  const x=inspect({...individual,requirements:{entries:[]} },opts);
+  assert.equal(x.status,'test_recipient_transfer_capability_verified');
+  assert.equal(x.bankPayoutReadiness,'not_verified');
 });
