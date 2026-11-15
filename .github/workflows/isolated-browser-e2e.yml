@@ -17,6 +17,7 @@ on:
       - "isolated-sct-test-reconciliation-coordinator.test.mjs"
       - "isolated-sct-test-payment-coordinator.test.mjs"
       - "sct-legacy-direct-charge-guard.test.mjs"
+      - "isolated-sct-test-full-refund.test.mjs"
       - "rental-http-e2e-v210.test.js"
       - "webhook-signed-http-v231.test.js"
       - "package.json"
@@ -81,7 +82,7 @@ jobs:
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
       - name: Verify deferred supplier transfer policy and LIVE payment gate
-        run: node --test deferred-supplier-transfer.test.mjs live-launch-gate-v243.test.mjs supplier-transfer-command-journal.test.mjs isolated-test-supplier-transfer-executor.test.mjs isolated-sct-platform-payment.test.mjs isolated-test-sct-stripe-adapter.test.mjs isolated-sct-payment-webhook-binding.test.mjs sct-payment-reconciliation-inbox.test.mjs sct-booking-binding.test.mjs isolated-sct-test-payment-coordinator.test.mjs isolated-sct-test-payment-reconciler.test.mjs sct-test-payment-settlement.test.mjs isolated-sct-test-reconciliation-coordinator.test.mjs sct-legacy-direct-charge-guard.test.mjs
+        run: node --test deferred-supplier-transfer.test.mjs live-launch-gate-v243.test.mjs supplier-transfer-command-journal.test.mjs isolated-test-supplier-transfer-executor.test.mjs isolated-sct-platform-payment.test.mjs isolated-test-sct-stripe-adapter.test.mjs isolated-sct-payment-webhook-binding.test.mjs sct-payment-reconciliation-inbox.test.mjs sct-booking-binding.test.mjs isolated-sct-test-payment-coordinator.test.mjs isolated-sct-test-payment-reconciler.test.mjs sct-test-payment-settlement.test.mjs isolated-sct-test-reconciliation-coordinator.test.mjs sct-legacy-direct-charge-guard.test.mjs isolated-sct-test-full-refund.test.mjs
       - name: Run real Chromium browser E2E, no live services
         # Collect independent browser evidence even if a prior HTTP regression fails.
         # The workflow still fails overall when any critical step fails.
