@@ -3,9 +3,9 @@
 // Stripe charge/refund/dispute/transfer evidence before calling this function.
 // A failed or ambiguous provider call is NEVER retried automatically.
 import {planIsolatedSctTestFullRefund} from './isolated-sct-test-full-refund-policy.js';
+import {finalizeIsolatedSctTestRefund} from './isolated-sct-test-refund-finalization.js';
 import {
   reserveIsolatedSctRefundCommand,markIsolatedSctRefundReconciliationRequired,
-  recordVerifiedIsolatedSctRefund,
 } from './isolated-sct-test-refund-journal.js';
 
 export async function executeIsolatedSctTestFullRefund({
@@ -41,5 +41,8 @@ export async function executeIsolatedSctTestFullRefund({
      readback.metadata?.paymentIntentId!==settlement.paymentIntentId||
      readback.metadata?.purpose!=='sct_rental_full_refund')
     return {blocked:'refund_reconciliation_required'};
-  return recordVerifiedIsolatedSctRefund(db,booking.id,readback);
+  // Refund journal and rental booking update must succeed together or remain
+  // unresolved. Do not release a supplier transfer during this period.
+  const saved=finalizeIsolatedSctTestRefund(db,{bookingId:booking.id,refund:readback});
+  return saved.blocked?{blocked:'refund_booking_reconciliation_required',reason:saved.blocked}:saved;
 }
