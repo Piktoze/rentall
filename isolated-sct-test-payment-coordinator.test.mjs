@@ -121,8 +121,38 @@ test('legacy payment intent on booking cannot be overwritten by SCT',async()=>{
   const h=fixture();
   try{
     h.db.exec("UPDATE rental_bookings SET stripe_payment_intent_id='pi_legacy'");
-    assert.equal((await h.initiate()).blocked,'booking_attachment_requires_manual_reconciliation');
+    assert.equal((await h.initiate()).blocked,'canonical_booking_not_ready');
+    assert.equal(h.calls(),0);
     assert.equal(h.db.prepare('SELECT stripe_payment_intent_id FROM rental_bookings').get()
       .stripe_payment_intent_id,'pi_legacy');
+  }finally{h.db.close()}
+});
+
+test('canonical preflight refuses legacy, refunded, missing, or changed booking before Stripe',async()=>{
+  for(const sql of [
+    "UPDATE rental_bookings SET stripe_payment_intent_id='pi_legacy'",
+    "UPDATE rental_bookings SET stripe_refund_id='re_prior'",
+    "UPDATE rental_bookings SET payment_status='paid'",
+    "UPDATE rental_bookings SET status='cancelled'",
+    "UPDATE rental_bookings SET order_value=101",
+    "UPDATE rental_bookings SET platform_fee_amount=15",
+    "DELETE FROM rental_bookings",
+  ]){
+    const h=fixture();
+    try {
+      h.db.exec(sql);
+      assert.equal((await h.initiate()).blocked,'canonical_booking_not_ready');
+      assert.equal(h.calls(),0);
+      assert.equal(getSctBookingBinding(h.db,booking.id),null);
+    }finally{h.db.close()}
+  }
+});
+test('canonical preflight refuses previously recorded Stripe disputes',async()=>{
+  const h=fixture();
+  try{
+    h.db.exec(`CREATE TABLE stripe_rental_disputes(booking_id TEXT);
+      INSERT INTO stripe_rental_disputes VALUES('RB-coordinator-test')`);
+    assert.equal((await h.initiate()).blocked,'prior_financial_record_requires_review');
+    assert.equal(h.calls(),0);
   }finally{h.db.close()}
 });
