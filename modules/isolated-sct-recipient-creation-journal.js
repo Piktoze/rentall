@@ -25,12 +25,15 @@ export function installIsolatedSctRecipientCreationJournal(db){
     status TEXT NOT NULL CHECK(status IN ('reserved','reconcile_required','created_pending_onboarding')),
     stripe_account_id TEXT UNIQUE,
     plan_digest TEXT,
+    owner_user_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   const cols=db.prepare('PRAGMA table_info(sct_test_recipient_creation_commands)').all();
   if(!cols.some(col=>col.name==='plan_digest'))
     db.exec('ALTER TABLE sct_test_recipient_creation_commands ADD COLUMN plan_digest TEXT');
+  if(!cols.some(col=>col.name==='owner_user_id'))
+    db.exec('ALTER TABLE sct_test_recipient_creation_commands ADD COLUMN owner_user_id TEXT');
 }
 export function reserveIsolatedSctRecipientCreation(db,{supplierId,entityType,planDigest}={}){
   if(!db?.transaction||!isSupplierId(supplierId)||
