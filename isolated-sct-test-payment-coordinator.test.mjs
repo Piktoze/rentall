@@ -16,7 +16,18 @@ const booking={
   financialHold:false,listingApproved:true,supplierEligible:true,
 };
 function fixture({fail=false}={}){
-  const db=new Database(':memory:');installSctBookingBindings(db);
+  const db=new Database(':memory:');
+  db.exec(`
+    CREATE TABLE rental_bookings(
+      booking_id TEXT PRIMARY KEY,listing_id TEXT NOT NULL,status TEXT NOT NULL,
+      payment_status TEXT NOT NULL,stripe_payment_intent_id TEXT,stripe_refund_id TEXT,
+      refund_status TEXT,order_value REAL NOT NULL,platform_fee_amount REAL,
+      supplier_amount REAL,payment_provider TEXT,payout_status TEXT,updated_at TEXT);
+    INSERT INTO rental_bookings
+      (booking_id,listing_id,status,payment_status,order_value)
+      VALUES('RB-coordinator-test','listing-1','confirmed','unpaid',100);
+  `);
+  installSctBookingBindings(db);
   let count=0;
   const pi={
     id:'pi_fixture',livemode:false,amount:10000,currency:'eur',
@@ -45,6 +56,12 @@ test('one successful platform TEST intent is bound to one immutable booking',asy
       bookingId:booking.id,
     });
     assert.equal(getSctBookingBinding(h.db,booking.id).paymentIntentId,'pi_fixture');
+    const saved=h.db.prepare('SELECT * FROM rental_bookings WHERE booking_id=?').get(booking.id);
+    assert.equal(saved.stripe_payment_intent_id,'pi_fixture');
+    assert.equal(saved.payment_status,'requires_payment_method');
+    assert.equal(saved.platform_fee_amount,15);
+    assert.equal(saved.supplier_amount,85);
+    assert.equal(saved.payout_status,'not_ready');
     assert.equal(h.calls(),1);
     assert.equal((await h.initiate()).blocked,'payment_intent_already_bound');
     assert.equal(h.calls(),1);
@@ -84,4 +101,28 @@ test('missing adapter cannot reserve a payment',async()=>{
       'test_provider_adapter_required');
     assert.equal(getSctBookingBinding(db,booking.id),null);
   }finally{db.close()}
+});
+
+test('provider intent is not exposed if booking was cancelled during Stripe creation',async()=>{
+  const h=fixture();
+  try{
+    const adapter={createPlatformPayment:async()=>{
+      h.db.exec("UPDATE rental_bookings SET status='cancelled' WHERE booking_id='RB-coordinator-test'");
+      return {paymentIntentId:'pi_fixture',clientSecret:'private_secret',status:'requires_payment_method'};
+    }};
+    assert.equal((await initiateIsolatedSctTestPayment({db:h.db,booking,adapter})).blocked,
+      'booking_attachment_requires_manual_reconciliation');
+    const saved=h.db.prepare('SELECT stripe_payment_intent_id FROM rental_bookings').get();
+    assert.equal(saved.stripe_payment_intent_id,null);
+    assert.equal(getSctBookingBinding(h.db,booking.id).paymentIntentId,'pi_fixture');
+  }finally{h.db.close()}
+});
+test('legacy payment intent on booking cannot be overwritten by SCT',async()=>{
+  const h=fixture();
+  try{
+    h.db.exec("UPDATE rental_bookings SET stripe_payment_intent_id='pi_legacy'");
+    assert.equal((await h.initiate()).blocked,'booking_attachment_requires_manual_reconciliation');
+    assert.equal(h.db.prepare('SELECT stripe_payment_intent_id FROM rental_bookings').get()
+      .stripe_payment_intent_id,'pi_legacy');
+  }finally{h.db.close()}
 });
