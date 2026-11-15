@@ -154,7 +154,7 @@ test('missing, duplicate, failed or incomplete Stripe pages block reconciliation
     'platform_transfer_history_unavailable'];
   for(let i=0;i<readers.length;i++){
     const result=await readCompletePlatformTestTransferHistory(
-      {transfers:{list:readers[i]}},{maxPages:1});
+      {transfers:{list:readers[i]}},{maxPages:i===1?2:1});
     assert.equal(result.blocked,expected[i]);
   }
 });
