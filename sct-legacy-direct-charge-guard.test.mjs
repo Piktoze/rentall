@@ -22,7 +22,8 @@ test('guard works with pre-SCT schema and rejects malformed request',()=>{
   const db=new Database(':memory:');
   try{
     assert.deepEqual(assessLegacyDirectChargeOperation(db,'RB-existing'),{ok:true});
-    assert.equal(assessLegacyDirectChargeOperation(db,'bad').blocked,'invalid_booking_id');
+    assert.deepEqual(assessLegacyDirectChargeOperation(db,'legacy-booking-id'),{ok:true});
+    assert.equal(assessLegacyDirectChargeOperation(db,'').blocked,'invalid_booking_id');
     assert.equal(assessLegacyDirectChargeOperation(null,'RB-existing').blocked,'database_required');
   }finally{db.close()}
 });
