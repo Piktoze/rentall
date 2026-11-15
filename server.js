@@ -1,4 +1,5 @@
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
+import {assessLegacyDirectChargeOperation} from './modules/sct-legacy-direct-charge-guard.js';
 import {installSctPaymentReconciliationInbox,recordBoundSctPaymentReconciliationSignal} from './modules/sct-payment-reconciliation-inbox.js';
 import {getSctBookingBinding} from './modules/sct-booking-binding.js';
 import express from 'express';
@@ -401,6 +402,8 @@ function updateDemoPayoutAfterReturn(booking,{completed=false}={}){
 }
 
 async function handleStripeCancellationForBooking(booking, refundAmount){
+  const sctGuard=assessLegacyDirectChargeOperation(db,booking?.bookingId);
+  if(sctGuard.blocked){const e=new Error('SCT cancellation requires separate financial reconciliation');e.code=sctGuard.blocked;throw e;}
   if(booking?.paymentProvider==='demo' || String(booking?.stripePaymentIntentId||'').startsWith('demo_pi_')){
     const safeRefund=Math.min(Math.max(0,Number(refundAmount||0)),Math.max(0,Number(booking.orderValue||0)));
     if(safeRefund>0 && ['paid','partially_refunded'].includes(String(booking.paymentStatus||''))){
@@ -2493,6 +2496,8 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
   try{
     const {bookingId,accessToken}=req.body||{}; if(!bookingId)return res.status(400).json({error:'bookingId is required'});
     const booking=getRentalBookingById(bookingId); if(!booking)return res.status(404).json({error:'Booking not found'});
+    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
+    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT deposit requires separate authorization'});
     const user=sessionUser(req);
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
@@ -2571,6 +2576,8 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const {bookingId,paymentToken}=req.body||{};
     const booking=getRentalBookingById(bookingId);
     if(!booking) return res.status(404).json({error:'Booking not found'});
+    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
+    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT booking requires separate payment flow'});
     const paymentUser=sessionUser(req);
     const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!paymentUser&&!!verifyBookingPaymentToken(bookingId,paymentToken);
