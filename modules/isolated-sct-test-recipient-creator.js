@@ -4,7 +4,7 @@
 import {planIsolatedSctRecipientOnboarding} from './isolated-sct-recipient-onboarding-plan.js';
 import {
   reserveIsolatedSctRecipientCreation,markIsolatedSctRecipientCreationUncertain,
-  recordIsolatedSctRecipientCreated,
+  recordIsolatedSctRecipientCreated,syntheticRecipientPlanDigest,
 } from './isolated-sct-recipient-creation-journal.js';
 
 const accountId=v=>typeof v==='string'&&/^acct_[A-Za-z0-9]+$/.test(v);
@@ -37,7 +37,9 @@ export async function createIsolatedSctTestRecipient({
      typeof stripe?.v2?.core?.accounts?.create!=='function'||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function')
     return {blocked:'verifiable_test_accounts_v2_client_required'};
-  const claim=reserveIsolatedSctRecipientCreation(db,{supplierId,entityType});
+  const planDigest=syntheticRecipientPlanDigest(plan.accountCreatePayload);
+  if(!planDigest)return {blocked:'invalid_recipient_plan_digest'};
+  const claim=reserveIsolatedSctRecipientCreation(db,{supplierId,entityType,planDigest});
   if(claim.blocked)return claim;
   // Persist external-call uncertainty BEFORE invoking Stripe.
   if(!markIsolatedSctRecipientCreationUncertain(db,supplierId))
