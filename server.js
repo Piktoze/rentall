@@ -316,10 +316,13 @@ const catalogNotice='Skelbimų katalogas. Rezervacijos ir mokėjimai dar neaktyv
 
 if(catalogOnly){
   // Apply before JSON parsing, authentication, callbacks and all API handlers.
+  const publicReads=new Set(['/config','/health','/readiness','/ops/status',
+    '/integrations/capabilities','/launch-readiness','/listings']);
   app.use('/api',(req,res,next)=>{
-    const path=req.path.toLowerCase();
+    const path=req.path.toLowerCase().replace(/\/$/,'');
+    const publicListingDetail=/^\/listings\/[^/]+\/(?:trader-disclosure|reputation)$/.test(path);
     if((req.method==='GET'||req.method==='HEAD') &&
-       !/^\/(?:stripe|payments)(?:\/|$)/.test(path))return next();
+       (publicReads.has(path)||publicListingDetail))return next();
     res.set('Cache-Control','no-store');
     return res.status(403).json({code:'CATALOG_ONLY',error:catalogNotice});
   });
@@ -1213,7 +1216,7 @@ app.get('/listing/:listingId/:slug?',(req,res)=>{
   const location=[listing.city,listing.country].filter(Boolean).join(', '),description=String(listing.description||seoCopy.fallbackDescription).slice(0,160);
   const image=absoluteAsset(origin,listing.coverPhoto||listing.photos?.[0]);
   const title=`${listing.title}${location?' · '+location:''} | RentInOrbit`;
-  const body=`<article class="seo-listing-page"><div class="eyebrow">${seoCopy.eyebrow}</div><h1>${escapeEmailHtml(listing.title)}</h1><p class="hero-copy">${escapeEmailHtml(listing.description||seoCopy.fallbackDescription)}</p>${image?`<img src="${escapeEmailHtml(image)}" alt="${escapeEmailHtml(listing.title)}" style="width:min(720px,100%);max-height:480px;object-fit:cover;border-radius:22px;border:1px solid #dde4de">`:''}<div class="v92-facts" style="margin:24px 0"><div><span>${seoCopy.location}</span><b>${escapeEmailHtml(location||seoCopy.seeListing)}</b></div><div><span>${seoCopy.dailyPrice}</span><b>€${Number(listing.priceDay||0).toFixed(2)}</b></div><div><span>${seoCopy.available}</span><b>${Number(listing.quantity||1)}</b></div><div><span>${seoCopy.fulfilment}</span><b>${listing.deliveryEnabled?seoCopy.delivery:seoCopy.pickup}</b></div></div><p><a class="primary" href="/?listing=${encodeURIComponent(listing.id)}">${catalogOnly?'Peržiūrėti skelbimą':seoCopy.cta}</a></p>${catalogOnly?`<p lang="lt">${catalogNotice}</p>`:''}</article>`;
+  const body=`<article class="seo-listing-page"><div class="eyebrow">${seoCopy.eyebrow}</div><h1>${escapeEmailHtml(listing.title)}</h1><p class="hero-copy">${escapeEmailHtml(listing.description||seoCopy.fallbackDescription)}</p>${image?`<img src="${escapeEmailHtml(image)}" alt="${escapeEmailHtml(listing.title)}" style="width:min(720px,100%);max-height:480px;object-fit:cover;border-radius:22px;border:1px solid #dde4de">`:''}<div class="v92-facts" style="margin:24px 0"><div><span>${seoCopy.location}</span><b>${escapeEmailHtml(location||seoCopy.seeListing)}</b></div><div><span>${seoCopy.dailyPrice}</span><b>€${Number(listing.priceDay||0).toFixed(2)}</b></div><div><span>${seoCopy.available}</span><b>${Number(listing.quantity||1)}</b></div><div><span>${seoCopy.fulfilment}</span><b>${listing.deliveryEnabled?seoCopy.delivery:seoCopy.pickup}</b></div></div><p><a class="primary" href="/?listing=${encodeURIComponent(listing.id)}">${catalogOnly?seoCopy.seeListing:seoCopy.cta}</a></p>${catalogOnly?`<p lang="lt">${catalogNotice}</p>`:''}</article>`;
   let html=pageShell({req,title,description,body,canonicalPath});
   if(image)html=html.replace('</head>',`<meta property="og:image" content="${escapeEmailHtml(image)}"></head>`);
   res.type('html').send(html);

@@ -15,7 +15,10 @@ test('catalog-only API rejects writes and does not expose Stripe configuration',
     expect(response.status(),path).toBe(403);
     expect(await response.json()).toMatchObject({code:'CATALOG_ONLY'});
   }
-  expect((await request.get('/api/stripe/connect/status')).status()).toBe(403);
+  for(const path of ['/api/stripe/connect/status','/api/customer/bookings',
+    '/api/rentals/bookings/RB-synthetic/transaction-confirmation.pdf']){
+    expect((await request.get(path)).status(),path).toBe(403);
+  }
   const list=await (await request.get('/api/listings')).json();
   expect(list.listings.filter(({id})=>id==='ci-drill-discovery')).toHaveLength(1);
   for(const id of ['ci-catalog-pending','ci-catalog-rejected']){
@@ -38,6 +41,8 @@ for(const width of [390,1280]){
     await expect(page.locator('#detailRentBtn')).toBeHidden();
     await expect(page.locator('#checkoutBtn')).toBeHidden();
     await expect(page.locator('#supplierAuthBtn')).toBeHidden();
+    await expect(page.locator('[data-v120-mobile="bookings"]')).toBeHidden();
+    await expect(page.locator('[data-v120-mobile="account"]')).toBeHidden();
     expect((await page.goto('/listing/ci-drill-discovery')).status()).toBe(200);
     await expect(page.locator('h1')).toHaveText('CI Drill Test Rental');
     await expect(page.getByText('Rezervacijos ir mokėjimai dar neaktyvūs.',{exact:false})).toBeVisible();

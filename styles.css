@@ -2156,7 +2156,8 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 .catalog-only :is(#v120Journey, #navListItemBtn, #supplierAuthBtn, #myBookingsBtn, #messagesBtn,
   #moreSavedSearchesBtn, #saveCurrentSearchBtn, #heroEarnStartBtn, #cartbar, #checkoutModal,
   #securePaymentPanel, #availabilityModal, #onboardingModal, #accountModal, #partnerForm,
-  #how, [data-search-mode="trip"], #detailRentBtn, #detailAvailabilityBtn,
+  #how, #pricing, [data-search-mode="trip"], [data-v120-mobile="bookings"],
+  [data-v120-mobile="account"], #supplierActivationModal, #detailRentBtn, #detailAvailabilityBtn,
   #v145AvailabilityContinue, [data-availability-id], .v92-nocharge, .v92-safe-note,
   .v92-availability-pill, .v92-trust-row, .v101-map-tags, .v132-checkout-confidence) {
   display: none !important;
