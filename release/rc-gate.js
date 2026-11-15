@@ -1,8 +1,12 @@
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 
+// This build suite exercises the rental workflow in disposable test databases.
+// Catalog-only behavior has its own browser and HTTP CI suite.
+const rentalTestEnv={...process.env,RENTINORBIT_CATALOG_ONLY:'false'};
+
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
-const invoiceTestEnv={...process.env,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
+const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
  DATABASE_URL:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:'',
  RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
 execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
@@ -89,7 +93,7 @@ for(const suite of [
   'booking-idempotency.test.js'
 ]){
   console.log(`RUN release suite: ${suite}`);
-  execFileSync(process.execPath,[suite],{stdio:'inherit'});
+  execFileSync(process.execPath,[suite],{stdio:'inherit',env:rentalTestEnv});
 }
 
 const server=fs.readFileSync('./server.js','utf8');
