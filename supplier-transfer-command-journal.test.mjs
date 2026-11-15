@@ -10,6 +10,26 @@ import { planDeferredSupplierTransfer } from './modules/deferred-supplier-transf
 function setup() {
   const db = new Database(':memory:');
   installSupplierTransferCommands(db);
+  db.exec(`
+    CREATE TABLE rental_bookings(
+      booking_id TEXT PRIMARY KEY,status TEXT,returned_at TEXT,
+      payment_status TEXT,stripe_payment_intent_id TEXT,stripe_refund_id TEXT,
+      refund_status TEXT,payout_status TEXT,order_value REAL,
+      platform_fee_amount REAL,supplier_amount REAL);
+    CREATE TABLE sct_booking_bindings(
+      booking_id TEXT PRIMARY KEY,payment_intent_id TEXT,destination TEXT,
+      amount_cents INTEGER,fee_cents INTEGER,stripe_mode TEXT);
+    CREATE TABLE sct_payment_settlements(
+      booking_id TEXT PRIMARY KEY,payment_intent_id TEXT,charge_id TEXT,
+      amount_cents INTEGER,fee_cents INTEGER,supplier_cents INTEGER);
+    INSERT INTO rental_bookings VALUES(
+      'RB-isolated-journal','returned','2026-11-15T08:00:00Z',
+      'paid','pi_fixture',NULL,NULL,'not_ready',100,15,85);
+    INSERT INTO sct_booking_bindings VALUES(
+      'RB-isolated-journal','pi_fixture','acct_fixture',10000,1500,'test');
+    INSERT INTO sct_payment_settlements VALUES(
+      'RB-isolated-journal','pi_fixture','ch_fixture',10000,1500,8500);
+  `);
   return db;
 }
 const booking = {
@@ -82,7 +102,16 @@ test('the same Stripe transfer ID cannot attach to two bookings',()=>{
     };
     const next=planDeferredSupplierTransfer({...booking,...second},
       {...payment,bookingId:second.id,paymentIntentId:second.paymentIntentId,chargeId:second.chargeId},1000);
-    reserveSupplierTransferCommand(db,next);
+    db.exec(`
+      INSERT INTO rental_bookings VALUES(
+        'RB-other-journal','returned','2026-11-15T08:00:00Z',
+        'paid','pi_other',NULL,NULL,'not_ready',100,15,85);
+      INSERT INTO sct_booking_bindings VALUES(
+        'RB-other-journal','pi_other','acct_fixture',10000,1500,'test');
+      INSERT INTO sct_payment_settlements VALUES(
+        'RB-other-journal','pi_other','ch_other',10000,1500,8500);
+    `);
+    assert.equal(reserveSupplierTransferCommand(db,next).status,'reserved');
     assert.equal(recordReconciledSupplierTransfer(db,booking.id,'tr_fixture').status,'transferred');
     assert.equal(recordReconciledSupplierTransfer(db,second.id,'tr_fixture').blocked,'transfer_id_already_used');
   } finally {db.close();}
@@ -110,5 +139,39 @@ test('refund command appearing after transfer reservation blocks transfer replay
     assert.equal(reserveSupplierTransferCommand(db,plan).blocked,
       'sct_refund_command_requires_review');
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM supplier_transfer_commands').get().n,1);
+  }finally{db.close()}
+});
+
+test('canonical refund, unconfirmed return, paid status and altered fee block transfer reservation',()=>{
+  for(const [sql,expected] of [
+    ["UPDATE rental_bookings SET status='active'","canonical_return_or_payment_not_releasable"],
+    ["UPDATE rental_bookings SET returned_at=NULL","canonical_return_or_payment_not_releasable"],
+    ["UPDATE rental_bookings SET payment_status='refunded'","canonical_return_or_payment_not_releasable"],
+    ["UPDATE rental_bookings SET stripe_refund_id='re_fixture'","canonical_return_or_payment_not_releasable"],
+    ["UPDATE rental_bookings SET supplier_amount=86","canonical_return_or_payment_not_releasable"],
+    ["UPDATE sct_booking_bindings SET fee_cents=1600","canonical_return_or_payment_not_releasable"],
+    ["UPDATE sct_booking_bindings SET destination='acct_other'","canonical_return_or_payment_not_releasable"],
+  ]){
+    const db=setup();
+    try{
+      db.exec(sql);
+      assert.equal(reserveSupplierTransferCommand(db,plan).blocked,expected);
+      assert.equal(db.prepare('SELECT COUNT(*) n FROM supplier_transfer_commands').get().n,0);
+    }finally{db.close()}
+  }
+});
+test('historical dispute blocks 85 EUR supplier transfer even if marked closed',()=>{
+  const db=setup();
+  try{
+    db.exec(`CREATE TABLE stripe_rental_disputes(booking_id TEXT,closed INTEGER);
+      INSERT INTO stripe_rental_disputes VALUES('RB-isolated-journal',1);`);
+    assert.equal(reserveSupplierTransferCommand(db,plan).blocked,'financial_dispute_requires_review');
+  }finally{db.close()}
+});
+test('missing authoritative settlement table refuses transfer reservation',()=>{
+  const db=setup();
+  try{
+    db.exec('DROP TABLE sct_payment_settlements');
+    assert.equal(reserveSupplierTransferCommand(db,plan).blocked,'canonical_transfer_evidence_unavailable');
   }finally{db.close()}
 });
