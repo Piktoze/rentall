@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {
   verifySctTestPaymentEvidence,reconcileIsolatedSctTestPayment,
+  readCompletePlatformTestTransferHistory,
 } from './modules/isolated-sct-test-payment-reconciler.js';
 
 const binding={id:'RB-test-reconcile',listingId:'listing-1',amountCents:10000,
@@ -100,4 +101,73 @@ test('Stripe timeout and wrong mode cannot mark a booking paid',async()=>{
     'provider_reconciliation_unavailable');
   assert.equal((await reconcileIsolatedSctTestPayment({stripe,stripeMode:'live',binding})).blocked,
     'test_platform_provider_required');
+});
+
+test('platform transfer audit examines second page and catches ungrouped source charge',async()=>{
+  const first=Array.from({length:100},(_,i)=>({
+    id:'tr_unrelated'+String(i+1),source_transaction:'ch_other',
+    transfer_group:'RB-other',metadata:{},
+  }));
+  const calls=[];
+  const stripe={
+    paymentIntents:{retrieve:async()=>intent},
+    charges:{retrieve:async()=>charge},
+    refunds:{list:async()=>empty},
+    disputes:{list:async()=>empty},
+    transfers:{list:async args=>{
+      calls.push(args);
+      if(args.transfer_group)return empty;
+      if(!args.starting_after)return {data:first,has_more:true};
+      assert.equal(args.starting_after,'tr_unrelated100');
+      return {data:[{id:'tr_unmarked',source_transaction:'ch_fixture'}],has_more:false};
+    }},
+  };
+  const result=await reconcileIsolatedSctTestPayment({stripe,stripeMode:'test',binding});
+  assert.equal(result.blocked,'existing_ungrouped_transfer_requires_review');
+  assert.equal(calls.length,3);
+});
+test('platform transfer pagination accepts complete unrelated history',async()=>{
+  let pages=0;
+  const stripe={transfers:{list:async args=>{
+    pages++;
+    if(!args.starting_after)return {data:[{id:'tr_one'}],has_more:true};
+    assert.equal(args.starting_after,'tr_one');
+    return {data:[{id:'tr_two'}],has_more:false};
+  }}};
+  const result=await readCompletePlatformTestTransferHistory(stripe);
+  assert.deepEqual(result,{data:[{id:'tr_one'},{id:'tr_two'}],has_more:false});
+  assert.equal(pages,2);
+});
+test('missing, duplicate, failed or incomplete Stripe pages block reconciliation',async()=>{
+  const readers=[
+    async()=>({data:[{id:'tr_one'}],has_more:true}),
+    async args=>args.starting_after?
+      {data:[{id:'tr_one'}],has_more:false}:{data:[{id:'tr_one'}],has_more:true},
+    async()=>({data:[],has_more:true}),
+    async()=>({data:[{id:'bad'}],has_more:false}),
+    async()=>{throw new Error('network unreachable')},
+  ];
+  const expected=['platform_transfer_history_page_limit',
+    'platform_transfer_history_invalid_cursor',
+    'platform_transfer_history_incomplete',
+    'platform_transfer_history_invalid_cursor',
+    'platform_transfer_history_unavailable'];
+  for(let i=0;i<readers.length;i++){
+    const result=await readCompletePlatformTestTransferHistory(
+      {transfers:{list:readers[i]}},{maxPages:1});
+    assert.equal(result.blocked,expected[i]);
+  }
+});
+test('Stripe pagination stops before unbounded account-history scanning',async()=>{
+  let calls=0;
+  const stripe={transfers:{list:async()=>{
+    calls++;
+    return {data:[{id:'tr_page'+calls}],has_more:true};
+  }}};
+  assert.equal((await readCompletePlatformTestTransferHistory(stripe,{maxPages:3})).blocked,
+    'platform_transfer_history_page_limit');
+  assert.equal(calls,3);
+  assert.equal((await readCompletePlatformTestTransferHistory(stripe,{maxPages:21})).blocked,
+    'invalid_transfer_history_reader');
+  assert.equal(calls,3);
 });
