@@ -5,6 +5,43 @@ const id=(v,prefix)=>typeof v==='string'&&new RegExp('^'+prefix+'[A-Za-z0-9]+$')
 const objectId=v=>typeof v==='string'?v:v?.id;
 const completeList=v=>Array.isArray(v?.data)&&v.has_more===false;
 
+// Platform-wide transfer history is paginated: a successful first page is not
+// sufficient evidence that no earlier, ungrouped transfer used this Charge.
+// Refuse incomplete pages, unexpected IDs, repeated cursors and excessive
+// history. This is deliberately read-only and fail-closed.
+export async function readCompletePlatformTestTransferHistory(stripe,{maxPages=20}={}){
+  if(typeof stripe?.transfers?.list!=='function'||
+     !Number.isSafeInteger(maxPages)||maxPages<1||maxPages>20)
+    return {blocked:'invalid_transfer_history_reader'};
+  const all=[];
+  const seen=new Set();
+  let cursor;
+  for(let pageIndex=0;pageIndex<maxPages;pageIndex++){
+    let page;
+    try{
+      page=await stripe.transfers.list(cursor?{limit:100,starting_after:cursor}:{limit:100});
+    }catch{
+      return {blocked:'platform_transfer_history_unavailable'};
+    }
+    if(!Array.isArray(page?.data)||typeof page.has_more!=='boolean'||
+       page.data.length>100||
+       (page.has_more&&page.data.length===0))
+      return {blocked:'platform_transfer_history_incomplete'};
+    for(const transfer of page.data){
+      if(!id(transfer?.id,'tr_')||seen.has(transfer.id))
+        return {blocked:'platform_transfer_history_invalid_cursor'};
+      seen.add(transfer.id);
+      all.push(transfer);
+    }
+    if(!page.has_more)return {data:all,has_more:false};
+    const next=page.data.at(-1)?.id;
+    if(!id(next,'tr_')||next===cursor)
+      return {blocked:'platform_transfer_history_invalid_cursor'};
+    cursor=next;
+  }
+  return {blocked:'platform_transfer_history_page_limit'};
+}
+
 export function verifySctTestPaymentEvidence(binding,evidence){
   if(!binding||binding.livemode!==false||!/^RB-[A-Za-z0-9-]+$/.test(binding.id||'')||
      !id(binding.paymentIntentId,'pi_')||!id(binding.destination,'acct_')||
@@ -76,8 +113,9 @@ export async function reconcileIsolatedSctTestPayment({stripe,stripeMode,binding
       stripe.refunds.list({charge:chargeId,limit:100}),
       stripe.disputes.list({charge:chargeId,limit:100}),
       stripe.transfers.list({transfer_group:binding.id,limit:100}),
-      stripe.transfers.list({limit:100}),
+      readCompletePlatformTestTransferHistory(stripe),
     ]);
+    if(platformTransfers.blocked)return platformTransfers;
     return verifySctTestPaymentEvidence(binding,{
       intent,charge,refunds,disputes,transfers,platformTransfers,
     });
