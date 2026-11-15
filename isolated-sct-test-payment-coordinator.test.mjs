@@ -63,7 +63,7 @@ test('one successful platform TEST intent is bound to one immutable booking',asy
     assert.equal(saved.supplier_amount,85);
     assert.equal(saved.payout_status,'not_ready');
     assert.equal(h.calls(),1);
-    assert.equal((await h.initiate()).blocked,'payment_intent_already_bound');
+    assert.equal((await h.initiate()).blocked,'canonical_booking_not_ready');
     assert.equal(h.calls(),1);
   }finally{h.db.close()}
 });
