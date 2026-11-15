@@ -531,6 +531,8 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
   return cancelBookingSingleFlight(bookingId,async()=>{
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
+  const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
+  if(sctGuard.blocked){const e=new Error('SCT cancellation requires separate financial flow');e.code=sctGuard.blocked;throw e;}
   if(hasStripeRentalDisputeHold(db,bookingId)){
     const error=new Error('Stripe dispute requires manual financial reconciliation');
     error.code='STRIPE_DISPUTE_RECONCILIATION_REQUIRED';
@@ -2496,12 +2498,12 @@ app.post('/api/payments/deposit-intent', simpleRateLimit({windowMs:60000,max:12,
   try{
     const {bookingId,accessToken}=req.body||{}; if(!bookingId)return res.status(400).json({error:'bookingId is required'});
     const booking=getRentalBookingById(bookingId); if(!booking)return res.status(404).json({error:'Booking not found'});
-    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
-    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT deposit requires separate authorization'});
     const user=sessionUser(req);
     const accountOwner=!!(user?.email&&String(user.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!user&&!!verifyBookingPaymentToken(bookingId,accessToken);
     if(!accountOwner&&!guestOwner)return res.status(403).json({error:'Booking access denied'});
+    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
+    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT deposit requires separate authorization'});
     if(hasStripeRentalDisputeHold(db,bookingId))
       return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     // Security-deposit holds must not precede supplier approval or rental payment.
@@ -2534,6 +2536,8 @@ async function processExpiredBookings(){
     if(hasStripeRentalDisputeHold(db,bookingId)) continue;
     try{
       const booking=getRentalBookingById(bookingId); if(!booking)continue;
+      // Never attempt a connected-account Stripe operation for a platform SCT charge.
+      if(assessLegacyDirectChargeOperation(db,bookingId).blocked)continue;
       const listing=getRentalListing(booking.listingId);
       const connection=getDirectMerchantConnectionByEmail(db,listing?.ownerEmail);
       if(stripe && connection?.stripeAccountId && booking.stripePaymentIntentId && booking.paymentStatus!=='paid'){
@@ -2576,12 +2580,12 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const {bookingId,paymentToken}=req.body||{};
     const booking=getRentalBookingById(bookingId);
     if(!booking) return res.status(404).json({error:'Booking not found'});
-    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
-    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT booking requires separate payment flow'});
     const paymentUser=sessionUser(req);
     const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!paymentUser&&!!verifyBookingPaymentToken(bookingId,paymentToken);
     if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'}); /* STAGING_PAYMENT_OWNER_ACCESS_V2 */
+    const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
+    if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT booking requires separate payment flow'});
     if(hasStripeRentalDisputeHold(db,bookingId))
       return res.status(409).json({code:'STRIPE_DISPUTE_RECONCILIATION_REQUIRED'});
     if(!['pending','confirmed'].includes(booking.status)){
