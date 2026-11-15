@@ -4,6 +4,8 @@ import Database from 'better-sqlite3';
 import {installSctBookingBindings,reserveSctBookingBinding,bindSctPaymentIntent}
   from './modules/sct-booking-binding.js';
 import {installSctPaymentSettlements} from './modules/sct-test-payment-settlement.js';
+import {installIsolatedSctRefundCommands} from './modules/isolated-sct-test-refund-journal.js';
+import {installSupplierTransferCommands} from './modules/supplier-transfer-command-journal.js';
 import {inspectIsolatedSctTestSupplierTransfer}
   from './modules/isolated-sct-test-supplier-transfer-readiness.js';
 
@@ -29,6 +31,7 @@ function fixture(patch={}){
       'RB-transfer-readiness','listing-1','returned','2026-11-15T11:00:00Z',
       'paid','pi_fixture',NULL,NULL,'not_ready',100,15,85);`);
   installSctBookingBindings(db);installSctPaymentSettlements(db);
+  installIsolatedSctRefundCommands(db);installSupplierTransferCommands(db);
   reserveSctBookingBinding(db,{id:bookingId,listingId:'listing-1',amountCents:10000,
     feeCents:1500,destination:'acct_fixture',livemode:false});
   bindSctPaymentIntent(db,bookingId,'pi_fixture');
@@ -94,9 +97,33 @@ test('any refund, transfer or dispute command blocks readiness before Stripe',as
                       'stripe_rental_disputes','rental_disputes']){
     const x=fixture();
     try{
-      x.db.exec(`CREATE TABLE ${table}(booking_id TEXT PRIMARY KEY);
-        INSERT INTO ${table} VALUES('RB-transfer-readiness');`);
+      if(!['sct_test_refund_commands','supplier_transfer_commands'].includes(table))
+        x.db.exec(`CREATE TABLE ${table}(booking_id TEXT PRIMARY KEY)`);
+      if(table==='sct_test_refund_commands'){
+        x.db.exec(`INSERT INTO sct_test_refund_commands
+          (booking_id,payment_intent_id,charge_id,amount_cents,idempotency_key,status)
+          VALUES('RB-transfer-readiness','pi_fixture','ch_fixture',10000,
+            'booking:RB-transfer-readiness:sct-full-refund:v1','reserved')`);
+      }else if(table==='supplier_transfer_commands'){
+        x.db.exec(`INSERT INTO supplier_transfer_commands
+          (booking_id,payment_intent_id,charge_id,destination,amount_cents,currency,
+           idempotency_key,payload_json,status)
+          VALUES('RB-transfer-readiness','pi_fixture','ch_fixture','acct_fixture',8500,'eur',
+            'booking:RB-transfer-readiness:supplier-transfer:v1','{}','reserved')`);
+      }else{
+        x.db.prepare(`INSERT INTO ${table}(booking_id) VALUES(?)`).run(bookingId);
+      }
       assert.equal((await x.inspect()).blocked,'existing_financial_command_or_dispute');
+      assert.equal(x.reads(),0);
+    }finally{x.db.close()}
+  }
+});
+test('missing refund or transfer command journal refuses financial readiness without Stripe calls',async()=>{
+  for(const missing of ['sct_test_refund_commands','supplier_transfer_commands']){
+    const x=fixture();
+    try{
+      x.db.exec(`DROP TABLE ${missing}`);
+      assert.equal((await x.inspect()).blocked,'financial_command_journals_unavailable');
       assert.equal(x.reads(),0);
     }finally{x.db.close()}
   }
