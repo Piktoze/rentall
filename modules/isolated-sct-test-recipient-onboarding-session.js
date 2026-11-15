@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 // Isolated Stripe TEST Connect onboarding session coordinator.
 // NOT imported by the public server. Never call from an unauthenticated route.
 // Account-session client_secret is sensitive: return only to the trusted
@@ -9,9 +10,25 @@ import {inspectIsolatedSctRecipientAccount}
 const validSupplier=v=>/^synthetic-supplier-[A-Za-z0-9-]+$/.test(v||'');
 const validAccount=v=>/^acct_[A-Za-z0-9]+$/.test(v||'');
 const validTestKey=v=>/^sk_test_[A-Za-z0-9_-]{8,}$/.test(v||'');
+function authenticatedOwner(db,sessionToken,ownerUserId){
+  if(typeof sessionToken!=='string'||sessionToken.length<24||
+     typeof ownerUserId!=='string'||!ownerUserId)return false;
+  const hash=createHash('sha256').update(sessionToken).digest('hex');
+  // Reuse the application's actual session + supplier role storage.
+  // Trust neither an ID passed by a requester nor a session cookie without
+  // independent DB verification. A legacy unowned SCT row never passes.
+  try{
+    const session=db.prepare(`SELECT u.user_id,u.role FROM app_sessions s
+      JOIN app_users u ON u.user_id=s.user_id
+      WHERE s.session_hash=? AND s.expires_at>?`)
+      .get(hash,new Date().toISOString());
+    return session?.user_id===ownerUserId&&session?.role==='supplier';
+  }catch{return false}
+}
+
 export async function createIsolatedSctTestOnboardingSession({
   db,stripe,stripeMode,stripeSecretKey,supplierId,entityType,accountId,
-  authenticatedSyntheticSupplierId,
+  sessionToken,
 }={}){
   if(stripeMode!=='test'||!validTestKey(stripeSecretKey)||
      stripe?._apiKey!==stripeSecretKey||
@@ -20,12 +37,12 @@ export async function createIsolatedSctTestOnboardingSession({
     return {blocked:'trusted_stripe_test_client_required'};
   if(!db?.prepare||!validSupplier(supplierId)||!validAccount(accountId)||
      !['individual','company'].includes(entityType)||
-     authenticatedSyntheticSupplierId!==supplierId)
+     typeof sessionToken!=='string')
     return {blocked:'authenticated_synthetic_supplier_required'};
   let row;
   try{
     row=db.prepare(`SELECT supplier_id,legal_entity_type,status,
-      stripe_account_id,plan_digest
+      stripe_account_id,plan_digest,owner_user_id
       FROM sct_test_recipient_creation_commands WHERE supplier_id=?`).get(supplierId);
   }catch{return {blocked:'recipient_creation_journal_unavailable'}}
   if(row?.legal_entity_type!==entityType||
@@ -33,6 +50,8 @@ export async function createIsolatedSctTestOnboardingSession({
      row?.stripe_account_id!==accountId||
      !/^[a-f0-9]{64}$/.test(row?.plan_digest||''))
     return {blocked:'recipient_account_not_bound_to_supplier'};
+  if(!authenticatedOwner(db,sessionToken,row.owner_user_id))
+    return {blocked:'verified_supplier_session_required'};
   let account;
   try{
     account=await stripe.v2.core.accounts.retrieve(accountId,{
@@ -76,25 +95,28 @@ export async function createIsolatedSctTestOnboardingSession({
 }
 
 export async function inspectIsolatedSctTestRecipientAfterOnboarding({
-  db,stripe,stripeMode,stripeSecretKey,supplierId,entityType,accountId,
+  db,stripe,stripeMode,stripeSecretKey,supplierId,entityType,accountId,sessionToken,
 }={}){
   if(stripeMode!=='test'||!validTestKey(stripeSecretKey)||
      stripe?._apiKey!==stripeSecretKey||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function')
     return {blocked:'trusted_stripe_test_client_required'};
   if(!db?.prepare||!validSupplier(supplierId)||!validAccount(accountId)||
+     typeof sessionToken!=='string'||
      !['individual','company'].includes(entityType))
     return {blocked:'synthetic_recipient_identity_required'};
   let row;
   try{
     row=db.prepare(`SELECT status,stripe_account_id,legal_entity_type,plan_digest
-      FROM sct_test_recipient_creation_commands WHERE supplier_id=?`).get(supplierId);
+      ,owner_user_id FROM sct_test_recipient_creation_commands WHERE supplier_id=?`).get(supplierId);
   }catch{return {blocked:'recipient_creation_journal_unavailable'}}
   if(row?.status!=='created_pending_onboarding'||
      row?.stripe_account_id!==accountId||
      row?.legal_entity_type!==entityType||
      !/^[a-f0-9]{64}$/.test(row?.plan_digest||''))
     return {blocked:'recipient_account_not_bound_to_supplier'};
+  if(!authenticatedOwner(db,sessionToken,row.owner_user_id))
+    return {blocked:'verified_supplier_session_required'};
   let account;
   try{
     account=await stripe.v2.core.accounts.retrieve(accountId,{
