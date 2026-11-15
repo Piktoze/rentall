@@ -51,6 +51,11 @@ export async function inspectIsolatedSctTestSupplierTransfer({
      Math.round(Number(booked.platform_fee_amount||0)*100)!==binding.feeCents||
      Math.round(Number(booked.supplier_amount||0)*100)!==settled.supplier_cents)
     return {blocked:'canonical_payment_or_return_not_ready'};
+  // Missing journals are NOT evidence of no refunds/transfers. Both must
+  // be initialized explicitly in the isolated TEST database before readiness.
+  if(!exists(db,'sct_test_refund_commands')||
+     !exists(db,'supplier_transfer_commands'))
+    return {blocked:'financial_command_journals_unavailable'};
   for(const table of ['sct_test_refund_commands','supplier_transfer_commands',
                        'stripe_rental_disputes','rental_disputes']){
     if(exists(db,table)&&db.prepare(`SELECT 1 FROM ${table} WHERE booking_id=? LIMIT 1`).get(bookingId))
