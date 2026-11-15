@@ -6,6 +6,7 @@ import {
   reserveSctBookingBinding,bindSctPaymentIntent,
 } from './sct-booking-binding.js';
 import {planIsolatedSctPaymentIntent} from './isolated-sct-platform-payment.js';
+import {attachSctTestPaymentIntentToBooking} from './sct-test-payment-booking-attachment.js';
 
 export async function initiateIsolatedSctTestPayment({db,booking,adapter}={}) {
   const plan=planIsolatedSctPaymentIntent(booking);
@@ -35,6 +36,12 @@ export async function initiateIsolatedSctTestPayment({db,booking,adapter}={}) {
   }
   const bound=bindSctPaymentIntent(db,booking.id,result.paymentIntentId);
   if(bound.blocked)return {blocked:'payment_binding_requires_manual_reconciliation'};
+  // Do not return the client secret until the legacy booking itself is bound.
+  // A failure leaves the TEST intent for explicit reconciliation, not a checkout.
+  const attached=attachSctTestPaymentIntentToBooking(db,{
+    bookingId:booking.id,paymentIntentId:result.paymentIntentId,
+  });
+  if(attached.blocked)return {blocked:'booking_attachment_requires_manual_reconciliation'};
   return {status:'requires_customer_payment',
     paymentIntentId:result.paymentIntentId,clientSecret:result.clientSecret,
     providerStatus:result.status,bookingId:booking.id};
