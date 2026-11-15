@@ -25,7 +25,21 @@ function fixture({createFails=false,readbackFails=false,readback=refund}={}){
   db.exec(`CREATE TABLE sct_payment_settlements
     (booking_id TEXT PRIMARY KEY,payment_intent_id TEXT,charge_id TEXT,amount_cents INTEGER);
     INSERT INTO sct_payment_settlements VALUES
-    ('RB-test-refund-exec','pi_fixture','ch_fixture',10000);`);
+    ('RB-test-refund-exec','pi_fixture','ch_fixture',10000);
+    CREATE TABLE sct_booking_bindings(
+      booking_id TEXT PRIMARY KEY,listing_id TEXT,payment_intent_id TEXT,
+      stripe_mode TEXT,amount_cents INTEGER);
+    INSERT INTO sct_booking_bindings VALUES
+      ('RB-test-refund-exec','listing-1','pi_fixture','test',10000);
+    CREATE TABLE rental_bookings(
+      booking_id TEXT PRIMARY KEY,listing_id TEXT,status TEXT,returned_at TEXT,
+      payment_status TEXT,stripe_payment_intent_id TEXT,stripe_refund_id TEXT,
+      refund_status TEXT,order_value REAL,payout_status TEXT,refund_amount REAL,
+      payout_amount REAL,updated_at TEXT);
+    INSERT INTO rental_bookings
+      (booking_id,listing_id,status,payment_status,stripe_payment_intent_id,
+       order_value,payout_status) VALUES
+      ('RB-test-refund-exec','listing-1','confirmed','paid','pi_fixture',100,'not_ready');`);
   installIsolatedSctRefundCommands(db);
   let creates=0,retrieves=0;
   const calls=[];
@@ -50,7 +64,10 @@ function fixture({createFails=false,readbackFails=false,readback=refund}={}){
 test('platform TEST refund succeeds with provider readback and only one network attempt',async()=>{
   const x=fixture();
   try{
-    assert.deepEqual(await x.execute(),{status:'refunded',refundId:'re_fixture'});
+    assert.deepEqual(await x.execute(),{status:'refunded',bookingId:booking.id,refundId:'re_fixture',amountCents:10000});
+    assert.deepEqual(x.db.prepare('SELECT payment_status,stripe_refund_id,refund_amount,payout_status FROM rental_bookings').get(),{
+      payment_status:'refunded',stripe_refund_id:'re_fixture',refund_amount:100,payout_status:'cancelled',
+    });
     assert.equal(x.creates(),1);assert.equal(x.retrieves(),1);
     assert.equal(x.calls[0].payload.amount,10000);
     assert.equal(x.calls[0].payload.charge,'ch_fixture');
@@ -111,4 +128,33 @@ test('Stripe LIVE key or mismatched key is rejected before any write',()=>{
   const noInspectableKey={refunds:stripe.refunds};
   assert.equal(makeIsolatedSctTestRefundAdapter({stripe:noInspectableKey,stripeMode:'test',
     stripeSecretKey:'sk_test_fixture0123456789'}).blocked,'trusted_platform_test_stripe_client_required');
+});
+
+test('historical dispute blocks atomic refund booking update after Stripe succeeded',async()=>{
+  const x=fixture();
+  try{
+    x.db.exec(`CREATE TABLE stripe_rental_disputes(booking_id TEXT);
+      INSERT INTO stripe_rental_disputes VALUES('RB-test-refund-exec');`);
+    assert.equal((await x.execute()).blocked,'refund_booking_reconciliation_required');
+    assert.equal(x.db.prepare('SELECT payment_status FROM rental_bookings').get().payment_status,'paid');
+    assert.equal(x.db.prepare('SELECT status FROM sct_test_refund_commands').get().status,'reconcile_required');
+    assert.equal(x.creates(),1);
+    assert.equal((await x.execute()).blocked,'existing_refund_command_requires_reconciliation');
+    assert.equal(x.creates(),1);
+  }finally{x.db.close()}
+});
+test('cancellation during provider refund causes explicit reconciliation, not false payout release',async()=>{
+  const x=fixture();
+  try{
+    const adapter={
+      createRefund:async()=>({refundId:'re_fixture'}),
+      retrieveRefund:async()=>{
+        x.db.exec("UPDATE rental_bookings SET status='cancelled'");
+        return refund;
+      },
+    };
+    assert.equal((await x.execute({adapter})).blocked,'refund_booking_reconciliation_required');
+    assert.equal(x.db.prepare('SELECT payment_status FROM rental_bookings').get().payment_status,'paid');
+    assert.equal(x.db.prepare('SELECT status FROM sct_test_refund_commands').get().status,'reconcile_required');
+  }finally{x.db.close()}
 });
