@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import Database from 'better-sqlite3';
@@ -25,8 +26,7 @@ function setup({created=account,createError=false,retrieveError=false}={}){
   const db=new Database(':memory:');
   installIsolatedSctRecipientCreationJournal(db);
   let calls=0,reads=0,seenPayload,seenKey;
-  const stripe={
-    _apiKey:base.stripeSecretKey,
+  const stripe=Object.assign(createIsolatedStripeTestClient(base.stripeSecretKey),{
     v2:{core:{accounts:{
       create:async(payload,{idempotencyKey})=>{
         calls++;seenPayload=payload;seenKey=idempotencyKey;
@@ -39,7 +39,7 @@ function setup({created=account,createError=false,retrieveError=false}={}){
         return created;
       },
     }}},
-  };
+  });
   const run=(extra={})=>create({db,stripe,...base,...extra});
   return {db,run,get calls(){return calls},get reads(){return reads},
     get payload(){return seenPayload},get key(){return seenKey}};

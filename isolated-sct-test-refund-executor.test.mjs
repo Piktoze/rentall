@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import Database from 'better-sqlite3';
@@ -43,7 +44,8 @@ function fixture({createFails=false,readbackFails=false,readback=refund}={}){
   installIsolatedSctRefundCommands(db);
   let creates=0,retrieves=0;
   const calls=[];
-  const stripe={_apiKey:'sk_test_fixture0123456789',refunds:{
+  const stripe=Object.assign(createIsolatedStripeTestClient('sk_test_fixture0123456789'),{
+    refunds:{
     create:async(payload,options)=>{
       creates++;calls.push({payload,options});
       if(createFails)throw new Error('timeout');
@@ -53,7 +55,7 @@ function fixture({createFails=false,readbackFails=false,readback=refund}={}){
       retrieves++;if(readbackFails)throw new Error('timeout');
       return readback;
     },
-  }};
+  }});
   const adapter=makeIsolatedSctTestRefundAdapter({stripe,stripeMode:'test',
     stripeSecretKey:'sk_test_fixture0123456789'});
   const execute=(changes={})=>executeIsolatedSctTestFullRefund({

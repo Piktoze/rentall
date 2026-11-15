@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 // Isolated, read-only TEST supplier transfer readiness inspection.
 // Not linked to public routes or cron. Does NOT reserve, send or confirm money.
 // A positive result is a snapshot, not authorization for a Stripe transfer:
@@ -6,6 +7,7 @@
 import {getSctBookingBinding} from './sct-booking-binding.js';
 import {reconcileIsolatedSctTestPayment} from './isolated-sct-test-payment-reconciler.js';
 import {planDeferredSupplierTransfer} from './deferred-supplier-transfer.js';
+import {inspectIsolatedSctRecipientAccount} from './isolated-sct-recipient-account-gate.js';
 
 const validBookingId=v=>typeof v==='string'&&/^RB-[A-Za-z0-9-]+$/.test(v);
 function exists(db,table){
@@ -13,11 +15,11 @@ function exists(db,table){
 }
 
 export async function inspectIsolatedSctTestSupplierTransfer({
-  db,stripe,stripeMode,stripeSecretKey,bookingId,nowMs,releaseDeadlineAt,
+  db,stripe,stripeMode,stripeSecretKey,bookingId,nowMs,releaseDeadlineAt,expectedEntityType,
 }={}){
   if(stripeMode!=='test'||
      !/^sk_test_[A-Za-z0-9_-]{8,}$/.test(stripeSecretKey||'')||
-     stripe?._apiKey!==stripeSecretKey)
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey))
     return {blocked:'trusted_platform_test_client_required'};
   if(!db?.prepare||!validBookingId(bookingId))
     return {blocked:'invalid_booking_or_database'};
@@ -69,6 +71,22 @@ export async function inspectIsolatedSctTestSupplierTransfer({
      proof.amountCents!==settled.amount_cents)
     return {blocked:'stripe_proof_settlement_mismatch'};
 
+  if (!['individual','company'].includes(expectedEntityType))
+    return {blocked:'verified_supplier_entity_type_required'};
+  let account;
+  try {
+    account=await stripe.v2.core.accounts.retrieve(binding.destination,{
+      include:['identity','configuration.recipient','configuration.merchant','requirements','defaults'],
+    });
+  } catch {
+    return {blocked:'recipient_account_readback_unavailable'};
+  }
+  if (account?.livemode!==false) return {blocked:'recipient_account_not_test'};
+  const recipient=inspectIsolatedSctRecipientAccount(account,{
+    expectedAccountId:binding.destination,expectedEntityType,
+  });
+  if (recipient.blocked) return recipient;
+
   const snapshot={
     id:bookingId,status:booked.status,
     returnConfirmedAt:Date.parse(booked.returned_at),
@@ -82,7 +100,7 @@ export async function inspectIsolatedSctTestSupplierTransfer({
     chargeId:proof.chargeId,destination:binding.destination,
     capturedAmountCents:proof.amountCents,currency:'eur',livemode:false,
     scope:'platform',status:'succeeded',refundState:'none',disputeState:'clear',
-    financialHold:false,destinationTransferActive:true,dataCurrent:true,
+    financialHold:false,destinationTransferActive:recipient.transferCapability==='active',dataCurrent:true,
   };
   const plan=planDeferredSupplierTransfer(snapshot,payment,nowMs);
   if(plan.blocked)return plan;

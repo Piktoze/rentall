@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 // Read-only examination of an uncertain synthetic TEST recipient creation.
 // Matching fields do NOT prove the account belongs to the original request:
 // Stripe request logs / idempotency evidence must be reviewed independently.
@@ -19,7 +20,7 @@ export async function inspectUncertainIsolatedSctRecipientCreation({
      !/^acct_[A-Za-z0-9]+$/.test(candidateAccountId||'')||
      !db?.prepare)return {blocked:'synthetic_creation_reference_required'};
   if(!/^sk_test_[A-Za-z0-9_-]{8,}$/.test(stripeSecretKey||'')||
-     stripe?._apiKey!==stripeSecretKey||
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey)||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function')
     return {blocked:'verifiable_test_accounts_v2_client_required'};
   const command=db.prepare(`SELECT status,legal_entity_type,idempotency_key,
@@ -36,7 +37,7 @@ export async function inspectUncertainIsolatedSctRecipientCreation({
   let account;
   try{
     account=await stripe.v2.core.accounts.retrieve(candidateAccountId,{
-      include:['configuration.recipient','requirements','defaults'],
+      include:['identity','configuration.recipient','configuration.merchant','requirements','defaults'],
     });
   }catch{return {blocked:'account_readback_unavailable'}}
   const p=plan.accountCreatePayload;

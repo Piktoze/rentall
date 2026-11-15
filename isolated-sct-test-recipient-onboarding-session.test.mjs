@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -50,11 +51,12 @@ function fixture({accountResponse=account,sessionResponse={
    VALUES(?,?,'idem_fixture','created_pending_onboarding',?,?,?)`)
    .run(supplierId,'individual',accountId,digest,ownerUserId);
   let sessions=0,reads=0,payload;
-  const stripe={_apiKey:secret,v2:{core:{accounts:{
+  const stripe=Object.assign(createIsolatedStripeTestClient(secret),{
+    v2:{core:{accounts:{
     retrieve:async()=>{reads++;return accountResponse},
   }}},accountSessions:{create:async p=>{
     sessions++;payload=p;return sessionResponse;
-  }}};
+  }}});
   const base={db,stripe,stripeMode:'test',stripeSecretKey:secret,
     supplierId,entityType:'individual',accountId,sessionToken};
   return {db,stripe,base,get sessions(){return sessions},

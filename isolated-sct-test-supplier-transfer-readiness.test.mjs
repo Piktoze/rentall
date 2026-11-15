@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import Database from 'better-sqlite3';
@@ -20,6 +21,11 @@ const charge={id:'ch_fixture',livemode:false,payment_intent:'pi_fixture',
   status:'succeeded',paid:true,captured:true,currency:'eur',
   amount:10000,amount_captured:10000,amount_refunded:0,refunded:false,disputed:false};
 const empty={data:[],has_more:false};
+const recipient={id:'acct_fixture',livemode:false,dashboard:'express',
+  identity:{country:'LT',entity_type:'company'},
+  configuration:{recipient:{capabilities:{stripe_balance:{stripe_transfers:{status:'active'}}}}},
+  defaults:{responsibilities:{fees_collector:'application',losses_collector:'application'}},
+  requirements:{entries:[]}};
 function fixture(patch={}){
   const db=new Database(':memory:');
   db.exec(`CREATE TABLE rental_bookings(
@@ -39,17 +45,23 @@ function fixture(patch={}){
     (booking_id,event_id,payment_intent_id,charge_id,amount_cents,fee_cents,supplier_cents)
     VALUES(?,?,?,?,?,?,?)`).run(bookingId,'evt_fixture','pi_fixture','ch_fixture',10000,1500,8500);
   let stripeReads=0;
-  const stripe={
-    _apiKey:'sk_test_fixture0123456789',
+  const stripe=Object.assign(createIsolatedStripeTestClient('sk_test_fixture0123456789'),{
+    v2:{core:{accounts:{retrieve:async(id,options)=>{
+      assert.equal(id,'acct_fixture');
+      assert.ok(options.include.includes('configuration.recipient'));
+      if(patch.accountUnavailable)throw new Error('unavailable');
+      return patch.account||recipient;
+    }}}},
+
     paymentIntents:{retrieve:async()=>{stripeReads++;return patch.intent||intent}},
     charges:{retrieve:async()=>patch.charge||charge},
     refunds:{list:async()=>patch.refunds||empty},
     disputes:{list:async()=>patch.disputes||empty},
     transfers:{list:async()=>patch.transfers||empty},
-  };
+  });
   const inspect=(changes={})=>inspectIsolatedSctTestSupplierTransfer({
     db,stripe,stripeMode:'test',stripeSecretKey:'sk_test_fixture0123456789',
-    bookingId,nowMs,releaseDeadlineAt:nowMs+86400000,...changes});
+    bookingId,nowMs,expectedEntityType:'company',releaseDeadlineAt:nowMs+86400000,...changes});
   return {db,stripe,inspect,reads:()=>stripeReads};
 }
 test('read-only TEST readiness confirms 100/15/85 and never books supplier transfer',async()=>{
@@ -154,4 +166,21 @@ test('LIVE key, no inspectable TEST key, expired deadline block all provider cal
       'verified_release_deadline_required');
     assert.equal(x.reads(),0);
   }finally{x.db.close()}
+});
+
+test('do not report readiness without an active, correctly bound TEST recipient',async()=>{
+  for(const [patch,reason] of [
+    [{accountUnavailable:true},'recipient_account_readback_unavailable'],
+    [{account:{...recipient,livemode:true}},'recipient_account_not_test'],
+    [{account:{...recipient,id:'acct_other'}},'connected_account_identity_mismatch'],
+    [{account:{...recipient,identity:{country:'LT',entity_type:'individual'}}},'recipient_country_or_entity_mismatch'],
+    [{account:{...recipient,configuration:{recipient:{}}}},'recipient_stripe_transfers_not_active'],
+    [{account:{...recipient,requirements:{entries:[{}]}}},'recipient_requirements_unresolved'],
+  ]){
+    const x=fixture(patch);
+    try{
+      assert.equal((await x.inspect()).blocked,reason);
+      assert.equal(x.db.prepare('SELECT COUNT(*) n FROM supplier_transfer_commands').get().n,0);
+    }finally{x.db.close()}
+  }
 });

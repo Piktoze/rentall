@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import Database from 'better-sqlite3';
@@ -36,13 +37,13 @@ function fixture({fail=false}={}){
       purpose:'rental_payment',paymentFlow:'separate_charges_and_transfers',
       supplierStripeAccountId:'acct_fixture',commissionCents:'1500'},
   };
-  const stripe={
+  const stripe=Object.assign(createIsolatedStripeTestClient('sk_test_fixture0123456789'),{
     paymentIntents:{
       create:async()=>{count++;if(fail)throw Error('transport unknown');return {...pi,client_secret:'test_secret'};},
       retrieve:async()=>pi,
     },
     transfers:{create:async()=>{throw Error('never called')},retrieve:async()=>null},
-  };
+  });
   const adapter=makeIsolatedTestSctStripeAdapter({stripe,stripeMode:'test'});
   const initiate=(b=booking)=>initiateIsolatedSctTestPayment({db,booking:b,adapter});
   return {db,initiate,calls:()=>count};

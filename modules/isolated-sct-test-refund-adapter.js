@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 // Isolated platform SCT refund adapter. Not imported by server.js.
 // Requires a caller-attested Stripe TEST secret; never supply real keys in code
 // or invoke this from public routes. LIVE key mode is always rejected.
@@ -6,7 +7,7 @@ const match=(v,prefix)=>typeof v==='string'&&new RegExp('^'+prefix+'[A-Za-z0-9]+
 export function makeIsolatedSctTestRefundAdapter({stripe,stripeMode,stripeSecretKey}={}){
   if(stripeMode!=='test'||!/^sk_test_[A-Za-z0-9_-]{8,}$/.test(stripeSecretKey||'')||
      // When SDK exposes its configured API key, require a matching key.
-     stripe?._apiKey!==stripeSecretKey||
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey)||
      typeof stripe?.refunds?.create!=='function'||
      typeof stripe?.refunds?.retrieve!=='function')
     return {blocked:'trusted_platform_test_stripe_client_required'};

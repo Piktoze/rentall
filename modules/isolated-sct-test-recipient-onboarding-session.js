@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 import {createHash} from 'node:crypto';
 // Isolated Stripe TEST Connect onboarding session coordinator.
 // NOT imported by the public server. Never call from an unauthenticated route.
@@ -31,7 +32,7 @@ export async function createIsolatedSctTestOnboardingSession({
   sessionToken,
 }={}){
   if(stripeMode!=='test'||!validTestKey(stripeSecretKey)||
-     stripe?._apiKey!==stripeSecretKey||
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey)||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function'||
      typeof stripe?.accountSessions?.create!=='function')
     return {blocked:'trusted_stripe_test_client_required'};
@@ -55,7 +56,7 @@ export async function createIsolatedSctTestOnboardingSession({
   let account;
   try{
     account=await stripe.v2.core.accounts.retrieve(accountId,{
-      include:['configuration.recipient','requirements','defaults'],
+      include:['identity','configuration.recipient','configuration.merchant','requirements','defaults'],
     });
   }catch{return {blocked:'recipient_account_readback_unavailable'}}
   // Onboarding may be needed before transfers become active, but identity,
@@ -98,7 +99,7 @@ export async function inspectIsolatedSctTestRecipientAfterOnboarding({
   db,stripe,stripeMode,stripeSecretKey,supplierId,entityType,accountId,sessionToken,
 }={}){
   if(stripeMode!=='test'||!validTestKey(stripeSecretKey)||
-     stripe?._apiKey!==stripeSecretKey||
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey)||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function')
     return {blocked:'trusted_stripe_test_client_required'};
   if(!db?.prepare||!validSupplier(supplierId)||!validAccount(accountId)||
@@ -120,9 +121,10 @@ export async function inspectIsolatedSctTestRecipientAfterOnboarding({
   let account;
   try{
     account=await stripe.v2.core.accounts.retrieve(accountId,{
-      include:['configuration.recipient','requirements','defaults'],
+      include:['identity','configuration.recipient','configuration.merchant','requirements','defaults'],
     });
   }catch{return {blocked:'recipient_account_readback_unavailable'}}
+  if(account?.livemode!==false)return {blocked:'recipient_account_not_test'};
   // This is a capability assessment, not proof that a bank payout is enabled.
   return inspectIsolatedSctRecipientAccount(account,{
     expectedAccountId:accountId,expectedCountry:'LT',expectedEntityType:entityType,

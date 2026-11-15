@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 // One-shot synthetic Accounts v2 recipient creator. NOT imported by server,
 // never enabled via HTTP, scheduler or production. Caller supplies an authenticated
 // platform TEST SDK client; this module never reads real supplier records.
@@ -33,7 +34,7 @@ export async function createIsolatedSctTestRecipient({
   if(!/^synthetic-supplier-[A-Za-z0-9-]+$/.test(supplierId||''))
     return {blocked:'synthetic_supplier_required'};
   if(!/^sk_test_[A-Za-z0-9_-]{8,}$/.test(stripeSecretKey||'')||
-     stripe?._apiKey!==stripeSecretKey||
+     !isIsolatedStripeTestClient(stripe,stripeSecretKey)||
      typeof stripe?.v2?.core?.accounts?.create!=='function'||
      typeof stripe?.v2?.core?.accounts?.retrieve!=='function')
     return {blocked:'verifiable_test_accounts_v2_client_required'};
@@ -55,7 +56,7 @@ export async function createIsolatedSctTestRecipient({
   let authoritative;
   try{
     authoritative=await stripe.v2.core.accounts.retrieve(result.id,{
-      include:['configuration.recipient','requirements','defaults'],
+      include:['identity','configuration.recipient','configuration.merchant','requirements','defaults'],
     });
   }catch{return {blocked:'account_creation_requires_reconciliation'}}
   if(!validateCreatedAccount(authoritative,entityType,result.id))

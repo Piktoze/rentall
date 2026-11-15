@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import Database from 'better-sqlite3';
@@ -28,10 +29,11 @@ async function fixture(){
   const db=new Database(':memory:');
   installIsolatedSctRecipientCreationJournal(db);
   let created=0,retrieved=0;
-  const stripe={_apiKey:base.stripeSecretKey,v2:{core:{accounts:{
+  const stripe=Object.assign(createIsolatedStripeTestClient(base.stripeSecretKey),{
+    v2:{core:{accounts:{
     create:async()=>{created++;throw new Error('uncertain network response')},
     retrieve:async()=>{retrieved++;return account},
-  }}}};
+  }}}});
   const attempt=await createIsolatedSctTestRecipient({db,stripe,...base});
   assert.equal(attempt.blocked,'account_creation_requires_reconciliation');
   assert.equal(created,1);
@@ -86,9 +88,10 @@ test('LIVE client and candidate with wrong identity never considered reconciled'
       {configuration:{merchant:{capabilities:{card_payments:{status:'active'}}}}},
       {defaults:{responsibilities:{fees_collector:'stripe',losses_collector:'stripe'}}},
     ]){
-      const stripe={_apiKey:base.stripeSecretKey,v2:{core:{accounts:{
+      const stripe=Object.assign(createIsolatedStripeTestClient(base.stripeSecretKey),{
+    v2:{core:{accounts:{
         retrieve:async()=>({...account,...changes}),
-      }}}};
+      }}}});
       assert.equal((await x.inspect({stripe})).blocked,
         'candidate_account_does_not_match_original_request');
     }
@@ -97,10 +100,11 @@ test('LIVE client and candidate with wrong identity never considered reconciled'
 test('read-only reconciler never retries Stripe create after uncertainty',async()=>{
   const x=await fixture();
   try{
-    const stripe={_apiKey:base.stripeSecretKey,v2:{core:{accounts:{
+    const stripe=Object.assign(createIsolatedStripeTestClient(base.stripeSecretKey),{
+    v2:{core:{accounts:{
       retrieve:async()=>account,
       create:async()=>{throw Error('must never be called')},
-    }}}};
+    }}}});
     const report=await x.inspect({stripe});
     assert.equal(report.status,'manual_stripe_request_evidence_required');
     assert.equal(x.db.prepare('SELECT status FROM sct_test_recipient_creation_commands').get().status,

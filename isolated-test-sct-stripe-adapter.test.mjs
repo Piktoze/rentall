@@ -1,3 +1,4 @@
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {makeIsolatedTestSctStripeAdapter} from './modules/isolated-test-sct-stripe-adapter.js';
@@ -16,7 +17,7 @@ function mockStripe({paymentPatch={},transferPatch={}}={}) {
       paymentFlow:'separate_charges_and_transfers',supplierStripeAccountId:booking.destination,
       commissionCents:'1500'},
   };
-  const stripe={
+  const stripe=Object.assign(createIsolatedStripeTestClient('sk_test_fixture0123456789'),{
     paymentIntents:{
       create:async (...args)=>{calls.push(['pi_create',...args]);return {...intent,client_secret:'test_secret'};},
       retrieve:async (...args)=>{calls.push(['pi_retrieve',...args]);return {...intent,...paymentPatch};},
@@ -25,7 +26,7 @@ function mockStripe({paymentPatch={},transferPatch={}}={}) {
       create:async (...args)=>{calls.push(['tr_create',...args]);return {id:'tr_fixture',...transferPatch};},
       retrieve:async (...args)=>{calls.push(['tr_retrieve',...args]);return {id:'tr_fixture',...transferPatch};},
     }
-  };
+  });
   return {stripe,calls};
 }
 test('TEST only and complete injected platform client required',()=>{

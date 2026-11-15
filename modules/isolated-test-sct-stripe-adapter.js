@@ -1,3 +1,4 @@
+import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 // TEST-only Stripe Connect SCT adapter. Not imported by the running server.
 // Actual integration requires a platform TEST Stripe SDK client and a separate
 // authenticated workflow; never expose these operations on a public route.
@@ -7,7 +8,7 @@ import {
 } from './isolated-sct-platform-payment.js';
 
 export function makeIsolatedTestSctStripeAdapter({ stripe, stripeMode } = {}) {
-  if (stripeMode !== 'test' ||
+  if (stripeMode !== 'test' || !isIsolatedStripeTestClient(stripe) ||
       typeof stripe?.paymentIntents?.create !== 'function' ||
       typeof stripe?.paymentIntents?.retrieve !== 'function' ||
       typeof stripe?.transfers?.create !== 'function' ||
