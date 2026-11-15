@@ -6,7 +6,7 @@ const match=(v,prefix)=>typeof v==='string'&&new RegExp('^'+prefix+'[A-Za-z0-9]+
 export function makeIsolatedSctTestRefundAdapter({stripe,stripeMode,stripeSecretKey}={}){
   if(stripeMode!=='test'||!/^sk_test_[A-Za-z0-9_-]{8,}$/.test(stripeSecretKey||'')||
      // When SDK exposes its configured API key, require a matching key.
-     (typeof stripe?._apiKey==='string'&&stripe._apiKey!==stripeSecretKey)||
+     stripe?._apiKey!==stripeSecretKey||
      typeof stripe?.refunds?.create!=='function'||
      typeof stripe?.refunds?.retrieve!=='function')
     return {blocked:'trusted_platform_test_stripe_client_required'};
