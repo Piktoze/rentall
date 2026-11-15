@@ -33,6 +33,12 @@ export function reserveSupplierTransferCommand(db, plan) {
   if (!verifiedPlan(plan)) return { blocked: 'invalid_transfer_plan' };
   const t = plan.transfer;
   return db.transaction(() => {
+    // Both journals reserve within SQLite IMMEDIATE transactions. Whichever
+    // reserves first blocks the opposite financial operation permanently until
+    // independent reconciliation; never transfer while any refund is uncertain.
+    const refundTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_test_refund_commands'").get();
+    if (refundTable && db.prepare('SELECT 1 FROM sct_test_refund_commands WHERE booking_id=? LIMIT 1').get(t.transfer_group))
+      return { blocked: 'sct_refund_command_requires_review' };
     const existing = db.prepare('SELECT * FROM supplier_transfer_commands WHERE booking_id=?')
       .get(t.transfer_group);
     const payload = JSON.stringify(t);
