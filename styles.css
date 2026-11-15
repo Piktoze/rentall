@@ -2141,3 +2141,23 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 #rioTraderPanel .checkbox-label input{width:auto;flex:none;margin-top:3px}
 #rioTraderPanel #rioTraderStatus{font-weight:600}
 #rioTraderPanel #rioTraderMessage{display:block;min-height:1.5em}
+
+/* Read-only launch mode is set by the server before the page is rendered. */
+#catalog-only-notice {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: .65rem 1rem;
+  text-align: center;
+  color: #233d38;
+  background: #e5f1ec;
+}
+
+.catalog-only :is(#v120Journey, #navListItemBtn, #supplierAuthBtn, #myBookingsBtn, #messagesBtn,
+  #moreSavedSearchesBtn, #saveCurrentSearchBtn, #heroEarnStartBtn, #cartbar, #checkoutModal,
+  #securePaymentPanel, #availabilityModal, #onboardingModal, #accountModal, #partnerForm,
+  #how, [data-search-mode="trip"], #detailRentBtn, #detailAvailabilityBtn,
+  #v145AvailabilityContinue, [data-availability-id], .v92-nocharge, .v92-safe-note,
+  .v92-availability-pill, .v92-trust-row, .v101-map-tags, .v132-checkout-confidence) {
+  display: none !important;
+}

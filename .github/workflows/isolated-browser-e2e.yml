@@ -97,6 +97,12 @@ jobs:
         # The workflow still fails overall when any critical step fails.
         if: ${{ success() || failure() }}
         run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js --config=e2e/playwright.config.js
+      - name: Lithuanian mobile search 10 times with retries disabled
+        run: npx playwright test e2e/isolated-ci.spec.js --config=e2e/playwright.config.js --grep 'mobile navigation and public pages support lt$' --repeat-each=10 --workers=1 --retries=0
+      - name: Verify read-only catalog in Chromium and over HTTP
+        env:
+          RENTINORBIT_CATALOG_ONLY: "true"
+        run: npx playwright test e2e/catalog-only.spec.js --config=e2e/playwright.config.js --retries=0
       - name: Probe public staging HTTPS endpoints (read-only evidence)
         if: ${{ always() }}
         continue-on-error: true

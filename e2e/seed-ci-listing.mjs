@@ -31,5 +31,14 @@ try{
   decideListingReview({listingId:listing.id,revision,status:'approved',adminId:'isolated-ci',validate:x=>x});
   const row=db.prepare('SELECT listing_id,owner_email,total_quantity FROM rental_listings WHERE listing_id=?').get(listing.id);
   if(row?.listing_id!==listing.id||row?.total_quantity!==2)throw Error('CI fixture verification failed');
+  for(const status of ['pending','rejected']){
+    const draft=submitListingReview({...listing,id:`ci-catalog-${status}`},
+      'demo@rentinorbit.test');
+    if(status==='rejected'){
+      const {revision}=db.prepare('SELECT revision FROM listing_reviews WHERE listing_id=?').get(draft.id);
+      decideListingReview({listingId:draft.id,revision,status:'rejected',
+        reason:'Synthetic regression fixture',adminId:'isolated-ci',validate:x=>x});
+    }
+  }
   console.log('PASS CI synthetic drill listing seeded in disposable DB');
 }finally{closeDatabase();}

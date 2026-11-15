@@ -1388,7 +1388,8 @@ function loadUniversalListings(){
   return purgeLegacyDemoListings(reviewedCatalog);
 }
 function saveUniversalListings(items){
-  reviewedCatalog=items;
+  reviewedCatalog=[...new Map(items.filter(item=>item?.id)
+    .map(item=>[String(item.id),item])).values()];
 }
 function renderUniversalListings(items=loadUniversalListings()){
   const grid=document.getElementById('listingPreviewGrid');
@@ -1526,23 +1527,24 @@ document.getElementById('listingForm')?.addEventListener('submit',async e=>{
   }
 });
 
-document.getElementById('searchForm')?.addEventListener('submit',e=>{
-  e.preventDefault();
+let localSearchSubmitted=false;
+
+function filterLocalSearchListings(listings){
   const country=document.getElementById('countrySelect')?.value||'LT';
   const city=document.getElementById('citySelect')?.value||'';
   const keyword=(document.getElementById('keywordSearch')?.value||'').toLowerCase().trim();
   const category=document.getElementById('categorySelect')?.value||'all';
   const qty=Number(document.getElementById('quantitySearch')?.value||1);
 
-  const filtered=loadUniversalListings().filter(l=>{
-    if(l.country!==country) return false;
-    if(city && l.city!==city) return false;
-    if(category!=='all' && l.category!==category) return false;
-    if(Number(l.quantity||0)<qty) return false;
-    if(keyword && !(l.title+' '+(l.description||'')).toLowerCase().includes(keyword)) return false;
-    return true;
-  });
-  renderUniversalListings(filtered);
+  return listings.filter(l=>l.country===country && (!city || l.city===city) &&
+    (category==='all' || l.category===category) && Number(l.quantity||0)>=qty &&
+    (!keyword || (l.title+' '+(l.description||'')).toLowerCase().includes(keyword)));
+}
+
+document.getElementById('searchForm')?.addEventListener('submit',e=>{
+  e.preventDefault();
+  localSearchSubmitted=true;
+  renderUniversalListings(filterLocalSearchListings(loadUniversalListings()));
   document.getElementById('list-item')?.scrollIntoView({behavior:'smooth'});
 }, true);
 
@@ -2845,6 +2847,7 @@ function availabilityClass(day){
 }
 
 async function openAvailabilityCalendar(listingId){
+  if(document.body.classList.contains('catalog-only'))return;
   return window.rentinorbitOpenAvailabilityV145?.(listingId);
 }
 
@@ -4245,15 +4248,19 @@ document.addEventListener('click',e=>{
   }
 }, true);
 
+let catalogRequestSequence=0;
 async function hydrateListingsFromServer(){
+  const request=++catalogRequestSequence;
   try{
     const data=await apiJson('/api/listings');
     const listings=purgeLegacyDemoListings(Array.isArray(data.listings)?data.listings:[]);
-    // Server inventory is authoritative even when empty: stale demo/local listings must disappear.
+    if(request!==catalogRequestSequence)return loadUniversalListings();
     saveUniversalListings(listings);
-    if(typeof renderGeoAwareListings==='function') renderGeoAwareListings(listings);
-    else renderUniversalListings(listings);
-    return listings;
+    const catalog=loadUniversalListings();
+    const localMode=document.querySelector('.search-mode-tab.active')?.dataset.searchMode!=='trip';
+    const visible=localSearchSubmitted&&localMode?filterLocalSearchListings(catalog):catalog;
+    renderGeoAwareListings(visible);
+    return catalog;
   }catch{
     return loadUniversalListings();
   }
@@ -4287,8 +4294,7 @@ loadAdminDashboard=async function(){
 };
 
 (async()=>{
-  await refreshServerUser();
-  await hydrateListingsFromServer();
+  await Promise.all([refreshServerUser(),hydrateListingsFromServer()]);
   refreshAuthUI();
   if(serverUser?.role==='admin') loadAdminDashboard().catch(()=>{});
 })();
@@ -5607,19 +5613,6 @@ function showToast(message,type='success',duration=2600){
   setTimeout(()=>el.remove(),duration);
 }
 
-function renderListingSkeletons(count=6){
-  const grid=document.getElementById('listingPreviewGrid');
-  if(!grid) return;
-  grid.innerHTML=Array.from({length:count},()=>`
-    <div class="skeleton-card">
-      <div class="skeleton skeleton-block lg"></div>
-      <div class="skeleton skeleton-block sm"></div>
-      <div class="skeleton skeleton-block md"></div>
-      <div class="skeleton skeleton-block"></div>
-      <div class="skeleton skeleton-block md"></div>
-    </div>`).join('');
-}
-
 function renderEmptyListingState(){
   const grid=document.getElementById('listingPreviewGrid');
   const tpl=document.getElementById('listingEmptyStateTemplate');
@@ -5662,19 +5655,6 @@ document.querySelectorAll('.quick-category').forEach(btn=>{
   });
 });
 
-// Lightweight skeleton when refreshing server listings.
-const v40HydrateListings=hydrateListingsFromServer;
-hydrateListingsFromServer=async function(){
-  renderListingSkeletons(6);
-  try{
-    const result=await v40HydrateListings();
-    return result;
-  }catch(err){
-    showToast(err.message||'Could not refresh listings','error');
-    throw err;
-  }
-};
-
 // Friendly toasts for common actions.
 document.addEventListener('click',e=>{
   if(e.target.closest('.favorite-btn')){
@@ -5684,14 +5664,6 @@ document.addEventListener('click',e=>{
     setTimeout(()=>showToast('Notification marked as read','success',1200),20);
   }
 });
-
-// Initial polish
-setTimeout(()=>{
-  if(!document.querySelector('#listingPreviewGrid .listing-card')){
-    renderGeoAwareListings(loadUniversalListings());
-  }
-},450);
-
 
 // --- V41: installable PWA + first-run onboarding ---
 let deferredInstallPrompt=null;

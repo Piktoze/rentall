@@ -311,6 +311,20 @@ function sameOriginWriteGuard(req,res,next){
   next();
 }
 
+const catalogOnly=process.env.RENTINORBIT_CATALOG_ONLY==='true';
+const catalogNotice='Skelbimų katalogas. Rezervacijos ir mokėjimai dar neaktyvūs.';
+
+if(catalogOnly){
+  // Apply before JSON parsing, authentication, callbacks and all API handlers.
+  app.use('/api',(req,res,next)=>{
+    const path=req.path.toLowerCase();
+    if((req.method==='GET'||req.method==='HEAD') &&
+       !/^\/(?:stripe|payments)(?:\/|$)/.test(path))return next();
+    res.set('Cache-Control','no-store');
+    return res.status(403).json({code:'CATALOG_ONLY',error:catalogNotice});
+  });
+}
+
 app.use('/api',sameOriginWriteGuard);
 
 app.use('/api',(req,res,next)=>{
@@ -325,9 +339,9 @@ app.use('/api',(req,res,next)=>{
 const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
-const stripe = stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
+const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const stripeMode = stripeModeFor(stripeKey);
-const demoPaymentsEnabled=String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
+const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
 // Authorization/capture experiment is isolated to staging and a Stripe TEST secret.
 // Product rule: supplier confirms the request BEFORE any payment/authorization.
@@ -1199,7 +1213,7 @@ app.get('/listing/:listingId/:slug?',(req,res)=>{
   const location=[listing.city,listing.country].filter(Boolean).join(', '),description=String(listing.description||seoCopy.fallbackDescription).slice(0,160);
   const image=absoluteAsset(origin,listing.coverPhoto||listing.photos?.[0]);
   const title=`${listing.title}${location?' · '+location:''} | RentInOrbit`;
-  const body=`<article class="seo-listing-page"><div class="eyebrow">${seoCopy.eyebrow}</div><h1>${escapeEmailHtml(listing.title)}</h1><p class="hero-copy">${escapeEmailHtml(listing.description||seoCopy.fallbackDescription)}</p>${image?`<img src="${escapeEmailHtml(image)}" alt="${escapeEmailHtml(listing.title)}" style="width:min(720px,100%);max-height:480px;object-fit:cover;border-radius:22px;border:1px solid #dde4de">`:''}<div class="v92-facts" style="margin:24px 0"><div><span>${seoCopy.location}</span><b>${escapeEmailHtml(location||seoCopy.seeListing)}</b></div><div><span>${seoCopy.dailyPrice}</span><b>€${Number(listing.priceDay||0).toFixed(2)}</b></div><div><span>${seoCopy.available}</span><b>${Number(listing.quantity||1)}</b></div><div><span>${seoCopy.fulfilment}</span><b>${listing.deliveryEnabled?seoCopy.delivery:seoCopy.pickup}</b></div></div><p><a class="primary" href="/?listing=${encodeURIComponent(listing.id)}">${seoCopy.cta}</a></p></article>`;
+  const body=`<article class="seo-listing-page"><div class="eyebrow">${seoCopy.eyebrow}</div><h1>${escapeEmailHtml(listing.title)}</h1><p class="hero-copy">${escapeEmailHtml(listing.description||seoCopy.fallbackDescription)}</p>${image?`<img src="${escapeEmailHtml(image)}" alt="${escapeEmailHtml(listing.title)}" style="width:min(720px,100%);max-height:480px;object-fit:cover;border-radius:22px;border:1px solid #dde4de">`:''}<div class="v92-facts" style="margin:24px 0"><div><span>${seoCopy.location}</span><b>${escapeEmailHtml(location||seoCopy.seeListing)}</b></div><div><span>${seoCopy.dailyPrice}</span><b>€${Number(listing.priceDay||0).toFixed(2)}</b></div><div><span>${seoCopy.available}</span><b>${Number(listing.quantity||1)}</b></div><div><span>${seoCopy.fulfilment}</span><b>${listing.deliveryEnabled?seoCopy.delivery:seoCopy.pickup}</b></div></div><p><a class="primary" href="/?listing=${encodeURIComponent(listing.id)}">${catalogOnly?'Peržiūrėti skelbimą':seoCopy.cta}</a></p>${catalogOnly?`<p lang="lt">${catalogNotice}</p>`:''}</article>`;
   let html=pageShell({req,title,description,body,canonicalPath});
   if(image)html=html.replace('</head>',`<meta property="og:image" content="${escapeEmailHtml(image)}"></head>`);
   res.type('html').send(html);
@@ -1755,7 +1769,8 @@ app.get('/api/admin/diagnostics', requireRole('admin'), (req,res)=>{
 
 app.get('/api/config', (req,res)=>{
   res.json({
-    stripePublishableKey:process.env.STRIPE_PUBLISHABLE_KEY || '',
+    catalogOnly,
+    stripePublishableKey:catalogOnly?'':(process.env.STRIPE_PUBLISHABLE_KEY || ''),
     stripeConfigured:!!stripe,
     demoPaymentsEnabled,
     rentalPreauthEnabled,
@@ -2571,8 +2586,8 @@ async function processExpiredBookings(){
   return expiredIds;
 }
 const BOOKING_EXPIRY_SWEEP_MS=Math.max(60000,Number(process.env.BOOKING_EXPIRY_SWEEP_MS||60000));
-const bookingExpiryTimer=setInterval(()=>processExpiredBookings().catch(err=>console.warn('Booking expiry sweep failed',err.message)),BOOKING_EXPIRY_SWEEP_MS);
-bookingExpiryTimer.unref?.();
+const bookingExpiryTimer=catalogOnly?null:setInterval(()=>processExpiredBookings().catch(err=>console.warn('Booking expiry sweep failed',err.message)),BOOKING_EXPIRY_SWEEP_MS);
+bookingExpiryTimer?.unref?.();
 
 app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,keyPrefix:'payment'}), async (req,res)=>{
   try{
@@ -4208,6 +4223,13 @@ const publicBrowserModules=new Set(
     .matchAll(/<script\b[^>]*\bsrc="(\/?modules\/[a-z0-9-]+\.js)(?:\?[^"]*)?"/gi)]
     .map(([,url])=>'/'+url.replace(/^\//,''))
 );
+if(catalogOnly){
+  const catalogHtml=fs.readFileSync(path.join(__dirname,'index.html'),'utf8')
+    .replace('<body class="theme-aurora">',`<body class="theme-aurora catalog-only"><p id="catalog-only-notice" role="status" lang="lt">${catalogNotice}</p>`);
+  app.get(['/','/index.html'],(req,res)=>{
+    res.set('Cache-Control','no-store').type('html').send(catalogHtml);
+  });
+}
 const servePublicFile=express.static(__dirname);
 app.use((req,res,next)=>{
   if(publicRootFiles.has(req.path) || publicBrowserModules.has(req.path) || /^\/assets\/brand\/[a-z0-9-]+\.(?:png|svg)$/i.test(req.path)){
@@ -4252,9 +4274,11 @@ async function runSupplierReliabilityMaintenance(){
     }
   }finally{supplierMaintenanceRunning=false;}
 }
-setTimeout(()=>runSupplierReliabilityMaintenance().catch(err=>console.warn('Supplier maintenance failed',err.message)),1500);
-const supplierMaintenanceTimer=setInterval(()=>runSupplierReliabilityMaintenance().catch(err=>console.warn('Supplier maintenance failed',err.message)),5*60*1000);
-supplierMaintenanceTimer.unref?.();
+if(!catalogOnly){
+  const maintain=()=>runSupplierReliabilityMaintenance().catch(err=>console.warn('Supplier maintenance failed',err.message));
+  setTimeout(maintain,1500).unref?.();
+  setInterval(maintain,5*60*1000).unref?.();
+}
 
 const server=app.listen(port,runtimeConfig.host, () => {
   const database=checkDatabase();
@@ -4268,7 +4292,7 @@ function runEmailWorker(){
   emailWorkerPromise=processTransactionalEmailOutbox().finally(()=>{emailWorkerPromise=null});
   return emailWorkerPromise;
 }
-if(process.env.EMAIL_WORKER_ENABLED==='true'){
+if(!catalogOnly&&process.env.EMAIL_WORKER_ENABLED==='true'){
   const recovered=recoverInterruptedTransactionalEmails();
   const interval=Math.max(5000,Math.min(300000,Number(process.env.EMAIL_WORKER_INTERVAL_MS)||15000));
   emailWorkerTimer=setInterval(()=>runEmailWorker().catch(err=>console.error(JSON.stringify({type:'email_worker_error',error:safeOperationalError(err)}))),interval);

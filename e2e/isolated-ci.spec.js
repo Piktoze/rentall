@@ -74,6 +74,16 @@ for(const language of ['lt','en','es','de','ru']){
   test(`mobile navigation and public pages support ${language}`,async({page})=>{
     await page.setViewportSize({width:390,height:844});
     await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
+    let releaseCatalog;
+    if(language==='lt'){
+      const loading=new Promise(resolve=>{releaseCatalog=resolve});
+      await page.route('**/api/listings',async route=>{
+        await loading;
+        const response=await route.fetch();
+        const payload=await response.json();
+        await route.fulfill({response,json:{...payload,listings:[...payload.listings,...payload.listings]}});
+      });
+    }
     await page.goto('/');
     await page.locator('#lang').selectOption(language);
     await expect(page.locator('html')).toHaveAttribute('lang',language);
@@ -82,7 +92,10 @@ for(const language of ['lt','en','es','de','ru']){
     await page.locator('#citySelect').selectOption('Klaipėda');
     await page.locator('#keywordSearch').fill('drill');
     await page.locator('#searchForm button[type="submit"]').click();
-    await page.locator('[data-detail-id="ci-drill-discovery"]').first().click({timeout:8000});
+    releaseCatalog?.();
+    const listing=page.locator('[data-detail-id="ci-drill-discovery"]');
+    await expect(listing).toHaveCount(1);
+    await listing.click({timeout:8000});
     await expect(page.locator('#listingDetailModal')).toBeVisible();
     await page.locator('#detailAvailabilityBtn').click({timeout:8000});
     await expect(page.locator('#availabilityModal')).toBeVisible();
