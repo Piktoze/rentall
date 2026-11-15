@@ -15,7 +15,7 @@ const charge={id:'ch_fixture',payment_intent:'pi_fixture',livemode:false,status:
   currency:'eur',amount:10000,amount_captured:10000,amount_refunded:0,
   paid:true,captured:true,refunded:false,disputed:false};
 const empty={object:'list',has_more:false,data:[]};
-const evidence={intent,charge,refunds:empty,disputes:empty,transfers:empty};
+const evidence={intent,charge,refunds:empty,disputes:empty,transfers:empty,platformTransfers:empty};
 
 test('authoritative TEST evidence confirms EUR 100 / 15 / 85 only without refund or dispute',()=>{
   assert.deepEqual(verifySctTestPaymentEvidence(binding,evidence),{
@@ -44,7 +44,7 @@ test('refunds, disputes and preexisting transfers hold the payment',()=>{
   ])assert.ok(verifySctTestPaymentEvidence(binding,{...evidence,...patch}).blocked);
 });
 test('incomplete or paginated provider data cannot certify safe payment',()=>{
-  for(const key of ['refunds','disputes','transfers']){
+  for(const key of ['refunds','disputes','transfers','platformTransfers']){
     assert.equal(verifySctTestPaymentEvidence(binding,{
       ...evidence,[key]:{...empty,has_more:true}}).blocked,'provider_evidence_incomplete');
     assert.equal(verifySctTestPaymentEvidence(binding,{
@@ -62,10 +62,33 @@ test('injected Stripe TEST client reads platform data and returns verified resul
   };
   const result=await reconcileIsolatedSctTestPayment({stripe,stripeMode:'test',binding});
   assert.equal(result.ok,true);
-  assert.equal(calls.length,5);
+  assert.equal(calls.length,6);
+  assert.deepEqual(calls[5],['transfers',{limit:100}]);
   assert.deepEqual(calls[0],['pi','pi_fixture']);
   assert.deepEqual(calls[1],['charge','ch_fixture']);
   for(const call of calls)assert.equal(call.some(arg=>arg?.stripeAccount),false);
+});
+test('off-group Stripe transfer funded by same charge blocks payment and supplier readiness',()=>{
+  const transfers=[
+    {id:'tr_wrong_group',source_transaction:'ch_fixture',transfer_group:null},
+    {id:'tr_booking_meta',source_transaction:null,transfer_group:null,
+      metadata:{bookingId:binding.id}},
+    {id:'tr_intent_meta',source_transaction:null,transfer_group:null,
+      metadata:{paymentIntentId:intent.id}},
+  ];
+  for(const transfer of transfers)assert.equal(verifySctTestPaymentEvidence(binding,{
+    ...evidence,platformTransfers:{...empty,data:[transfer]},
+  }).blocked,'existing_ungrouped_transfer_requires_review');
+});
+test('unrelated complete platform transfer history passes, partial history fails closed',()=>{
+  assert.equal(verifySctTestPaymentEvidence(binding,{
+    ...evidence,platformTransfers:{...empty,data:[
+      {id:'tr_other',source_transaction:'ch_other',transfer_group:'RB-other',metadata:{}},
+    ]},
+  }).ok,true);
+  assert.equal(verifySctTestPaymentEvidence(binding,{
+    ...evidence,platformTransfers:{...empty,has_more:true},
+  }).blocked,'provider_evidence_incomplete');
 });
 test('Stripe timeout and wrong mode cannot mark a booking paid',async()=>{
   const stripe={
