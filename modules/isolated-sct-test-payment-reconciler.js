@@ -11,9 +11,10 @@ export function verifySctTestPaymentEvidence(binding,evidence){
      !Number.isSafeInteger(binding.amountCents)||binding.amountCents<50||
      !Number.isSafeInteger(binding.feeCents)||binding.feeCents<0||
      binding.feeCents>=binding.amountCents)return {blocked:'invalid_booking_binding'};
-  const {intent,charge,refunds,disputes,transfers}=evidence||{};
+  const {intent,charge,refunds,disputes,transfers,platformTransfers}=evidence||{};
   if(!intent||!charge||!completeList(refunds)||!completeList(disputes)||
-     !completeList(transfers))return {blocked:'provider_evidence_incomplete'};
+     !completeList(transfers)||!completeList(platformTransfers))
+    return {blocked:'provider_evidence_incomplete'};
   if(intent.livemode!==false||charge.livemode!==false||
      intent.id!==binding.paymentIntentId||intent.status!=='succeeded'||
      intent.currency!=='eur'||intent.amount!==binding.amountCents||
@@ -40,6 +41,18 @@ export function verifySctTestPaymentEvidence(binding,evidence){
   // Even a transfer to another account or an external manual transfer must
   // be reviewed before starting the rental or creating another transfer.
   if(transfers.data.length!==0)return {blocked:'existing_transfer_requires_review'};
+  // A Stripe Transfer can be created with source_transaction and WITHOUT
+  // transfer_group. The group-only list cannot prove the charge was unused.
+  // Only an EXHAUSTIVE account-wide list (has_more:false) is accepted.
+  // For unrelated transfers keep the original accounting data intact; inspect
+  // charge, group and booking metadata to detect transfers outside the group.
+  const sourceUsed=platformTransfers.data.some(t=>{
+    const source=objectId(t?.source_transaction);
+    return source===charge.id || t?.transfer_group===binding.id ||
+      t?.metadata?.bookingId===binding.id ||
+      t?.metadata?.paymentIntentId===intent.id;
+  });
+  if(sourceUsed)return {blocked:'existing_ungrouped_transfer_requires_review'};
   return {ok:true,bookingId:binding.id,paymentIntentId:intent.id,
     chargeId:charge.id,amountCents:binding.amountCents,
     feeCents:binding.feeCents,supplierCents:binding.amountCents-binding.feeCents};
@@ -59,12 +72,15 @@ export async function reconcileIsolatedSctTestPayment({stripe,stripeMode,binding
     const chargeId=objectId(intent?.latest_charge);
     if(!id(chargeId,'ch_'))return {blocked:'provider_charge_missing'};
     const charge=await stripe.charges.retrieve(chargeId);
-    const [refunds,disputes,transfers]=await Promise.all([
+    const [refunds,disputes,transfers,platformTransfers]=await Promise.all([
       stripe.refunds.list({charge:chargeId,limit:100}),
       stripe.disputes.list({charge:chargeId,limit:100}),
       stripe.transfers.list({transfer_group:binding.id,limit:100}),
+      stripe.transfers.list({limit:100}),
     ]);
-    return verifySctTestPaymentEvidence(binding,{intent,charge,refunds,disputes,transfers});
+    return verifySctTestPaymentEvidence(binding,{
+      intent,charge,refunds,disputes,transfers,platformTransfers,
+    });
   }catch{
     return {blocked:'provider_reconciliation_unavailable'};
   }
