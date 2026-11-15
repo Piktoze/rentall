@@ -7,12 +7,15 @@ import {
 } from './sct-booking-binding.js';
 import {planIsolatedSctPaymentIntent} from './isolated-sct-platform-payment.js';
 import {attachSctTestPaymentIntentToBooking} from './sct-test-payment-booking-attachment.js';
+import {preflightIsolatedSctTestCheckout} from './isolated-sct-test-checkout-preflight.js';
 
 export async function initiateIsolatedSctTestPayment({db,booking,adapter}={}) {
   const plan=planIsolatedSctPaymentIntent(booking);
   if(plan.blocked)return plan;
   if(typeof adapter?.createPlatformPayment!=='function')
     return {blocked:'test_provider_adapter_required'};
+  const preflight=preflightIsolatedSctTestCheckout(db,booking);
+  if(preflight.blocked)return preflight;
   // Claim the booking in SQLite before the first Stripe request. One successful
   // claim authorizes one network attempt; duplicate callers MUST NOT retry.
   const claimed=reserveSctBookingBinding(db,booking);
