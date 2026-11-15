@@ -108,4 +108,7 @@ test('Stripe LIVE key or mismatched key is rejected before any write',()=>{
     stripeSecretKey:'sk_test_fixture0123456789'}).blocked,'trusted_platform_test_stripe_client_required');
   assert.equal(makeIsolatedSctTestRefundAdapter({stripe,stripeMode:'live',
     stripeSecretKey:'sk_test_fixture0123456789'}).blocked,'trusted_platform_test_stripe_client_required');
+  const noInspectableKey={refunds:stripe.refunds};
+  assert.equal(makeIsolatedSctTestRefundAdapter({stripe:noInspectableKey,stripeMode:'test',
+    stripeSecretKey:'sk_test_fixture0123456789'}).blocked,'trusted_platform_test_stripe_client_required');
 });
