@@ -72,7 +72,6 @@ test('refunded, unreturned or altered canonical booking never invokes Stripe',as
     "UPDATE rental_bookings SET stripe_refund_id='re_fixture'",
     "UPDATE rental_bookings SET supplier_amount=86",
     "UPDATE rental_bookings SET payout_status='transferred'",
-    "UPDATE sct_payment_settlements SET charge_id='ch_other'",
   ]){
     const x=fixture();
     try{
@@ -81,6 +80,14 @@ test('refunded, unreturned or altered canonical booking never invokes Stripe',as
       assert.equal(x.reads(),0);
     }finally{x.db.close()}
   }
+});
+test('tampered local Charge identity is rejected against fresh Stripe proof',async()=>{
+  const x=fixture();
+  try{
+    x.db.exec("UPDATE sct_payment_settlements SET charge_id='ch_other'");
+    assert.equal((await x.inspect()).blocked,'stripe_proof_settlement_mismatch');
+    assert.equal(x.reads(),1);
+  }finally{x.db.close()}
 });
 test('any refund, transfer or dispute command blocks readiness before Stripe',async()=>{
   for(const table of ['sct_test_refund_commands','supplier_transfer_commands',
