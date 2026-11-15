@@ -35,9 +35,14 @@ export function inspectIsolatedSctRecipientAccount(account,{
   const requirements=account?.requirements;
   // Accounts v2 requirements can remain pending after onboarding and
   // change over time. Treat any unknown/restricted state as non-clear.
-  if(!requirements || requirements?.disabled_reason ||
-     (Array.isArray(requirements?.currently_due)&&requirements.currently_due.length>0)||
-     (Array.isArray(requirements?.past_due)&&requirements.past_due.length>0))
+  const hasLegacyArrays=Array.isArray(requirements?.currently_due)&&
+    Array.isArray(requirements?.past_due);
+  const hasV2Entries=Array.isArray(requirements?.entries);
+  if(!requirements || (!hasLegacyArrays&&!hasV2Entries) ||
+     requirements.disabled_reason ||
+     (hasLegacyArrays&&
+       (requirements.currently_due.length>0||requirements.past_due.length>0))||
+     (hasV2Entries&&requirements.entries.length>0))
     return blocked('recipient_requirements_unresolved');
   return Object.freeze({
     status:'test_recipient_transfer_capability_verified',
