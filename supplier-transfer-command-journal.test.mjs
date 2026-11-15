@@ -54,7 +54,7 @@ test('one immutable 85 EUR transfer command per booking', () => {
     assert.equal(db.prepare('SELECT count(*) AS n FROM supplier_transfer_commands').get().n,1);
     assert.equal(db.prepare('SELECT amount_cents AS n FROM supplier_transfer_commands').get().n,8500);
     assert.equal(reserveSupplierTransferCommand(db,{...plan,transfer:{...plan.transfer,amount:8501}}).blocked,
-      'transfer_command_conflict');
+      'canonical_return_or_payment_not_releasable');
   } finally {db.close();}
 });
 test('network uncertainty cannot create a second transfer command',()=>{
