@@ -39,6 +39,46 @@ export function reserveSupplierTransferCommand(db, plan) {
     const refundTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_test_refund_commands'").get();
     if (refundTable && db.prepare('SELECT 1 FROM sct_test_refund_commands WHERE booking_id=? LIMIT 1').get(t.transfer_group))
       return { blocked: 'sct_refund_command_requires_review' };
+    // Re-read canonical TEST payment and confirmed return inside the same
+    // IMMEDIATE transaction that reserves the one-shot transfer command.
+    const bookingTable=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='rental_bookings'").get();
+    const bindingTable=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_booking_bindings'").get();
+    const paymentTable=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_payment_settlements'").get();
+    if(!bookingTable||!bindingTable||!paymentTable)
+      return {blocked:'canonical_transfer_evidence_unavailable'};
+    const booking=db.prepare(`SELECT status,returned_at,payment_status,
+      stripe_payment_intent_id,stripe_refund_id,refund_status,payout_status,order_value,
+      platform_fee_amount,supplier_amount FROM rental_bookings WHERE booking_id=?`)
+      .get(t.transfer_group);
+    const binding=db.prepare(`SELECT payment_intent_id,destination,
+      amount_cents,fee_cents,stripe_mode FROM sct_booking_bindings WHERE booking_id=?`)
+      .get(t.transfer_group);
+    const settled=db.prepare(`SELECT payment_intent_id,charge_id,amount_cents,
+      fee_cents,supplier_cents FROM sct_payment_settlements WHERE booking_id=?`)
+      .get(t.transfer_group);
+    if(!booking||!binding||!settled||booking.status!=='returned'||
+       !booking.returned_at||!Number.isFinite(Date.parse(booking.returned_at))||
+       booking.payment_status!=='paid'||booking.stripe_refund_id!=null||
+       (booking.refund_status&&!['none','not_required'].includes(booking.refund_status))||
+       booking.payout_status!=='not_ready'||
+       booking.stripe_payment_intent_id!==t.metadata.paymentIntentId||
+       binding.stripe_mode!=='test'||binding.payment_intent_id!==t.metadata.paymentIntentId||
+       settled.payment_intent_id!==t.metadata.paymentIntentId||
+       settled.charge_id!==t.source_transaction||
+       binding.destination!==t.destination||
+       settled.amount_cents!==binding.amount_cents||
+       settled.fee_cents!==binding.fee_cents||
+       settled.supplier_cents!==t.amount||
+       binding.amount_cents-binding.fee_cents!==t.amount||
+       Math.round(Number(booking.order_value||0)*100)!==binding.amount_cents||
+       Math.round(Number(booking.platform_fee_amount||0)*100)!==binding.fee_cents||
+       Math.round(Number(booking.supplier_amount||0)*100)!==t.amount)
+      return {blocked:'canonical_return_or_payment_not_releasable'};
+    for(const table of ['stripe_rental_disputes','rental_disputes']){
+      if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)&&
+         db.prepare(`SELECT 1 FROM ${table} WHERE booking_id=? LIMIT 1`).get(t.transfer_group))
+        return {blocked:'financial_dispute_requires_review'};
+    }
     const existing = db.prepare('SELECT * FROM supplier_transfer_commands WHERE booking_id=?')
       .get(t.transfer_group);
     const payload = JSON.stringify(t);
