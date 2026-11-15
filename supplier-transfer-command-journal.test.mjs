@@ -87,3 +87,28 @@ test('the same Stripe transfer ID cannot attach to two bookings',()=>{
     assert.equal(recordReconciledSupplierTransfer(db,second.id,'tr_fixture').blocked,'transfer_id_already_used');
   } finally {db.close();}
 });
+
+test('SCT refund command blocks later supplier transfer, even when refund result is unknown',()=>{
+  for(const status of ['reserved','reconcile_required','refunded']){
+    const db=setup();
+    try{
+      db.exec(`CREATE TABLE sct_test_refund_commands(
+        booking_id TEXT PRIMARY KEY,status TEXT NOT NULL);
+        INSERT INTO sct_test_refund_commands VALUES ('RB-isolated-journal','${status}');`);
+      assert.equal(reserveSupplierTransferCommand(db,plan).blocked,
+        'sct_refund_command_requires_review');
+      assert.equal(db.prepare('SELECT COUNT(*) AS n FROM supplier_transfer_commands').get().n,0);
+    }finally{db.close()}
+  }
+});
+test('refund command appearing after transfer reservation blocks transfer replay',()=>{
+  const db=setup();
+  try{
+    assert.equal(reserveSupplierTransferCommand(db,plan).status,'reserved');
+    db.exec(`CREATE TABLE sct_test_refund_commands(booking_id TEXT PRIMARY KEY);
+      INSERT INTO sct_test_refund_commands VALUES ('RB-isolated-journal');`);
+    assert.equal(reserveSupplierTransferCommand(db,plan).blocked,
+      'sct_refund_command_requires_review');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM supplier_transfer_commands').get().n,1);
+  }finally{db.close()}
+});
