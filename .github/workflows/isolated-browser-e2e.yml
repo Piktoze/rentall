@@ -10,6 +10,7 @@ on:
       - "app.js"
       - "config.js"
       - "modules/**"
+      - "release/rc-gate.js"
       - "privacy-requests-http-v255.test.mjs"
       - "sct-payment-reconciliation-inbox.test.mjs"
       - "isolated-sct-test-payment-reconciler.test.mjs"
