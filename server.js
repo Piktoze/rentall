@@ -198,6 +198,16 @@ installSctPaymentReconciliationInbox(db);
 
 const app = express();
 
+// Canonical hostname for the public catalog; preserve path and query.
+// Exact match prevents redirects based on arbitrary Host/forwarded headers.
+app.use((req,res,next)=>{
+  const host=String(req.get('host')||'').toLowerCase().replace(/:\d+$/,'');
+  if(process.env.RENTINORBIT_CATALOG_ONLY==='true' && host==='www.rentinorbit.com'){
+    return res.redirect(308,'https://rentinorbit.com'+req.originalUrl);
+  }
+  next();
+});
+
 // Validate an address before queueing transactional email. This helper is
 // intentionally local and does not contact any email provider.
 function isEmail(value){
