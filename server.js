@@ -1229,8 +1229,52 @@ function renderHelpPage(lang){
   const c=HELP_CENTER_COPY[lang]||HELP_CENTER_COPY.en;
   return `<article class="legal-page help-center"><div class="eyebrow">${escapeEmailHtml(c.eyebrow)}</div><h1>${escapeEmailHtml(c.pageTitle)}</h1><p class="legal-lead">${escapeEmailHtml(c.intro)}</p><nav class="help-jump" aria-label="Help topics"><a href="#renters">${escapeEmailHtml(c.renterTitle)}</a><a href="#suppliers">${escapeEmailHtml(c.supplierTitle)}</a><a href="#safety">${escapeEmailHtml(c.safetyTitle)}</a></nav><div id="renters">${renderFaqGroup(c.renterTitle,c.renter)}</div><div id="suppliers">${renderFaqGroup(c.supplierTitle,c.supplier)}</div><div id="safety">${renderFaqGroup(c.safetyTitle,c.safety)}</div><section class="help-contact"><h2>${escapeEmailHtml(c.contactTitle)}</h2><p>${escapeEmailHtml(c.contactText)}</p></section><p><a class="secondary" href="/">← RentInOrbit</a></p></article>`;
 }
+
+function catalogDocument(key){
+  const confirmed=process.env.LEGAL_CATALOG_OPERATOR_CONFIRMED==='true';
+  const values=['LEGAL_OPERATOR_NAME','LEGAL_IV_CERTIFICATE','LEGAL_OPERATOR_ADDRESS'].map(k=>confirmed?String(process.env[k]||'').trim():'');
+  const identity=values.every(Boolean)?values.join('; '):'Operatoriaus rekvizitai dar nepatvirtinti. Viešas katalogo paleidimas dar nebaigtas.';
+  const contact='Kontaktas ir privatumo prašymai: info@rentinorbit.com.';
+  const mode='Šiuo metu veikia tik skelbimų katalogas. Registracija, prisijungimas, skelbimų pateikimas, vidinės žinutės, rezervacijos, sutartys ir mokėjimai išjungti.';
+  const pages={
+    terms:{title:'Katalogo naudojimosi taisyklės',intro:mode,sections:[
+      ['Operatorius',[identity,contact]],
+      ['Katalogo paskirtis',['Galima peržiūrėti viešus skelbimus ir naudotis paieška. Skelbimo peržiūra nesukuria rezervacijos ar nuomos sutarties. Skelbimo kaina yra informacinė; katalogas nepatvirtina daikto prieinamumo ir nepriima užsakymų.']],
+      ['Turinys ir pranešimai',['Draudžiama neteisėtai naudoti svetainę, bandyti pasiekti neviešus duomenis ar trikdyti jos veikimą. Apie klaidinantį ar neteisėtą turinį praneškite info@rentinorbit.com, nurodydami puslapio adresą ir problemą.']],
+      ['Vėlesni etapai',['Komisiniai, užstatai, mokėjimai, grąžinimai ir elektroninės nuomos sutartys katalogo režime netaikomi. Atitinkamos sąlygos bus paskelbtos prieš įjungiant šias funkcijas. Privalomos teisės aktuose nustatytos teisės neribojamos.']]
+    ]},
+    privacy:{title:'Katalogo privatumo politika',intro:'Politika taikoma katalogo naršymui ir bendravimui el. paštu. '+mode,sections:[
+      ['Duomenų valdytojas',[identity,contact]],
+      ['Duomenys, tikslai ir pagrindai',['Svetainės pateikimui ir saugumui infrastruktūra gauna IP adresą, užklausos laiką, adresą ir naršyklės techninius duomenis. Programos užklausų žurnaluose fiksuojami užklausos identifikatorius, metodas, kelias, atsakymo kodas ir trukmė. Pagrindas – teisėtas interesas teikti saugią ir veikiančią svetainę (BDAR 6 straipsnio 1 dalies f punktas).',
+      'Rašant el. paštu tvarkomas siuntėjo adresas, vardas, laiško turinys ir priedai, kad galėtume atsakyti. Pagrindas – teisėtas interesas spręsti užklausas arba, kai taikoma, veiksmai jūsų prašymu prieš sutartį. Teisinės pareigos vykdomos pagal BDAR 6 straipsnio 1 dalies c punktą. Nesiųskite nereikalingų jautrių duomenų. Katalogas naujų rezervacijų ir mokėjimų nerenka.']],
+      ['Gavėjai ir perdavimai',['Talpinimas – Railway (dabartinis regionas JAV, iad); pašto dėžutė – Zoho ES paskyra; domenas ir DNS – Porkbun. Resend siuntimo konfigūracija išsaugota, tačiau kataloge rezervavimo ir mokėjimo veiksmai neaktyvūs.',
+      'Leaflet ištekliai gaunami iš unpkg.com; naudojant žemėlapį gali būti kreipiamasi į OpenStreetMap. Išorinės užklausos atskleidžia IP adresą ir techninius duomenis. Vien ES pašto paskyra nereiškia, kad visa svetainės infrastruktūra yra ES.',
+      'Prieš viešą paleidimą dar tikslinamos duomenų tvarkymo sutartys ir perdavimo už EEE ribų priemonės.']],
+      ['Saugojimas',['Susirašinėjimas saugomas tiek, kiek reikia užklausai išspręsti ir taikomiems teisiniams reikalavimams vykdyti. Tikslūs susirašinėjimo, techninių žurnalų ir atsarginių kopijų terminai bei ištrynimo tvarka dar tikslinami prieš viešą paleidimą. Automatinis ištrynimas šiuo tekstu nežadamas.']],
+      ['Jūsų teisės',['Galite prašyti susipažinti su duomenimis, juos ištaisyti, ištrinti, apriboti tvarkymą, nesutikti su teisėtu interesu grindžiamu tvarkymu ir, kai taikoma, perkelti duomenis. Rašykite info@rentinorbit.com. Tapatybė tikrinama tik būtina apimtimi.',
+      'Į prašymus atsakoma nepagrįstai nedelsiant, paprastai per vieną mėnesį; teisės aktuose leidžiamas pratęsimas paaiškinamas pareiškėjui. Galite skųstis Valstybinei duomenų apsaugos inspekcijai (vdai.lrv.lt). Duomenų pateikimas el. paštu neprivalomas, bet be kontakto ar klausimo aprašymo gali nepavykti atsakyti.']]
+    ]},
+    cookies:{title:'Katalogo slapukai ir vietinė saugykla',intro:mode,sections:[
+      ['Naršyklės saugykla',['Sąsaja naudoja vietinę saugyklą kalbai, paieškai ir rodymo pasirinkimams. Ankstesnio apsilankymo duomenys gali likti naršyklėje, kol juos išvalysite.']],
+      ['Prisijungimas',['Nauji prisijungimai blokuojami. Pilnos sistemos rentinorbit_session slapukas skirtas prisijungimui ir turi iki 14 dienų galiojimą; ankstesnis slapukas gali likti naršyklėje. Naujos rezervacijos ir mokėjimai nepradedami.']],
+      ['Išoriniai ištekliai',['Naudojami Leaflet ištekliai iš unpkg.com; žemėlapis gali kreiptis į OpenStreetMap. Katalogo pagrindinio HTML Google Fonts nuorodos pašalintos. Reklaminės analitikos įjungimas nėra šio katalogo paleidimo dalis.']],
+      ['Valdymas',['Svetainės duomenis galima išvalyti naršyklės nustatymuose; tuomet kalbą ir kitus pasirinkimus reikės nustatyti iš naujo.']]
+    ]},
+    fees:{title:'Katalogo kainos ir mokesčiai',intro:mode,sections:[
+      ['Katalogo peržiūra',['RentInOrbit už katalogo peržiūrą mokesčio nerenka. Nuomos, užstato ir platformos komisinio apmokėti negalima.']],
+      ['Skelbimų kainos',['Skelbimų kainos yra informacinės. Skelbimo peržiūra nesukuria užsakymo ar prievolės mokėti. 15 procentų komisinis ir atšaukimo bei pinigų grąžinimo taisyklės šiame etape netaikomi.']],
+      ['Kontaktas',[contact]]
+    ]},
+    help:{title:'Katalogo pagalba',intro:mode,sections:[
+      ['Kaip naudotis?',['Peržiūrėkite skelbimus ir naudokite paieškos filtrus. Tuščias sąrašas reiškia, kad šiuo metu nėra viešų patvirtintų skelbimų arba jie neatitinka filtrų.']],
+      ['Kaip susisiekti?',[contact,'Norėdami pasiūlyti daiktą būsimam katalogui ar pranešti apie problemą, parašykite el. paštu. Laiškas savaime nereiškia skelbimo paskelbimo ar nuomos patvirtinimo.']]
+    ]}
+  };
+  return pages[key]||pages.terms;
+}
+
 function renderPolicyPage(lang,key){
-  const page=getPolicyPage(lang,key);
+  const page=catalogOnly?catalogDocument(key):getPolicyPage(lang,key);
   const sections=(page.sections||[]).map(([title,paras])=>`<section class="policy-section"><h2>${escapeEmailHtml(title)}</h2>${paras.map(p=>`<p>${escapeEmailHtml(p)}</p>`).join('')}</section>`).join('');
   const stagingSource={
     lt:['Staging versija','Šis tekstas yra informacinis produkto juodraštis. Prieš viešą komercinį paleidimą jį turi peržiūrėti teisės ir apskaitos specialistai.'],
@@ -1239,17 +1283,19 @@ function renderPolicyPage(lang,key){
     de:['Staging-Entwurf','Dieser Text ist ein Informationsentwurf und muss vor dem kommerziellen Start rechtlich und steuerlich geprüft werden.'],
     ru:['Черновик staging','Это информационный черновик, который до коммерческого запуска должен пройти юридическую и бухгалтерскую проверку.']
   }[lang]||['Staging draft','Professional legal review required before public launch.'];
-  const stageNote=process.env.RENTINORBIT_STAGING==='true'?`<aside class="staging-note"><b>${escapeEmailHtml(stagingSource[0])}</b><p>${escapeEmailHtml(stagingSource[1])}</p></aside>`:'';
+  const stageNote=catalogOnly?`<aside class="staging-note"><b>Rengiama viešam katalogui</b><p>Laukiama operatoriaus rekvizitų, saugojimo terminų ir duomenų tvarkymo sąlygų patvirtinimo. Kontaktas: info@rentinorbit.com.</p></aside>`:process.env.RENTINORBIT_STAGING==='true'?`<aside class="staging-note"><b>${escapeEmailHtml(stagingSource[0])}</b><p>${escapeEmailHtml(stagingSource[1])}</p></aside>`:'';
   return `<article class="legal-page policy-page"><div class="eyebrow">RENTINORBIT</div><h1>${escapeEmailHtml(page.title)}</h1><p class="legal-lead">${escapeEmailHtml(page.intro)}</p>${sections}${stageNote}<p><a class="secondary" href="/">← RentInOrbit</a></p></article>`;
 }
 
 app.get('/help',(req,res)=>{
+  if(catalogOnly){req.query.lang='lt';const page=catalogDocument('help');return res.type('html').send(pageShell({req,title:page.title+' | RentInOrbit',description:page.intro,body:renderPolicyPage('lt','help'),canonicalPath:'/help'}));}
   const lang=pageLanguage(req),c=HELP_CENTER_COPY[lang]||HELP_CENTER_COPY.en;
   res.type('html').send(pageShell({req,title:`${c.pageTitle} | RentInOrbit`,description:c.intro,body:renderHelpPage(lang),canonicalPath:'/help'}));
 });
 for(const [pathName,key] of [['/terms','terms'],['/privacy','privacy'],['/cookies','cookies'],['/fees','fees']]){
   app.get(pathName,(req,res)=>{
-    const lang=pageLanguage(req),page=getPolicyPage(lang,key);
+    if(catalogOnly)req.query.lang='lt';
+    const lang=pageLanguage(req),page=catalogOnly?catalogDocument(key):getPolicyPage(lang,key);
     res.type('html').send(pageShell({req,title:`${page.title} | RentInOrbit`,description:page.intro,body:renderPolicyPage(lang,key),canonicalPath:pathName}));
   });
 }
@@ -4228,6 +4274,7 @@ const publicBrowserModules=new Set(
 );
 if(catalogOnly){
   const catalogHtml=fs.readFileSync(path.join(__dirname,'index.html'),'utf8')
+    .replace(/<link\b[^>]*https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/g,'')
     .replace('<body class="theme-aurora">',`<body class="theme-aurora catalog-only"><p id="catalog-only-notice" role="status" lang="lt">${catalogNotice}</p>`);
   app.get(['/','/index.html'],(req,res)=>{
     res.set('Cache-Control','no-store').type('html').send(catalogHtml);
