@@ -82,8 +82,12 @@ Both are mandatory in the release gate and staging CI.
 
 Before calling the financial blocker resolved, execute independent fresh A/B
 orders against real Stripe TEST in disposable storage, record provider IDs and
-signed webhook evidence, and verify the actual connected balance. Test actual
-Resend delivery separately. Railway MCP redacts key values, so this work has no
-usable TEST key in its disposable execution environment. Do not paste keys into
-chat or log them. Existing Stripe TEST orders are not a substitute for these
-new SCT runtime tests. LIVE gates remain in place.
+signed webhook evidence, and verify the actual connected balance. The safe
+Railway build execution path is implemented, so a user-supplied chat API key is
+not needed. Its first real preflight is blocked by Stripe-hosted TEST recipient
+terms acceptance, not by an unverified assumption about provider readiness.
+See `approved-model-a-costs.md` for the real recipient and remaining requirement
+fields. Recovery delivery to the authorized Gmail inbox has been verified:
+SPF/DKIM/DMARC pass; link HTTP 200, consumption 200, replay 400, independent memory
+storage. No private URL or token is recorded. Existing Stripe TEST orders are
+not a substitute for new SCT A/B evidence. LIVE gates remain in place.

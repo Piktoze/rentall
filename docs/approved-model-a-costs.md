@@ -44,12 +44,34 @@ are no observed LIVE provider-fee charges here to establish an effective tariff.
 
 ## Outstanding real execution evidence
 
-No successful new real Stripe SCT A/B objects are asserted by this document.
-The secure CLI login expired without authorization; no API key is requested
-in chat. TEST recipient list in sandbox `acct_1UT4JCLM72MR015z` returned no
-recipient-configured accounts. An eligible synthetic TEST recipient and real
-TEST runtime execution are still needed. No historical account/order operation
-may substitute for that evidence.
+Railway's one-shot build runner safely used the existing TEST key without
+revealing it. The account API and balance response verified TEST context on
+`acct_1UT4JCLM72MR015z`. A fresh synthetic recipient was created:
+`acct_1UdAsYLM72k4RDTw` (run `1e87e1d6f359fbcdf91308b04bd67237`).
+Official Stripe TEST identity/address/DOB/bank fixtures prepared the recipient;
+no operator identity or bank details were used. No bank payout was executed.
+
+Stripe reports exactly two remaining requirements, both awaiting `user`:
+`identity.attestations.terms_of_service.account.date` and
+`identity.attestations.terms_of_service.account.ip`. Its transfer capability is
+`restricted`. Attempted API acceptance was rejected with
+`tos_acceptance_on_behalf_not_allowed` (request `req_v2qI8pIl8OVh0xPFd`), because
+Stripe collects this account's requirements. No terms were accepted by the agent;
+requirement collection responsibility and financial guards were not changed.
+
+A real Stripe-hosted TEST onboarding form was prepared for the user. Its private
+link was encrypted in build evidence and is not recorded here. User completion
+of Stripe's hosted terms step is required before real payment A/B scenarios can
+start. No new PaymentIntent, Charge, Refund or Transfer is asserted as completed
+by this stage. Do not substitute historical orders for the missing A/B evidence.
+The one-shot execution flag is cleared after this attempt to prevent repeat runs.
+
+Separately, delayed city-center radius initialization could hide a real API
+listing after changing Vilnius to Klaipėda. Initial browsing no longer silently
+applies the fallback radius, and a city fallback follows the selected city while
+preserving explicitly shared device location. Local Chromium: 21/21 passed;
+CI run 44340721992 for commit 62ffe9e also succeeded. Privacy UI tests isolate
+the optional welcome tour; the separate first-run onboarding test remains.
 
 Real recovery email was generated for a synthetic user in an independent memory
 database on staging and delivered through Resend to the authorized Gmail inbox
