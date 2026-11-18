@@ -1,3 +1,6 @@
+import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
+import {createSctTestRuntime} from './modules/sct-test-runtime.js';
+import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
 import {assessLegacyDirectChargeOperation} from './modules/sct-legacy-direct-charge-guard.js';
 import {installSctPaymentReconciliationInbox,recordBoundSctPaymentReconciliationSignal} from './modules/sct-payment-reconciliation-inbox.js';
@@ -353,6 +356,8 @@ const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
+const sctRuntime=process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
+ ? createSctTestRuntime({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null;
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
@@ -558,6 +563,15 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
   return cancelBookingSingleFlight(bookingId,async()=>{
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
+  if(sctRuntime?.owned(bookingId)){
+    if(['unpaid','requires_payment_method'].includes(booking.paymentStatus)){
+      await sctRuntime.cancelUnpaid(bookingId);
+      return {booking:getRentalBookingById(bookingId),refundAmount:0};
+    }
+    const cents=Math.round((forceFullRefund?Number(booking.orderValue):calculateRefundAmount(booking,booking.cancellationPolicySnapshot,new Date()))*100);
+    await sctRuntime.refund(bookingId,cents);
+    return {booking:getRentalBookingById(bookingId),refundAmount:cents/100};
+  }
   const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
   if(sctGuard.blocked){const e=new Error('SCT cancellation requires separate financial flow');e.code=sctGuard.blocked;throw e;}
   if(hasStripeRentalDisputeHold(db,bookingId)){
@@ -835,6 +849,13 @@ app.post('/api/stripe/webhook',
         case 'refund.failed': {
           const providerRefund=event.data.object;
           const bookingId=String(providerRefund?.metadata?.bookingId||'');
+          if(sctRuntime?.owned(bookingId)){
+            if(event.account||event.livemode!==false||providerRefund.livemode===true)throw new Error('SCT_TEST_PLATFORM_EVENT_REQUIRED');
+            // Retrieve provider truth, never trust a webhook's amount or status alone.
+            if(providerRefund.status==='succeeded')await sctRuntime.recover(bookingId,'refund');
+            else if(['failed','canceled'].includes(providerRefund.status))sctRuntime.setHold(bookingId,'Stripe refund requires manual review');
+            break;
+          }
           const booking=bookingId?getRentalBookingById(bookingId):null;
           if(!booking || !booking.stripeRefundId || !booking.stripePaymentIntentId) break;
           const accountBinding=validateDirectEventAccount(event.account,booking);
@@ -927,6 +948,11 @@ app.post('/api/stripe/webhook',
           // Fail closed and retain retry visibility rather than processing them as
           // legacy connected-account Direct Charges and falsely marking them paid.
           if(pi?.metadata?.paymentFlow==='separate_charges_and_transfers'){
+            if(sctRuntime?.owned(pi.metadata.bookingId)){
+              if(event.account!=null||event.livemode!==false||pi.livemode!==false)throw new Error('SCT platform TEST event required');
+              await sctRuntime.settle(pi.metadata.bookingId);
+              break;
+            }
             const inboxBooking=pi?.metadata?.bookingId?getRentalBookingById(pi.metadata.bookingId):null;
             const immutableBinding=pi?.metadata?.bookingId?getSctBookingBinding(db,pi.metadata.bookingId):null;
             const recorded=recordBoundSctPaymentReconciliationSignal(db,event,inboxBooking,immutableBinding);
@@ -1886,6 +1912,44 @@ app.get('/api/auth/me', (req,res)=>{
   res.json({user:sessionUser(req)});
 });
 
+const passwordRecovery=String(process.env.SESSION_SECRET||'').length>=32
+ ?createPasswordRecovery({db,enqueue:enqueueTransactionalEmail,origin:appUrl,secret:process.env.SESSION_SECRET,
+  eligible:user=>!runtimeConfig.deployment||!['admin@rentinorbit.test','demo@rentinorbit.test'].includes(user.email)}):null;
+app.post('/api/auth/forgot-password',simpleRateLimit({windowMs:900000,max:5,keyPrefix:'password-reset-request'}),(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(!passwordRecovery)return res.status(503).json({error:'Slaptažodžio atkūrimas šiuo metu nepasiekiamas.'});
+ try{passwordRecovery.request(req.body?.email);}catch{console.warn(JSON.stringify({type:'password_recovery_queue_failed'}));}
+ return res.status(202).json(RESET_REPLY);
+});
+app.post('/api/auth/reset-password',simpleRateLimit({windowMs:900000,max:10,keyPrefix:'password-reset-consume'}),(req,res)=>{
+ res.set('Cache-Control','no-store');
+ if(!passwordRecovery)return res.status(503).json({error:'Slaptažodžio atkūrimas šiuo metu nepasiekiamas.'});
+ if(!passwordRecovery.consume(req.body?.token,req.body?.password))return res.status(400).json({error:'Nuoroda nebegalioja arba slaptažodis netinkamas.'});
+ res.setHeader('Set-Cookie','rentinorbit_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+ return res.json({message:'Slaptažodis pakeistas. Prisijunkite iš naujo.'});
+});
+app.get('/password-reset',(req,res)=>{
+ if(catalogOnly)return res.status(403).send(catalogNotice);
+ res.set({'Cache-Control':'no-store','Referrer-Policy':'no-referrer',
+  'Content-Security-Policy':"default-src 'none'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});
+ res.type('html').send('<!doctype html><html lang="lt"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Slaptažodžio atkūrimas | RentInOrbit</title><main><h1>Slaptažodžio atkūrimas</h1><form><label>El. paštas <input id="resetEmail" type="email" autocomplete="email" maxlength="254"></label><label>Naujas slaptažodis <input id="resetPassword" type="password" autocomplete="new-password" minlength="8" maxlength="256"></label><button>Patvirtinti</button></form><p role="status" aria-live="polite"></p><a href="/">Grįžti ir prisijungti</a></main><script src="/password-reset.js" defer></script></html>');
+});
+app.post('/api/admin/sct-test/recipients',requireRole('admin'),async(req,res)=>{
+ if(!sctRuntime)return res.status(404).end();
+ try{res.json(await sctRuntime.registerRecipient(req.body?.email,req.body?.accountId,req.body?.entityType));}
+ catch(err){res.status(409).json({code:err.code||'SCT_TEST_PROVIDER_UNAVAILABLE'});}
+});
+app.post('/api/admin/sct-test/bookings/:id/:action',requireRole('admin'),async(req,res)=>{
+ if(!sctRuntime)return res.status(404).end();
+ try{
+  const {id,action}=req.params;
+  if(action==='hold')return res.json(sctRuntime.setHold(id,req.body?.reason));
+  if(action==='reconcile')return res.json(await sctRuntime.recover(id,req.body?.kind));
+  if(action==='settle')return res.json(await sctRuntime.settle(id));
+  if(action==='transfer')return res.json(await sctRuntime.transfer(id));
+  return res.status(404).end();
+ }catch(err){res.status(409).json({code:err.code||'SCT_TEST_RECONCILIATION_REQUIRED'});}
+});
 registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail);
 
 app.post('/api/auth/enable-supplier', requireRole('customer','supplier','admin'), (req,res)=>{
@@ -2013,6 +2077,10 @@ function renderTransactionalEmail(item){
       <p><a href="${escapeEmailHtml(new URL('/?privacy-requests=1',appUrl).toString())}">Atidaryti apsaugotą BDAR prašymų skydelį</a></p>
       <p>Nuoroda nėra prisijungimo ar prieigos suteikimo būdas – reikalinga administratoriaus paskyra.</p>
       <p>Neatsakinėkite į šį pranešimą pateikdami asmens duomenis.</p></body></html>`;
+  }
+  if(key==='password_reset'){
+    const mail=decodeResetMail(payload,process.env.SESSION_SECRET);
+    return '<!doctype html><html lang="lt"><h1>RentInOrbit – slaptažodžio atkūrimas</h1><p>Nuoroda galioja 30 minučių ir gali būti panaudota vieną kartą.</p><p><a href="'+escapeEmailHtml(mail.url)+'">Pakeisti slaptažodį</a></p><p>Jei atkūrimo neprašėte, šį laišką ignoruokite.</p></html>';
   }
   if(key==='supplier_booking_received') return renderSupplierBookingReceivedEmail(payload);
   if(key==='supplier_activation') return renderSupplierActivationEmail(payload);
@@ -2662,6 +2730,7 @@ app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,k
     const accountOwner=!!(paymentUser?.email&&String(paymentUser.email).toLowerCase()===String(booking.customerEmail||'').toLowerCase());
     const guestOwner=!paymentUser&&!!verifyBookingPaymentToken(bookingId,paymentToken);
     if(!accountOwner&&!guestOwner) return res.status(403).json({error:'Booking access denied'}); /* STAGING_PAYMENT_OWNER_ACCESS_V2 */
+    if(sctRuntime?.owned(bookingId))return res.json(await sctRuntime.createPayment(bookingId));
     const sctGuard=assessLegacyDirectChargeOperation(db,bookingId);
     if(sctGuard.blocked)return res.status(409).json({code:sctGuard.blocked,error:'SCT booking requires separate payment flow'});
     if(hasStripeRentalDisputeHold(db,bookingId))
@@ -3007,7 +3076,12 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       startDate,endDate,quantity:qty,deliveryCity,deliveryAddress,accommodationName
     });
     const bookingId = `RB-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    const result = createRentalBookingAtomic({
+    if(sctRuntime){
+      if(!authenticatedUser) return res.status(401).json({error:'SCT TEST requires an authenticated renter'});
+      if(authoritativePrice.securityDeposit!==0)return res.status(409).json({code:'SCT_TEST_DEPOSIT_REQUIRES_SEPARATE_FLOW'});
+      sctRuntime.newBookingRecipient(listingForBooking.ownerEmail);
+    }
+    const result = db.transaction(()=>{const created=createRentalBookingAtomic({
       bookingId,
       listingId,
       startDate,
@@ -3030,6 +3104,8 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       securityDepositAmount:authoritativePrice.securityDeposit,
       holdMinutes:Number(process.env.BOOKING_HOLD_MINUTES || 30)
     });
+    if(sctRuntime)sctRuntime.enrollNewBooking(bookingId,listingForBooking.ownerEmail);
+    return created;}).immediate();
     const agreement=createRentalAgreement({
       bookingId,
       termsVersion:'rentinorbit-rental-v3',
@@ -4278,7 +4354,7 @@ app.post('/api/uploads/image', simpleRateLimit({windowMs:60000,max:30,keyPrefix:
 // Serve only browser entry points and assets. The application directory also
 // contains backend code, test fixtures and deployment files.
 const publicRootFiles=new Set([
-  '/', '/index.html', '/app.js', '/service-worker.js', '/manifest.webmanifest',
+  '/', '/index.html', '/app.js', '/password-reset.js', '/service-worker.js', '/manifest.webmanifest',
   '/styles.css', '/light-premium-v161.css', '/brand-v193.css', '/icon-192.svg', '/icon-512.svg'
 ]);
 const publicBrowserModules=new Set(
@@ -4350,6 +4426,13 @@ const server=app.listen(port,runtimeConfig.host, () => {
   console.log(JSON.stringify({type:'startup',service:'rentinorbit',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,paymentProvider,email:config.email,ready:launchGate().ready}));
 });
 let emailWorkerTimer=null;
+let sctWorkerTimer=null;
+if(sctRuntime&&!catalogOnly){
+  const sweep=()=>sctRuntime.sweep().then(result=>console.log(JSON.stringify({type:'sct_test_sweep',...result})))
+    .catch(error=>console.warn(JSON.stringify({type:'sct_test_sweep_failed',error:safeOperationalError(error)})));
+  sctWorkerTimer=setInterval(sweep,30000);sctWorkerTimer.unref?.();
+  setTimeout(sweep,1500).unref?.();
+}
 let emailWorkerPromise=null;
 function runEmailWorker(){
   if(emailWorkerPromise)return emailWorkerPromise;
@@ -4370,6 +4453,7 @@ function gracefulShutdown(signal){
   if(shuttingDown)return;shuttingDown=true;
   console.log(JSON.stringify({type:'shutdown',signal,timestamp:new Date().toISOString()}));
   clearInterval(bookingExpiryTimer);
+  if(sctWorkerTimer)clearInterval(sctWorkerTimer);
   if(emailWorkerTimer)clearInterval(emailWorkerTimer);
   if(!server.listening){try{closeDatabase()}catch{}process.exit(process.exitCode||1);return}
   server.close(async err=>{

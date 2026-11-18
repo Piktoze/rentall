@@ -10,6 +10,9 @@ const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTIN
  DATABASE_URL:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:'',
  RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
 execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
+// New financial commands and password recovery run only against disposable databases.
+execFileSync(process.execPath,['--test','password-recovery.test.mjs','sct-test-runtime.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
+execFileSync(process.execPath,['password-recovery-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 
 // Guard all source-marked Lithuanian UI labels and booking completion accessibility.
 execFileSync(process.execPath,['localization-coverage-v203.test.mjs'],{stdio:'inherit'});

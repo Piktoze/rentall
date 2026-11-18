@@ -4448,8 +4448,13 @@ async function prepareStripePayment(bookingId,paymentToken){
       return;
     }
     await loadStripeJs();
-    if(!intent.stripeAccountId) throw new Error('Supplier Stripe account context is missing');
-    stripeClient=Stripe(config.stripePublishableKey,{stripeAccount:intent.stripeAccountId});
+    if(intent.paymentFlow==='separate_charges_and_transfers'){
+      if(intent.stripeAccountId)throw new Error('Platform payment must not use a connected account context');
+      stripeClient=Stripe(config.stripePublishableKey);
+    }else{
+      if(!intent.stripeAccountId) throw new Error('Supplier Stripe account context is missing');
+      stripeClient=Stripe(config.stripePublishableKey,{stripeAccount:intent.stripeAccountId});
+    }
     stripeElements=stripeClient.elements({clientSecret:intent.clientSecret});
 
     const container=document.getElementById('stripePaymentElement');
@@ -4460,7 +4465,7 @@ async function prepareStripePayment(bookingId,paymentToken){
     breakdown.innerHTML=`
       <div><span>Customer total</span><b>${money(intent.amount)}</b></div>
       <div><span>Platform fee</span><b>${money(intent.platformFee)}</b></div>
-      <div><span>Supplier share</span><b>${money(intent.supplierAmount)}</b></div>`;
+      <div><span>${intent.paymentFlow==='separate_charges_and_transfers'?'Nuomotojo dalis prieš Stripe mokesčius':'Supplier share'}</span><b>${money(intent.supplierShareBeforeStripeFees??intent.supplierAmount)}</b></div>`;
     panel.hidden=false;
     message.textContent=intent.preauthorization
       ? 'Patvirtinkite kortelę dabar. Nuomos mokestis bus tik rezervuotas; nuskaičiavimas įvyks automatiškai nuomotojui patvirtinus.'
@@ -6562,7 +6567,7 @@ function renderSupplierFinanceV95(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('v95Gross',money(gross));set('v95Completed',money(completed));set('v95InProgress',money(progress));set('v95Fees',money(fees));set('v95Net',money(net));
   set('v95FeeNote',authoritativeCount===rows.length && rows.length
-    ?'Using recorded payment splits'
+    ?'Recorded payment splits; Stripe fees may reduce the final supplier transfer'
     :`${authoritativeCount}/${rows.length} from payment records · remaining rows forecast at ${(SUPPLIER_FEE_RATE_V95*100).toFixed(0)}%`);
   set('v95LedgerSummary',`${rows.length} booking${rows.length===1?'':'s'}`);
   body.innerHTML=rows.length?rows.slice().sort((x,y)=>String(y.booking.startDate||'').localeCompare(String(x.booking.startDate||''))).slice(0,8).map(r=>`<tr><td><b>${escapeHtml(r.booking.bookingId||'—')}</b><small>${escapeHtml(r.booking.title||'Rental item')}</small></td><td><span class="status ${escapeHtml(r.booking.status)}">${escapeHtml(r.booking.status)}</span></td><td>${escapeHtml(r.booking.startDate||'—')} → ${escapeHtml(r.booking.endDate||'—')}</td><td>${money(r.gross)}</td><td>${money(r.fee)}</td><td><b>${money(r.net)}</b><small>${r.authoritative?'Recorded split':'Forecast'} · Payout: ${escapeHtml(r.payoutStatus)}</small></td></tr>`).join(''):'<tr><td colspan="6">No earnings activity yet.</td></tr>';

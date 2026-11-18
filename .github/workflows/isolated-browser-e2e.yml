@@ -6,6 +6,9 @@ on:
     paths:
       - "e2e/**"
       - "server.js"
+      - "password-reset.js"
+      - "password-recovery*.test.mjs"
+      - "sct-test-runtime.test.mjs"
       - "db.js"
       - "app.js"
       - "config.js"
@@ -92,6 +95,8 @@ jobs:
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
       - name: Verify deferred supplier transfer policy and LIVE payment gate
+        run: node --test password-recovery.test.mjs sct-test-runtime.test.mjs && node password-recovery-http.test.mjs
+      - name: Verify previous financial safety regressions
         run: node --test deferred-supplier-transfer.test.mjs live-launch-gate-v243.test.mjs supplier-transfer-command-journal.test.mjs isolated-test-supplier-transfer-executor.test.mjs isolated-sct-platform-payment.test.mjs isolated-test-sct-stripe-adapter.test.mjs isolated-sct-payment-webhook-binding.test.mjs sct-payment-reconciliation-inbox.test.mjs sct-booking-binding.test.mjs isolated-sct-test-payment-coordinator.test.mjs isolated-sct-test-payment-reconciler.test.mjs sct-test-payment-settlement.test.mjs isolated-sct-test-reconciliation-coordinator.test.mjs sct-legacy-direct-charge-guard.test.mjs isolated-sct-test-full-refund.test.mjs isolated-sct-test-refund-executor.test.mjs isolated-sct-test-supplier-transfer-readiness.test.mjs isolated-sct-recipient-account-gate.test.mjs isolated-sct-recipient-onboarding-plan.test.mjs isolated-sct-test-recipient-creator.test.mjs isolated-sct-recipient-uncertain-reconciliation.test.mjs isolated-sct-test-recipient-onboarding-session.test.mjs
       - name: Run real Chromium browser E2E, no live services
         # Collect independent browser evidence even if a prior HTTP regression fails.
