@@ -35,14 +35,16 @@ try{
  // https://docs.stripe.com/connect/testing?accounts-namespace=v2
  step='complete_synthetic_test_onboarding';
  const beforeOnboarding=await stripe.v2.core.accounts.retrieve(created.id,{include:['identity','defaults']});
- if(!beforeOnboarding.identity?.individual)await stripe.v2.core.accounts.update(created.id,{
-  defaults:{profile:{business_url:'https://example.com'}},
+ try{if(!beforeOnboarding.identity?.individual)await stripe.v2.core.accounts.update(created.id,{
+  defaults:{profile:{business_url:'https://rentall-staging.up.railway.app'}},
   identity:{individual:{given_name:'Synthetic',surname:'Test',date_of_birth:{day:1,month:1,year:1902},
    address:{country:'LT',city:'Vilnius',postal_code:'01100',line1:'address_full_match'}}},
- },{idempotencyKey:'rio-synthetic-recipient-identity-v2-'+run});
- const banks=await stripe.accounts.listExternalAccounts(created.id,{object:'bank_account',limit:10});
+ },{idempotencyKey:'rio-synthetic-recipient-identity-v3-'+run});}
+ catch(e){report.syntheticIdentityPreparationError=safeError(e);}
+ try{const banks=await stripe.accounts.listExternalAccounts(created.id,{object:'bank_account',limit:10});
  if(!banks.data.length)await stripe.accounts.createExternalAccount(created.id,{external_account:{object:'bank_account',country:'LT',currency:'eur',
-  account_number:'LT121000011101001000'},default_for_currency:true},{idempotencyKey:'rio-synthetic-recipient-test-bank-'+run});
+  account_number:'LT121000011101001000'},default_for_currency:true},{idempotencyKey:'rio-synthetic-recipient-test-bank-'+run});}
+ catch(e){report.syntheticBankPreparationError=safeError(e);}
  step='verify_new_recipient';
  let recipient,gate;
  for(let i=0;i<10;i++){
