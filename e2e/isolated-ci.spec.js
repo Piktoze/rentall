@@ -85,6 +85,9 @@ for(const language of ['lt','en','es','de','ru']){
       });
     }
     await page.goto('/');
+    // Let the delayed default-city fallback complete before changing cities.
+    // This used to hide Klaipėda items using the stale Vilnius radius.
+    await expect.poll(()=>page.evaluate(()=>Array.isArray(userGeo))).toBe(true);
     await page.locator('#lang').selectOption(language);
     await expect(page.locator('html')).toHaveAttribute('lang',language);
     await expect(page.locator('a[data-legal-link="/terms"]').first()).toHaveAttribute('href',`/terms?lang=${language}`);

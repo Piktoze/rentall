@@ -5324,6 +5324,7 @@ const CITY_COORDS={
 };
 
 let userGeo=null;
+let userGeoFromDevice=false;
 let resultsMap=null;
 let resultsMarkerLayer=null;
 let currentResultItems=[];
@@ -5367,7 +5368,9 @@ function getGeoFilteredSortedListings(items){
 
   result=result.map(l=>({...l,_distanceKm:listingDistanceKm(l)}));
 
-  if(userGeo && radius>0){
+  // An automatic city-center fallback is useful for sorting, but must not
+  // silently narrow initial browsing before the user submits a search.
+  if(userGeo && radius>0 && (userGeoFromDevice||localSearchSubmitted)){
     result=result.filter(l=>l._distanceKm==null || l._distanceKm<=radius);
   }
 
@@ -5397,6 +5400,7 @@ document.getElementById('useMyLocationBtn')?.addEventListener('click',()=>{
   setGeoStatus('Getting location…');
   navigator.geolocation.getCurrentPosition(pos=>{
     userGeo=[pos.coords.latitude,pos.coords.longitude];
+    userGeoFromDevice=true;
     setGeoStatus(`Location set · accuracy ±${Math.round(pos.coords.accuracy)} m`);
     renderGeoAwareListings(loadUniversalListings());
   },err=>{
@@ -5511,16 +5515,16 @@ document.querySelectorAll('[data-results-view]').forEach(btn=>{
 
 // Use selected city center as a fallback for distance-sort if the user has not shared precise location.
 function setGeoFromSelectedCity(){
-  if(userGeo) return;
+  if(userGeoFromDevice) return;
   const city=document.getElementById('citySelect')?.value || '';
   const coords=CITY_COORDS[normalizeCityKey(city)];
   if(coords){
     userGeo=[...coords];
     setGeoStatus(uiText('Using {city} city center',{city}));
-  }
+  }else userGeo=null;
 }
 document.getElementById('citySelect')?.addEventListener('change',()=>{
-  if(!userGeo) setGeoFromSelectedCity();
+  setGeoFromSelectedCity();
   renderGeoAwareListings(loadUniversalListings());
 });
 
