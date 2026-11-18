@@ -7,17 +7,19 @@ export function installIsolatedRecoveryProbe({app,env,deliver,limit}){
  const runId=env.RECOVERY_PROBE_RUN_ID;
  if(!/^[a-f0-9]{32}$/.test(runId||''))throw new Error('RECOVERY_PROBE_RUN_ID_REQUIRED');
  if(env.EMAIL_PROVIDER!=='resend'||!env.RESEND_API_KEY)throw new Error('RECOVERY_PROBE_RESEND_REQUIRED');
+ const recipient=env.RECOVERY_PROBE_RECIPIENT;
+ if(typeof recipient!=='string'||! /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(recipient))throw new Error('RECOVERY_PROBE_RECIPIENT_REQUIRED');
  const prefix='/__recovery_probe/'+runId;
  const origin='https://rentall-staging.up.railway.app';
  const db=new Database(':memory:');
  db.exec(`CREATE TABLE app_users(user_id TEXT PRIMARY KEY,email TEXT,role TEXT,password_salt TEXT,password_hash TEXT,updated_at TEXT);
  CREATE TABLE app_sessions(user_id TEXT);`);
  // Only an isolated synthetic identity. Never load, authenticate or modify the real account.
- db.prepare('INSERT INTO app_users(user_id,email,role) VALUES(?,?,?)').run('synthetic-recovery-'+runId,'ieva.zalpyte@gmail.com','customer');
+ db.prepare('INSERT INTO app_users(user_id,email,role) VALUES(?,?,?)').run('synthetic-recovery-'+runId,recipient,'customer');
  let queued,deliveryStatus='pending',consumed=false;
  const recovery=createPasswordRecovery({db,origin,secret:env.SESSION_SECRET,resetPath:prefix,
   enqueue:item=>{queued={...item,id:'isolated-recovery-'+runId,subject:'[TEST] '+item.subject,deliveryIdempotencyKey:'recovery-probe-'+runId};}});
- recovery.request('ieva.zalpyte@gmail.com');
+ recovery.request(recipient);
  const headers=(req,res,next)=>{res.set({'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow',
   'Content-Security-Policy':"default-src 'none'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});next();};
  app.get(prefix,headers,(req,res)=>res.type('html').send('<!doctype html><html lang="lt"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TEST atkūrimo patikra | RentInOrbit</title><h1>Sintetinės TEST paskyros atkūrimas</h1><p>Ši patikra nekeičia veikiančios paskyros slaptažodžio.</p><form><label>Naujas TEST slaptažodis <input type="password" minlength="8" maxlength="256" autocomplete="new-password" required></label><button>Patvirtinti TEST atkūrimą</button></form><p role="status"></p><script src="'+prefix+'/client.js" defer></script></html>'));

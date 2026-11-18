@@ -39,17 +39,25 @@ Do not infer the account tariff from synthetic TEST fees. Account Features API
 lookup returned `The API method cannot be found`; private fee settings therefore
 remain unverified. Do not claim all provider costs are only the card processing
 fee or that a TEST balance transfer proves a bank payout or its charges.
+The LIVE `stripe_fee` balance-transaction query returned zero records; there
+are no observed LIVE provider-fee charges here to establish an effective tariff.
 
 ## Outstanding real execution evidence
 
 No successful new real Stripe SCT A/B objects are asserted by this document.
-The secure CLI login is waiting for user authorization; no API key is requested
+The secure CLI login expired without authorization; no API key is requested
 in chat. TEST recipient list in sandbox `acct_1UT4JCLM72MR015z` returned no
 recipient-configured accounts. An eligible synthetic TEST recipient and real
 TEST runtime execution are still needed. No historical account/order operation
 may substitute for that evidence.
 
-Real recovery email must be generated for a synthetic user in disposable
-storage and delivered to the authorized Gmail address. It must not reset an
-existing user's password or write the mounted `/data` database. Until safe
-isolated mail-sending access is available, HTTP/outbox tests do not prove delivery.
+Real recovery email was generated for a synthetic user in an independent memory
+database on staging and delivered through Resend to the authorized Gmail inbox
+at 2026-11-18 15:27:58 UTC. Gmail message ID: `1a1ef459c7257576`.
+Gmail Authentication-Results: SPF pass, DKIM pass for rentinorbit.com, DMARC pass.
+The private email link returned HTTP 200 with the synthetic reset form; first
+token consumption returned 200, replay 400. Status confirmed storage=memory,
+deliveryStatus=provider_accepted, consumed=true. No real account password or
+mounted `/data` row was changed. The link/token are intentionally not recorded.
+The temporary probe is disabled in configuration after this run. Recipient is
+an environment setting, not a hardcoded personal address in the probe source.

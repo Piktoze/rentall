@@ -4,6 +4,11 @@ import {execFileSync} from 'node:child_process';
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
 const rentalTestEnv={...process.env,RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+// Only an explicitly requested Railway staging build may run real TEST APIs.
+// Ordinary release/CI tests below use provider doubles and disposable storage.
+if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
+  execFileSync(process.execPath,['ops/sct-real-test-evidence.mjs'],{stdio:'inherit',timeout:120000});
+}
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
 const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
