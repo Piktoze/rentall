@@ -1,6 +1,7 @@
 // Explicit one-shot build-time TEST validation; never opens a mounted database.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawn} from 'node:child_process';
+import crypto from 'node:crypto';
 import {createIsolatedStripeTestClient} from '../modules/isolated-stripe-test-client.js';
 import {planIsolatedSctRecipientOnboarding} from '../modules/isolated-sct-recipient-onboarding-plan.js';
 import {inspectIsolatedSctRecipientAccount} from '../modules/isolated-sct-recipient-account-gate.js';
@@ -33,13 +34,14 @@ try{
  // Official Stripe TEST fixtures, never the operator's identity or bank details.
  // https://docs.stripe.com/connect/testing?accounts-namespace=v2
  step='complete_synthetic_test_onboarding';
- await stripe.v2.core.accounts.update(created.id,{
+ const beforeOnboarding=await stripe.v2.core.accounts.retrieve(created.id,{include:['identity','defaults']});
+ if(!beforeOnboarding.identity?.individual)await stripe.v2.core.accounts.update(created.id,{
   defaults:{profile:{business_url:'https://example.com'}},
   identity:{individual:{given_name:'Synthetic',surname:'Test',date_of_birth:{day:1,month:1,year:1902},
-   address:{country:'LT',city:'Vilnius',postal_code:'01100',line1:'address_full_match'}},
-   attestations:{terms_of_service:{account:{date:created.created,ip:'127.0.0.1',user_agent:'RentInOrbit synthetic TEST fixture'}}}},
- },{idempotencyKey:'rio-synthetic-recipient-identity-'+run});
- await stripe.accounts.createExternalAccount(created.id,{external_account:{object:'bank_account',country:'LT',currency:'eur',
+   address:{country:'LT',city:'Vilnius',postal_code:'01100',line1:'address_full_match'}}},
+ },{idempotencyKey:'rio-synthetic-recipient-identity-v2-'+run});
+ const banks=await stripe.accounts.listExternalAccounts(created.id,{object:'bank_account',limit:10});
+ if(!banks.data.length)await stripe.accounts.createExternalAccount(created.id,{external_account:{object:'bank_account',country:'LT',currency:'eur',
   account_number:'LT121000011101001000'},default_for_currency:true},{idempotencyKey:'rio-synthetic-recipient-test-bank-'+run});
  step='verify_new_recipient';
  let recipient,gate;
@@ -49,11 +51,25 @@ try{
   if(!gate.blocked)break;await new Promise(resolve=>setTimeout(resolve,1000));
  }
  if(gate.blocked){report.recipientBlocker=gate.blocked;report.transferCapability=recipient.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status;
-  report.recipientRequirementCount=recipient.requirements?.entries?.length??null;throw new Error(gate.blocked);}
+  report.recipientRequirementCount=recipient.requirements?.entries?.length??null;
+  report.recipientRequirements=recipient.requirements?.entries?.map(e=>({field:e.description,awaitingActionFrom:e.awaiting_action_from}));
+  const key=process.env.SCT_TEST_ONBOARDING_RESULT_KEY;
+  if(/^[a-f0-9]{64}$/.test(key||'')){
+   const link=await stripe.v2.core.accountLinks.create({account:created.id,use_case:{type:'account_onboarding',account_onboarding:{
+    configurations:['recipient'],collection_options:{fields:'currently_due'},refresh_url:'https://rentall-staging.up.railway.app/help',return_url:'https://rentall-staging.up.railway.app/'}}});
+   assert.equal(link.livemode,false);assert.equal(link.account,created.id);
+   const url=new URL(link.url);assert.equal(url.protocol,'https:');assert.equal(url.hostname,'connect.stripe.com');
+   const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',Buffer.from(key,'hex'),iv);
+   const encrypted=Buffer.concat([cipher.update(link.url,'utf8'),cipher.final()]);
+   report.onboardingEnvelope=[iv,cipher.getAuthTag(),encrypted].map(x=>x.toString('hex')).join('.');report.onboardingExpiresAt=link.expires_at;
+  }
+  throw new Error(gate.blocked);}
  // Isolate db.js's actual canonical rental tables before importing it.
  temporary=fs.mkdtempSync(path.join(os.tmpdir(),'rio-real-sct-'));report.storage='temporary_sqlite';
  process.env.NODE_ENV='test';process.env.DB_PATH=path.join(temporary,'synthetic.sqlite');process.env.RENTINORBIT_CATALOG_ONLY='false';
  process.env.RENTINORBIT_SCT_TEST_RUNTIME='true';process.env.SCT_STRIPE_FEE_PAYER='platform';process.env.PLATFORM_FEE_PERCENT='15';
+ process.env.DB_BACKUP_ENABLED='false';process.env.BACKUP_SCHEDULER_ENABLED='false';process.env.BACKUP_S3_ENABLED='false';
+ process.env.BACKUP_DIR=path.join(temporary,'backups');process.env.DB_BACKUP_EVIDENCE_PATH=path.join(temporary,'backup-evidence.json');
  for(const k of ['DATABASE_URL','RENTINORBIT_DB_PATH','RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID','RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR'])delete process.env[k];
  const d=await import('../db.js');db=d.db;assert.equal(d.db.name,process.env.DB_PATH);
  d.createAppUser({email:supplier,password:'SyntheticOnly-'+run,role:'supplier'});

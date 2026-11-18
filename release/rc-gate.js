@@ -7,7 +7,7 @@ const rentalTestEnv={...process.env,RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT
 // Only an explicitly requested Railway staging build may run real TEST APIs.
 // Ordinary release/CI tests below use provider doubles and disposable storage.
 if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
-  execFileSync(process.execPath,['ops/sct-real-test-evidence.mjs'],{stdio:'inherit',timeout:240000});
+  execFileSync(process.execPath,['ops/sct-real-test-evidence.mjs'],{stdio:'inherit',timeout:240000,env:{...process.env,NODE_OPTIONS:''}});
 }
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
