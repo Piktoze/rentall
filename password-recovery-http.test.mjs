@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';import {decodeResetMail} from './modules
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rio-reset-http-'));
 const env={...process.env,NODE_ENV:'test',DB_PATH:path.join(temp,'db.sqlite'),UPLOADS_DIR:path.join(temp,'uploads'),
  APP_URL:'http://127.0.0.1:32891',PUBLIC_BASE_URL:'http://127.0.0.1:32891',PORT:'32891',HOST:'127.0.0.1',
- RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_STAGING:'true',RENTINORBIT_SCT_TEST_RUNTIME:'false',
+ RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_STAGING:'true',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false',
  EMAIL_WORKER_ENABLED:'false',SESSION_SECRET:'Reset-http-synthetic-strong-secret-12345',EMAIL_PROVIDER:'disabled',
  STRIPE_SECRET_KEY:'',STRIPE_PUBLISHABLE_KEY:'',STRIPE_WEBHOOK_SECRET:''};
 for(const k of ['DATABASE_URL','RENTINORBIT_DB_PATH','RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID','RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR'])delete env[k];

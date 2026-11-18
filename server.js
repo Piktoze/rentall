@@ -1,4 +1,5 @@
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
+import {installIsolatedRecoveryProbe} from './modules/isolated-recovery-probe.js';
 import {createSctTestRuntime} from './modules/sct-test-runtime.js';
 import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
@@ -1303,6 +1304,7 @@ function catalogDocument(key){
     fees:{title:'Katalogo kainos ir mokesčiai',intro:mode,sections:[
       ['Katalogo peržiūra',['RentInOrbit už katalogo peržiūrą mokesčio nerenka. Nuomos, užstato ir platformos komisinio apmokėti negalima.']],
       ['Skelbimų kainos',['Skelbimų kainos yra informacinės. Skelbimo peržiūra nesukuria užsakymo ar prievolės mokėti. 15 procentų komisinis ir atšaukimo bei pinigų grąžinimo taisyklės šiame etape netaikomi.']],
+      ['Patvirtinta būsimos pilnos platformos kainodara',['Naujoms rezervacijoms numatytas 15 % platformos komisinis ir 85 % nuomotojo dalis. Stripe apdorojimo, Connect ir banko išmokų kaštus dengs RentInOrbit; jie papildomai nebus atskaitomi iš nuomotojo dalies. Šis pasirinkimas neįjungia rezervacijų ar mokėjimų kataloge.']],
       ['Kontaktas',[contact]]
     ]},
     help:{title:'Katalogo pagalba',intro:mode,sections:[
@@ -2101,7 +2103,7 @@ async function deliverTransactionalEmail(item){
   if(provider==='resend'){
     const apiKey=String(process.env.RESEND_API_KEY||'').trim();
     if(!apiKey||!from) throw new Error('RESEND_API_KEY and EMAIL_FROM are required');
-    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json'},body:JSON.stringify({from,to:[item.recipient],subject:item.subject,html:renderTransactionalEmail(item)})});
+    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json',...(item.deliveryIdempotencyKey?{'Idempotency-Key':item.deliveryIdempotencyKey}:{})},body:JSON.stringify({from,to:[item.recipient],subject:item.subject,html:renderTransactionalEmail(item)})});
     const text=await response.text();let body={};try{body=JSON.parse(text)}catch{}
     if(!response.ok) throw new Error(`Email provider rejected request (${response.status}): ${String(body?.message||text||'unknown error').slice(0,300)}`);
     return {provider:'resend',id:body?.id||null};
@@ -4420,7 +4422,10 @@ if(!catalogOnly){
   setInterval(maintain,5*60*1000).unref?.();
 }
 
+const recoveryProbe=installIsolatedRecoveryProbe({app,env:process.env,deliver:deliverTransactionalEmail,
+ limit:simpleRateLimit({windowMs:900000,max:10,keyPrefix:'isolated-recovery-consume'})});
 const server=app.listen(port,runtimeConfig.host, () => {
+  if(recoveryProbe)void recoveryProbe.send();
   const database=checkDatabase();
   const config=productionConfigReport();
   console.log(JSON.stringify({type:'startup',service:'rentinorbit',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,paymentProvider,email:config.email,ready:launchGate().ready}));

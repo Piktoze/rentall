@@ -1,3 +1,4 @@
+import {PLATFORM_COST_POLICY} from './platform-cost-policy.js';
 export const DEFAULT_PLAN_CODE='STARTER';
 export const DEFAULT_CURRENCY='EUR';
 export const DEFAULT_COMMISSION_BPS=1500;
@@ -39,6 +40,9 @@ export function calculateSupplierPricing({bookingAmountCents,plan=DEFAULT_STARTE
     bookingAmountCents:grossCents,
     commissionAmountCents,
     supplierAmountCents,
+    providerCostBearer:'platform',
+    providerCostsDeductedFromSupplierCents:0,
+    costPolicyVersion:PLATFORM_COST_POLICY.version,
     pricingSource:String(pricingSource||'supplier_plan')
   });
 }

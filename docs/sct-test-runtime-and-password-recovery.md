@@ -5,7 +5,7 @@ Scope: `staging/v203`. This is not LIVE launch approval.
 ## Financial execution boundary
 
 `RENTINORBIT_SCT_TEST_RUNTIME=true`, `STRIPE_MODE=test`, a validated TEST key and
-`SCT_STRIPE_FEE_PAYER=platform|supplier` are required together. No fee-payer default.
+`SCT_STRIPE_FEE_PAYER=platform` are required together. Model A was approved on 2026-11-18; supplier-paid configuration is rejected.
 The actual open SQLite database must be under the system temporary directory
 (symlinks resolved); memory is allowed only for tests. `/data` is refused.
 Do not enable this runtime on the existing Railway volume or migrate historical
@@ -31,12 +31,13 @@ paid status, no dispute/hold, suitable recipient and an available EUR balance
 transaction with actual processing fee. A transfer credits the connected Stripe
 balance; it does not establish a bank payout.
 
-For a 100 EUR rental the platform commission is 15 EUR. With platform-paid
-processing fees, the connected balance transfer is 85 EUR and platform margin is
-15 EUR minus actual fees. With supplier-paid fees, transfer is 85 EUR minus actual
-fees; the displayed pre-fee share is not a promised net payout. On a full refund,
-no supplier transfer or commission remains; provider costs already debited from
-the platform are not recovered from the supplier by this implementation.
+For a 100 EUR rental the platform commission is 15 EUR and the supplier Stripe
+balance transfer is 85 EUR. RentInOrbit bears processing, Connect and bank-payout
+costs; none may be deducted from the supplier's 85 EUR. The platform commission
+is revenue before these provider costs, not net profit. A full refund leaves no
+supplier transfer or platform commission; unrecovered provider costs remain with
+the platform. Existing enrollments with a different fee policy require review;
+they are not automatically migrated.
 
 Supported cancellation: unpaid booking (provider intent must be verified canceled
 if present) or a paid full refund before handover. Partial/zero policy refunds,

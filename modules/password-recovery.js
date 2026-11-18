@@ -11,12 +11,13 @@ export function decodeResetMail(payload,secret){
  decipher.setAuthTag(tag);
  return JSON.parse(Buffer.concat([decipher.update(body),decipher.final()]).toString('utf8'));
 }
-export function createPasswordRecovery({db,enqueue,origin,secret,now=Date.now,eligible=()=>true}){
+export function createPasswordRecovery({db,enqueue,origin,secret,now=Date.now,eligible=()=>true,resetPath='/password-reset'}){
  const url=new URL(origin);
  if(!['https:','http:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search||url.hash)
   throw new Error('A fixed application origin is required');
  if(url.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(url.hostname))throw new Error('HTTPS required');
  if(typeof secret!=='string'||secret.length<32)throw new Error('Password recovery encryption key unavailable');
+ if(typeof resetPath!=='string'||!/^\/[A-Za-z0-9/_-]+$/.test(resetPath))throw new Error('Invalid reset path');
  // Lazy installation: registering routes does not migrate a mounted /data database.
  let installed=false;
  function install(){if(installed)return;db.exec(`CREATE TABLE IF NOT EXISTS password_reset_tokens(
@@ -45,7 +46,7 @@ export function createPasswordRecovery({db,enqueue,origin,secret,now=Date.now,el
     DO UPDATE SET token_hash=excluded.token_hash,expires_ms=excluded.expires_ms`).run(hash,user.user_id,at+30*60000);
    enqueue({recipient:user.email,templateKey:'password_reset',subject:'RentInOrbit – slaptažodžio atkūrimas',
     dedupeKey:'password-reset:'+hash,
-    payload:{sealed:seal({url:new URL('/password-reset#token='+token,url).toString(),expiresAt:new Date(at+30*60000).toISOString()})}});
+    payload:{sealed:seal({url:new URL(resetPath+'#token='+token,url).toString(),expiresAt:new Date(at+30*60000).toISOString()})}});
   }).immediate();
   return RESET_REPLY;
  }

@@ -361,7 +361,19 @@ for(const [lang,message] of Object.entries(CANCELLATION_COPY_V198)){
   if(fees && fees[1]?.length)fees[1][0]=message;
 }
 
+const PLATFORM_COST_COPY={
+ lt:['15 % komisinis ir platformos kaštai','Naujoms rezervacijoms pagal patvirtintą mokėjimų modelį taikomas 15 % platformos komisinis, o nuomotojo dalis yra 85 %. Iš 100 € nuomos 85 € pervedami į nuomotojo Stripe balansą tik patvirtinus grąžinimą ir nesant ginčo ar sulaikymo. Stripe mokėjimo apdorojimo, Connect ir banko išmokų kaštus dengia RentInOrbit; jie papildomai neatskaitomi iš nuomotojo dalies. 15 € komisinis yra prieš šiuos kaštus. Pervedimas į Stripe balansą nėra banko išmoka. Viso refund atveju klientui grąžinama visa nuomos suma, o neatgauti mokėjimų tiekėjo kaštai lieka platformai. Istorinių užsakymų sutartos sąlygos nekeičiamos.'],
+ en:['15% commission and platform costs','New bookings under the approved payment model carry a 15% platform commission and an 85% supplier share. A EUR 100 rental transfers EUR 85 to the supplier Stripe balance only after confirmed return with no dispute or hold. RentInOrbit bears payment processing, Connect and bank payout costs without deducting them from the supplier share. The EUR 15 commission is before these costs. A Stripe balance transfer is not a bank payout. A full refund returns the entire rental amount to the customer; unrecovered provider costs remain with the platform. Historical booking terms remain unchanged.'],
+ es:['Comisión del 15% y costes de la plataforma','Las nuevas reservas del modelo aprobado tienen una comisión del 15% y una parte del proveedor del 85%. De un alquiler de 100 EUR se transfieren 85 EUR al saldo Stripe del proveedor tras confirmar la devolución sin disputa ni retención. RentInOrbit asume los costes de procesamiento, Connect y pagos bancarios sin descontarlos al proveedor. Los 15 EUR son anteriores a estos costes. La transferencia al saldo Stripe no es un pago bancario. Un reembolso total devuelve todo el alquiler al cliente; los costes no recuperados corresponden a la plataforma. No cambian las condiciones de reservas anteriores.'],
+ de:['15% Provision und Plattformkosten','Neue Buchungen im bestätigten Zahlungsmodell haben 15% Plattformprovision und 85% Vermieteranteil. Bei 100 EUR Miete werden nach bestätigter Rückgabe ohne Streitfall oder Sperre 85 EUR auf das Stripe-Guthaben des Vermieters übertragen. RentInOrbit trägt Zahlungsabwicklungs-, Connect- und Bankauszahlungskosten ohne Abzug vom Vermieteranteil. Die 15 EUR Provision verstehen sich vor diesen Kosten. Eine Guthabenübertragung ist keine Bankauszahlung. Bei vollständiger Erstattung erhält der Kunde den gesamten Mietbetrag zurück; nicht erstattete Anbieterkosten trägt die Plattform. Frühere Buchungsbedingungen bleiben unverändert.'],
+ ru:['Комиссия 15% и расходы платформы','Для новых бронирований по утверждённой модели комиссия платформы составляет 15%, доля арендодателя — 85%. Из аренды 100 EUR на баланс Stripe арендодателя переводятся 85 EUR после подтверждённого возврата без спора или удержания. RentInOrbit оплачивает обработку платежей, Connect и банковские выплаты без вычета из доли арендодателя. Комиссия 15 EUR указана до этих расходов. Перевод на баланс Stripe не является банковской выплатой. При полном возврате клиент получает всю сумму аренды; невозмещённые расходы провайдера несёт платформа. Условия прежних бронирований не меняются.']
+};
 export function getPolicyPage(lang,key){
   const copy=POLICY_COPY[lang]||POLICY_COPY.en;
-  return copy[key]||POLICY_COPY.en[key];
+  const page=copy[key]||POLICY_COPY.en[key];
+  if(['fees','terms'].includes(key)){
+    const [heading,text]=PLATFORM_COST_COPY[lang]||PLATFORM_COST_COPY.en;
+    return {...page,sections:[...page.sections,[heading,[text]]]};
+  }
+  return page;
 }

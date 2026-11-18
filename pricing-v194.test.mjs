@@ -6,6 +6,8 @@ assert.equal(p100.planCode,'STARTER');
 assert.equal(p100.commissionBps,1500);
 assert.equal(p100.commissionAmountCents,1500);
 assert.equal(p100.supplierAmountCents,8500);
+assert.equal(p100.providerCostBearer,'platform');
+assert.equal(p100.providerCostsDeductedFromSupplierCents,0);
 assert.equal(p100.monthlyFeeCents,0);
 
 const p999=calculateSupplierPricing({bookingAmountCents:999});

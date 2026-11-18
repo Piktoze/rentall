@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {assertPlatformCostConfiguration,calculatePlatformCostSplit} from './platform-cost-policy.js';
 import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 import {installSctBookingBindings,reserveSctBookingBinding,bindSctPaymentIntent,getSctBookingBinding} from './sct-booking-binding.js';
 import {planIsolatedSctPaymentIntent,verifyIsolatedSctPaymentIntent} from './isolated-sct-platform-payment.js';
@@ -22,8 +23,8 @@ export function assertSctTestStorage(db,env){
 export function createSctTestRuntime({db,stripe,env,now=Date.now}){
  assertSctTestStorage(db,env);
  if(!isIsolatedStripeTestClient(stripe,env.STRIPE_SECRET_KEY))fail('SCT_TRUSTED_TEST_CLIENT_REQUIRED');
- const feePayer=env.SCT_STRIPE_FEE_PAYER;
- if(!['platform','supplier'].includes(feePayer))fail('SCT_FEE_PAYER_DECISION_REQUIRED');
+ assertPlatformCostConfiguration(env);
+ const feePayer='platform';
  installSctBookingBindings(db);
  db.exec(`CREATE TABLE IF NOT EXISTS sct_test_recipients(
   email TEXT PRIMARY KEY COLLATE NOCASE,account_id TEXT NOT NULL UNIQUE,entity_type TEXT NOT NULL);
@@ -76,7 +77,7 @@ export function createSctTestRuntime({db,stripe,env,now=Date.now}){
   const b=row(id),r=newBookingRecipient(email);
   if(!b||b.status!=='pending'||b.payment_status!=='unpaid'||b.stripe_payment_intent_id||
    Number(b.security_deposit_amount||0)!==0||owned(id))fail('SCT_NEW_UNPAID_NO_DEPOSIT_BOOKING_REQUIRED');
-  const cents=Math.round(b.order_value*100),fee=Math.round(cents*0.15);
+  const cents=Math.round(b.order_value*100),fee=calculatePlatformCostSplit(cents).platformCommissionCents;
   if(!Number.isSafeInteger(cents)||cents<50)fail('SCT_INVALID_AMOUNT');
   const reserved=reserveSctBookingBinding(db,{id,listingId:b.listing_id,amountCents:cents,
    feeCents:fee,destination:r.account_id,livemode:false});
@@ -145,6 +146,7 @@ export function createSctTestRuntime({db,stripe,env,now=Date.now}){
   return {provider:'stripe',paymentFlow:'separate_charges_and_transfers',paymentIntentId:pi.id,
    clientSecret:pi.client_secret,amount:wanted.amountCents/100,platformFee:wanted.feeCents/100,
    supplierShareBeforeStripeFees:(wanted.amountCents-wanted.feeCents)/100,
+   supplierAmount:(wanted.amountCents-wanted.feeCents)/100,
    stripeFeePayer:enrollment(id).fee_payer,status:pi.status};
  }
  async function createPayment(id){
@@ -179,7 +181,9 @@ export function createSctTestRuntime({db,stripe,env,now=Date.now}){
    await stripe.balanceTransactions.retrieve(charge.balance_transaction);
   if(!txn||txn.currency!=='eur'||txn.amount!==p.amountCents||!Number.isSafeInteger(txn.fee)||txn.fee<0||
    txn.net!==txn.amount-txn.fee||txn.status!=='available')fail('SCT_AVAILABLE_BALANCE_PROOF_REQUIRED');
-  const amount=p.supplierCents-(enrollment(id).fee_payer==='supplier'?txn.fee:0);
+  // Never reinterpret an older enrollment with a different commercial model.
+  if(enrollment(id).fee_payer!=='platform')fail('SCT_EXISTING_COST_POLICY_REQUIRES_REVIEW');
+  const amount=p.supplierCents;
   if(amount<=0)fail('SCT_FEES_EXCEED_SUPPLIER_SHARE');
   const payload={amount,currency:'eur',destination:b.destination,source_transaction:p.chargeId,transfer_group:id,
    metadata:{bookingId:id,paymentIntentId:p.paymentIntentId,purpose:'sct_rental_supplier_transfer'}};

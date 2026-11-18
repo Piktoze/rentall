@@ -75,9 +75,11 @@ test('SCT B: independent new booking, full refund, duplicate refund and transfer
  const b=d.getRentalBookingById(id);assert.equal(b.status,'cancelled');assert.equal(b.paymentStatus,'refunded');assert.equal(b.refundAmount,100);
  assert.equal(b.platformFeeAmount,0);assert.equal(b.supplierAmount,0);
 });
-test('Stripe fee paid by supplier means 83.25 EUR, not an advertised net 85 EUR',async()=>{
- const f=fixture('supplier'),id=await booking(f);await f.service.createPayment(id);f.paid(id);await f.service.settle(id);returned(id);
- assert.equal((await f.service.transfer(id)).amountCents,8325);
+test('approved A model refuses supplier-paid configuration and absorbs higher fees',async()=>{
+ assert.throws(()=>fixture('supplier'),{code:'SCT_PLATFORM_COST_POLICY_REQUIRED'});
+ const f=fixture(),id=await booking(f);await f.service.createPayment(id);f.paid(id);await f.service.settle(id);returned(id);
+ f.stripe.balanceTransactions.retrieve=async()=>({currency:'eur',amount:10000,fee:900,net:9100,status:'available'});
+ assert.equal((await f.service.transfer(id)).amountCents,8500);
 });
 test('unknown payment result recovers provider object after restart without another create',async()=>{
  const f=fixture(),id=await booking(f);f.fault.payment=true;await assert.rejects(f.service.createPayment(id));
