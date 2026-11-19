@@ -62,7 +62,7 @@ export function createSctTestRuntime({db,stripe,env,now=Date.now}){
   if(!/^[^\s@]+@[^\s@]+$/.test(email||''))fail('SCT_RECIPIENT_EMAIL_INVALID');
   await recipient(accountId,entityType);
   // Map only an existing supplier. No credentials or identity documents are collected here.
-  const user=db.prepare("SELECT user_id FROM app_users WHERE email=? COLLATE NOCASE AND role='supplier'").get(email);
+  const user=db.prepare("SELECT user_id FROM app_users WHERE email=? COLLATE NOCASE AND role IN ('supplier','admin')").get(email);
   if(!user)fail('SCT_SUPPLIER_NOT_FOUND');
   db.prepare(`INSERT INTO sct_test_recipients VALUES(?,?,?) ON CONFLICT(email)
    DO UPDATE SET account_id=excluded.account_id,entity_type=excluded.entity_type`).run(email,accountId,entityType);

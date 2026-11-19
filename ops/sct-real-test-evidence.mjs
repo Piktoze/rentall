@@ -70,6 +70,7 @@ try{
  temporary=fs.mkdtempSync(path.join(os.tmpdir(),'rio-real-sct-'));report.storage='temporary_sqlite';
  process.env.NODE_ENV='test';process.env.DB_PATH=path.join(temporary,'synthetic.sqlite');process.env.RENTINORBIT_CATALOG_ONLY='false';
  process.env.RENTINORBIT_SCT_TEST_RUNTIME='true';process.env.SCT_STRIPE_FEE_PAYER='platform';process.env.PLATFORM_FEE_PERCENT='15';
+ process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';
  process.env.DB_BACKUP_ENABLED='false';process.env.BACKUP_SCHEDULER_ENABLED='false';process.env.BACKUP_S3_ENABLED='false';
  process.env.BACKUP_DIR=path.join(temporary,'backups');process.env.DB_BACKUP_EVIDENCE_PATH=path.join(temporary,'backup-evidence.json');
  for(const k of ['DATABASE_URL','RENTINORBIT_DB_PATH','RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID','RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR'])delete process.env[k];

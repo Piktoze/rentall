@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import {privateTestRequested,privateTestSettings,assertPrivatePath} from './modules/private-test-mode.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -51,6 +52,7 @@ function sqlitePathFromUrl(raw){
 
 // Explicit opt-in: relaxes ONLY the Stripe and email provider checks. Every other
 // production check (HTTPS URLs, secrets, proxy, volume-backed DB/uploads) stays required.
+// The separate private TEST contract explicitly permits disposable isolated storage.
 export function isStagingEnvironment(env=process.env){
   return String(env.RENTINORBIT_STAGING||'').trim()==='true';
 }
@@ -60,6 +62,10 @@ export function isDeploymentEnvironment(env=process.env){
 }
 
 export function resolveDatabaseConfig(env=process.env){
+  if(privateTestRequested(env)){
+    const s=privateTestSettings(env);
+    return s.valid?{ok:true,driver:'sqlite',source:'private-test',path:s.db,volumeRoot:null}:{ok:false,driver:'unsupported',source:'private-test',error:'Invalid private TEST configuration'};
+  }
   const databaseUrl=String(env.DATABASE_URL||'').trim();
   const explicit=String(env.RENTINORBIT_DB_PATH||env.DB_PATH||'').trim();
   const volumeRoot=String(env.RAILWAY_VOLUME_MOUNT_PATH||env.PERSISTENT_DATA_DIR||'').trim();
@@ -80,6 +86,7 @@ export function resolveDatabaseConfig(env=process.env){
 }
 
 export function resolveUploadsConfig(env=process.env){
+  if(privateTestRequested(env))return {directory:privateTestSettings(env).uploads||'',source:'private-test',volumeRoot:null};
   const volumeRoot=String(env.RAILWAY_VOLUME_MOUNT_PATH||env.PERSISTENT_DATA_DIR||'').trim();
   const explicit=String(env.UPLOADS_DIR||'').trim();
   const directory=explicit?path.resolve(explicit):(volumeRoot?path.join(path.resolve(volumeRoot),'uploads'):path.join(rootDir,'uploads'));
@@ -96,7 +103,8 @@ export function productionConfigReport(env=process.env){
   const production=String(env.NODE_ENV||'')==='production';
   const deployment=isDeploymentEnvironment(env);
   const staging=isStagingEnvironment(env);
-  const integrationRequired=deployment&&!staging;
+  const privateTest=privateTestRequested(env);
+  const integrationRequired=deployment&&(!staging||privateTest);
   const railway=Boolean(env.RAILWAY_ENVIRONMENT_ID||env.RAILWAY_PROJECT_ID||env.RAILWAY_SERVICE_ID);
   const dbConfig=resolveDatabaseConfig(env);
   const uploadsConfig=resolveUploadsConfig(env);
@@ -124,9 +132,9 @@ export function productionConfigReport(env=process.env){
     {id:'database_explicit',required:deployment,ready:dbConfig.ok&&dbConfig.source!=='default-local'},
     {id:'database_absolute',required:deployment,ready:dbConfig.ok&&path.isAbsolute(dbConfig.path||'')},
     {id:'database_not_project_local',required:deployment,ready:dbConfig.ok&&!inside(dbConfig.path||'',rootDir)},
-    {id:'database_volume_configured',required:deployment,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)},
-    {id:'database_on_volume',required:deployment,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)&&inside(dbConfig.path,dbConfig.volumeRoot)},
-    {id:'uploads_on_volume',required:deployment,ready:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
+    {id:'database_volume_configured',required:deployment&&!privateTest,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)},
+    {id:'database_on_volume',required:deployment&&!privateTest,ready:dbConfig.ok&&Boolean(dbConfig.volumeRoot)&&inside(dbConfig.path,dbConfig.volumeRoot)},
+    {id:'uploads_on_volume',required:deployment&&!privateTest,ready:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
     {id:'stripe_mode',required:integrationRequired,ready:['test','live'].includes(stripeMode)},
     {id:'stripe_secret',required:integrationRequired,ready:/^[sr]k_(?:test|live)_[A-Za-z0-9_\-]{12,}$/.test(stripeSecret)&&detectedStripeMode===stripeMode},
     {id:'stripe_publishable',required:integrationRequired,ready:new RegExp(`^pk_${stripeMode}_[A-Za-z0-9_\\-]{12,}$`).test(publishable)},
@@ -144,10 +152,13 @@ export function productionConfigReport(env=process.env){
     {id:'sms_provider',required:deployment,ready:smsProvider==='disabled'},
     {id:'push_provider',required:deployment,ready:pushProvider==='disabled'}
   ];
+  checks.push({id:'private_test_backups_disabled',required:privateTest,ready:['DB_BACKUP_ENABLED','BACKUP_SCHEDULER_ENABLED','BACKUP_S3_ENABLED'].every(k=>env[k]==='false')});
+  checks.push({id:'private_test_configuration',required:privateTest,ready:privateTestSettings(env).valid});
+  checks.push({id:'private_test_required',required:env.PRIVATE_TEST_REQUIRED==='true',ready:privateTest&&privateTestSettings(env).valid});
   const blocking=checks.filter(check=>check.required&&!check.ready).map(check=>check.id);
   return {
     ready:blocking.length===0,production,deployment,staging,railway,checks,blocking,
-    database:{driver:dbConfig.driver,source:dbConfig.source,persistent:dbConfig.source!=='default-local',volumeConfigured:Boolean(dbConfig.volumeRoot)},
+    database:{driver:dbConfig.driver,source:dbConfig.source,persistent:!['default-local','private-test'].includes(dbConfig.source),volumeConfigured:Boolean(dbConfig.volumeRoot)},
     uploads:{source:uploadsConfig.source,persistent:Boolean(uploadsConfig.volumeRoot)&&inside(uploadsConfig.directory,uploadsConfig.volumeRoot)},
     stripe:{configured:Boolean(stripeSecret),mode:stripeMode||'unset',keyType:stripeSecret.startsWith('rk_')?'restricted':stripeSecret.startsWith('sk_')?'secret':'unset',webhookConfigured:Boolean(webhookSecret),connectWebhookConfigured:Boolean(connectWebhookSecret)},
     email:{provider:emailProvider||'unset',workerEnabled:enabled('EMAIL_WORKER_ENABLED',env),fromConfigured:validEmail(emailFrom)},
@@ -213,6 +224,11 @@ export function legalLaunchReadinessReport(env=process.env){
 }
 
 export function productionStorageReport(env=process.env){
+  if(privateTestRequested(env)){
+    const s=privateTestSettings(env);let ready=false;
+    try{if(!s.valid)throw Error();for(const p of [s.root,s.db,s.uploads])assertPrivatePath(p);fs.accessSync(s.root,fs.constants.R_OK|fs.constants.W_OK);fs.accessSync(s.uploads,fs.constants.R_OK|fs.constants.W_OK);ready=true;}catch{}
+    return {ready,deployment:isDeploymentEnvironment(env),checks:[{id:'private_test_isolated_storage',required:true,ready}],blocking:ready?[]:['private_test_isolated_storage'],database:{driver:'sqlite',source:'private-test',volumeConfigured:false}};
+  }
   const deployment=isDeploymentEnvironment(env);
   const config=resolveDatabaseConfig(env);
   let volumeExists=false,volumeDirectory=false,volumeWritable=false;

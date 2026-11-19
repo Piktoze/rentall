@@ -1,6 +1,8 @@
+import {preparePrivateTestEnvironment} from '../modules/private-test-mode.js';
 import {assertProductionConfig,assertProductionStorage,productionConfigReport} from '../config.js';
 
 try{
+  preparePrivateTestEnvironment();
   const config=assertProductionConfig();
   const storage=assertProductionStorage();
   console.log(JSON.stringify({

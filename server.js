@@ -1,3 +1,5 @@
+import {installPrivateTestAccess} from './modules/private-test-access.js';
+import {privateTestSettings,privateTestRequested} from './modules/private-test-mode.js';
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
 import {installIsolatedRecoveryProbe} from './modules/isolated-recovery-probe.js';
 import {createSctTestRuntime} from './modules/sct-test-runtime.js';
@@ -206,9 +208,10 @@ const app = express();
 // Exact match prevents redirects based on arbitrary Host/forwarded headers.
 app.use((req,res,next)=>{
   const host=String(req.get('host')||'').toLowerCase().replace(/:\d+$/,'');
-  if(process.env.RENTINORBIT_CATALOG_ONLY==='true' && host==='www.rentinorbit.com'){
+  if(host==='www.rentinorbit.com'){
     return res.redirect(308,'https://rentinorbit.com'+req.originalUrl);
   }
+  if(privateTestRequested()&&host==='rentall-staging.up.railway.app'&&req.method==='GET'&&req.path!=='/healthz'&&!req.path.startsWith('/api/'))return res.redirect(308,'https://rentinorbit.com'+req.originalUrl);
   next();
 });
 
@@ -280,6 +283,8 @@ app.use((req,res,next)=>{
   );
   next();
 });
+
+const privateTestAccess=installPrivateTestAccess(app,{send:deliverTransactionalEmail});
 
 const rateBuckets=new Map();
 let rateSweepCounter=0;
@@ -372,7 +377,7 @@ const __dirname = path.dirname(__filename);
 
 
 
-seedDefaultUsers();
+if(!privateTestRequested())seedDefaultUsers();
 
 function parseCookies(req){
   const out={};
@@ -797,6 +802,7 @@ app.post('/api/stripe/webhook',
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    if(privateTestRequested()&&event.livemode!==false)return res.status(400).send('TEST events required');
     const eventMode = event.livemode === true ? 'live' : event.livemode === false ? 'test' : null;
     if (eventMode !== stripeMode) {
       return res.status(400).send('Stripe webhook mode does not match the configured Stripe key');
@@ -1870,7 +1876,21 @@ app.get('/api/config', (req,res)=>{
   });
 });
 
-app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-register'}), (req,res)=>{
+async function privateTestOwnerSetup(req,user){
+ if(!privateTestRequested()||runtimeConfig.database.source!=='private-test')return user;
+ const s=privateTestSettings();
+ if(req.privateTestIdentity?.email!==s.owner||user.email!==s.owner)return user;
+ // Ownership is attested by the allowlisted mailbox gate AND the normal account password.
+ db.prepare("UPDATE app_users SET role='admin' WHERE user_id=? AND email=? COLLATE NOCASE").run(user.userId,s.owner);
+ ensureSupplierOnboarding(s.owner,{active:true});
+ if(sctRuntime&&/^acct_[A-Za-z0-9]+$/.test(process.env.PRIVATE_TEST_RECIPIENT_ID||'')){
+  try{await sctRuntime.registerRecipient(s.owner,process.env.PRIVATE_TEST_RECIPIENT_ID,'individual');}
+  catch(e){console.warn(JSON.stringify({type:'private_test_recipient_pending',code:String(e.code||'RECIPIENT_NOT_READY')}));}
+ }
+ return {...user,role:'admin'};
+}
+
+app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-register'}), async (req,res)=>{
   try{
     const {email,password,displayName=null,businessName=null,country=null,city=null,role='supplier'}=req.body||{};
     if(req.body?.termsAccepted!==true){
@@ -1880,7 +1900,8 @@ app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPr
       return res.status(400).json({error:'Password must contain at least 8 characters'});
     }
     const safeRole=role==='customer'?'customer':'supplier';
-    const user=createAppUser({email,password,role:safeRole,displayName,businessName,country,city});
+    let user=createAppUser({email,password,role:safeRole,displayName,businessName,country,city});
+    user=await privateTestOwnerSetup(req,user);
     if(safeRole==='supplier') ensureSupplierOnboarding(user.email,{active:true});
     const session=createAppSession(user.userId);
     setSessionCookie(res,session.token);
@@ -1890,10 +1911,11 @@ app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPr
   }
 });
 
-app.post('/api/auth/login', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-login'}), (req,res)=>{
+app.post('/api/auth/login', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-login'}), async (req,res)=>{
   const {email,password}=req.body||{};
-  const user=authenticateAppUser(email,password);
+  let user=authenticateAppUser(email,password);
   if(!user) return res.status(401).json({error:'Invalid email or password'});
+  try{user=await privateTestOwnerSetup(req,user);}catch{return res.status(503).json({error:'TEST account setup unavailable'});}
   const session=createAppSession(user.userId);
   setSessionCookie(res,session.token);
   res.json({user});
@@ -2071,6 +2093,7 @@ function queueBookingStatusEmail(booking,status,{message=''}={}){
 // V139 production transactional email worker. Explicitly disabled unless enabled by deployment config.
 function renderTransactionalEmail(item){
   const key=String(item?.templateKey||''), payload=item?.payload||{};
+  if(key==='private_test_access')return '<!doctype html><html lang="lt"><h1>Privati RentInOrbit TEST prieiga</h1><p>Kodas: <strong>'+escapeEmailHtml(payload.code)+'</strong></p><p>Galioja 10 minučių. Kodo niekam neperduokite.</p></html>';
   if(key==='privacy_request_notify'){
     return `<!doctype html><html lang="lt"><body style="font-family:Arial,sans-serif;color:#15354f"><h1>Gautas BDAR prašymas</h1>
       <p>Užregistruotas naujas duomenų subjekto prašymas. Atidarykite apsaugotą administratoriaus skydelį ir įvertinkite jį.</p>
@@ -2093,6 +2116,7 @@ function renderTransactionalEmail(item){
   throw new Error(`Unsupported email template: ${key}`);
 }
 async function deliverTransactionalEmail(item){
+  if(privateTestRequested()&&!privateTestSettings().emails.includes(String(item.recipient||'').toLowerCase()))throw new Error('PRIVATE_TEST_RECIPIENT_NOT_ALLOWED');
   const provider=String(process.env.EMAIL_PROVIDER||'console').toLowerCase();
   const from=String(process.env.EMAIL_FROM||'').trim();
   if(provider==='console'){
@@ -4364,6 +4388,10 @@ const publicBrowserModules=new Set(
     .matchAll(/<script\b[^>]*\bsrc="(\/?modules\/[a-z0-9-]+\.js)(?:\?[^"]*)?"/gi)]
     .map(([,url])=>'/'+url.replace(/^\//,''))
 );
+if(privateTestRequested()){
+  const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8').replace('<body class="theme-aurora">','<body class="theme-aurora"><p role="status" style="padding:8px;margin:0;background:#fff0b3;color:#15354f;text-align:center">Privatus TEST · Mokėjimai bandomieji · Duomenys laikini</p>');
+  app.get(['/','/index.html'],(req,res)=>res.type('html').send(html));
+}
 if(catalogOnly){
   const catalogHtml=fs.readFileSync(path.join(__dirname,'index.html'),'utf8')
     .replace(/<link\b[^>]*https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/g,'')

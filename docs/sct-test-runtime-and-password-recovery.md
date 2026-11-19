@@ -91,3 +91,59 @@ fields. Recovery delivery to the authorized Gmail inbox has been verified:
 SPF/DKIM/DMARC pass; link HTTP 200, consumption 200, replay 400, independent memory
 storage. No private URL or token is recorded. Existing Stripe TEST orders are
 not a substitute for new SCT A/B evidence. LIVE gates remain in place.
+
+
+## Private own-domain TEST access (2026-11-19)
+
+This is private full-application TEST availability, not public/LIVE launch approval.
+`PRIVATE_TEST_ENABLED=true` requires staging, TEST secret and publishable keys,
+SCT TEST runtime, catalog=false and demo payments=false together. A separate
+`PRIVATE_TEST_REQUIRED=true` interlock prevents accidentally dropping the gate.
+The existing Railway service is reused; no additional service, volume or plan is
+ordered. Existing metered Railway resource usage still applies.
+
+SQLite and uploads resolve exclusively to
+`os.tmpdir()/rentinorbit-private-test/<random-32-hex-run>/`. Existing DB_PATH,
+DATABASE_URL, uploads and the `/data` mount are not used, copied or migrated.
+Symlink paths are rejected; backups and schedulers are disabled. Test data is
+disposable and may disappear on deployment. Production storage checks remain
+unchanged when this explicit private TEST mode is off.
+
+All pages, assets, uploads and APIs require a server-validated private session.
+The access page `/__test-access` sends an eight-digit, ten-minute, single-use code
+only to configured operator mailboxes, with per-IP/email limits and five guesses.
+Codes are HMAC-hashed in process memory, never stored in SQLite or application
+logs. Access sessions use an opaque, hashed, 12-hour server-side session and
+`__Host-rio_test` (Secure, HttpOnly, SameSite=Lax, Path=/, no Domain). Restarting
+the process revokes access. Normal account password/session, CSRF, moderation,
+contract, pickup, refund and transfer guards remain in force.
+
+Only GET /healthz and POST /api/stripe/webhook bypass the private login. Webhooks
+still require the real Stripe signature and explicit TEST livemode=false. The
+readiness API stays private; Railway health checking therefore uses /healthz.
+Private pages and static responses are no-store. The private service worker
+clears only RentInOrbit application caches and unregisters itself.
+
+After mailbox verification and normal account registration/login, only the
+configured owner email in the isolated database receives the TEST administrator
+role needed for moderation. Client-supplied admin roles remain ignored. Default
+demo/admin accounts are not seeded. Owner-to-TEST-recipient mapping is verified
+against Stripe; unmet recipient requirements remain blockers, not bypasses.
+Transactional email recipients are restricted to the same configured allowlist.
+
+APP_URL and PUBLIC_BASE_URL must both be https://rentinorbit.com. Exact www and
+old Railway browser URLs redirect to the apex, retaining path/query. Canonical
+account cookies remain host-only and Secure. Existing TEST webhook callbacks on
+the Railway host can continue to reach the signature-validated receiver.
+
+Validation added: private-test-access.test.mjs and private-test-http.test.mjs,
+including production-mode startup using disposable storage, real HTTP auth gate,
+owner bootstrap, no default credentials, canonical redirects, own-domain reset
+links, OTP replay/expiry/limits, logout, assets/uploads denial and symlink refusal.
+These checks do not substitute for real own-domain TLS or Stripe TEST E2E.
+
+Remaining external work: connect Porkbun browser context, save current complete
+DNS zone, apply only website routing/verification records while preserving mail,
+then verify certificates and actual own-domain browser journeys. The recipient
+acct_1UdAsYLM72k4RDTw still requires the user's Stripe-hosted TEST terms acceptance
+(date/IP, verified again 2026-11-19). No terms accepted on the user's behalf.
