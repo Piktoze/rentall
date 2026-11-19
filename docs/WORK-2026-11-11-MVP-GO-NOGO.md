@@ -3,6 +3,19 @@
 **Parengta:** 2026-11-09. **Statusas:** vykdymo instrukcija, NE įvykdytų E2E testų ataskaita.
 **Tikslas:** trečiadienį vienu valdomu Work seansu atlikti likusius realius įrodymus ir priimti tik įrodymais pagrįstą GO/NO-GO. Nebeplėsti kosmetinių darbų.
 
+## 2026-11-20 – privalomas SCT scenarijus (viršesnis už istorines Direct Charges instrukcijas)
+
+**Dabartinis preflight:** `staging/v203` HEAD `717b424f9a2fdbde88b78264ca2a61b534ac421f`; Railway staging deployment `fab829a3-2edd-434c-988f-f856ddeffce1` SUCCESS. GitHub prieinamas commit workflow sąrašas tik PR tipo: Chromium 14/14 **NOT VERIFIED**. Tai nėra naujų testų PASS. Šis skyrius pakeičia žemiau esančias Direct Charges vykdymo instrukcijas; jos paliktos tik istorinei atsekamybei.
+
+**B1 – Stripe Connect Separate Charges and Transfers (SCT), tik Work / autorizuotas TEST:**
+1. Tiksliai identifikuoti naują sintetinę A rezervaciją, savininką, susietą TEST Connect paskyrą, tiekėjo patvirtinimą, vienos dienos/kiekio/datyvų kainodaros snapshot ir galutinę 100,00 EUR sumą. Iki tiekėjo patvirtinimo mokėjimas turi būti blokuotas. Bet koks neatitikimas = STOP.
+2. Patikrinti, kad PaymentIntent kuriamas **platformos TEST paskyroje**, o ne kaip Direct Charge tiekėjo paskyroje; `livemode=false`, `amount=10000` ct, `currency=eur`, rezervacijos metadata, stabilus idempotency key. Komisija 15,00 EUR ir tiekėjui skirta 85,00 EUR tik jei konkretaus užsakymo užfiksuotas planas patvirtina 15 %; nepasikliauti vien bendru platformos tarifu.
+3. Tik po autorizuoto TEST apmokėjimo patikrinti pasirašyto webhook įvykį, įvykio ID, booking `paid`, pakartotinio webhook/replay atmetimą ir antro mokėjimo neatsiradimą. Tikras TEST PaymentIntent/Charge ID būtinas; vien izoliuoti testai nėra gyvos operacijos įrodymas.
+4. A atšaukimas iki perdavimo ir TEST refundas tik pagal faktinę užsakymo politiką; sutikrinti Refund ID, sumą, būseną, idempotentiškumą ir neįvykusį ar tinkamai atšauktą tiekėjo transfer. Jei B cikle atliekamas transfer, patikrinti būtent tam užsakymui priskirtą 85 EUR (ar snapshot atitinkančią sumą), gavėją, transfer ID ir grąžinimo/atšaukimo apsaugas. Jokio LIVE, realių lėšų ar ankstesnių svetimų objektų keitimo.
+5. **B1 PASS** tik su faktiniais Stripe TEST objektų ID, teisinga platformos ir tiekėjo sąsaja, webhook, mokėjimo ir refund/transfer įrodymais. B2 lieka atskiras dviejų paskyrų, dviejų sutarčių, vienkartinio perdavimo kodo ir grąžinimo be antro kodo scenarijus.
+
+**B3–B5:** izoliuotas S3 atkūrimas tik laikinoje DB, HTTPS/readiness ir pranešimų pristatymas; teisinių tekstų patvirtinimai ir operatoriaus rekvizitai tik vartotojos sprendimu; GO tik kai B1–B4 turi įrodymus. Viešas mokamas MVP = **NO-GO**. Railway 27/27 niekada nelaikyti Chromium 14/14 įrodymu.
+
 ## 2026-11-13 00:38 LT – naujausias read-only preflight (viršesnis už istorinius įrašus)
 
 - GitHub `staging/v203` HEAD: `5706bb6af92668eec6bd43755418b14612bb6117` (branch API); šio vykdymo metu naujų commit prieš šį dokumento atnaujinimą nebuvo.
