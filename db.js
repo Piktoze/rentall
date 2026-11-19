@@ -37,7 +37,7 @@ db.exec(`
   INSERT OR IGNORE INTO schema_migrations(version,name) VALUES(146,'rc44-production-foundation');
 `);
 
-export const databaseRuntime=Object.freeze({driver:'sqlite',source:runtimeConfig.database.source,path:dbPath,persistent:runtimeConfig.database.source!=='default-local'});
+export const databaseRuntime=Object.freeze({driver:'sqlite',source:runtimeConfig.database.source,path:dbPath,persistent:!['default-local','private-test'].includes(runtimeConfig.database.source)});
 export function checkDatabase(){
   try{
     const row=db.prepare('SELECT 1 AS ok').get();

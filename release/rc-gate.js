@@ -3,7 +3,7 @@ import {execFileSync} from 'node:child_process';
 
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
-const rentalTestEnv={...process.env,PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+const rentalTestEnv={...process.env,PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 // Only an explicitly requested Railway staging build may run real TEST APIs.
 // Ordinary release/CI tests below use provider doubles and disposable storage.
 if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
@@ -11,7 +11,7 @@ if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
 }
 
 // Build-time suites must never inherit the deployed private database or access gate.
-process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';
+process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
 const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',

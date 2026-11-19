@@ -28,6 +28,7 @@ try{
  assert.equal((await (await req('/api/auth/me')).json()).user.role,'admin');
  const normal=await req('/api/auth/register',{method:'POST',body:{email:'renter@example.test',password:'Synthetic-password-123456',termsAccepted:true,role:'admin'}});assert.equal(normal.status,200);assert.equal((await normal.json()).user.role,'supplier');
  assert.equal((await req('/api/listings')).status,200);assert.equal((await req('/app.js')).status,200);
+ const readiness=await (await req('/api/readiness')).json();assert.equal(readiness.database.persistent,false);
  assert.equal((await req('/api/auth/forgot-password',{method:'POST',body:{email:'owner@example.test'}})).status,202);
  const {default:Database}=await import('better-sqlite3');const db=new Database(path.join(os.tmpdir(),'rentinorbit-private-test',run,'test.sqlite'),{readonly:true});
  assert.equal(db.prepare("SELECT count(*) n FROM app_users WHERE email IN ('demo@rentinorbit.test','admin@rentinorbit.test')").get().n,0);
