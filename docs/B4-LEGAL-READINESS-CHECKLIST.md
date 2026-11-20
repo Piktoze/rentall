@@ -21,7 +21,9 @@ Tik `staging/v203`; šiame faile nieko nepublikuojama svetainės lankytojams. Op
 - [ ] **Kitų kalbų versijos.** Patvirtinus LT tekstus sutikrinti kitas kalbas ir versijos datą; negalima vien kalbos pasirinkimo laikyti teisės jurisdikcijos keitimu.
 
 ## Ką sąmoningai paliekame paskutiniam etapui
-- [ ] Tikri IV vykdytojo vardas/pavardė ir IV identifikacija / EVRK (tiek, kiek reikia viešai nurodyti), viešas kontaktinis adresas ir el. paštas.
+- [x] Operatoriaus vardas, IV pažymos numeris, viešas korespondencijos adresas ir info@rentinorbit.com pateikti vartotojos šiame pokalbyje; jų pakartotinai neprašyti. Tai nėra visų viešų dokumentų patvirtinimas.
+- [x] Vartotoja patvirtino įprastų užklausų saugojimą 12 mėnesių po išsprendimo, išskyrus dokumentuotą teisinį poreikį. Žurnalų ir atsarginių kopijų terminai iš to neišvedami.
+- [ ] EVRK atitiktis konkrečiai pilnos platformos veiklai ir mokesčių/PVM statusas dar turi būti patvirtinti prieš komercinį paleidimą.
 - [ ] Operatoriaus mokesčių / PVM statusas ir sąskaitų išrašymo bei apskaitos organizavimas (su buhalteriu).
 - [ ] Galutinės sąlygų ir privatumo politikos redakcijos patvirtinimas; „staging juodraštis“ žymos panaikinimas tik prieš viešą komercinį startą.
 - [ ] Galutinis DSA / vartotojų teisių / BDAR reikalavimų taikymo patvirtinimas konkrečiam verslo modeliui. Jei privaloma išorinė teisinė peržiūra neįvykdyta, B4 lieka NO-GO.

@@ -136,3 +136,14 @@ Prie kiekvienos patikros nurodyk `PASS / FAIL / BLOCKED / NOT RUN` ir įrodymą 
 ## 8. Tekstas perduoti į Work trečiadienį
 > Tęsk RentInOrbit MVP pagal **tik** `Piktoze/rentall` `staging/v203` ir Railway `nurturing-strength / staging`. Pirmiausia atsiversk šį protokolą `docs/WORK-2026-11-11-MVP-GO-NOGO.md` bei GitHub issue #3. Vykdyk preflight, B1 rezervaciją A (tikras Stripe TEST €100 Separate Charges and Transfers / SCT: PaymentIntent platformoje, teisingas connected tiekėjas, 15 % / 85 % pagal užsakymo snapshot, signed webhook, vienkartinis saugus refundas ir pervedimo suderinimas), B2 atskirą rezervaciją B (dviejų paskyrų sutartys, PIN, grąžinimas), B3 el. pašto ir readiness patikras, B4 be atidėtų IV rekvizitų ir B5 faktinę GO/NO-GO ataskaitą. Naudok valdomą naršyklę, neskelbk PASS be tikrų įrodymų. Neleisk mokėjimo iki tiekėjo patvirtinimo. Neliesk production, main, LIVE Stripe, /data, klientų duomenų; papildomas biudžetas 0 €. Jei reikės mano prisijungimo ar aiškaus sutikimo, sustok konkrečiai tame žingsnyje.
 
+
+
+## 2026-11-20 tęsinys: tik esami blokatoriai
+
+- Pasveikinimo langas pašalintas commit `42c8e4c`; privati TEST prieiga lieka įjungta.
+- Naujoje mobiliųjų ekranų patikroje rasti už 320–390 px ekrano ribų išeinantys prieinamumo datų laukai ir mygtukas. Taisymas naudoja susitraukiantį grid ir vieną stulpelį mažuose ekranuose; atskirai tikrinami rezervacijos, registracijos ir skelbimo nuotraukų įkėlimo langai.
+- Šviežias tikros Stripe TEST API atsakymas: platforma `acct_1UT4JCLM72MR015z`, gavėjas `acct_1UdAsYLM72k4RDTw`, `livemode=false`, pervedimų galimybė `restricted`. Reikalavimai: `identity.attestations.terms_of_service.account.date` ir `.ip`, abu `awaiting_action_from=user`. B1/B2 finansinė dalis lieka **BLOCKED**; naujų PaymentIntent, Refund ar Transfer šiame bandyme nesukurta, nes sustota prieš finansinius veiksmus.
+- `ops/sct-real-test-evidence.mjs` dabar nuskaito aiškiai nurodytą esamą sintetinį TEST gavėją. Jo iš naujo nekuria, nekeičia tapatybės/banko duomenų ar atsakomybių ir nepriima sąlygų. Tai apsaugo nuo naujos paskyros sukūrimo pasibaigus seno idempotency rakto galiojimui.
+- Paruoštas A/B įrodymų rinkimas tik naujiems sintetiniams užsakymams laikinoje SQLite bazėje: Stripe sumos ir objektų ID lyginami su programos snapshot; PASS reikalauja tikrų apmokėjimo ir refundo webhook bei pakartojimo blokavimo. Paruoštas kodas nėra įvykdyto finansinio scenarijaus įrodymas.
+- B4 rekvizitų gavimo būsena patikslinta `B4-LEGAL-READINESS-CHECKLIST.md`; jau pateiktų rekvizitų nelaikyti trūkstamais. Galutinis pilnos platformos teisinis/PVM/EVRK patvirtinimas ir LIVE parengtis lieka atviri. Katalogo ar privataus TEST veikimas jų neuždaro.
+- Domeno/DNS prijungimas nebekartojamas. `/data`, istoriniai užsakymai, main, production ir LIVE finansinės operacijos nekeičiami.

@@ -158,7 +158,7 @@ async function fitsPhone(page,scope){
    return r.left< -1||r.right>width+1?[{id:el.id,text:(el.textContent||'').trim().slice(0,35),left:r.left,right:r.right,width}]:[];
   });
  },scope);
- expect(overflow,`Horizontal overflow in ${scope}`).toEqual([]);
+ expect.soft(overflow,`Horizontal overflow in ${scope}`).toEqual([]);
 }
 for(const width of [320,390]){
  test(`phone ${width}px search, item, availability, checkout and registration`,async({page})=>{
@@ -178,3 +178,22 @@ for(const width of [320,390]){
   await expect(page.locator('#supplierRegisterForm')).toBeVisible();await fitsPhone(page,'#supplierRegisterForm');
  });
 }
+
+test('phone 390px supplier listing form and actual isolated photo upload',async({page,request})=>{
+ await page.setViewportSize({width:390,height:844});
+ const email=`phone-supplier-${Date.now()}@example.test`,password='Synthetic-phone-only-12345';
+ expect((await request.post('/api/auth/register',{data:{email,password,role:'supplier',termsAccepted:true}})).ok()).toBeTruthy();
+ await page.goto('/');await page.locator('#supplierAuthBtn').click();
+ await page.locator('#loginEmail').fill(email);await page.locator('#loginPassword').fill(password);
+ await page.locator('#supplierLoginForm button[type="submit"]').click();
+ await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
+ await page.locator('#navListItemBtn').click();await expect(page.locator('#listingForm')).toBeVisible();
+ await fitsPhone(page,'#listingForm');
+ const images=await page.evaluate(()=>['#224466','#663322'].map(color=>{
+  const c=document.createElement('canvas');c.width=500;c.height=500;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,500,500);return c.toDataURL('image/png').split(',')[1];
+ }));
+ await page.locator('#listingPhotos').setInputFiles(images.map((data,i)=>({name:`synthetic-phone-${i}.png`,mimeType:'image/png',buffer:Buffer.from(data,'base64')})));
+ await expect(page.locator('#listingPhotoPreview img')).toHaveCount(2);
+ await fitsPhone(page,'#listingForm');await page.locator('#closeListingModal').click();
+ await expect(page.locator('#listingModal')).not.toHaveClass(/open/);
+});

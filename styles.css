@@ -2060,3 +2060,14 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
   .v92-availability-pill, .v92-trust-row, .v101-map-tags, .v132-checkout-confidence) {
   display: none !important;
 }
+
+/* Phone availability: native date inputs must not widen the modal's grid. */
+@media(max-width:620px){
+  #availabilityModal .availability-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #availabilityModal .availability-controls label{min-width:0}
+  #availabilityModal .availability-controls input{min-width:0;max-width:100%;box-sizing:border-box}
+}
+@media(max-width:480px){
+  #availabilityModal .availability-controls{grid-template-columns:minmax(0,1fr)}
+  #availabilityModal .availability-controls input{width:100%}
+}

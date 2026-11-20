@@ -90,12 +90,22 @@ try{
  }).immediate();d.updateRentalBookingStatus(id,'confirmed');return id;}
  async function pay(id){const result=await rt.createPayment(id);
   // Official TEST card makes funds available, without bypassing our balance guard.
-  if(result.status!=='succeeded')await stripe.paymentIntents.confirm(result.paymentIntentId,{payment_method:'pm_card_bypassPending',return_url:'https://rentall-staging.up.railway.app/'});
+  if(result.status!=='succeeded')await stripe.paymentIntents.confirm(result.paymentIntentId,{payment_method:'pm_card_bypassPending',return_url:'https://rentinorbit.com/'});
   const pi=await stripe.paymentIntents.retrieve(result.paymentIntentId);assert.equal(pi.livemode,false);assert.equal(pi.status,'succeeded');
   // Wait for the actual signed forwarded event to drive the canonical paid state.
   for(let i=0;i<150&&d.getRentalBookingById(id).paymentStatus!=='paid';i++)await wait(100);
   assert.equal(d.getRentalBookingById(id).paymentStatus,'paid');assert.equal((await rt.settle(id)).duplicate,true);
-  return {bookingId:id,paymentIntentId:pi.id,chargeId:typeof pi.latest_charge==='string'?pi.latest_charge:pi.latest_charge.id,amountCents:10000,commissionCents:1500};}
+  const binding=db.prepare('SELECT * FROM sct_booking_bindings WHERE booking_id=?').get(id);
+  assert.equal(binding.payment_intent_id,pi.id);assert.equal(binding.destination,created.id);
+  assert.equal(binding.amount_cents,10000);assert.equal(binding.fee_cents,1500);
+  assert.equal(pi.amount,binding.amount_cents);assert.equal(pi.currency,'eur');
+  assert.equal(pi.application_fee_amount,null);assert.equal(pi.transfer_data,null);
+  const chargeId=typeof pi.latest_charge==='string'?pi.latest_charge:pi.latest_charge.id;
+  const charge=await stripe.charges.retrieve(chargeId,{expand:['balance_transaction']});
+  assert.equal(charge.payment_intent,pi.id);assert.equal(charge.amount,10000);assert.equal(charge.livemode,false);
+  assert.equal(typeof charge.balance_transaction,'object');assert.equal(charge.balance_transaction.currency,'eur');
+  return {bookingId:id,paymentIntentId:pi.id,chargeId,amountCents:binding.amount_cents,commissionCents:binding.fee_cents,
+   processingFeeCents:charge.balance_transaction.fee,balanceTransactionId:charge.balance_transaction.id};}
  step='scenario_A';const a=await booking('A');
  report.A=await pay(a);await assert.rejects(rt.transfer(a));
  d.createRentalAgreement({bookingId:a,termsVersion:'synthetic-test-only',snapshot:{total:100}});
@@ -107,21 +117,31 @@ try{
   const after=await stripe.balance.retrieve({},{stripeAccount:created.id});
   const eur=b=>[...b.available,...b.pending].filter(x=>x.currency==='eur').reduce((n,x)=>n+x.amount,0);
   assert.equal(eur(after)-eur(before),8500);report.A.connectedBalanceIncreaseCents=8500;
-  report.A.transfer=t;const final=d.getRentalBookingById(a);report.A.finalState={status:final.status,paymentStatus:final.paymentStatus,payoutStatus:final.payoutStatus};report.scenarioA='PASS';}
+  report.A.transfer=t;const final=d.getRentalBookingById(a);report.A.finalState={status:final.status,paymentStatus:final.paymentStatus,payoutStatus:final.payoutStatus};assert.equal(final.status,'returned');assert.equal(final.paymentStatus,'paid');
+  const providerTransfer=await stripe.transfers.retrieve(t.providerId);assert.equal(providerTransfer.destination,created.id);assert.equal(providerTransfer.amount,8500);assert.equal(providerTransfer.currency,'eur');}
  catch(e){report.A.blocker=safeError(e);}
  step='scenario_B';const b=await booking('B');report.B=await pay(b);
  const refund=await rt.refund(b,10000);const refundRow=d.db.prepare("SELECT provider_id FROM sct_test_commands WHERE booking_id=? AND kind='refund'").get(b);
- const providerRefund=await stripe.refunds.retrieve(refundRow.provider_id);assert.equal(providerRefund.amount,10000);assert.equal(providerRefund.status,'succeeded');
+ const providerRefund=await stripe.refunds.retrieve(refundRow.provider_id);assert.equal(providerRefund.amount,10000);assert.equal(providerRefund.status,'succeeded');assert.equal(providerRefund.charge,report.B.chargeId);
+ assert.equal(providerRefund.payment_intent,report.B.paymentIntentId);assert.equal(providerRefund.currency,'eur');
  await assert.rejects(rt.refund(b,10000));await assert.rejects(rt.settle(b));
  report.B.refund={providerId:providerRefund.id,amountCents:providerRefund.amount,status:providerRefund.status};const final=d.getRentalBookingById(b);report.B.finalState={status:final.status,paymentStatus:final.paymentStatus,refundStatus:final.refundStatus,refundAmount:final.refundAmount,payoutStatus:final.payoutStatus};
- report.scenarioB='PASS';
+ assert.equal(final.status,'cancelled');assert.equal(final.paymentStatus,'refunded');assert.equal(final.refundAmount,100);
  const held=await booking('hold');rt.setHold(held,'Synthetic explicit financial hold');await assert.rejects(rt.transfer(held),{code:'SCT_FINANCIAL_HOLD'});
  report.holdBlocked=true;
- const events=await stripe.events.list({type:'payment_intent.succeeded',limit:100});
- const ownEvents=events.data.filter(e=>[report.A.paymentIntentId,report.B.paymentIntentId].includes(e.data?.object?.id));
- report.providerEventIds=ownEvents.map(e=>e.id);
- for(let i=0;i<100;i++){if(ownEvents.length===2&&ownEvents.every(e=>d.db.prepare("SELECT 1 FROM webhook_events WHERE event_id=? AND status='processed'").get(e.id)))break;await wait(100);}
- assert.equal(ownEvents.length,2);
+ const disputed=await booking('dispute');d.createRentalDispute({bookingId:disputed,reason:'Synthetic TEST financial dispute'});
+ await assert.rejects(rt.transfer(disputed),{code:'SCT_FINANCIAL_HOLD'});report.disputeBlocked=true;
+ let paymentEvents=[],refundEvents=[];
+ for(let i=0;i<40;i++){
+  const payments=await stripe.events.list({type:'payment_intent.succeeded',limit:100});
+  const refunds=await stripe.events.list({type:'refund.created',limit:100});
+  paymentEvents=payments.data.filter(e=>[report.A.paymentIntentId,report.B.paymentIntentId].includes(e.data?.object?.id));
+  refundEvents=refunds.data.filter(e=>e.data?.object?.id===providerRefund.id);
+  if(paymentEvents.length===2&&refundEvents.length>=1)break;await wait(250);
+ }
+ assert.equal(paymentEvents.length,2);assert.ok(refundEvents.length>=1,'REAL_REFUND_WEBHOOK_EVENT_REQUIRED');
+ const ownEvents=[...paymentEvents,...refundEvents];report.providerEventIds=ownEvents.map(e=>e.id);report.refundWebhookEventIds=refundEvents.map(e=>e.id);
+ for(let i=0;i<100;i++){if(ownEvents.every(e=>d.db.prepare("SELECT 1 FROM webhook_events WHERE event_id=? AND status='processed'").get(e.id)))break;await wait(100);}
  for(const event of ownEvents){
   assert.ok(d.db.prepare("SELECT 1 FROM webhook_events WHERE event_id=? AND status='processed'").get(event.id));
   const body=JSON.stringify(event),signature=stripe.webhooks.generateTestHeaderString({payload:body,secret:webhookSecret});
@@ -129,6 +149,7 @@ try{
   assert.equal(replay.status,200);assert.equal((await replay.json()).duplicate,true);
  }
  report.webhookTransportVerified=true;report.webhookReplayBlocked=true;report.bankPayoutVerified=false;
+ report.scenarioB='PASS';if(report.A.transfer&&!report.A.blocker)report.scenarioA='PASS';
 }catch(e){report.blockedAt=step;report.blocker=safeError(e);}
 finally{stop(server);stop(listener);if(db?.open)db.close();if(temporary)fs.rmSync(temporary,{recursive:true,force:true});}
 // A BLOCKED financial test is explicit evidence, never a build/launch GO.
