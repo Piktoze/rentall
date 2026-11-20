@@ -4,6 +4,10 @@ import {execFileSync} from 'node:child_process';
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
 const rentalTestEnv={...process.env,PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+if(process.env.RENTINORBIT_NOTIFICATION_TEST_RUN_ID){
+  execFileSync(process.execPath,['ops/notification-delivery-evidence.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
+}
+execFileSync(process.execPath,['--test','full-platform-policy.test.mjs','email-delivery-receipt.test.mjs','invoice-issuer-plan.test.mjs'],{stdio:'inherit',env:{...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',DATABASE_URL:'',RENTINORBIT_DB_PATH:'',RAILWAY_VOLUME_MOUNT_PATH:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:''}});
 // Only an explicitly requested Railway staging build may run real TEST APIs.
 // Ordinary release/CI tests below use provider doubles and disposable storage.
 if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){

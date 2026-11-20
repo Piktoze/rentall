@@ -2339,8 +2339,20 @@ export function claimTransactionalEmails({limit=20,maxAttempts=5}={}){
   claim();
   return claimed;
 }
-export function completeTransactionalEmail(id){
-  return markEmailSentStmt.run(Number(id)).changes===1;
+db.exec(`CREATE TABLE IF NOT EXISTS email_delivery_receipts(
+ outbox_id INTEGER PRIMARY KEY REFERENCES email_outbox(id),provider TEXT NOT NULL,
+ provider_id TEXT NOT NULL UNIQUE,accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+export function completeTransactionalEmail(id,delivery=null){
+  return db.transaction(()=>{
+    if(delivery?.provider==='resend'){
+      if(!/^[a-f0-9-]{36}$/i.test(delivery.id||''))throw new Error('EMAIL_PROVIDER_RECEIPT_REQUIRED');
+      const prior=db.prepare('SELECT provider_id FROM email_delivery_receipts WHERE outbox_id=?').get(Number(id));
+      if(prior&&prior.provider_id!==delivery.id)throw new Error('EMAIL_RECEIPT_CONFLICT');
+      db.prepare('INSERT OR IGNORE INTO email_delivery_receipts(outbox_id,provider,provider_id) VALUES(?,?,?)').run(Number(id),'resend',delivery.id);
+    }
+    // sent means provider accepted, not mailbox delivery. Inspect provider events.
+    return markEmailSentStmt.run(Number(id)).changes===1;
+  })();
 }
 export function failTransactionalEmail(id,error,{maxAttempts=5}={}){
   const row=db.prepare('SELECT attempts FROM email_outbox WHERE id=?').get(Number(id));

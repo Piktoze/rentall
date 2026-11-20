@@ -12,6 +12,7 @@ import {getSctBookingBinding} from './modules/sct-booking-binding.js';
 import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
+import {invoiceIssuerPlan} from './modules/invoice-issuer-plan.js';
 import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
@@ -157,6 +158,7 @@ import {
 } from './db.js';
 import {assertProductionConfig,productionConfigReport,productionStorageReport,runtimeConfig,stripeModeFor} from './config.js';
 import {HELP_CENTER_COPY,getPolicyPage} from './modules/help-center-content-v177.js';
+import {fullPlatformPolicy} from './modules/full-platform-policy.js';
 import {supplierResponseSchedule,supplierTimezoneForListing} from './modules/supplier-response-clock-v187.js';
 import {resolveRentalStart} from './modules/cancellation-policy-v197.js';
 import {DEFAULT_COMMISSION_BPS} from './modules/pricing-v194.js';
@@ -1324,7 +1326,7 @@ function catalogDocument(key){
 }
 
 function renderPolicyPage(lang,key){
-  const page=catalogOnly?catalogDocument(key):getPolicyPage(lang,key);
+  const page=catalogOnly?catalogDocument(key):fullPlatformPolicy(getPolicyPage(lang,key),{key,lang});
   const sections=(page.sections||[]).map(([title,paras])=>`<section class="policy-section"><h2>${escapeEmailHtml(title)}</h2>${paras.map(p=>`<p>${escapeEmailHtml(p)}</p>`).join('')}</section>`).join('');
   const stagingSource={
     lt:['Staging versija','Šis tekstas yra informacinis produkto juodraštis. Prieš viešą komercinį paleidimą jį turi peržiūrėti teisės ir apskaitos specialistai.'],
@@ -1569,13 +1571,15 @@ function trustedRentalInvoicePreflight(bookingId){
  if(!booking)return null;
  const listing=getRentalListing(booking.listingId);
  const supplierEmail=String(listing?.ownerEmail||'').trim().toLowerCase();
- return assessRentalInvoicePreflight({
+ const assessment=assessRentalInvoicePreflight({
   booking,listing,
   profile:getAccountingSupplierProfile(supplierEmail),
   mandate:getAccountingInvoiceMandate(supplierEmail),
   terms:invoiceDelegationTerms(),
   hasOpenDispute:hasStripeRentalDisputeHold(db,bookingId)||!!db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(booking.bookingId)
  });
+ try{return {...assessment,issuerPlan:invoiceIssuerPlan({booking,listing,profile:getAccountingSupplierProfile(supplierEmail)})};}
+ catch{return {...assessment,issuerPlan:null,issuerPlanBlocker:'ACCOUNTING_SNAPSHOT_REVIEW_REQUIRED'};}
 }
 app.get('/api/admin/accounting/bookings/:bookingId/invoice-preflight',requireRole('admin'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
@@ -2143,7 +2147,7 @@ async function processTransactionalEmailOutbox(){
   let processed=0,sent=0,failed=0;
   try{
     const items=claimTransactionalEmails({limit:batchSize,maxAttempts});
-    for(const item of items){processed++;try{await deliverTransactionalEmail(item);completeTransactionalEmail(item.id);sent++;}catch(err){failTransactionalEmail(item.id,err?.message||'Delivery failed',{maxAttempts});failed++;console.warn(JSON.stringify({type:'email.delivery_failed',id:item.id,template:item.templateKey,error:String(err?.message||err).slice(0,300)}));}}
+    for(const item of items){processed++;try{const receipt=await deliverTransactionalEmail(item);completeTransactionalEmail(item.id,receipt);sent++;}catch(err){failTransactionalEmail(item.id,err?.message||'Delivery failed',{maxAttempts});failed++;console.warn(JSON.stringify({type:'email.delivery_failed',id:item.id,template:item.templateKey,error:String(err?.message||err).slice(0,300)}));}}
     return {processed,sent,failed};
   }finally{emailWorkerBusy=false}
 }
@@ -3693,7 +3697,15 @@ app.post('/api/rentals/bookings/:bookingId/return-confirm',
     const current=getRentalBookingById(id);
     if(!current||current.status!=='active')
       return res.status(409).json({error:'Grąžinimą galima patvirtinti tik aktyviai nuomai.',code:'TRANSFER_NOT_READY'});
+    const booking=db.transaction(()=>{
     const booking=markRentalReturned(id,condition,notes||null);
+    queueBookingStatusEmail(booking,'returned',{message:'Nuomotojas užfiksavo daikto grąžinimą. Peržiūrėkite būklę užsakyme; jei nesutinkate, galite pranešti apie problemą.'});
+    const returnListing=getRentalListing(booking.listingId);
+    if(returnListing?.ownerEmail)enqueueTransactionalEmail({recipient:returnListing.ownerEmail,templateKey:'booking_returned_supplier',
+      subject:`RentInOrbit · Daikto grąžinimas užfiksuotas · ${id}`,dedupeKey:`booking:${id}:returned:supplier`,
+      payload:{bookingId:id,listingTitle:returnListing.title,status:'returned',message:'Daikto grąžinimas užfiksuotas. Pervedimas priklauso nuo grąžinimo būklės, ginčų ir sulaikymų.',accountBookingPath:`/?view=supplier-bookings&booking=${encodeURIComponent(id)}`}});
+    return booking;
+    })();
     const listing=getRentalListing(booking.listingId);
     if(Math.max(0,Number(booking.securityDepositAmount||0))>0){
       try{

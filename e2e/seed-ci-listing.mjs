@@ -40,5 +40,17 @@ try{
         reason:'Synthetic regression fixture',adminId:'isolated-ci',validate:x=>x});
     }
   }
-  console.log('PASS CI synthetic drill listing seeded in disposable DB');
+  // Separate real browser sessions exercise contracts and physical handover.
+  // Paid is an explicit local precondition, NOT another real Stripe payment.
+  const {createAppUser,upsertRentalListing,createRentalBookingAtomic,setBookingPaymentDetails,createRentalAgreement}=await import('../db.js');
+  for(const width of [1280,390]){
+    const supplier=`journey-supplier-${width}@example.test`,renter=`journey-renter-${width}@example.test`;
+    for(const [email,role] of [[supplier,'supplier'],[renter,'customer']])createAppUser({email,role,password:'SyntheticJourney123!',displayName:'Synthetic TEST'});
+    const listingId=`ci-journey-${width}`,bookingId=`CI-UI-${width}`;
+    upsertRentalListing({listingId,ownerEmail:supplier,title:'Synthetic browser journey',totalQuantity:1});
+    createRentalBookingAtomic({bookingId,listingId,startDate:'2099-05-01',endDate:'2099-05-02',quantity:1,status:'confirmed',customerEmail:renter,customerName:'Synthetic renter',orderValue:100});
+    setBookingPaymentDetails({bookingId,paymentIntentId:`pi_mock_ci_${width}`,paymentStatus:'paid',paymentProvider:'mock',platformFeeAmount:15,supplierAmount:85});
+    createRentalAgreement({bookingId,termsVersion:'synthetic-ci-only',snapshot:{listingTitle:'Synthetic browser journey',startDate:'2099-05-01',endDate:'2099-05-02',total:100,terms:['Synthetic TEST agreement only.']}});
+  }
+  console.log('PASS CI synthetic drill and two-account journey fixtures seeded in disposable DB');
 }finally{closeDatabase();}
