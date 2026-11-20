@@ -35,7 +35,7 @@ test('server gate protects every asset/API; allowlist OTP one-use, expiry, limit
   assert.equal((await fetch(origin+'/',{redirect:'manual'})).status,303);
   assert.equal((await get('/healthz')).status,200);assert.equal((await post('/api/stripe/webhook')).status,400);
   assert.equal((await get('/api/stripe/webhook')).status,401);
-  assert.equal((await get('/__test-access')).status,200);
+  const accessPage=await get('/__test-access');assert.equal(accessPage.status,200);assert.ok(accessPage.headers.get('content-security-policy').includes("form-action 'self' https://connect.stripe.com"));
   assert.equal((await post('/__test-access/request',{email:'owner@example.test'},null,'https://evil.test')).status,403);
   const unknown=await post('/__test-access/request',{email:'stranger@example.test'});assert.equal(unknown.status,202);await unknown.json();assert.equal(mail.length,0);
   const r=await post('/__test-access/request',{email:'owner@example.test'});const {challenge}=await r.json();assert.equal(r.status,202);assert.equal(mail.length,1);

@@ -279,7 +279,7 @@ app.use((req,res,next)=>{
       "worker-src 'self'",
       "manifest-src 'self'",
       "base-uri 'self'",
-      "form-action 'self' https://hooks.stripe.com"
+      "form-action 'self' https://hooks.stripe.com"+(privateTestRequested()?" https://connect.stripe.com":"")
     ].join('; ')
   );
   next();
