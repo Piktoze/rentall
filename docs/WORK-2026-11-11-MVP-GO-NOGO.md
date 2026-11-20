@@ -147,3 +147,6 @@ Prie kiekvienos patikros nurodyk `PASS / FAIL / BLOCKED / NOT RUN` ir įrodymą 
 - Paruoštas A/B įrodymų rinkimas tik naujiems sintetiniams užsakymams laikinoje SQLite bazėje: Stripe sumos ir objektų ID lyginami su programos snapshot; PASS reikalauja tikrų apmokėjimo ir refundo webhook bei pakartojimo blokavimo. Paruoštas kodas nėra įvykdyto finansinio scenarijaus įrodymas.
 - B4 rekvizitų gavimo būsena patikslinta `B4-LEGAL-READINESS-CHECKLIST.md`; jau pateiktų rekvizitų nelaikyti trūkstamais. Galutinis pilnos platformos teisinis/PVM/EVRK patvirtinimas ir LIVE parengtis lieka atviri. Katalogo ar privataus TEST veikimas jų neuždaro.
 - Domeno/DNS prijungimas nebekartojamas. `/data`, istoriniai užsakymai, main, production ir LIVE finansinės operacijos nekeičiami.
+
+- Papildoma mobiliųjų ekranų patikra aptiko progreso juostos uždengiamą rezervacijos uždarymo mygtuką. Pataisa suteikia uždarymui aukštesnį sluoksnį ir atskiria jam vietą nuo juostos; testas naudoja įprastą paspaudimą be `force`.
+- Kad nereikėtų nematomo naršyklės perėmimo, patvirtintam privačios TEST prieigos savininkui pateikiamas mygtukas „Užbaigti Stripe TEST sąlygas“. Jis atidaro trumpalaikę oficialią esamos sintetinės TEST paskyros formą; privatūs URL pokalbyje neskelbiami. Kiti pakviesti adresai tokios teisės negauna. Pats mygtukas sąlygų nepriima ir finansinių veiksmų neatlieka.

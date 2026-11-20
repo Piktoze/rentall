@@ -2071,3 +2071,9 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
   #availabilityModal .availability-controls{grid-template-columns:minmax(0,1fr)}
   #availabilityModal .availability-controls input{width:100%}
 }
+
+/* Keep checkout dismissal above the sticky mobile progress strip. */
+@media(max-width:700px){
+  #checkoutModal #closeCheckout{z-index:10!important;width:44px!important;height:44px!important}
+  #checkoutModal .checkout-progress{margin-right:52px}
+}
