@@ -4,9 +4,9 @@ const app=[fs.readFileSync('./app.js','utf8'),...fs.readdirSync('./modules',{wit
 const manifest=fs.readFileSync('./manifest.webmanifest','utf8');
 function assert(v,msg){if(!v)throw new Error(msg)}
 assert(index.includes('manifest.webmanifest'),'Manifest missing');
-assert(index.includes('onboardingModal'),'Onboarding modal missing');
+assert(!index.includes('onboardingModal'),'Retired welcome modal must not be rendered');
 assert(index.includes('installAppBtn'),'Install app button missing');
 assert(app.includes('beforeinstallprompt'),'PWA install prompt missing');
 assert(app.includes('serviceWorker.register'),'Service worker registration missing');
 assert(manifest.includes('RentInOrbit — Rent Anything, Anywhere'),'Manifest app name missing');
-console.log('PASS: V41 PWA/onboarding static checks passed.');
+console.log('PASS: PWA static checks passed.');

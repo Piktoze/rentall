@@ -5674,98 +5674,8 @@ document.addEventListener('click',e=>{
   }
 });
 
-// --- V41: installable PWA + first-run onboarding ---
+// Installable PWA. Search opens directly; no first-run mode selection.
 let deferredInstallPrompt=null;
-
-function showOnboardingStep(step){
-  document.querySelectorAll('[data-onboarding-step]').forEach(el=>{
-    el.classList.toggle('active',Number(el.dataset.onboardingStep)===Number(step));
-  });
-  document.querySelectorAll('[data-onboarding-dot]').forEach(el=>{
-    el.classList.toggle('active',Number(el.dataset.onboardingDot)<=Number(step));
-  });
-}
-
-function openOnboarding(){
-  const modal=document.getElementById('onboardingModal');
-  if(!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
-  showOnboardingStep(1);
-}
-
-function closeOnboarding(){
-  const modal=document.getElementById('onboardingModal');
-  if(!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden','true');
-}
-
-function onboardingPrefs(){
-  try{return JSON.parse(localStorage.getItem('rentinorbit_onboarding_prefs')||'{}');}
-  catch{return {};}
-}
-function saveOnboardingPrefs(prefs){
-  localStorage.setItem('rentinorbit_onboarding_prefs',JSON.stringify(prefs));
-}
-
-document.querySelectorAll('[data-onboarding-intent]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('[data-onboarding-intent]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const prefs=onboardingPrefs();
-    prefs.intent=btn.dataset.onboardingIntent;
-    saveOnboardingPrefs(prefs);
-  });
-});
-
-document.querySelectorAll('[data-next-onboarding]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const next=Number(btn.dataset.nextOnboarding);
-    if(next===3){
-      const prefs=onboardingPrefs();
-      prefs.language=document.getElementById('onboardingLanguage')?.value||'en';
-      prefs.currency=document.getElementById('onboardingCurrency')?.value||'EUR';
-      saveOnboardingPrefs(prefs);
-      const summary=document.getElementById('onboardingSummary');
-      if(summary){
-        summary.innerHTML=`
-          <b>Mode:</b> ${escapeHtml(prefs.intent==='trip'?'For my trip':'Near me')}<br>
-          <b>Language:</b> ${escapeHtml(prefs.language.toUpperCase())}<br>
-          <b>Currency:</b> ${escapeHtml(prefs.currency)}`;
-      }
-    }
-    showOnboardingStep(next);
-  });
-});
-
-document.querySelectorAll('[data-back-onboarding]').forEach(btn=>{
-  btn.addEventListener('click',()=>showOnboardingStep(Number(btn.dataset.backOnboarding)));
-});
-
-document.getElementById('skipOnboardingBtn')?.addEventListener('click',()=>{
-  localStorage.setItem('rentinorbit_onboarding_done','1');
-  closeOnboarding();
-});
-document.getElementById('finishOnboardingBtn')?.addEventListener('click',()=>{
-  const prefs=onboardingPrefs();
-  localStorage.setItem('rentinorbit_onboarding_done','1');
-
-  const lang=document.getElementById('lang');
-  if(lang && prefs.language){
-    lang.value=prefs.language;
-    window.RentInOrbitI18n?.apply?.(prefs.language);
-  }
-
-  if(prefs.intent==='trip'){
-    document.querySelector('[data-search-mode="trip"]')?.click();
-  }else{
-    document.querySelector('[data-search-mode="local"]')?.click();
-  }
-
-  closeOnboarding();
-  showToast('RentInOrbit is ready','success',1800);
-});
 
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();
@@ -5793,13 +5703,6 @@ if('serviceWorker' in navigator){
     });
   });
 }
-
-window.addEventListener('DOMContentLoaded',()=>{
-  if(!localStorage.getItem('rentinorbit_onboarding_done')){
-    setTimeout(openOnboarding,450);
-  }
-});
-
 
 // --- V42: persistent saved searches ---
 function currentSearchSnapshot(){

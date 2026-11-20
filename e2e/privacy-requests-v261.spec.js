@@ -40,7 +40,6 @@ async function mockPrivacyApi(page,{role='customer'}={}){
 test.describe('BDAR prašymų sąsaja (be realių įrašų)',()=>{
   test.beforeEach(async({page})=>{
     // This suite tests privacy rights, separately from the optional welcome tour.
-    await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
   });
   test('svečias mato teisės langą, bet negali pateikti prašymo',async({page})=>{
     await page.route('**/api/auth/me',r=>r.fulfill({status:200,contentType:'application/json',

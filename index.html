@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="modules/preboot-route-v197.js?v=197"></script>
-  <link rel="stylesheet" href="styles.css?v=226"/>
+  <link rel="stylesheet" href="styles.css?v=227"/>
   <link rel="stylesheet" href="light-premium-v161.css?v=223"/>
   <link rel="stylesheet" href="brand-v193.css?v=227"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -1723,7 +1723,7 @@
 <script defer src="modules/brand-migration-v186.js?v=203"></script>
 <script defer src="modules/i18n-v161.js?v=227"></script>
   <script defer src="modules/ux-cleanup-v193.js?v=203"></script>
-<script defer src="app.js?v=250"></script>
+<script defer src="app.js?v=251"></script>
   <script defer src="modules/renter-response-deadline-v189.js?v=203"></script>
   <script defer src="modules/renter-booking-status-v190.js?v=203"></script>
   <script defer src="modules/renter-alternatives-v191.js?v=204"></script>
@@ -1768,68 +1768,6 @@
   </div>
 </template>
 
-
-<div class="onboarding-modal" id="onboardingModal" aria-hidden="true">
-  <div class="onboarding-panel">
-    <button class="close-modal" id="skipOnboardingBtn" aria-label="Skip onboarding">×</button>
-
-    <div class="onboarding-progress">
-      <span class="onboarding-dot active" data-onboarding-dot="1"></span>
-      <span class="onboarding-dot" data-onboarding-dot="2"></span>
-      <span class="onboarding-dot" data-onboarding-dot="3"></span>
-    </div>
-
-    <section class="onboarding-step active" data-onboarding-step="1">
-      <div class="onboarding-icon">R</div>
-      <div class="eyebrow" data-i18n-text="Welcome to RentInOrbit">Welcome to RentInOrbit</div>
-      <h2 data-i18n-text="Rent what you need. Earn from what you own.">Rent what you need. Earn from what you own.</h2>
-      <p data-i18n-text="Find useful things nearby or at your destination — and use the same account to list things you already own.">Find useful things nearby or at your destination — and use the same account to list things you already own.</p>
-      <div class="onboarding-choice-grid">
-        <button type="button" class="onboarding-choice" data-onboarding-intent="nearby">
-          <b data-i18n-text="Near me">Near me</b><span data-i18n-text="Browse rentals around your current city.">Browse rentals around your current city.</span>
-        </button>
-        <button type="button" class="onboarding-choice" data-onboarding-intent="trip">
-          <b data-i18n-text="For my trip">For my trip</b><span data-i18n-text="Choose a destination and get items delivered there.">Choose a destination and get items delivered there.</span>
-        </button>
-      </div>
-      <button type="button" class="primary onboarding-next" data-next-onboarding="2" data-i18n-text="Continue">Continue</button>
-    </section>
-
-    <section class="onboarding-step" data-onboarding-step="2">
-      <div class="eyebrow" data-i18n-text="Personalize">Personalize</div>
-      <h2 data-i18n-text="Set your language and currency">Set your language and currency</h2>
-      <div class="onboarding-form-grid">
-        <label><span data-i18n-text="Language">Language</span>
-          <select id="onboardingLanguage">
-            <option value="lt">Lietuvių</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="de">Deutsch</option>
-            <option value="ru">Русский</option>
-          </select>
-        </label>
-        <label><span data-i18n-text="Currency">Currency</span>
-          <select id="onboardingCurrency">
-            <option value="EUR">EUR €</option>
-          </select>
-        </label>
-      </div>
-      <div class="onboarding-actions">
-        <button type="button" class="secondary onboarding-back" data-back-onboarding="1" data-i18n-text="Back">Back</button>
-        <button type="button" class="primary onboarding-next" data-next-onboarding="3" data-i18n-text="Continue">Continue</button>
-      </div>
-    </section>
-
-    <section class="onboarding-step" data-onboarding-step="3">
-      <div class="onboarding-icon success">✓</div>
-      <div class="eyebrow" data-i18n-text="Ready">Ready</div>
-      <h2 data-i18n-text="Your marketplace is set up">Your marketplace is set up</h2>
-      <p data-i18n-text="You can change language, location and filters any time. Suppliers can list inventory and customers can book live availability.">You can change language, location and filters any time. Suppliers can list inventory and customers can book live availability.</p>
-      <div class="onboarding-summary" id="onboardingSummary"></div>
-      <button type="button" class="primary" id="finishOnboardingBtn" data-i18n-text="Start exploring">Start exploring</button>
-    </section>
-  </div>
-</div>
 
 <div class="v102-notification-panel" id="v102NotificationPanel" hidden aria-hidden="true"><div class="v102-notification-head"><div><div class="eyebrow" data-i18n-text="Updates">Updates</div><h3 data-i18n-text="Notifications">Notifications</h3></div><button type="button" class="close-modal" id="v102CloseNotifications" aria-label="Close notifications" data-i18n-aria-label="Close notifications">×</button></div><div id="v102NotificationList" class="v102-notification-list"></div></div>
   <script defer src="modules/supplier-ux-v179.js?v=203"></script>

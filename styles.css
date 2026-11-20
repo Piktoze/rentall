@@ -1480,109 +1480,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   font-weight:800;
   cursor:pointer;
 }
-.onboarding-modal{
-  position:fixed;
-  inset:0;
-  z-index:400;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-  background:
-    radial-gradient(circle at 15% 10%,rgba(73,209,255,.10),transparent 24%),
-    radial-gradient(circle at 85% 10%,rgba(108,240,181,.10),transparent 24%),
-    rgba(4,9,8,.86);
-  backdrop-filter:blur(18px);
-}
-.onboarding-modal.open{display:flex}
-.onboarding-panel{
-  position:relative;
-  width:min(720px,100%);
-  max-height:min(820px,92vh);
-  overflow:auto;
-  padding:30px;
-  border:1px solid var(--line);
-  border-radius:28px;
-  background:linear-gradient(180deg,rgba(19,34,30,.97),rgba(11,21,18,.98));
-  box-shadow:0 40px 120px rgba(0,0,0,.48);
-}
-.onboarding-progress{
-  display:flex;
-  justify-content:center;
-  gap:7px;
-  margin:0 0 28px;
-}
-.onboarding-dot{
-  width:28px;height:5px;border-radius:999px;
-  background:rgba(255,255,255,.08);
-}
-.onboarding-dot.active{
-  background:linear-gradient(90deg,var(--accent),var(--accent-2));
-}
-.onboarding-step{display:none;text-align:center}
-.onboarding-step.active{display:block}
-.onboarding-step h2{margin-top:8px}
-.onboarding-step>p{max-width:560px;margin:0 auto 22px;color:var(--muted);line-height:1.65}
-.onboarding-icon{
-  display:grid;place-items:center;
-  width:72px;height:72px;
-  margin:0 auto 18px;
-  border-radius:22px;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  color:#071b15;
-  font-size:28px;
-  font-weight:900;
-  box-shadow:0 20px 44px rgba(73,209,255,.18);
-}
-.onboarding-icon.success{font-size:30px}
-.onboarding-choice-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin:22px 0;
-}
-.onboarding-choice{
-  text-align:left;
-  min-height:118px;
-  padding:18px;
-  border:1px solid var(--line);
-  border-radius:18px;
-  background:rgba(255,255,255,.025);
-  color:var(--text);
-  cursor:pointer;
-}
-.onboarding-choice b{display:block;font-size:17px;margin-bottom:7px}
-.onboarding-choice span{display:block;color:var(--muted);line-height:1.5}
-.onboarding-choice.active{
-  border-color:rgba(108,240,181,.36);
-  background:linear-gradient(135deg,rgba(108,240,181,.10),rgba(73,209,255,.07));
-}
-.onboarding-form-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0;
-}
-.onboarding-form-grid label{
-  display:grid;gap:7px;text-align:left;font-size:12px;font-weight:800;color:var(--muted);
-}
-.onboarding-form-grid select{
-  padding:12px;
-}
-.onboarding-actions{
-  display:flex;gap:10px;justify-content:center;margin-top:20px;
-}
-.onboarding-summary{
-  max-width:500px;
-  margin:18px auto 22px;
-  padding:16px;
-  border:1px solid var(--line);
-  border-radius:16px;
-  background:rgba(255,255,255,.025);
-  color:#c9dbd4;
-  text-align:left;
-}
 @media(max-width:620px){
-  .onboarding-panel{padding:24px 18px;border-radius:24px}
-  .onboarding-choice-grid,.onboarding-form-grid{grid-template-columns:1fr}
-  .onboarding-choice{min-height:96px}
   .install-app-btn{display:none!important}
 }
 
@@ -2155,7 +2053,7 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
 
 .catalog-only :is(#v120Journey, #navListItemBtn, #supplierAuthBtn, #myBookingsBtn, #messagesBtn,
   #moreSavedSearchesBtn, #saveCurrentSearchBtn, #heroEarnStartBtn, #cartbar, #checkoutModal,
-  #securePaymentPanel, #availabilityModal, #onboardingModal, #accountModal, #partnerForm,
+  #securePaymentPanel, #availabilityModal, #accountModal, #partnerForm,
   #how, #pricing, [data-search-mode="trip"], [data-v120-mobile="bookings"],
   [data-v120-mobile="account"], #supplierActivationModal, #detailRentBtn, #detailAvailabilityBtn,
   #v145AvailabilityContinue, [data-availability-id], .v92-nocharge, .v92-safe-note,

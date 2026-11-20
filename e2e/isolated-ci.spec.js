@@ -73,7 +73,6 @@ test.describe('Isolated CI real-browser safety gate',()=>{
 for(const language of ['lt','en','es','de','ru']){
   test(`mobile navigation and public pages support ${language}`,async({page})=>{
     await page.setViewportSize({width:390,height:844});
-    await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
     let releaseCatalog;
     if(language==='lt'){
       const loading=new Promise(resolve=>{releaseCatalog=resolve});

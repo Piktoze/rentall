@@ -2,7 +2,6 @@ import {test,expect} from '@playwright/test';
 
 test.describe('RentInOrbit customer journey',()=>{
  test.beforeEach(async({page})=>{
-   await page.addInitScript(()=>localStorage.setItem('rentinorbit_onboarding_done','1'));
    page.on('pageerror',error=>console.error(`BROWSER_ERROR: ${error.stack||error.message}`));
  });
  test('home → discovery → listing detail is navigable',async({page})=>{
@@ -115,18 +114,36 @@ test.describe('RentInOrbit customer journey',()=>{
  });
 });
 
-test.describe('RentInOrbit first-run onboarding',()=>{
- test.use({viewport:{width:390,height:844}});
- test('welcome controls stay above persistent navigation',async({page})=>{
-   const errors=[];
-   page.on('pageerror',error=>errors.push(error.message));
+for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+ for(const returning of [false,true]){
+  test(`direct search ${viewport.width}px ${returning?'returning':'new'} visitor`,async({page})=>{
+   await page.setViewportSize(viewport);
+   if(returning)await page.addInitScript(()=>{
+    localStorage.setItem('rentinorbit_onboarding_done','1');
+    localStorage.setItem('rentinorbit_onboarding_prefs',JSON.stringify({intent:'trip',language:'lt',currency:'EUR'}));
+   });
+   const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto('/');
-   const modal=page.locator('#onboardingModal');
-   await expect(modal).toHaveClass(/open/,{timeout:3000});
-   await page.locator('[data-next-onboarding="2"]').click();
-   await expect(page.locator('[data-onboarding-step="2"]')).toHaveClass(/active/);
-   await page.locator('#skipOnboardingBtn').click();
-   await expect(modal).not.toHaveClass(/open/);
+   await expect(page.locator('#searchForm')).toBeVisible();
+   await expect(page.locator('#citySelect')).toBeEnabled();
+   // The retired welcome opened on a 450ms timer. Check after that deadline.
+   await page.waitForTimeout(700);
+   await expect(page.locator('#onboardingModal, .onboarding-modal')).toHaveCount(0);
+   expect(await page.evaluate(()=>getComputedStyle(document.body).overflowY)).not.toBe('hidden');
+   expect(await page.evaluate(()=>getComputedStyle(document.documentElement).overflowY)).not.toBe('hidden');
+   await page.evaluate(()=>window.scrollTo(0,400));
+   await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBeGreaterThan(0);
+   await page.locator('#countrySelect').selectOption('LT');
+   await page.locator('#citySelect').selectOption('Klaipėda');
+   await page.locator('#keywordSearch').fill('drill');
+   // Search must work without selecting either rental/travel mode.
+   await page.locator('#searchForm button[type="submit"]').click();
+   if(process.env.CI)await expect(page.locator('[data-detail-id="ci-drill-discovery"]')).toHaveCount(1);
+   await page.reload();
+   await expect(page.locator('#searchForm')).toBeVisible();
+   await page.waitForTimeout(700);
+   await expect(page.locator('#onboardingModal')).toHaveCount(0);
    expect(errors).toEqual([]);
- });
-});
+  });
+ }
+}
