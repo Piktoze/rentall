@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+test.describe.configure({retries:0}); // Mutating journey: never replay half-completed fixtures.
 // Real isolated server + two cookie jars. No provider mocks at browser routing,
 // no Stripe API calls. The seed documents the paid precondition explicitly.
 for(const width of [1280,390])test(`two independent accounts ${width}px: contracts, pickup and return`,async({browser})=>{

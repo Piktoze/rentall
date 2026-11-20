@@ -6253,6 +6253,7 @@ async function handleCustomerDeepLinkV81(){
   }
 
   if(bookingId && access){
+    await refreshServerUser();
     // Persist the guest credential only in the existing per-booking access store.
     saveBookingAccess(bookingId,access);
     try{
@@ -6274,6 +6275,9 @@ async function handleCustomerDeepLinkV81(){
 
   if(view==='my-bookings'){
     const targetBooking=qs.get('booking')||'',payNow=qs.get('pay')==='1';
+    // The bookings shell opens only for verified session/guest state. Startup
+    // auth is asynchronous; route only after it has refreshed the UI guards.
+    await refreshServerUser();
     await loadUnifiedCustomerBookings();
     document.getElementById('myBookingsBtn')?.click();
     if(targetBooking){
