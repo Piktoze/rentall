@@ -142,11 +142,15 @@ owner bootstrap, no default credentials, canonical redirects, own-domain reset
 links, OTP replay/expiry/limits, logout, assets/uploads denial and symlink refusal.
 These checks do not substitute for real own-domain TLS or Stripe TEST E2E.
 
-Remaining external work: connect Porkbun browser context, save current complete
-DNS zone, apply only website routing/verification records while preserving mail,
-then verify certificates and actual own-domain browser journeys. The recipient
-acct_1UdAsYLM72k4RDTw still requires the user's Stripe-hosted TEST terms acceptance
-(date/IP, verified again 2026-11-19). No terms accepted on the user's behalf.
+Current evidence (2026-11-20 17:40 UTC): own-domain private TEST is connected;
+the operator personally completed Stripe-hosted TEST consent. A fresh recipient
+read passed the readiness gate. Both real API financial scenarios passed in a
+disposable SQLite database: €100 rental to €85 connected Stripe balance transfer
+after return, and a separate €100 cancellation/full refund, with actual signed
+webhook receipt and replay protection. See `evidence/2026-11-20-sct-real-test.json`.
+No bank payout or complete browser payment journey is proven by that API run.
+The one-shot build run variable was cleared after evidence collection to prevent
+unrequested repetition on future deployments. No terms accepted by the agent.
 
 
 ### Owner-operated Stripe TEST consent from the private site

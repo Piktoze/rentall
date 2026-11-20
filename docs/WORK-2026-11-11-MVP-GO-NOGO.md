@@ -140,6 +140,32 @@ Prie kiekvienos patikros nurodyk `PASS / FAIL / BLOCKED / NOT RUN` ir įrodymą 
 
 ## 2026-11-20 tęsinys: tik esami blokatoriai
 
+### Naujausia būsena po vartotojos Stripe TEST sąlygų patvirtinimo (17:40 UTC)
+
+Ši būsena pakeičia toliau išsaugotą ankstesnio bandymo `restricted` / BLOCKED rezultatą.
+Šaltinis: `docs/evidence/2026-11-20-sct-real-test.json`, kodas `92ab065`, Railway build
+`b41d3479-477c-4879-945f-c41abef5fd30`. Stripe gavėjo tikrinimas praėjo po vartotojos
+asmeniškai priimtų sąlygų; agentas jų nepriėmė.
+
+- **A PASS**: naujas sintetinis €100 mokėjimas, abu sutarties sutikimai, atsiėmimo kodas,
+  perdavimas, geros būklės grąžinimas, vienas €85 Transfer į Stripe gavėjo balansą.
+  Programos būsena `returned / paid / transferred`; Stripe balanso padidėjimas 8500 ct.
+- **B PASS**: atskiras naujas sintetinis €100 mokėjimas, atšaukimas iki perdavimo,
+  €100 `succeeded` refund; programos būsena `cancelled / refunded / succeeded`.
+- Tikri pasirašyti webhookai gauti vietiniu HTTP per Stripe CLI; du PI ir vienas
+  `refund.created` įvykis užfiksuoti `processed`, pakartojimai atmesti kaip duplicate.
+  Pakartotinis pervedimas/refundas atmesti; pervedimas iki grąžinimo, su sulaikymu
+  ir su ginču užblokuotas. Sulaikymo/ginčo papildomi užsakymai sintetiniai, neapmokėti.
+- 15 % komisinis = €15, tiekėjui €85; faktinis šio TEST kortelės apdorojimo mokestis
+  €3,40 dengiamas platformos (lieka €11,60 prieš kitus kaštus). Tai nėra visų kortelių
+  kainoraštis ar visų Connect kaštų įrodymas. Banko išmoka netikrinta.
+- Naudota laikina SQLite bazė ir failų katalogas, po bandymo pašalinti; istorinių
+  užsakymų ir `/data` nelietė. Vienkartinis bandymo paleidiklis po rezultato išvalytas.
+- Tai tikras finansinio vykdymo ir webhook integracijos įrodymas, **ne** pilnas
+  dviejų paskyrų telefono/naršyklės apmokėjimo E2E. B1 finansinis SCT blokatorius
+  pašalintas; B2 galutinis naršyklės kelias, B3 pranešimų pristatymas, B4 pilni
+  teisiniai dokumentai ir LIVE parengtis vis dar nėra bendras pilnos platformos GO.
+
 - Pasveikinimo langas pašalintas commit `42c8e4c`; privati TEST prieiga lieka įjungta.
 - Naujoje mobiliųjų ekranų patikroje rasti už 320–390 px ekrano ribų išeinantys prieinamumo datų laukai ir mygtukas. Taisymas naudoja susitraukiantį grid ir vieną stulpelį mažuose ekranuose; atskirai tikrinami rezervacijos, registracijos ir skelbimo nuotraukų įkėlimo langai.
 - Šviežias tikros Stripe TEST API atsakymas: platforma `acct_1UT4JCLM72MR015z`, gavėjas `acct_1UdAsYLM72k4RDTw`, `livemode=false`, pervedimų galimybė `restricted`. Reikalavimai: `identity.attestations.terms_of_service.account.date` ir `.ip`, abu `awaiting_action_from=user`. B1/B2 finansinė dalis lieka **BLOCKED**; naujų PaymentIntent, Refund ar Transfer šiame bandyme nesukurta, nes sustota prieš finansinius veiksmus.

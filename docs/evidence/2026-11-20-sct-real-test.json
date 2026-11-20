@@ -1,0 +1,70 @@
+{
+  "type": "real_sct_test_evidence",
+  "run": "e29448f35b258fb4ceba9cccfa69ac08",
+  "storage": "temporary_sqlite",
+  "liveFinancialOperations": false,
+  "scenarioA": "PASS",
+  "scenarioB": "PASS",
+  "platformAccountId": "acct_1UT4JCLM72MR015z",
+  "providerModeVerified": "TEST",
+  "recipientAccountId": "acct_1UdAsYLM72k4RDTw",
+  "A": {
+    "bookingId": "RB-real-e29448f35b258fb4ceba9cccfa69ac08-A",
+    "paymentIntentId": "pi_3UdvnjLM72MR015z0MtfRhL3",
+    "chargeId": "ch_3UdvnjLM72MR015z0zXFM3Jo",
+    "amountCents": 10000,
+    "commissionCents": 1500,
+    "processingFeeCents": 340,
+    "balanceTransactionId": "txn_3UdvnjLM72MR015z0DEIwS8C",
+    "connectedBalanceIncreaseCents": 8500,
+    "transfer": {
+      "status": "transferred",
+      "providerId": "tr_3UdvnjLM72MR015z0LQ9AgYC",
+      "amountCents": 8500,
+      "bankPayoutVerified": false
+    },
+    "finalState": {
+      "status": "returned",
+      "paymentStatus": "paid",
+      "payoutStatus": "transferred"
+    }
+  },
+  "B": {
+    "bookingId": "RB-real-e29448f35b258fb4ceba9cccfa69ac08-B",
+    "paymentIntentId": "pi_3UdvnpLM72MR015z1H2FxhE4",
+    "chargeId": "ch_3UdvnpLM72MR015z1MKMjEaL",
+    "amountCents": 10000,
+    "commissionCents": 1500,
+    "processingFeeCents": 340,
+    "balanceTransactionId": "txn_3UdvnpLM72MR015z1fOgH7xc",
+    "refund": {
+      "providerId": "re_3UdvnpLM72MR015z1v0HFP1i",
+      "amountCents": 10000,
+      "status": "succeeded"
+    },
+    "finalState": {
+      "status": "cancelled",
+      "paymentStatus": "refunded",
+      "refundStatus": "succeeded",
+      "refundAmount": 100,
+      "payoutStatus": "cancelled"
+    }
+  },
+  "holdBlocked": true,
+  "disputeBlocked": true,
+  "providerEventIds": [
+    "evt_3UdvnpLM72MR015z1HCiPti9",
+    "evt_3UdvnjLM72MR015z0XbAd4gy",
+    "evt_3UdvnpLM72MR015z1xzMCs0w"
+  ],
+  "refundWebhookEventIds": [
+    "evt_3UdvnpLM72MR015z1xzMCs0w"
+  ],
+  "webhookTransportVerified": true,
+  "webhookReplayBlocked": true,
+  "bankPayoutVerified": false,
+  "sourceCommit": "92ab0657fbfb2f3975f7af29da445494bb6e74b9",
+  "railwayDeploymentId": "b41d3479-477c-4879-945f-c41abef5fd30",
+  "observedAt": "2026-11-20T17:40:53.553Z",
+  "scope": "Real Stripe TEST API + canonical rental database functions and real signed webhook HTTP, disposable SQLite. Not a phone/browser payment or bank payout test."
+}
