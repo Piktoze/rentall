@@ -5,6 +5,12 @@ on:
     branches: [staging/v203]
     paths:
       - "e2e/**"
+      - "index.html"
+      - "styles.css"
+      - "brand-v193.css"
+      - "light-premium-v161.css"
+      - "service-worker.js"
+      - "private-test*.test.mjs"
       - "server.js"
       - "password-reset.js"
       - "password-recovery*.test.mjs"
@@ -97,7 +103,7 @@ jobs:
       - name: Verify signed Stripe webhook locally (synthetic events only)
         run: node webhook-signed-http-v231.test.js
       - name: Verify private TEST access and isolated production storage
-        run: node --test private-test-access.test.mjs && node private-test-http.test.mjs
+        run: node --test private-test-access.test.mjs private-test-recipient-onboarding.test.mjs && node private-test-http.test.mjs
       - name: Verify deferred supplier transfer policy and LIVE payment gate
         run: node --test password-recovery.test.mjs sct-test-runtime.test.mjs isolated-recovery-probe.test.mjs && node password-recovery-http.test.mjs
       - name: Verify previous financial safety regressions
