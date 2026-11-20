@@ -174,7 +174,7 @@ for(const width of [320,390]){
   await fitsPhone(page,'#checkoutModal');await page.locator('#rentalStartTime').fill('10:00');
   await page.locator('.checkout-step[data-step="1"] .next-step').click();await expect(page.locator('.checkout-step[data-step="2"]')).toHaveClass(/active/);
   await fitsPhone(page,'#checkoutModal');await page.locator('#closeCheckout').click();
-  await page.locator('#supplierAuthBtn').click();await page.locator('[data-auth-tab="register"]').first().click();
+  await page.locator('[data-v120-mobile="account"]').click();await page.locator('[data-auth-tab="register"]').first().click();
   await expect(page.locator('#supplierRegisterForm')).toBeVisible();await fitsPhone(page,'#supplierRegisterForm');
  });
 }
@@ -183,11 +183,11 @@ test('phone 390px supplier listing form and actual isolated photo upload',async(
  await page.setViewportSize({width:390,height:844});
  const email=`phone-supplier-${Date.now()}@example.test`,password='Synthetic-phone-only-12345';
  expect((await request.post('/api/auth/register',{data:{email,password,role:'supplier',termsAccepted:true}})).ok()).toBeTruthy();
- await page.goto('/');await page.locator('#supplierAuthBtn').click();
+ await page.goto('/');await page.locator('[data-v120-mobile="account"]').click();
  await page.locator('#loginEmail').fill(email);await page.locator('#loginPassword').fill(password);
  await page.locator('#supplierLoginForm button[type="submit"]').click();
  await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
- await page.locator('#navListItemBtn').click();await expect(page.locator('#listingForm')).toBeVisible();
+ await page.locator('[data-v120-mobile="account"]').click();await page.locator('#supplierActionDrawer [data-supplier-action="add"]').click();await expect(page.locator('#listingForm')).toBeVisible();
  await fitsPhone(page,'#listingForm');
  const images=await page.evaluate(()=>['#224466','#663322'].map(color=>{
   const c=document.createElement('canvas');c.width=500;c.height=500;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,500,500);return c.toDataURL('image/png').split(',')[1];

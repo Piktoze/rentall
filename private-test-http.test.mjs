@@ -22,7 +22,8 @@ try{
  for(let i=0;i<50&&!fs.existsSync(mailPath);i++)await new Promise(r=>setTimeout(r,20));
  const code=JSON.parse(fs.readFileSync(mailPath)).html.match(/<strong>(\d{8})<\/strong>/)[1];
  const access=await req('/__test-access/verify',{method:'POST',body:{challenge:challenge.challenge,code}});assert.equal(access.status,200);cookie=access.headers.get('set-cookie').split(';')[0];
- const root=await req('/');assert.equal(root.status,200);assert.ok((await root.text()).includes('Privatus TEST'));
+ const root=await req('/');assert.equal(root.status,200);const rootHtml=await root.text();assert.ok(rootHtml.includes('Privatus TEST'));assert.ok(rootHtml.includes('Užbaigti Stripe TEST sąlygas'));
+ assert.equal((await req('/__test-access/stripe-recipient',{method:'POST',body:{}})).status,503);
  const registration=await req('/api/auth/register',{method:'POST',body:{email:'owner@example.test',password:'Synthetic-password-123456',displayName:'Synthetic owner',termsAccepted:true,role:'admin'}});assert.equal(registration.status,200,await registration.clone().text());assert.equal((await registration.json()).user.role,'admin');
  const session=registration.headers.get('set-cookie');assert.ok(session.includes('Secure'));assert.ok(!session.includes('Domain='));cookie+='; '+session.split(';')[0];
  assert.equal((await (await req('/api/auth/me')).json()).user.role,'admin');

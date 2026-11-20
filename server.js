@@ -1,3 +1,4 @@
+import {installPrivateTestRecipientOnboarding} from './modules/private-test-recipient-onboarding.js';
 import {installPrivateTestAccess} from './modules/private-test-access.js';
 import {privateTestSettings,privateTestRequested} from './modules/private-test-mode.js';
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
@@ -364,6 +365,7 @@ const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const sctRuntime=process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
  ? createSctTestRuntime({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null;
+installPrivateTestRecipientOnboarding(app,{getStripe:()=>createIsolatedStripeTestClient(stripeKey)});
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
 const paymentProvider=demoPaymentsEnabled?'demo':(stripe?'stripe':'none');
@@ -4390,7 +4392,11 @@ const publicBrowserModules=new Set(
 );
 if(privateTestRequested()){
   const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8').replace('<body class="theme-aurora">','<body class="theme-aurora"><p role="status" style="padding:8px;margin:0;background:#fff0b3;color:#15354f;text-align:center">Privatus TEST · Mokėjimai bandomieji · Duomenys laikini</p>');
-  app.get(['/','/index.html'],(req,res)=>res.type('html').send(html));
+  app.get(['/','/index.html'],(req,res)=>{
+    const action=req.privateTestIdentity?.email===privateTestSettings().owner
+      ?'<form action="/__test-access/stripe-recipient" method="post" style="padding:8px;text-align:center"><button type="submit">Užbaigti Stripe TEST sąlygas</button></form>':'';
+    res.type('html').send(html.replace('<main id="home">',action+'<main id="home">'));
+  });
 }
 if(catalogOnly){
   const catalogHtml=fs.readFileSync(path.join(__dirname,'index.html'),'utf8')

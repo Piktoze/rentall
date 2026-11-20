@@ -147,3 +147,20 @@ DNS zone, apply only website routing/verification records while preserving mail,
 then verify certificates and actual own-domain browser journeys. The recipient
 acct_1UdAsYLM72k4RDTw still requires the user's Stripe-hosted TEST terms acceptance
 (date/IP, verified again 2026-11-19). No terms accepted on the user's behalf.
+
+
+### Owner-operated Stripe TEST consent from the private site
+
+After verifying the configured owner mailbox, `/__test-access` and the main page
+provide a POST button to `/__test-access/stripe-recipient`. This bridges only to
+the explicitly configured existing synthetic TEST recipient. It requires the
+opaque private session, exact owner identity, same-origin POST and valid private
+TEST configuration; other invitees and unsigned visitors are denied. Stripe
+retrieval must confirm `livemode=false` and the synthetic account identity. The
+provider link must target `https://connect.stripe.com`, match the same account
+and be TEST. No account, bank data or identity is created/changed, no funds move,
+and no terms are accepted by this code. Redirect responses are private/no-store;
+provider error bodies and private URLs are not logged. This avoids relying on an
+invisible cloud-browser handoff or publishing a private onboarding URL in chat.
+The operator performs the review/consent herself on Stripe. Returning from Stripe
+is not treated as proof of acceptance; the account must be re-read before A/B.

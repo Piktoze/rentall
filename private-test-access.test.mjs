@@ -42,7 +42,7 @@ test('server gate protects every asset/API; allowlist OTP one-use, expiry, limit
   assert.equal((await post('/__test-access/verify',{challenge,code:'wrong'})).status,400);
   const ok=await post('/__test-access/verify',{challenge,code:mail[0].payload.code});assert.equal(ok.status,200);
   const fullCookie=ok.headers.get('set-cookie');for(const flag of ['Secure','HttpOnly','SameSite=Lax','Path=/'])assert.ok(fullCookie.includes(flag));assert.ok(!fullCookie.includes('Domain='));
-  const cookie=fullCookie.split(';')[0];assert.equal((await post('/__test-access/verify',{challenge,code:mail[0].payload.code})).status,400);
+  const cookie=fullCookie.split(';')[0];assert.ok((await (await get('/__test-access',cookie)).text()).includes('Užbaigti Stripe TEST sąlygas'));assert.equal((await post('/__test-access/verify',{challenge,code:mail[0].payload.code})).status,400);
   const authorized=await get('/api/listings',cookie);assert.equal(authorized.status,200);assert.equal((await authorized.json()).identity.email,'owner@example.test');assert.equal(authorized.headers.get('cache-control'),'private, no-store');
   assert.equal((await get('/app.js',cookie)).status,200);assert.ok((await (await get('/service-worker.js',cookie)).text()).includes('unregister'));
   await post('/__test-access/logout',{},cookie);assert.equal((await get('/api/listings',cookie)).status,401);

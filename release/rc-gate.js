@@ -19,7 +19,7 @@ const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTIN
  RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
 execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
 // New financial commands and password recovery run only against disposable databases.
-execFileSync(process.execPath,['--test','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
+execFileSync(process.execPath,['--test','private-test-recipient-onboarding.test.mjs','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['private-test-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['password-recovery-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 
