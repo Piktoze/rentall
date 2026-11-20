@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawn} from 'node:child_process';
 import crypto from 'node:crypto';
 import {createIsolatedStripeTestClient} from '../modules/isolated-stripe-test-client.js';
-import {planIsolatedSctRecipientOnboarding} from '../modules/isolated-sct-recipient-onboarding-plan.js';
 import {inspectIsolatedSctRecipientAccount} from '../modules/isolated-sct-recipient-account-gate.js';
 import {createSctTestRuntime} from '../modules/sct-test-runtime.js';
 const run=process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID;
@@ -23,28 +22,18 @@ try{
  const platform=await stripe.accounts.retrieve();
  if(!['acct_1UT4J2LlutaSFdau','acct_1UT4JCLM72MR015z'].includes(platform.id))throw new Error('EXPECTED_PLATFORM_TEST_ACCOUNT_REQUIRED');
  report.platformAccountId=platform.id;report.providerModeVerified='TEST';
- step='create_new_synthetic_recipient';
+ step='read_existing_synthetic_recipient';
  const supplier='synthetic-sct-'+run+'@example.test',customer='synthetic-renter-'+run+'@example.test';
- const plan=planIsolatedSctRecipientOnboarding({stripeMode:'test',country:'LT',entityType:'individual',contactEmail:supplier,
-  displayName:'RentInOrbit synthetic TEST '+run,termsAccepted:true,platformLiabilityApproved:true});
- if(plan.blocked)throw new Error(plan.blocked);
- const created=await stripe.v2.core.accounts.create(plan.accountCreatePayload,{idempotencyKey:'rio-synthetic-recipient-'+run});
+ // Reusing a create idempotency key after its retention window could create a new
+ // account. Always read the explicitly selected existing synthetic TEST recipient.
+ const recipientId=String(process.env.SCT_TEST_RECIPIENT_ID||'');
+ assert.match(recipientId,/^acct_[A-Za-z0-9]+$/,'EXISTING_TEST_RECIPIENT_REQUIRED');
+ const created=await stripe.v2.core.accounts.retrieve(recipientId,{include:['identity','defaults']});
  report.recipientAccountId=created.id;
- assert.equal(created.livemode,false);assert.equal(created.contact_email,supplier);
- // Official Stripe TEST fixtures, never the operator's identity or bank details.
- // https://docs.stripe.com/connect/testing?accounts-namespace=v2
- step='complete_synthetic_test_onboarding';
- const beforeOnboarding=await stripe.v2.core.accounts.retrieve(created.id,{include:['identity','defaults']});
- try{if(!beforeOnboarding.identity?.individual)await stripe.v2.core.accounts.update(created.id,{
-  defaults:{profile:{business_url:'https://rentall-staging.up.railway.app'}},
-  identity:{individual:{given_name:'Synthetic',surname:'Test',date_of_birth:{day:1,month:1,year:1902},
-   address:{country:'LT',city:'Vilnius',postal_code:'01100',line1:'address_full_match'}}},
- },{idempotencyKey:'rio-synthetic-recipient-identity-v3-'+run});}
- catch(e){report.syntheticIdentityPreparationError=safeError(e);}
- try{const banks=await stripe.accounts.listExternalAccounts(created.id,{object:'bank_account',limit:10});
- if(!banks.data.length)await stripe.accounts.createExternalAccount(created.id,{external_account:{object:'bank_account',country:'LT',currency:'eur',
-  account_number:'LT121000011101001000'},default_for_currency:true},{idempotencyKey:'rio-synthetic-recipient-test-bank-'+run});}
- catch(e){report.syntheticBankPreparationError=safeError(e);}
+ assert.equal(created.livemode,false);assert.equal(created.id,recipientId);
+ assert.match(created.contact_email||'',/^synthetic-sct-[a-f0-9]{32}@example\.test$/,'SYNTHETIC_RECIPIENT_REQUIRED');
+ assert.match(created.display_name||'',/^RentInOrbit synthetic TEST /,'SYNTHETIC_RECIPIENT_REQUIRED');
+ // Do not modify identity, bank data, responsibilities or accept terms here.
  step='verify_new_recipient';
  let recipient,gate;
  for(let i=0;i<10;i++){
@@ -58,7 +47,7 @@ try{
   const key=process.env.SCT_TEST_ONBOARDING_RESULT_KEY;
   if(/^[a-f0-9]{64}$/.test(key||'')){
    const link=await stripe.v2.core.accountLinks.create({account:created.id,use_case:{type:'account_onboarding',account_onboarding:{
-    configurations:['recipient'],collection_options:{fields:'currently_due'},refresh_url:'https://rentall-staging.up.railway.app/help',return_url:'https://rentall-staging.up.railway.app/'}}});
+    configurations:['recipient'],collection_options:{fields:'currently_due'},refresh_url:'https://rentinorbit.com/help',return_url:'https://rentinorbit.com/'}}});
    assert.equal(link.livemode,false);assert.equal(link.account,created.id);
    const url=new URL(link.url);assert.equal(url.protocol,'https:');assert.equal(url.hostname,'connect.stripe.com');
    const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',Buffer.from(key,'hex'),iv);

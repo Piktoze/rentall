@@ -147,3 +147,34 @@ for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
   });
  }
 }
+
+async function fitsPhone(page,scope){
+ const overflow=await page.evaluate(selector=>{
+  const root=document.querySelector(selector),width=innerWidth;
+  if(!root)return [{missing:selector}];
+  return [...root.querySelectorAll('input,select,textarea,button')].flatMap(el=>{
+   const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+   if(!r.width||!r.height||s.visibility==='hidden')return [];
+   return r.left< -1||r.right>width+1?[{id:el.id,text:(el.textContent||'').trim().slice(0,35),left:r.left,right:r.right,width}]:[];
+  });
+ },scope);
+ expect(overflow,`Horizontal overflow in ${scope}`).toEqual([]);
+}
+for(const width of [320,390]){
+ test(`phone ${width}px search, item, availability, checkout and registration`,async({page})=>{
+  await page.setViewportSize({width,height:844});await page.goto('/');
+  await expect(page.locator('#searchForm')).toBeVisible();await fitsPhone(page,'#searchForm');
+  await page.locator('#countrySelect').selectOption('LT');await page.locator('#citySelect').selectOption('Klaipėda');
+  await page.locator('#keywordSearch').fill('drill');await page.locator('#searchForm button[type="submit"]').click();
+  await page.locator('[data-detail-id="ci-drill-discovery"]').click();
+  await expect(page.locator('#listingDetailModal')).toBeVisible();await fitsPhone(page,'#listingDetailModal');
+  await page.locator('#detailAvailabilityBtn').click();await expect(page.locator('#availabilityModal')).toBeVisible();
+  await fitsPhone(page,'#availabilityModal');await expect(page.locator('#v145AvailabilityContinue')).toBeEnabled();
+  await page.locator('#v145AvailabilityContinue').click();await expect(page.locator('#checkoutModal')).toBeVisible();
+  await fitsPhone(page,'#checkoutModal');await page.locator('#rentalStartTime').fill('10:00');
+  await page.locator('.checkout-step[data-step="1"] .next-step').click();await expect(page.locator('.checkout-step[data-step="2"]')).toHaveClass(/active/);
+  await fitsPhone(page,'#checkoutModal');await page.locator('#closeCheckout').click();
+  await page.locator('#supplierAuthBtn').click();await page.locator('[data-auth-tab="register"]').first().click();
+  await expect(page.locator('#supplierRegisterForm')).toBeVisible();await fitsPhone(page,'#supplierRegisterForm');
+ });
+}
