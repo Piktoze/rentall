@@ -1,3 +1,5 @@
+import {onboardingPilotAccess,onboardingPilotSupplierAllowed} from './modules/onboarding-pilot-access.js';
+import {stagingCapacityReview} from './modules/staging-capacity-review.js';
 import {installTestCommissionExamples} from './modules/test-commission-routes.js';
 import {backupWrites} from './modules/backup-write-coordinator.js';
 import {startCoordinatedBackupScheduler} from './ops/coordinated-backup-scheduler.js';
@@ -218,6 +220,7 @@ assertProductionConfig();
 installSctPaymentReconciliationInbox(db);
 
 const app = express();
+app.use(onboardingPilotAccess());
 app.use(backupWrites.http());
 backupWrites.guardRoutes(app);
 
@@ -414,7 +417,7 @@ const __dirname = path.dirname(__filename);
 
 
 
-if(!privateTestRequested()&&!commercialRuntime)seedDefaultUsers();
+if(!privateTestRequested()&&!commercialRuntime&&!onboardingOnlyEnabled)seedDefaultUsers();
 
 function parseCookies(req){
   const out={};
@@ -2480,7 +2483,7 @@ app.get('/api/readiness',(req,res)=>{
   res.status(gate.ready?200:503).json({ready:gate.ready,environment:runtimeConfig.nodeEnv,checks:gate.checks,blocking:gate.blocking,database:gate.database,stripe:gate.stripe,email:gate.email,version:APP_VERSION});
 });
 
-installSctOnboardingRoutes(app,{enabled:()=>!!sctRuntime||onboardingOnlyEnabled,getService:getSctOnboarding,requireRole,rateLimit:simpleRateLimit({windowMs:60000,max:12,keyPrefix:'sct-onboarding'})});
+installSctOnboardingRoutes(app,{enabled:()=>!!sctRuntime||onboardingOnlyEnabled,allowed:req=>onboardingPilotSupplierAllowed(req),getService:getSctOnboarding,requireRole,rateLimit:simpleRateLimit({windowMs:60000,max:12,keyPrefix:'sct-onboarding'})});
 
 // Stripe Connect for authenticated suppliers — V195 direct-charge merchant model.
 function directStatusResponse(status,{demo=false}={}){
@@ -4552,6 +4555,7 @@ const recoveryProbe=installIsolatedRecoveryProbe({app,env:process.env,deliver:de
  limit:simpleRateLimit({windowMs:900000,max:10,keyPrefix:'isolated-recovery-consume'})});
 const server=app.listen(port,runtimeConfig.host, () => {
   if(recoveryProbe)void recoveryProbe.send();
+  try{const review=stagingCapacityReview();if(review)console.log(JSON.stringify(review));}catch(e){console.warn(JSON.stringify({type:'staging_volume_capacity_review',readOnly:true,errorCode:e.code||'CAPACITY_UNAVAILABLE'}));}
   const database=checkDatabase();
   const config=productionConfigReport();
   console.log(JSON.stringify({type:'startup',service:'rentinorbit',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,paymentProvider,email:config.email,ready:launchGate().ready}));
