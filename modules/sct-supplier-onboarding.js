@@ -24,7 +24,8 @@ export async function createSctSupplierOnboarding({db,stripe,env,runtime,now=Dat
  function verify(account,r){
   if(account?.id!==r.account_id||account.livemode!==live||account.dashboard!=='express'||account.identity?.country!=='LT'||account.identity?.entity_type!==r.entity_type||
    !account.configuration?.recipient||account.configuration?.merchant||account.defaults?.responsibilities?.fees_collector!=='application'||account.defaults?.responsibilities?.losses_collector!=='application'||
-   account.configuration.recipient.capabilities?.stripe_balance?.stripe_transfers?.requested!==true)fail('SCT_ONBOARDING_PROVIDER_BINDING_MISMATCH');
+   !(account.configuration.recipient.capabilities?.stripe_balance?.stripe_transfers?.requested===true||
+     ['active','restricted','pending'].includes(account.configuration.recipient.capabilities?.stripe_balance?.stripe_transfers?.status)&&account.configuration.recipient.capabilities.stripe_balance.stripe_transfers.requested!==false))fail('SCT_ONBOARDING_PROVIDER_BINDING_MISMATCH');
   return account;
  }
  function connect(user,r){

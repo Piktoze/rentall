@@ -56,3 +56,8 @@ test('existing private TEST owner pin is read without creating or reassigning a 
  await pinned.create(owner,input);assert.equal(created.length,before);
  assert.equal(d.db.prepare('SELECT count(*) n FROM sct_supplier_onboarding WHERE user_id=?').get(owner.userId).n,0);
 });
+
+test('active Stripe v2 capability readback may omit the write-only requested field',async()=>{
+ const a=accounts[0];delete a.configuration.recipient.capabilities.stripe_balance.stripe_transfers.requested;
+ const x=await request('status');assert.equal(x.r.status,200);assert.equal(x.data.recipientTransfersReady,true);assert.equal(x.data.bankPayoutsReady,false);
+});

@@ -6278,6 +6278,15 @@ async function handleCustomerDeepLinkV81(){
     return;
   }
 
+  if(view==='supplier-payouts'){
+    await refreshServerUser();
+    if(!['supplier','admin'].includes(currentServerUser?.role)){showToast('Sign in as the supplier to open payout settings.','error',2600);return;}
+    const toggle=document.getElementById('supplierDashboardToggle');
+    if(toggle&&toggle.getAttribute('aria-expanded')!=='true')toggle.click();
+    document.getElementById('supplierPaymentsBtn')?.click();
+    await refreshLiveStripeStatus();
+    const clean=new URL(window.location.href);['view','stripe_onboarding'].forEach(k=>clean.searchParams.delete(k));history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);return;
+  }
   if(view==='my-bookings'){
     const targetBooking=qs.get('booking')||'',payNow=qs.get('pay')==='1';
     // The bookings shell opens only for verified session/guest state. Startup

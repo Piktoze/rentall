@@ -18,7 +18,9 @@ try{
  installSctOnboardingRoutes(app,{enabled:()=>true,getService:async()=>service,requireRole:auth});server=http.createServer(app);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const request=(suffix,session,method='GET',body)=>fetch(base+'/api/stripe/connect/'+suffix,{method,headers:{'Content-Type':'application/json',...(session?{cookie:'rentinorbit_session='+session.token}:{})},...(body?{body:JSON.stringify(body)}:{})});
  if((await request('status',null)).status!==401)throw Error('GUEST_NOT_BLOCKED');
- const statusResponse=await request('status',ownerSession);if(statusResponse.status!==200)throw Error('OWNER_STATUS_FAILED');const status=await statusResponse.json();
+ const statusResponse=await request('status',ownerSession);const status=await statusResponse.json();if(statusResponse.status!==200){
+  const a=await stripe.v2.core.accounts.retrieve(pin,{include:['identity','configuration.recipient','configuration.merchant','requirements','defaults']});
+  console.log(JSON.stringify({type:'isolated_sct_onboarding_layout',mode:a.livemode,recipient:!!a.configuration?.recipient,merchant:!!a.configuration?.merchant,country:a.identity?.country,entityType:a.identity?.entity_type,dashboard:a.dashboard,feesCollector:a.defaults?.responsibilities?.fees_collector,lossesCollector:a.defaults?.responsibilities?.losses_collector,capabilityStatus:a.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status,requested:a.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.requested,code:status.code}));throw Error('OWNER_STATUS_FAILED_'+String(status.code||'UNKNOWN'));}
  if(status.accountId!==pin||status.bankPayoutsReady!==false)throw Error('OWNER_STATUS_MISMATCH');
  if((await request('hosted-onboarding-link',otherSession,'POST',{accountId:pin})).status!==409)throw Error('OTHER_SUPPLIER_NOT_BLOCKED');
  const response=await request('hosted-onboarding-link',ownerSession,'POST',{});if(response.status!==200||response.headers.get('cache-control')!=='private, no-store')throw Error('PRIVATE_ONBOARDING_LINK_FAILED');
