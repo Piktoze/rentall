@@ -1,6 +1,9 @@
+import path from 'node:path';
+import os from 'node:os';
 export const commissionSeriesYear=date=>Number(new Intl.DateTimeFormat('en',{timeZone:'Europe/Vilnius',year:'numeric'}).format(date));
 // New commercial enrollments only. No legacy invoices/orders are adopted.
 export function createCommissionCompletion({db,env={},now=()=>new Date()}){
+ if(env.NODE_ENV==='test'&&db.name!==':memory:'&&!path.resolve(db.name).startsWith(path.resolve(os.tmpdir())+path.sep))throw Error('COMMISSION_TEST_STORE_REQUIRED');
  db.exec(`CREATE TABLE IF NOT EXISTS commission_return_acceptance(booking_id TEXT NOT NULL,party TEXT NOT NULL CHECK(party IN ('customer','supplier')),user_id TEXT NOT NULL,accepted_at TEXT NOT NULL,PRIMARY KEY(booking_id,party));
  CREATE TABLE IF NOT EXISTS commission_documents(document_id INTEGER PRIMARY KEY,booking_id TEXT NOT NULL,kind TEXT NOT NULL,source_id INTEGER,amount_cents INTEGER NOT NULL,number TEXT UNIQUE,issued_at TEXT NOT NULL,snapshot TEXT NOT NULL);
  CREATE UNIQUE INDEX IF NOT EXISTS commission_one_invoice ON commission_documents(booking_id) WHERE kind='invoice';
@@ -24,7 +27,7 @@ export function createCommissionCompletion({db,env={},now=()=>new Date()}){
   db.prepare('INSERT INTO commission_series VALUES(?,?,?)').run(year,unused?0:lastNumber,unused?'confirmed_unused':'confirmed_last_number');
  }
  function number(date){const year=commissionSeriesYear(date);const row=db.prepare('SELECT * FROM commission_series WHERE year=?').get(year);if(!row)fail('COMMISSION_SERIES_NOT_APPROVED');
-  const n=row.last_number+1;if(n>999999)fail('COMMISSION_SERIES_EXHAUSTED');db.prepare('UPDATE commission_series SET last_number=? WHERE year=?').run(n,year);return `RIO-${year}-${String(n).padStart(6,'0')}`;
+  const n=row.last_number+1;if(n>999999)fail('COMMISSION_SERIES_EXHAUSTED');db.prepare('UPDATE commission_series SET last_number=? WHERE year=?').run(n,year);return `${env.NODE_ENV==='test'?'TEST-RIO':'RIO'}-${year}-${String(n).padStart(6,'0')}`;
  }
  function invoice(id){return db.transaction(()=>{owned(id);const prior=db.prepare("SELECT * FROM commission_documents WHERE booking_id=? AND kind='invoice'").get(id);if(prior)return prior;
   const b=db.prepare('SELECT b.*,e.hold_reason,p.fee_cents,p.amount_cents FROM rental_bookings b JOIN commercial_sct_enrollments e USING(booking_id) JOIN commercial_sct_bindings p USING(booking_id) WHERE booking_id=?').get(id);

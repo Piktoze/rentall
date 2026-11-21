@@ -35,8 +35,8 @@ test('bilateral completion, annual shared counter, immutable invoice, partial cr
  const c=createCommissionCompletion({db,env:{NODE_ENV:'test',COMMISSION_ISSUANCE_ENABLED:'true'},now:()=>new Date('2026-11-21T10:00:00Z')});
  assert.throws(()=>c.invoice('new'));assert.throws(()=>c.accept('new',{userId:'x',email:'x@test'}));c.accept('new',{userId:'s',email:'s@test'});assert.throws(()=>c.invoice('new'));c.accept('new',{userId:'c',email:'c@test'});assert.throws(()=>c.invoice('new'),{code:'COMMISSION_SERIES_NOT_APPROVED'});
  c.approveSeries(2026,{unused:true});db.prepare("UPDATE commercial_sct_enrollments SET hold_reason='review'").run();assert.throws(()=>c.invoice('new'));db.prepare('UPDATE commercial_sct_enrollments SET hold_reason=NULL').run();
- const inv=c.invoice('new');assert.equal(inv.number,'RIO-2026-000001');assert.equal(inv.amount_cents,1500);assert.equal(c.invoice('new').document_id,inv.document_id);c.accept('new',{userId:'c',email:'c@test'});assert.equal(db.prepare('SELECT count(*) n FROM commission_documents').get().n,1);
- const cr=c.credit(inv.document_id,500,'credit-request-one');assert.equal(cr.number,'RIO-2026-000002');assert.equal(c.credit(inv.document_id,500,'credit-request-one').document_id,cr.document_id);assert.equal(c.credit(inv.document_id,1000,'credit-request-two').number,'RIO-2026-000003');assert.throws(()=>c.credit(inv.document_id,1,'credit-request-three'));assert.throws(()=>db.prepare('UPDATE commission_documents SET amount_cents=0').run());assert.equal(db.prepare('SELECT snapshot FROM commission_documents WHERE document_id=?').get(inv.document_id).snapshot,inv.snapshot);db.close();
+ const inv=c.invoice('new');assert.equal(inv.number,'TEST-RIO-2026-000001');assert.equal(inv.amount_cents,1500);assert.equal(c.invoice('new').document_id,inv.document_id);c.accept('new',{userId:'c',email:'c@test'});assert.equal(db.prepare('SELECT count(*) n FROM commission_documents').get().n,1);
+ const cr=c.credit(inv.document_id,500,'credit-request-one');assert.equal(cr.number,'TEST-RIO-2026-000002');assert.equal(c.credit(inv.document_id,500,'credit-request-one').document_id,cr.document_id);assert.equal(c.credit(inv.document_id,1000,'credit-request-two').number,'TEST-RIO-2026-000003');assert.throws(()=>c.credit(inv.document_id,1,'credit-request-three'));assert.throws(()=>db.prepare('UPDATE commission_documents SET amount_cents=0').run());assert.equal(db.prepare('SELECT snapshot FROM commission_documents WHERE document_id=?').get(inv.document_id).snapshot,inv.snapshot);db.close();
 });
 
 test('onboarding-only HTTP guard blocks payments, transfers, refunds and admin writes while own authenticated status/form stay isolated',async()=>{
@@ -53,3 +53,7 @@ test('onboarding-only HTTP guard blocks payments, transfers, refunds and admin w
 });
 
 test('annual RIO series follows Lithuania year at UTC boundary',()=>{assert.equal(commissionSeriesYear(new Date('2026-12-31T22:30:00Z')),2027);assert.equal(commissionSeriesYear(new Date('2026-12-31T21:30:00Z')),2026);});
+
+test('TEST numbering refuses a non-temporary database before any read/write',()=>{
+ let touched=false;assert.throws(()=>createCommissionCompletion({db:{name:'/data/existing-commercial.sqlite',exec:()=>{touched=true;}},env:{NODE_ENV:'test'}}),/COMMISSION_TEST_STORE_REQUIRED/);assert.equal(touched,false);
+});

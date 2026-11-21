@@ -91,8 +91,10 @@
    2026-08-26.dahlia; v2 thin išjungtas. Workbench tikrinti paskirtį, event.id,
    source/mode, parašą, 2xx ir patvarią processed būseną / dedup; transportas
    nesusietam demonstraciniam įvykiui nėra tikras finansinio settlement testas.
-8. Patvirtinti SF serijos nepanaudojimą arba paskutinį panaudotą numerį ir
-   apskaitos peržiūrą. Tik tada užpildyti metų commission_series faktą,
+8. RIO-2026 nepanaudojimas jau patvirtintas 2026-11-21, pradžia
+   RIO-2026-000001. Faktą saugo RIO-2026-PREPARED-NUMBERING.json, jis
+   automatiškai neimportuojamas į DB. Dar būtini atskiras aktyvavimo leidimas ir
+   apskaitos peržiūra. Tik tada užpildyti metų commission_series faktą,
    leisti numeravimo aktyvavimą ir COMMISSION_ISSUANCE_ENABLED. Naujo metų
    numerio be patvirtinimo nekurti. Patvirtinti galutinius dokumentų rekvizitus
    ir pateikimo klientui formatą prieš pirmą tikrą dokumentą.
@@ -116,8 +118,8 @@ sutikrinimą. Nei nauji komandų raktai, nei istorijos išmetimas nėra rollback
 
 ## Tik operatorės veiksmai / sprendimai
 
-- RIO-2026 serija: ar tikriems SF/kreditinėms nepanaudota; jei naudota –
-  paskutinis tikras numeris. Paslaugos užbaigimo momentas jau patvirtintas,
+- RIO-2026 nepanaudojimas PATVIRTINTAS; pradžia 000001 paruošta.
+  Šio fakto nebeklausti. Vėliau reikės tik atskiro aktyvavimo leidimo. Paslaugos užbaigimo momentas jau patvirtintas,
   jo pakartotinai neklausti.
 - Galutinė apskaitos/kreditavimo ir kategorijų saugojimo projekto peržiūra;
   privataus nuomotojo → įmonės VMI išvada ir užsienio paslaugų PVM atskirai.

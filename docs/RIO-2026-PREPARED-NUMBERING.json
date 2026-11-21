@@ -1,0 +1,21 @@
+{
+  "status": "prepared_not_activated",
+  "operatorConfirmedUnused": true,
+  "confirmationDate": "2026-11-21",
+  "year": 2026,
+  "series": "RIO-2026",
+  "firstNumber": "RIO-2026-000001",
+  "lastIssuedNumber": null,
+  "counterInitialValueWhenSeparatelyActivated": 0,
+  "sharedCounterFor": [
+    "invoice",
+    "credit"
+  ],
+  "timezone": "Europe/Vilnius",
+  "testPrefix": "TEST-RIO",
+  "testStorage": "separate disposable database only",
+  "activationApproved": false,
+  "realIssuanceApproved": false,
+  "liveDatabaseChanged": false,
+  "automaticImportIntoDatabase": false
+}

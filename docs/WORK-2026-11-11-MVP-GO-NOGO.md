@@ -1,5 +1,16 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## RIO-2026 serijos faktas patvirtintas 2026-11-21
+
+Operatorė patvirtino, kad tikrų SF ir kreditinių serijoje dar nebuvo.
+Bendras SF/kreditinių skaitiklis paruoštas nuo RIO-2026-000001;
+RIO-2026-PREPARED-NUMBERING.json yra tik parengta konfigūracija, ne aktyvavimas.
+Tikros serijos DB nekeista, dokumentai neišrašyti, Railway kintamieji nekeisti.
+Bandomiesiems dokumentams TEST-RIO prefiksas ir izoliuota laikina bazė;
+test režimas negali naudoti netemporarios DB. Nepanaudojimo pakartotinai neklausti.
+Lieka atskiras numeracijos / tikro išrašymo aktyvavimo leidimas ir ankstesni
+apskaitos, saugojimo, VMI/PVM, Zoho DPA bei infrastruktūros blokatoriai.
+
 ## Naujausias techninis tęsinys – onboarding-only, banko readback, abipusis grąžinimas
 
 Įgyvendinta (dar neaktyvuota): atskiras onboarding-only režimas be finansinės
