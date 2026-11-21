@@ -3,7 +3,8 @@ import {spawn} from 'node:child_process';import {once} from 'node:events';import
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'rio-private-http-')),run=crypto.randomBytes(16).toString('hex');
 const mailPath=path.join(temp,'mail.json'),hook=path.join(temp,'fetch.mjs');
 // Provider double exists only in this disposable test process; deployed code has no mail bypass.
-fs.writeFileSync(hook,`import http from 'node:http';import fs from 'node:fs';const real=globalThis.fetch;globalThis.fetch=(u,o)=>String(u)==='https://api.resend.com/emails'?(fs.writeFileSync(${JSON.stringify(mailPath)},o.body),Promise.resolve(new Response(JSON.stringify({id:'synthetic-mail'}),{status:200}))):real(u,o);`);
+// Publish the synthetic mail atomically: existence must never expose partial JSON to the parent.
+fs.writeFileSync(hook,`import http from 'node:http';import fs from 'node:fs';const real=globalThis.fetch;globalThis.fetch=(u,o)=>String(u)==='https://api.resend.com/emails'?(fs.writeFileSync(${JSON.stringify(mailPath+'.tmp')},o.body),fs.renameSync(${JSON.stringify(mailPath+'.tmp')},${JSON.stringify(mailPath)}),Promise.resolve(new Response(JSON.stringify({id:'11111111-1111-1111-1111-111111111111'}),{status:200}))):real(u,o);`);
 const env={...process.env,NODE_ENV:'production',NODE_OPTIONS:'',HOST:'127.0.0.1',PORT:'32895',
  PRIVATE_TEST_ENABLED:'true',PRIVATE_TEST_REQUIRED:'true',PRIVATE_TEST_RUN_ID:run,PRIVATE_TEST_ALLOWED_EMAILS:'owner@example.test',PRIVATE_TEST_OWNER_EMAIL:'owner@example.test',PRIVATE_TEST_RECIPIENT_ID:'',
  RENTINORBIT_STAGING:'true',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_SCT_TEST_RUNTIME:'true',RENTINORBIT_DEMO_PAYMENTS:'false',
