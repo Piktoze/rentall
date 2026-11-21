@@ -1,0 +1,37 @@
+{
+  "sourceCommit": "cca3d65a26bf20dd77430e45b820b562ad561666",
+  "workflowRun": 44932516106,
+  "workflowConclusion": "success",
+  "railwayDeploymentId": "6642b058-7bf9-4445-8c47-fca9b878886b",
+  "railwayDeploymentStatus": "SUCCESS",
+  "targetedLocalTests": 38,
+  "newFocusedTests": 6,
+  "scope": [
+    "onboarding-only financial HTTP deny",
+    "authenticated owner-only forms/status",
+    "bank configuration versus actual payout",
+    "persistent account-scoped payout readback/dedup",
+    "separate signed Snapshot sources and mode guard",
+    "bilateral good-return acceptance and one invoice/transfer",
+    "shared SF/credit series and immutable original",
+    "Lithuania year boundary"
+  ],
+  "liveConfigurationChanged": false,
+  "liveRecipientsCreated": 0,
+  "liveFinancialOperations": 0,
+  "actualInvoicesIssued": 0,
+  "existingDataTouched": false,
+  "realStripeTestPaymentScenariosRepeated": false,
+  "realEncryptedBackupRestoreRepeated": false,
+  "limits": [
+    "Provider doubles and disposable SQLite; not LIVE financial proof",
+    "LIVE flags and series not activated",
+    "Regular backup write-pause coordination remains before scheduler activation",
+    "Accounting presentation and statutory review remain before real documents"
+  ],
+  "ciTargetedTests": 68,
+  "ciFinancialSafetyRegressions": 147,
+  "browserTests": 33,
+  "mobileSearchRepeats": 10,
+  "catalogRegressions": 3
+}

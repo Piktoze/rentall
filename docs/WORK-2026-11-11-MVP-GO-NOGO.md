@@ -12,8 +12,11 @@ transakcijoje kaip transfer komanda. RIO-YYYY SF/kreditinių bendra numeracija,
 nekintantis originalas ir idempotentinės dalinės kreditinės; tikra serija
 neaktyvuota. Paslaugos baigimo momentas operatorės jau patvirtintas.
 
-Patikros ir vienas nuoseklus perjungimo/rollback/kopijų/webhook/pirmo gavėjo
-planas: ACTIVATION-REVIEW-2026-11-21.md. LIVE konfigūracija / gavėjai / mokėjimai,
+Patikros: 38 tikslinės vietinės izoliuotos patikros PASS, naujos 6
+Connect/apskaitos patikros; CI 44932516106 SUCCESS ir Railway
+6642b058-7bf9-4445-8c47-fca9b878886b SUCCESS kodui cca3d65.
+Įrodymas: evidence/2026-11-21-connect-commission-prelaunch.json.
+Vienas nuoseklus perjungimo/rollback/kopijų/webhook/pirmo gavėjo planas: ACTIVATION-REVIEW-2026-11-21.md. LIVE konfigūracija / gavėjai / mokėjimai,
 realios SF/kreditinės ir saugyklos perjungimas neįjungti. Senesnės būsenos žemiau
 paliktos istorijai. Likę: tikra LIVE infrastruktūros konfigūracija ir gavėjas,
 reguliarių kopijų rašymo pauzės koordinavimas prieš aktyvavimą, serijos faktas ir
