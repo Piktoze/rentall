@@ -64,7 +64,10 @@ tik laikinuose kataloguose. Tai repeticija, ne esamo tomo migracijos įrodymas.
 Šis papildymas pakeičia aukščiau nurodytą teiginį, kad privati konfigūracija
 visada ignoruoja nuolatinius kelius. Numatytasis režimas toliau laikinas.
 `createPersistentSctTestRuntime` naudoja tą patį tik TEST tikrinamą SCT branduolį;
-LIVE raktai/objektai nepriimami. Komercinio LIVE vykdyklė ir jos vartai dėl to
+LIVE raktai/objektai nepriimami. Nuolatinio TEST jungtis reikalauja SQLite
+`synchronous=FULL`, kad komandos transakcija būtų išsaugota prieš provider I/O.
+SIGKILL testas nėra fizinio disko gedimo ar maitinimo dingimo bandymas.
+Komercinio LIVE vykdyklė ir jos vartai dėl to
 nelaikomi užbaigtais. Nei naujas resursas, nei perjungimas dabar neatliktas.
 
 Vėlesnio privataus TEST perjungimo tikslus rinkinys:

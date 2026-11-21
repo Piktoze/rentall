@@ -11,7 +11,7 @@ for(const kind of ['payment','transfer','refund'])test(`disk journal survives SI
   for(let n=0;n<2;n++){
    const recovered=child('recover');assert.equal(recovered.status,0,recovered.stderr+recovered.stdout);
    const result=JSON.parse(recovered.stdout.trim().split('\n').at(-1));
-   assert.equal(result.calls[kind],1);assert.equal(result.result.status,'already_reconciled');
+   assert.equal(result.journalSynchronous,2);assert.equal(result.calls[kind],1);assert.equal(result.result.status,'already_reconciled');
    if(kind==='transfer'){assert.equal(result.booking.payout,'transferred');assert.equal(result.booking.amount,85);}
    if(kind==='refund'){assert.equal(result.booking.payment,'refunded');assert.equal(result.booking.refund,100);}
   }

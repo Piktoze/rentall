@@ -75,6 +75,6 @@ if(action==='crash'){
  await f.service.sweep();await f.service.sweep();
  const result=await f.service.recover(id,kind);
  const row=d.getRentalBookingById(id);
- console.log(JSON.stringify({result,calls:f.calls,booking:{payment:row.paymentStatus,payout:row.payoutStatus,status:row.status,amount:row.payoutAmount,refund:row.refundAmount}}));
+ console.log(JSON.stringify({result,journalSynchronous:d.db.pragma('synchronous',{simple:true}),calls:f.calls,booking:{payment:row.paymentStatus,payout:row.payoutStatus,status:row.status,amount:row.payoutAmount,refund:row.refundAmount}}));
  d.closeDatabase();
 }

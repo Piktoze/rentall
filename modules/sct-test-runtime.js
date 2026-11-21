@@ -27,6 +27,9 @@ export function createSctTestRuntime(options){
 }
 export function createPersistentSctTestRuntime(options){
  assertPersistentTestDatabase(options.db,options.env);
+ // Flush every committed command before any provider call, including host power-loss durability.
+ options.db.pragma('synchronous = FULL');
+ if(options.db.pragma('synchronous',{simple:true})!==2)fail('SCT_DURABLE_JOURNAL_REQUIRED');
  return createRuntime(options);
 }
 function createRuntime({db,stripe,env,now=Date.now}){
