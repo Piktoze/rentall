@@ -14,7 +14,10 @@
   sąrašo patikrą, kai v2 savininko / režimo susiejimas jau patvirtintas.
   Pervedimų į Stripe balansą ir banko išmokų parengtis UI rodoma atskirai.
   Bankui reikia payouts_enabled, švarių aktualių ir laukiančių reikalavimų,
-  EUR default banko validated/verified statuso; new ar vien pridėjimo nepakanka.
+  EUR default banko be klaidos su standard payout galimybe. Vien pridėjimo
+  nepakanka: tikrinami visi šie Stripe rodikliai. External banko new gali būti
+  normali būsena; nereikalaujama jam netaikomo validated/verified statuso.
+  Banko nuosavybės patvirtinimas ir faktinis gavimas dėl to neskelbiami.
 - Connect payout snapshot handleris skaito po_ tik su stripeAccount=nuomotojo
   accountId, reikalauja vieno nuosavo v2 SCT susiejimo ir tinkamo režimo.
   Patvarios connect_payout_events/connect_bank_payouts lentelės, event ID
@@ -131,3 +134,8 @@ commercial-sct-runtime.test.mjs; SIGKILL regresijoms tik lokalūs pakaitalai.
 webhook-signed-http-v231.test.js tikrina parašus, šaltinio ir režimo atskyrimą,
 thin atmetimą ir dedup. Sėkmingi realūs Stripe TEST mokėjimai ir realus
 šifruotos kopijos atkūrimas nekartojami. Nauji realūs Stripe objektai nekuriami.
+
+Oficialūs banko statusų / payout įvykių šaltiniai (tikrinta 2026-11-21):
+https://docs.stripe.com/api/external_account_bank_accounts/object
+https://docs.stripe.com/connect/manage-connected-account-payouts
+Payout įvykiai yra v1 net Accounts v2 gavėjams; papildomas thin endpoint tam nereikalingas.

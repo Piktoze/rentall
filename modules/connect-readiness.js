@@ -6,9 +6,9 @@ export async function inspectBankPayoutReadiness(stripe,accountId,livemode){
  if(banks.has_more!==false||!Array.isArray(banks.data))throw Error('CONNECT_BANK_LIST_INCOMPLETE');
  const requirements=account.requirements;
  const clear=requirements&&Array.isArray(requirements.currently_due)&&Array.isArray(requirements.past_due)&&Array.isArray(requirements.pending_verification)&&!requirements.currently_due.length&&!requirements.past_due.length&&!requirements.pending_verification.length&&!requirements.disabled_reason;
- const bank=banks.data.find(x=>x.object==='bank_account'&&x.currency==='eur'&&x.default_for_currency===true&&['validated','verified'].includes(x.status));
+ const bank=banks.data.find(x=>x.object==='bank_account'&&x.currency==='eur'&&x.default_for_currency===true&&['new','validated','verified'].includes(x.status)&&Array.isArray(x.available_payout_methods)&&x.available_payout_methods.includes('standard')&&(!x.requirements?.currently_due?.length)&&(!x.requirements?.errors?.length));
  return {bankPayoutsReady:!!(account.payouts_enabled===true&&clear&&bank),payoutsEnabled:account.payouts_enabled===true,
-  bankPayoutReadiness:account.payouts_enabled&&clear&&bank?'ready':'needs_review',bankStatus:bank?.status||'not_verified',bankPayoutExecuted:false};
+  bankPayoutReadiness:account.payouts_enabled&&clear&&bank?'ready':'needs_review',bankStatus:bank?.status||'not_verified',bankPayoutExecuted:false,bankOwnershipVerified:false,payoutSchedule:account.settings?.payouts?.schedule||null};
 }
 export function createConnectPayoutReconciler({db,stripe,livemode}){
  db.exec(`CREATE TABLE IF NOT EXISTS connect_payout_events(event_id TEXT PRIMARY KEY,account_id TEXT NOT NULL,payout_id TEXT NOT NULL,event_type TEXT NOT NULL,state TEXT NOT NULL);

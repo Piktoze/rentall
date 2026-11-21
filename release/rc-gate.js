@@ -6,7 +6,7 @@ if(process.env.RENTINORBIT_ENCRYPTED_BACKUP_PROBE_RUN_ID)execFileSync(process.ex
 
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
-const rentalTestEnv={...process.env,COMMERCIAL_SCT_RUNTIME_ENABLED:'false',PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+const rentalTestEnv={...process.env,CONNECT_ONBOARDING_ONLY_ENABLED:'false',CONNECT_BANK_READBACK_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'false',PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 if(process.env.RENTINORBIT_NOTIFICATION_TEST_RUN_ID){
   execFileSync(process.execPath,['ops/notification-delivery-evidence.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
 }
@@ -18,7 +18,7 @@ if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
 }
 
 // Build-time suites must never inherit the deployed private database or access gate.
-process.env.COMMERCIAL_SCT_RUNTIME_ENABLED='false';process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
+process.env.CONNECT_ONBOARDING_ONLY_ENABLED='false';process.env.CONNECT_BANK_READBACK_ENABLED='false';process.env.COMMERCIAL_SCT_RUNTIME_ENABLED='false';process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
 const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
@@ -26,7 +26,7 @@ const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTIN
  RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
 execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
 // New financial commands and password recovery run only against disposable databases.
-execFileSync(process.execPath,['--test','encrypted-backup-bundle.test.mjs','sct-supplier-onboarding-http.test.mjs','commercial-sct-runtime.test.mjs','commercial-sct-restart.test.mjs','private-test-recipient-onboarding.test.mjs','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
+execFileSync(process.execPath,['--test','connect-prelaunch.test.mjs','encrypted-backup-bundle.test.mjs','sct-supplier-onboarding-http.test.mjs','commercial-sct-runtime.test.mjs','commercial-sct-restart.test.mjs','private-test-recipient-onboarding.test.mjs','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['private-test-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['password-recovery-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 
@@ -132,7 +132,7 @@ const paymentSafetyChecks=[
 ];
 const checks=[
   ['version',pkg.version.startsWith('1.0.0-rc.')],
-  ['webhook verification',server.includes('stripe.webhooks.constructEvent')],
+  ['webhook verification',server.includes('webhookStripe.webhooks.constructEvent')&&server.includes('verifiedConnectSource')&&server.includes('eventMode !== webhookMode')],
   ['supplier direct-charge gate',server.includes('requireSupplierDirectChargeCapability')],
   ['guest token protection',server.includes('verifyBookingPaymentToken')],
   ['invited supplier activation requires explicit terms consent',(()=>{const route=server.split("app.post('/api/supplier/activation'")[1]?.split("app.get('/api/supplier/listings/confirm-current'")[0]||'';const html=fs.readFileSync('./index.html','utf8');return route.includes('req.body?.termsAccepted!==true')&&route.includes("code:'TERMS_ACCEPTANCE_REQUIRED'")&&html.includes('id="supplierActivationTerms" required')&&app.includes("termsAccepted:document.getElementById('supplierActivationTerms')?.checked===true")})()],

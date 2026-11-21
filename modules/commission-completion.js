@@ -1,3 +1,4 @@
+export const commissionSeriesYear=date=>Number(new Intl.DateTimeFormat('en',{timeZone:'Europe/Vilnius',year:'numeric'}).format(date));
 // New commercial enrollments only. No legacy invoices/orders are adopted.
 export function createCommissionCompletion({db,env={},now=()=>new Date()}){
  db.exec(`CREATE TABLE IF NOT EXISTS commission_return_acceptance(booking_id TEXT NOT NULL,party TEXT NOT NULL CHECK(party IN ('customer','supplier')),user_id TEXT NOT NULL,accepted_at TEXT NOT NULL,PRIMARY KEY(booking_id,party));
@@ -22,7 +23,7 @@ export function createCommissionCompletion({db,env={},now=()=>new Date()}){
   if(!Number.isSafeInteger(year)||year<2026||!(unused===true&&lastNumber===undefined||unused===false&&Number.isSafeInteger(lastNumber)&&lastNumber>0))fail('COMMISSION_SERIES_FACT_REQUIRED');
   db.prepare('INSERT INTO commission_series VALUES(?,?,?)').run(year,unused?0:lastNumber,unused?'confirmed_unused':'confirmed_last_number');
  }
- function number(date){const year=date.getUTCFullYear();const row=db.prepare('SELECT * FROM commission_series WHERE year=?').get(year);if(!row)fail('COMMISSION_SERIES_NOT_APPROVED');
+ function number(date){const year=commissionSeriesYear(date);const row=db.prepare('SELECT * FROM commission_series WHERE year=?').get(year);if(!row)fail('COMMISSION_SERIES_NOT_APPROVED');
   const n=row.last_number+1;if(n>999999)fail('COMMISSION_SERIES_EXHAUSTED');db.prepare('UPDATE commission_series SET last_number=? WHERE year=?').run(n,year);return `RIO-${year}-${String(n).padStart(6,'0')}`;
  }
  function invoice(id){return db.transaction(()=>{owned(id);const prior=db.prepare("SELECT * FROM commission_documents WHERE booking_id=? AND kind='invoice'").get(id);if(prior)return prior;
@@ -37,7 +38,10 @@ export function createCommissionCompletion({db,env={},now=()=>new Date()}){
   if(env.COMMISSION_ISSUANCE_ENABLED!=='true')fail('COMMISSION_ISSUANCE_NOT_APPROVED');
   if(env.NODE_ENV!=='test'&&env.COMMISSION_ACCOUNTING_REVIEWED!=='true')fail('COMMISSION_ACCOUNTING_REVIEW_REQUIRED');
   if(b.fee_cents===0)return null;
-  const date=now(),n=number(date),snapshot=JSON.stringify({issuer:'Ieva Piktožė',activityCertificate:'751612',issuerAddress:'Paryžiaus Komunos g. 10-30, Klaipėda, 91151 Klaipėdos m. sav., Lietuva',recipientEmail:db.prepare('SELECT owner_email FROM rental_listings WHERE listing_id=?').get(b.listing_id)?.owner_email,description:'RentInOrbit tarpininkavimo paslauga',quantity:1,currency:'EUR',kind:'platform_commission',grossRentalCents:b.amount_cents,commissionCents:b.fee_cents,feePayer:'platform',vatStatus:'not_vat_registered',serviceCompletedAt:date.toISOString(),returnAcceptances:readiness(id).parties});
+  const ownerEmail=db.prepare('SELECT owner_email FROM rental_listings WHERE listing_id=?').get(b.listing_id)?.owner_email;
+  const billing=db.prepare("SELECT 1 FROM sqlite_master WHERE name='supplier_business_profiles'").get()?db.prepare('SELECT * FROM supplier_business_profiles WHERE supplier_email=? COLLATE NOCASE').get(ownerEmail):null;
+  if(env.NODE_ENV!=='test'&&(!billing?.legal_name||!billing?.business_address||billing.reviewed!==1))fail('COMMISSION_RECIPIENT_BILLING_REVIEW_REQUIRED');
+  const date=now(),n=number(date),snapshot=JSON.stringify({issuer:'Ieva Piktožė',activityCertificate:'751612',issuerAddress:'Paryžiaus Komunos g. 10-30, Klaipėda, 91151 Klaipėdos m. sav., Lietuva',recipientEmail:ownerEmail,recipientName:billing?.legal_name||null,recipientAddress:billing?.business_address||null,recipientRegistration:billing?.registration_number||null,description:'RentInOrbit tarpininkavimo paslauga',quantity:1,currency:'EUR',kind:'platform_commission',grossRentalCents:b.amount_cents,commissionCents:b.fee_cents,feePayer:'platform',vatStatus:'not_vat_registered',serviceCompletedAt:date.toISOString(),returnAcceptances:readiness(id).parties});
   const r=db.prepare("INSERT INTO commission_documents(booking_id,kind,amount_cents,number,issued_at,snapshot) VALUES(?,'invoice',?,?,?,?)").run(id,b.fee_cents,n,date.toISOString(),snapshot);return db.prepare('SELECT * FROM commission_documents WHERE document_id=?').get(r.lastInsertRowid);
  }).immediate();}
  function credit(invoiceId,amountCents,requestId){return db.transaction(()=>{

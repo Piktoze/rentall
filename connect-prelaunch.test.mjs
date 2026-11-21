@@ -2,12 +2,12 @@ import test from 'node:test';import assert from 'node:assert/strict';import Data
 import {inspectBankPayoutReadiness,createConnectPayoutReconciler} from './modules/connect-readiness.js';
 import {createOnboardingOnly} from './modules/connect-onboarding-only.js';
 import {createCommercialStripeClient} from './modules/commercial-sct-client.js';
-import {createCommissionCompletion} from './modules/commission-completion.js';
+import {createCommissionCompletion,commissionSeriesYear} from './modules/commission-completion.js';
 const schema=()=>{const d=new Database(':memory:');d.exec(`CREATE TABLE stripe_connections(user_id TEXT,user_email TEXT,stripe_account_id TEXT,connect_api TEXT);INSERT INTO stripe_connections VALUES('u','owner@test','acct_owner','v2_recipient_sct_test');`);return d;};
-test('bank readiness requires provider payout permission, complete requirements and validated EUR default bank; execution separate',async()=>{
- let account={id:'acct_owner',payouts_enabled:true,requirements:{currently_due:[],past_due:[],pending_verification:[]}},bank={object:'bank_account',currency:'eur',default_for_currency:true,status:'new'};
+test('bank readiness requires provider permission, clear requirements and usable EUR bank; new status alone is insufficient',async()=>{
+ let account={id:'acct_owner',payouts_enabled:false,requirements:{currently_due:[],past_due:[],pending_verification:[]}},bank={object:'bank_account',currency:'eur',default_for_currency:true,status:'new',available_payout_methods:['standard']};
  const stripe={accounts:{retrieve:async()=>account,listExternalAccounts:async()=>({data:[bank],has_more:false})}};
- assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,false);bank.status='verified';assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,true);
+ assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,false);account.payouts_enabled=true;assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,true);
  account.requirements.pending_verification=['identity'];assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,false);account.requirements.pending_verification=[];bank.status='errored';assert.equal((await inspectBankPayoutReadiness(stripe,'acct_owner',false)).bankPayoutsReady,false);
 });
 test('durable Connect payout readback pins owner and account context, deduplicates across restart, provider truth beats stale event',async()=>{
@@ -51,3 +51,5 @@ test('onboarding-only HTTP guard blocks payments, transfers, refunds and admin w
   const r=await fetch(base+'/api/stripe/connect/hosted-onboarding-link',{method:'POST',headers:{'Content-Type':'application/json','x-test-role':'supplier','x-test-user':'owner'},body:JSON.stringify({userId:'other',accountId:'acct_other'})});assert.equal(r.status,200);assert.equal((await r.json()).url,'https://connect.stripe.com/owner');assert.equal(r.headers.get('cache-control'),'private, no-store');
  }finally{await new Promise(r=>server.close(r));}
 });
+
+test('annual RIO series follows Lithuania year at UTC boundary',()=>{assert.equal(commissionSeriesYear(new Date('2026-12-31T22:30:00Z')),2027);assert.equal(commissionSeriesYear(new Date('2026-12-31T21:30:00Z')),2026);});
