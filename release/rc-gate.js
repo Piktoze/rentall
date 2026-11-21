@@ -6,7 +6,7 @@ if(process.env.RENTINORBIT_ENCRYPTED_BACKUP_PROBE_RUN_ID)execFileSync(process.ex
 
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
-const rentalTestEnv={...process.env,CONNECT_ONBOARDING_ONLY_ENABLED:'false',CONNECT_BANK_READBACK_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'false',PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+const rentalTestEnv={...process.env,ENCRYPTED_BACKUP_SCHEDULER_ENABLED:'false',CONNECT_ONBOARDING_ONLY_ENABLED:'false',CONNECT_BANK_READBACK_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'false',PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 if(process.env.RENTINORBIT_NOTIFICATION_TEST_RUN_ID){
   execFileSync(process.execPath,['ops/notification-delivery-evidence.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
 }
@@ -18,7 +18,7 @@ if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
 }
 
 // Build-time suites must never inherit the deployed private database or access gate.
-process.env.CONNECT_ONBOARDING_ONLY_ENABLED='false';process.env.CONNECT_BANK_READBACK_ENABLED='false';process.env.COMMERCIAL_SCT_RUNTIME_ENABLED='false';process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
+process.env.ENCRYPTED_BACKUP_SCHEDULER_ENABLED='false';process.env.CONNECT_ONBOARDING_ONLY_ENABLED='false';process.env.CONNECT_BANK_READBACK_ENABLED='false';process.env.COMMERCIAL_SCT_RUNTIME_ENABLED='false';process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
 const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',

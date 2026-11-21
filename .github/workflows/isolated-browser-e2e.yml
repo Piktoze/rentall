@@ -72,6 +72,7 @@ jobs:
       APP_URL: http://127.0.0.1:3000
       PUBLIC_BASE_URL: http://127.0.0.1:3000
       PORT: "3000"
+      ENCRYPTED_BACKUP_SCHEDULER_ENABLED: "false"
       COMMERCIAL_SCT_RUNTIME_ENABLED: "false"
       STRIPE_MODE: test
       STRIPE_SECRET_KEY: ""

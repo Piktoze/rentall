@@ -12,7 +12,7 @@ const env={...process.env,NODE_ENV:'production',NODE_OPTIONS:'',HOST:'127.0.0.1'
  APP_URL:'https://rentinorbit.com',PUBLIC_BASE_URL:'https://rentinorbit.com',TRUST_PROXY_HOPS:'1',SESSION_SECRET:crypto.randomBytes(32).toString('hex'),
  SCT_STRIPE_FEE_PAYER:'platform',PLATFORM_FEE_PERCENT:'15',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_synthetic_placeholder_123456',STRIPE_PUBLISHABLE_KEY:'pk_test_synthetic_placeholder_123456',STRIPE_WEBHOOK_SECRET:'whsec_synthetic_placeholder_123456',STRIPE_CONNECT_WEBHOOK_SECRET:'whsec_synthetic_placeholder_123456',STRIPE_CONNECT_V2_PROVISIONING:'true',
  EMAIL_PROVIDER:'resend',EMAIL_FROM:'RentInOrbit <info@example.test>',RESEND_API_KEY:'re_synthetic_placeholder_123456',EMAIL_WORKER_ENABLED:'true',EMAIL_WORKER_TOKEN:crypto.randomBytes(32).toString('hex'),SUPPORT_EMAIL:'info@example.test',SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled',MAPS_PROVIDER:'stub',
- DB_BACKUP_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',BACKUP_S3_ENABLED:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+ ENCRYPTED_BACKUP_SCHEDULER_ENABLED:'false',DB_BACKUP_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',BACKUP_S3_ENABLED:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 const child=spawn(process.execPath,['--import',hook,'ops/start.js'],{env,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x);
 const base='http://127.0.0.1:32895';let cookie='';
 const req=(p,{method='GET',body,headers={}}={})=>fetch(base+p,{method,headers:{Origin:env.APP_URL,'Content-Type':'application/json',cookie,...headers},...(body?{body:JSON.stringify(body)}:{}),redirect:'manual'});
