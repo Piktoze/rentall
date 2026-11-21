@@ -17,15 +17,15 @@ export function startCoordinatedBackupScheduler({coordinator,db,uploads,env=proc
  const publicKey=env.ENCRYPTED_BACKUP_PUBLIC_KEY_PEM;if(!publicKey||/PRIVATE KEY/.test(publicKey))throw Error('ENCRYPTED_BACKUP_PUBLIC_KEY_ONLY');
  const key=crypto.createPublicKey(publicKey);if(key.asymmetricKeyType!=='rsa'||key.asymmetricKeyDetails.modulusLength<3072)throw Error('ENCRYPTED_BACKUP_RSA_3072_REQUIRED');
  let running=false,stopped=false;const {client,bucket}=createBackupS3(env);
- const run=async()=>{if(running||stopped)return {skipped:true};running=true;const root=fs.mkdtempSync(path.join(os.tmpdir(),'rio-coordinated-')),output=path.join(root,'bundle.enc');
-  try{const proof=await coordinatedEncryptedBackup({coordinator,db,uploads,output,publicKey});
+ const run=async()=>{if(running||stopped)return {skipped:true};running=true;let root;
+  try{root=fs.mkdtempSync(path.join(os.tmpdir(),'rio-coordinated-'));const output=path.join(root,'bundle.enc');const proof=await coordinatedEncryptedBackup({coordinator,db,uploads,output,publicKey});
    // The read/write pause ends before upload and retention; local bundle is immutable.
    const objectKey='bundles-v1/'+new Date().toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomBytes(8).toString('hex')+'.enc';
    await uploadBackupObject(client,bucket,objectKey,output,'application/octet-stream');
    const downloaded=path.join(root,'downloaded.enc');await downloadBackupObject(client,bucket,objectKey,downloaded);
    if(fs.statSync(downloaded).size!==proof.bytes||await sha256File(downloaded)!==proof.sha256)throw Error('ENCRYPTED_BACKUP_DOWNLOAD_HASH_MISMATCH');
    const deleted=await prune(client,bucket);return {ok:true,objectKey,...proof,deleted};
-  }finally{fs.rmSync(root,{recursive:true,force:true});running=false;if(stopped)client.destroy();}
+  }finally{try{if(root)fs.rmSync(root,{recursive:true,force:true});}finally{running=false;if(stopped)client.destroy();}}
  };
  const tick=()=>run().then(r=>console.log(JSON.stringify({type:'coordinated_encrypted_backup',...r,output:undefined}))).catch(e=>console.error(JSON.stringify({type:'coordinated_encrypted_backup',ok:false,code:e.code||'BACKUP_FAILED'})));
  // No immediate/startup run: first interval is six hours after explicit activation.

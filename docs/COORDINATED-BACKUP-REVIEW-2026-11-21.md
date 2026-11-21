@@ -2,7 +2,9 @@
 
 ## Faktinis mechanizmas ir jo ribos
 
-Vienas Node rašantis procesas / viena Railway paslaugos replika. HTTP užklausos
+Vienas Node rašantis procesas / viena Railway paslaugos replika. Kontrolės
+plokštumoje patikrinta: dabartinis staging iad regione turi numReplicas=1,
+npm start procesą ir esamą 500 MB volume. Volume turinys netikrintas. HTTP užklausos
 įleidžiamos prieš body parser ir visus maršrutus. Async maršrutų veikimas
 sekamas iki jų Promise pabaigos net klientui nutraukus ryšį. Foniniai nuomos
 terminų, tiekėjų priežiūros, finansinių komandų ir laiškų darbuotojai naudoja
@@ -42,6 +44,7 @@ backup-write-coordination.test.mjs:
   nuotraukų writer sėkmingai tęsia, o vėlesnė kopija vėl gali būti sukurta.
 - Nutrūkus HTTP klientui kopija vis tiek laukia async handlerio DB įrašo.
 - Drain timeout nepradeda kopijos ir atnaujina naujų darbų įleidimą.
+- Esama išvestis neperrašoma ir EEXIST klaida jos neištrina; vartai atlaisvinami.
 - Retention tikrina abu limitus ir neliečia kitų / istorinių objektų prefiksų.
 
 Naudotos naujos laikinos bazės ir sintetiniai failai. Esama /data neatidaryta.

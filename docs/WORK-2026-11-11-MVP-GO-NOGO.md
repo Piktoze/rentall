@@ -11,7 +11,7 @@ NEĮJUNGTAS; pirmas tik po 6 val. nuo vėlesnio leidimo. Retention tik po upload
 download / hash patikros, tik naujo prefikso savo objektams; fiziniam
 prastovos metu galiojančiam 7 d. lifecycle dar nesukonfigūruotas.
 
-5 koordinavimo/retention patikros ir 2 TEST PDF/HTTP patikros izoliuotose
+6 koordinavimo/retention patikros ir 2 TEST PDF/HTTP patikros izoliuotose
 bazėse. TEST-RIO-2026-000001 komisinis 15 EUR ir susieta dalinė kreditinė
 TEST-RIO-2026-000002 5 EUR naudoja esamą logotipą, sintetinius rekvizitus ir
 atskirą laikiną bazę. Nuomotojo kelias: Paskyros meniu → Išmokos → TEST

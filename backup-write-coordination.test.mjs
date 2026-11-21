@@ -48,3 +48,7 @@ test('drain timeout releases admission and never starts copying over a busy writ
  assert.equal(f.coordinator.state().pending,false);let admitted=false;await f.coordinator.writer(async()=>{admitted=true;});assert.equal(admitted,true);gate.resolve();await old;
  }finally{gate.resolve();f.close();}
 });
+
+test('existing encrypted output is never overwritten or deleted on EEXIST; write gate resumes',async()=>{
+ const f=fixture();try{const output=path.join(f.root,'existing.enc');fs.writeFileSync(output,'SYNTHETIC_PREVIOUS_BACKUP');await assert.rejects(coordinatedEncryptedBackup({...f,output,publicKey}),{code:'EEXIST'});assert.equal(fs.readFileSync(output,'utf8'),'SYNTHETIC_PREVIOUS_BACKUP');await f.coordinator.writer(async()=>f.db.prepare('UPDATE state SET version=5').run());assert.equal(f.coordinator.state().paused,false);}finally{f.close();}
+});

@@ -6,7 +6,7 @@ function files(root,prefix=''){const out=[];for(const e of fs.readdirSync(root,{
 export async function createEncryptedBundle({db,uploads,output,publicKey,quiesced,coordinationProof}){
  if(fs.lstatSync(uploads).isSymbolicLink())throw Error('BACKUP_SOURCE_SYMLINK');
  if(quiesced!==true||!db?.backup||!path.isAbsolute(uploads))throw Error('BACKUP_QUIESCED_EXPLICIT_SOURCE_REQUIRED');
- const root=fs.mkdtempSync(path.join(os.tmpdir(),'rio-bundle-'));let child;
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rio-bundle-'));let child,outputCreated=false;
  try{
   if(coordinationProof&&!coordinationProof())throw Error('BACKUP_COORDINATION_LOST');
   await db.backup(path.join(root,'database.sqlite'));fs.chmodSync(path.join(root,'database.sqlite'),0o600);fs.mkdirSync(path.join(root,'uploads'),{mode:0o700});
@@ -22,13 +22,13 @@ export async function createEncryptedBundle({db,uploads,output,publicKey,quiesce
   fs.writeFileSync(path.join(root,'manifest.json'),JSON.stringify(manifest),{mode:0o600});
   const key=crypto.randomBytes(32),iv=crypto.randomBytes(12),wrapped=crypto.publicEncrypt({key:publicKey,oaepHash:'sha256',padding:crypto.constants.RSA_PKCS1_OAEP_PADDING},key);
   const header=Buffer.from(JSON.stringify({version:1,cipher:'aes-256-gcm',wrap:'rsa-oaep-sha256',iv:iv.toString('base64'),wrappedKey:wrapped.toString('base64')})),len=Buffer.alloc(4);len.writeUInt32BE(header.length);
-  fs.writeFileSync(output,Buffer.concat([magic,len,header]),{flag:'wx',mode:0o600});
+  fs.writeFileSync(output,Buffer.concat([magic,len,header]),{flag:'wx',mode:0o600});outputCreated=true;
   const cipher=crypto.createCipheriv('aes-256-gcm',key,iv);cipher.setAAD(Buffer.concat([magic,len,header]));
   child=spawn('tar',['-czf','-','-C',root,'manifest.json','database.sqlite','uploads'],{stdio:['ignore','pipe','pipe']});let error='';child.stderr.on('data',x=>error+=x);const completed=once(child,'close');
   await pipeline(child.stdout,cipher,fs.createWriteStream(output,{flags:'a'}));const [code]=await completed;if(code!==0)throw Error('BACKUP_TAR_FAILED');
   fs.appendFileSync(output,cipher.getAuthTag());key.fill(0);
   return {sha256:await sha256File(output),bytes:fs.statSync(output).size,fileCount:manifest.files.length};
- }catch(e){child?.kill('SIGKILL');fs.rmSync(output,{force:true});throw e;}
+ }catch(e){child?.kill('SIGKILL');if(outputCreated)fs.rmSync(output,{force:true});throw e;}
  finally{fs.rmSync(root,{recursive:true,force:true});}
 }
 export async function restoreEncryptedBundle({bundle,privateKey,target}){
