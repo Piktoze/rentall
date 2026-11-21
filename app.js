@@ -1,3 +1,4 @@
+const rioSupplierUiReady=document.readyState==='complete'?Promise.resolve():new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
 const prices = { "Beach Pack for Two":49, "Travel Stroller":39, "Mobility Scooter":89, "Action Camera Kit":59, "Travel Cot":35, "Cooler Box":19 };
 let cart = [];
 let supplierPayoutVerified=false;
@@ -6282,6 +6283,8 @@ async function handleCustomerDeepLinkV81(){
   }
 
   if(view==='supplier-payouts'){
+    // Defer routing until every deferred supplier UI module has registered its listeners.
+    await rioSupplierUiReady;
     await refreshServerUser();
     if(!['supplier','admin'].includes(currentServerUser?.role)){showToast('Sign in as the supplier to open payout settings.','error',2600);return;}
     const toggle=document.getElementById('supplierDashboardToggle');

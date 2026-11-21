@@ -8,5 +8,6 @@
  }finally{pending=false;}}
  document.getElementById('supplierPaymentsBtn')?.addEventListener('click',()=>load().catch(()=>{}));
  document.addEventListener('rentinorbit:auth-ui-updated',()=>{if(panel.classList.contains('open'))load().catch(()=>{});});
+ new MutationObserver(()=>{if(panel.classList.contains('open'))load().catch(()=>{});}).observe(panel,{attributes:true,attributeFilter:['class']});
  if(panel.classList.contains('open'))load().catch(()=>{});
 })();
