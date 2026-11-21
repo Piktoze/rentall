@@ -118,7 +118,10 @@ jobs:
         # Collect independent browser evidence even if a prior HTTP regression fails.
         # The workflow still fails overall when any critical step fails.
         if: ${{ success() || failure() }}
-        run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js e2e/two-account-handover.spec.js e2e/sct-onboarding-return.spec.js --config=e2e/playwright.config.js
+        run: npx playwright test e2e/isolated-ci.spec.js e2e/customer-journey.spec.js e2e/privacy-requests-v261.spec.js e2e/two-account-handover.spec.js --config=e2e/playwright.config.js
+      - name: Verify authenticated Stripe return in a fresh isolated server process
+        # Keep the production login rate limit intact; prior journey logins use its budget.
+        run: npx playwright test e2e/sct-onboarding-return.spec.js --config=e2e/playwright.config.js --retries=0
       - name: Lithuanian mobile search 10 times with retries disabled
         run: npx playwright test e2e/isolated-ci.spec.js --config=e2e/playwright.config.js --grep 'mobile navigation and public pages support lt$' --repeat-each=10 --workers=1 --retries=0
       - name: Verify read-only catalog in Chromium and over HTTP

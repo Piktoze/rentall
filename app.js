@@ -6283,7 +6283,7 @@ async function handleCustomerDeepLinkV81(){
     if(!['supplier','admin'].includes(currentServerUser?.role)){showToast('Sign in as the supplier to open payout settings.','error',2600);return;}
     const toggle=document.getElementById('supplierDashboardToggle');
     if(toggle&&toggle.getAttribute('aria-expanded')!=='true')toggle.click();
-    document.getElementById('supplierPaymentsBtn')?.click();
+    document.dispatchEvent(new CustomEvent('rentinorbit:open-supplier-payouts'));
     await refreshLiveStripeStatus();
     const clean=new URL(window.location.href);['view','stripe_onboarding'].forEach(k=>clean.searchParams.delete(k));history.replaceState({},document.title,clean.pathname+clean.search+clean.hash);return;
   }

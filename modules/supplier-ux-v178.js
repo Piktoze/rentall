@@ -174,6 +174,10 @@
   }
   document.addEventListener('rentinorbit:language-changed',()=>setTimeout(()=>{localizeDrawer();localizeSupplierRoots();sync();},0));
   document.addEventListener('rentinorbit:auth-ui-updated',sync);
+  document.addEventListener('rentinorbit:open-supplier-payouts',()=>{
+    if(!isSupplier())return;
+    createFeatureHeading();handleAction('payouts');
+  });
   const authObserver=new MutationObserver(()=>sync());const auth=$('supplierAuthBtn');if(auth)authObserver.observe(auth,{childList:true,subtree:true,characterData:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();
