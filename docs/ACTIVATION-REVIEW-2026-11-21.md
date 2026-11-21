@@ -45,7 +45,11 @@
   nepatvirtina. Realios SF/kreditinės šiuo etapu neįjungtos.
 - Privatus ne verslininkas → įmonė lieka užblokuotas; apskaitos/VMI klausimo
   šios techninės pataisos neišsprendžia. LT sutarties taisyklė atnaujinta pagal
-  operatorės patvirtintą abipusio grąžinimo momentą.
+  operatorės patvirtintą abipusio grąžinimo momentą. Naujo komercinio
+  užsakymo konkrečios sutarties snapshot taip pat turi atskirą
+  bilateral-commission-v1 versiją ir šias sąlygas; ankstesni snapshot nekeisti.
+  Naujam komerciniam užsakymui reikia prisijungusio nuomininko paskyros,
+  kad abipusis grąžinimo patvirtinimas nebūtų nepasiekiamas svečiui.
 
 ## Nuoseklus aktyvavimo planas (visiems pakeitimams atskiras galutinis leidimas)
 

@@ -3131,6 +3131,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     validateAvailabilityWindow(startDate,endDate);
     const qty=validateRequestedQuantity(quantity);
     const sessionUserForValidation=sessionUser(req);
+    if(commercialRuntime&&!['customer','supplier'].includes(sessionUserForValidation?.role))return res.status(401).json({code:'COMMERCIAL_RENTER_ACCOUNT_REQUIRED',error:'Prisijunkite prieš komercinę rezervaciją: reikės atskirai patvirtinti grąžinimą.'});
     const emailForValidation=sessionUserForValidation?.email || customerEmail || '';
     if(emailForValidation && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(emailForValidation))){
       return res.status(400).json({error:'Valid customer email is required'});
@@ -3196,7 +3197,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     return created;}).immediate();
     const agreement=createRentalAgreement({
       bookingId,
-      termsVersion:'rentinorbit-rental-v3',
+      termsVersion:'rentinorbit-rental-v3'+(commercialRuntime?'-bilateral-commission-v1':''),
       // Agreeing to platform checkout terms does not replace signing the
       // booking-specific rental agreement. Each party accepts explicitly.
       customerAcceptedAt:null,
@@ -3209,6 +3210,10 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
         cancellationPolicy:result.booking.cancellationPolicySnapshot||listingForBooking.cancellationPolicy||'moderate',
         cancellationPolicyVersion:result.booking.cancellationPolicyVersion,
         terms:[
+          ...(commercialRuntime?[
+            'Tarpininkavimo paslauga laikoma užbaigta, kai abi šalys atskirai patvirtina tinkamą daikto grąžinimą ir nėra neišspręsto ginčo ar išmokos sulaikymo. Tuo metu platforma išrašo sąskaitą tik už savo 15 % komisinį ir inicijuoja 85 % pervedimą į nuomotojo Stripe balansą. Stripe apdorojimo, Connect ir banko išmokų kaštus dengia platforma. Pervedimas į Stripe balansą nėra banko išmoka.',
+            'Jei komisinis sumažėja po sąskaitos išrašymo, parengiamas susietas kreditinis dokumentas, originalas išsaugomas. Visiškai atšaukus iki paslaugos užbaigimo ir komisiniui esant nuliui, komisinio sąskaita neišrašoma.'
+          ]:[]),
           'Nuomotojas patvirtina, kad turi teisę nuomoti skelbime aprašytą daiktą, pateikia tikslią informaciją apie būklę, komplektaciją, saugų naudojimą ir sutartą perdavimo būdą.',
           'Nuomininkas naudoja daiktą pagal paskirtį, laikosi pateiktų saugos instrukcijų, saugo komplektaciją ir laiku grąžina daiktą pagal rezervacijos sąlygas, atsižvelgiant į įprastą nusidėvėjimą.',
           'Abi šalys atskirai patvirtina šią konkrečios rezervacijos sutartį. Iki abiejų patvirtinimų daikto perdavimas pagal RentInOrbit kodą negalimas.',
