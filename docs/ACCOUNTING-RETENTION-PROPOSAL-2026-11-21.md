@@ -43,9 +43,9 @@ LT rinka; A modelis 15 % / 85 %, visi Stripe kaštai tenka platformai.
 | Įprastos užklausos | 12 mėn. po išsprendimo | Jau patvirtinta; dokumentuotas teisinis sulaikymas – išimtis |
 | Uždarytos paskyros nefinansiniai profilio duomenys | Pašalinti / anonimizuoti per 30 d. patvirtinus prašymą ir užbaigus atviras nuomas | Netaikoma privalomiems finansiniams/sutarčių įrodymams; teisės į prašymą atsakymas atskirai |
 | Nebevieši skelbimai ir jų nuotraukos | 90 d. po ištrynimo, jei nereikia atvirai nuomai/ginčui | Sutarčiai reikalingas minimalus įrodymas atskiriamas nuo viešos galerijos |
-| Sutartys, perdavimo ir grąžinimo įrodymai | 10 metų po prievolių užbaigimo, peržiūrint apimtį ir pagrindą prieš startą | Siūlomas reikalavimų gynimo terminas, ne teiginys, kad visiems laukams toks terminas privalomas |
+| Sutarčių ir būklės įrodymai | Išskaidyta pagal laukus ir tikslus dokumente RETENTION-BY-CATEGORY-2026-11-21.md | Minimalus sutarties branduolys atskirtas nuo 3 m. būklės įrodymų ir 90 d. logistikos; jokio bendro visų laukų 10 metų termino |
 | Mokėjimų ir pervedimų žurnalas | 10 metų tik apskaitą ir prievolių vykdymą pagrindžiantiems duomenims | Pilnų kortelių duomenų ar Stripe slaptų raktų nesaugoti; perteklinė diagnostika nepriskiriama apskaitai |
-| Ginčo bylos | 10 metų po galutinio išsprendimo tik būtiniems reikalavimo gynimo įrodymams; ilgesnis terminas tik pagal dokumentuotą pagrindą | Tai operatorės peržiūrai siūlomas terminas, ne visiems ginčo laukams privalomas minimumas; sulaikymą peržiūrėti kas 12 mėn. |
+| Ginčo bylos | Būtini konkrečios bylos duomenys ir tikslinis sulaikymas; papildomi priedai projekte iki 3 m. po užbaigimo | Sulaikymo apimtį ir pagrindą peržiūrėti kas 6 mėn.; ne visas profilis 10 metų |
 | SF, kreditinės ir apskaitos registrai | Ne mažiau kaip 10 metų pagal taikomas taisykles | VMI nurodytas minimumas; atskirti nuo savanoriškų profilio duomenų |
 | Infrastruktūros žurnalai | Tik pagal faktinį Railway planą ir konfigūraciją | Dabartiniame kode fizinio ištrynimo termino nekonfigūruojame ir nežadame |
 | Naujos nuolatinės saugyklos kopijos | Siūloma kas 6 val., iki 28 naujausių bendrų DB+failų rinkinių, ne ilgiau kaip 7 kalendorines dienas | Tai pasiūlymas, ne dabartinis nustatymas; reikalauja naujo prefikso amžiaus ribos, šalinimo patikros ir perspėjimo, jei kopijos nepavyksta |

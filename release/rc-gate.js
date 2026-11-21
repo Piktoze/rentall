@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 
+if(process.env.RENTINORBIT_SCT_ONBOARDING_PROBE_RUN_ID)execFileSync(process.execPath,['ops/isolated-sct-onboarding-probe.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
 if(process.env.RENTINORBIT_ENCRYPTED_BACKUP_PROBE_RUN_ID)execFileSync(process.execPath,['ops/isolated-encrypted-backup-probe.mjs'],{stdio:'inherit',timeout:180000,env:{...process.env,NODE_OPTIONS:''}});
 
 // This build suite exercises the rental workflow in disposable test databases.

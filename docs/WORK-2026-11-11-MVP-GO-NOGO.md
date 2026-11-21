@@ -2,6 +2,37 @@
 
 ## Aktualus tęsinys 2026-11-21 (senesni planai toliau – istorija)
 
+### Naujausias tęsinys: SCT onboarding ir tikras šifruotos kopijos atkūrimas
+
+- SCT gavėjo onboarding sujungtas su autentifikuotais create/status/hosted/embedded
+  ir dashboard keliais. Naudojama serverio sesijos tapatybė, fiksuotas gavėjas /
+  platforma / režimas, recipient-only modelis, application kaštai ir patvarus
+  kūrimo raktas. Svetimas accountId iš body nesuteikia prieigos. TEST savininko
+  senas konfigūracijos pin neperrašomas; komercinis režimas lieka neįjungtas.
+- 5 naujos realaus vietinio HTTP onboarding patikros ir 1 šifravimo/atkūrimo
+  patikra PASS. Aktyvi pervedimų galimybė neskelbiama banko išmokų patvirtinimu.
+- Esamame Railway bucket realiai atliktas šviežios kanoninės DB ir sintetinės
+  PNG bendros šifruotos kopijos upload → download → restore. SHA-256 manifestas
+  ir SQLite integrity PASS; objektas po bandymo pašalintas tik savo naujame
+  prefikse. Įrodymas `evidence/2026-11-21-encrypted-bucket-restore.json`.
+  Vienkartinio kopijos bandymo paleidimo kintamasis išvalytas.
+- Vietiniam laikymui už Railway paruošti viešojo rakto šifravimo ir atskiro
+  privataus rakto parsisiuntimo / atkūrimo įrankiai. Reguliarus kopijavimas ir
+  saugyklos perjungimas neįjungti. `OFFLINE-ENCRYPTED-BACKUP-2026-11-21.md`.
+- Apskaitos sprendimų trumpas sąrašas, atskirai serijos nepanaudojimas ir
+  paslaugos baigimo momentas: `ACCOUNTING-APPROVAL-CHECKLIST-2026-11-21.md`.
+- Ankstesnis bendras 10 m. sutarčių/ginčų pasiūlymas pakeistas konkrečiomis
+  kategorijomis: minimalus sutarties branduolys, žalos įrodymai, logistika,
+  pokalbiai ir tikslinis bylos sulaikymas. Visi terminai dar peržiūrai:
+  `RETENTION-BY-CATEGORY-2026-11-21.md`.
+- Privataus nuomotojo → įmonės atvejui parengtas konkretus NEIŠSIŲSTAS VMI
+  paklausimas apie dokumentus, A/B klasę, išskaičiuojantį asmenį ir 100/15/85.
+  Kombinacija neatblokuota, GPM bazė / tarifas nespėjami:
+  `VMI-PRIVATE-LESSOR-COMPANY-QUESTION-2026-11-21.md`.
+- Zoho naršyklė vėl grąžina originating-context klaidą; vartotojos tikslus
+  kelias ir reikalingas esamo prašymo vaizdas: `ZOHO-DPA-USER-CHECK-2026-11-21.md`.
+  Naujo prašymo nėra. Pending savaime neįrodo, kad laukiamas vartotojos parašas.
+
 ### Naujausias papildymas: komercinė vykdyklė ir kopijų tikslas
 
 Komercinė SCT vykdyklė įgyvendinta ir sujungta su serverio keliais, bet
@@ -86,7 +117,7 @@ Sėkmingi tikri Stripe TEST A/B iš `7e330c2` nebekartojami. Modelis yra
 
 | Likęs blokatorius | Konkretus užbaigimas | Kas veikia dabar |
 |---|---|---|
-| Komercinė nuolatinė mokėjimų vykdyklė | Adapteris ir vykdymo serverio jungtys paruošti; lieka autentifikuoto SCT recipient onboarding jungtis, tikros paskyros / webhook įrodymai ir atskirai patvirtintas aktyvavimas | Nuolatinis TEST ir komercinio adapterio offline patikros PASS; LIVE vartas nepakeistas |
+| Komercinė nuolatinė mokėjimų vykdyklė | Adapteris ir vykdymo serverio jungtys paruošti; lieka tikrų LIVE gavėjų onboarding užbaigimas ir tikros paskyros / webhook įrodymai ir atskirai patvirtintas aktyvavimas | Nuolatinis TEST ir komercinio adapterio offline patikros PASS; LIVE vartas nepakeistas |
 | Nuolatinės saugyklos perjungimas ir avarinė kopija | Atskirai leistas naujas katalogas; vietos/sąnaudų patikra; bendras DB+failų manifestas ir nepriklausomas kopijos tikslas; tikras Railway perkūrimo bandymas | Kodas ir konkretus perjungimo/rollback planas parengti; perjungimas dabar draudžiamas |
 | LIVE Stripe aktyvavimas / banko išmoka | Operatorė užpildo oficialią Stripe formą; paskui tikrinami Connect/webhook ir išmokos atskiru leidimu | Šviežia GET patikra; jokio LIVE finansinio veiksmo |
 | Apskaita ir dokumentų patvirtinimas | Peržiūrėti konkretų RIO numeravimo/kreditavimo/saugojimo projektą; užbaigti privačios nuomos → įmonės tvarką arba palikti derinį blokuotą; LT ir kitų kalbų galutinis suderinimas | Rekvizitai ir A modelis įtraukti; tikros SF neišrašomos |

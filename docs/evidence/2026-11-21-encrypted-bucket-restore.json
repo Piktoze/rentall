@@ -1,0 +1,20 @@
+{
+  "type": "isolated_encrypted_backup_probe",
+  "runId": "de6a399ef4c02310dce09991d25b6307",
+  "status": "PASS",
+  "bucket": "rentinorbit-staging-backups-u4n51k",
+  "objectKey": "isolated-probes/backup/de6a399ef4c02310dce09991d25b6307/bundle.enc",
+  "encryptedBytes": 14833,
+  "encryptedSha256": "4febc26351132fcd3e899cbf1dc613648bcd45d598d408a64e0ea0de4c759326",
+  "canonicalDatabase": true,
+  "sqliteIntegrity": "ok",
+  "photoHashVerified": true,
+  "manifestVerified": true,
+  "downloadVerified": true,
+  "privateKeyPublished": false,
+  "probeObjectRemoved": true,
+  "existingDataTouched": false,
+  "sourceCommit": "bb376af69ba838b06e74077e3d379e9f2ed7143d",
+  "deploymentId": "daccb146-e3b5-4eca-81fb-6fbdd8fe783b",
+  "scope": "Fresh temporary canonical SQLite and one synthetic PNG only; existing Railway bucket; no historical source"
+}

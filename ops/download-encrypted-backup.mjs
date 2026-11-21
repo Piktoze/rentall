@@ -5,6 +5,7 @@ import {createBackupS3,downloadBackupObject} from './backup-s3.js';
 const args=Object.fromEntries(process.argv.slice(2).reduce((a,x,i,all)=>i%2?a:[...a,[x.replace(/^--/,''),all[i+1]]],[]));
 if(args['generate-keypair']){
  const folder=path.resolve(args['generate-keypair']);fs.mkdirSync(folder,{recursive:true,mode:0o700});
+ if(['private.pem','public.pem'].some(name=>fs.existsSync(path.join(folder,name))))throw Error('Choose a new key directory; existing keys are never overwritten');
  const {publicKey,privateKey}=crypto.generateKeyPairSync('rsa',{modulusLength:3072,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}});
  fs.writeFileSync(path.join(folder,'private.pem'),privateKey,{flag:'wx',mode:0o600});fs.writeFileSync(path.join(folder,'public.pem'),publicKey,{flag:'wx',mode:0o644});
  console.log('Created local private.pem and public.pem. Keep private.pem outside Railway.');
