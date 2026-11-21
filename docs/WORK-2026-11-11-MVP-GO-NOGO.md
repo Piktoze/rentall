@@ -12,7 +12,11 @@ download / hash patikros, tik naujo prefikso savo objektams; fiziniam
 prastovos metu galiojančiam 7 d. lifecycle dar nesukonfigūruotas.
 
 6 koordinavimo/retention patikros ir 2 TEST PDF/HTTP patikros izoliuotose
-bazėse. TEST-RIO-2026-000001 komisinis 15 EUR ir susieta dalinė kreditinė
+bazėse PASS. Tikri privataus TEST HTTP vartai ir savininko sesija parsisiunčia
+abu PDF; naršyklės atsisiuntimai 1280/390 px PASS (UI bandymo metaduomenys
+sintetiniai; serverio autorizacija atskirai tikra HTTP patikra).
+CI 44935625849 SUCCESS, Railway 6582cf5a-d27e-4899-aada-b16a26f5550e SUCCESS
+kodui 8f8cd7d. Įrodymas: evidence/2026-11-21-coordinated-backup-test-pdfs.json. TEST-RIO-2026-000001 komisinis 15 EUR ir susieta dalinė kreditinė
 TEST-RIO-2026-000002 5 EUR naudoja esamą logotipą, sintetinius rekvizitus ir
 atskirą laikiną bazę. Nuomotojo kelias: Paskyros meniu → Išmokos → TEST
  dokumentų pavyzdžiai. Maršrutai tik privačiam TEST supplier/admin.

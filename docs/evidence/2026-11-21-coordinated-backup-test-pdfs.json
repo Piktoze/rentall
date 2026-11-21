@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "8f8cd7d169d03deba784a6d0c781f9619b417358",
+  "workflowRun": 44935625849,
+  "workflowConclusion": "success",
+  "railwayDeploymentId": "6582cf5a-d27e-4899-aada-b16a26f5550e",
+  "railwayDeploymentStatus": "SUCCESS",
+  "coordinationTests": 6,
+  "pdfAndAuthorizationTests": 2,
+  "privateTestRealHttpDownloads": "PASS with actual disposable owner session and private OTP gate",
+  "snapshotScope": "single Node writer process; HTTP and known workers; SQLite guard and uploads admission",
+  "topologyReadOnly": {
+    "region": "iad",
+    "replicas": 1,
+    "existingVolumeMB": 500,
+    "volumeContentsInspected": false
+  },
+  "realBackupRestoreRepeated": false,
+  "realStripeTestPaymentsRepeated": false,
+  "scheduleActivated": false,
+  "storageSwitched": false,
+  "liveFinancialOperations": 0,
+  "realSeriesUsed": false,
+  "existingDataTouched": false,
+  "pdfs": [
+    {
+      "filename": "TEST-RIO-2026-000001.pdf",
+      "bytes": 168856,
+      "sha256": "8341cc240ff96f47b057d0f44f40295b55f61ab78a9cb906ff6ccf6b41262567",
+      "amountCents": 1500,
+      "synthetic": true,
+      "logo": "existing RentInOrbit horizontal logo"
+    },
+    {
+      "filename": "TEST-RIO-2026-000002.pdf",
+      "bytes": 169009,
+      "sha256": "f88143a4dcc9baffe3de2038f142e40b9105aad95f7076f2bdad0d203451e52d",
+      "amountCents": 500,
+      "synthetic": true,
+      "logo": "existing RentInOrbit horizontal logo"
+    }
+  ],
+  "ciTargetedTests": 77,
+  "financialSafetyRegressionTests": 147,
+  "browserTests": 35,
+  "mobileSearchRepeats": 10,
+  "catalogRegressions": 3
+}
