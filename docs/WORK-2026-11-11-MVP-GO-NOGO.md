@@ -2,6 +2,33 @@
 
 ## Aktualus tęsinys 2026-11-21 (senesni planai toliau – istorija)
 
+### Naujausias papildymas: komercinė vykdyklė ir kopijų tikslas
+
+Komercinė SCT vykdyklė įgyvendinta ir sujungta su serverio keliais, bet
+**neįjungta**. Atskiri LIVE susiejimai, platformos ID patikra, 15/85, grąžinimo /
+ginčo vartai, viso refund žurnalas, payload hash, ribotas same-key retry,
+pasirašytų įvykių apdorojimas, mokėjimo polling ir atominis outbox. 24 offline
+patikros, tarp jų trys SIGKILL atkūrimai; jokio LIVE finansinio veiksmo.
+Žr. `COMMERCIAL-SCT-PREPARED-2026-11-21.md` ir
+`evidence/2026-11-21-commercial-sct-offline.json`.
+
+Esamas `rentinorbit-staging-backups` bucket ir BACKUP_S3 kintamųjų vardai rasti.
+Tai atskira saugykla nuo programos disko, bet ta pati Railway paskyra/tiekėjas.
+Nepriklausomam tiekėjui siūlomas Backblaze B2 (neužsakytas); kainos ir aiškūs
+srauto pavyzdžiai `INDEPENDENT-BACKUP-OPTIONS-2026-11-21.md`.
+Kopijos nepradėtos, `/data` nepasiekta ir neperjungta.
+
+Gmail atlikta paieška visur, įskaitant spam/trash: rastas tik 2026-11-17
+siųstas esamas DPA laiškas, atsakymo šiame gautame susirašinėjime nėra;
+Reply-To – info@rentinorbit.com. Zoho UI ir paštas neprieinami dėl vietinės
+naršyklės originating-context klaidos, valdomoje naršyklėje sesijų nėra.
+Dabartinė Zoho DPA būsena todėl **nepatvirtinta**, ne dar kartą spėjama Pending.
+Naujas prašymas ar pakartotinis laiškas nesiųstas.
+
+Apskaitos/saugojimo grafikas lieka PROPOSED, NOT APPROVED. Užklausų 12 mėn.
+jau patvirtinta; apskaitos dokumentų >=10 metų – teisės aktų minimumas;
+likusiems terminams būtina operatorės peržiūra.
+
 **Papildyta operatorės patikslinimu:** operatorė Ieva Piktožė, IV pažyma
 751612, veiklos kodas 775200 (EVRK 2.1 / 77.52.00), šiuo metu ne PVM mokėtoja.
 Šių duomenų nebeklausti. Tarpininkavimo klasifikavimas patikrintas oficialiai;
@@ -52,7 +79,7 @@ Sėkmingi tikri Stripe TEST A/B iš `7e330c2` nebekartojami. Modelis yra
 
 | Likęs blokatorius | Konkretus užbaigimas | Kas veikia dabar |
 |---|---|---|
-| Komercinė nuolatinė mokėjimų vykdyklė | Atskiras LIVE adapteris, paskyros/sandbox ryšio ir webhook/gavėjo susiejimo įrodymas; vėlesnis kontroliuojamas įjungimas | Nuolatinio privataus TEST vykdymas ir atkūrimas patikrinti; LIVE vartas nepakeistas |
+| Komercinė nuolatinė mokėjimų vykdyklė | Adapteris ir vykdymo serverio jungtys paruošti; lieka autentifikuoto SCT recipient onboarding jungtis, tikros paskyros / webhook įrodymai ir atskirai patvirtintas aktyvavimas | Nuolatinis TEST ir komercinio adapterio offline patikros PASS; LIVE vartas nepakeistas |
 | Nuolatinės saugyklos perjungimas ir avarinė kopija | Atskirai leistas naujas katalogas; vietos/sąnaudų patikra; bendras DB+failų manifestas ir nepriklausomas kopijos tikslas; tikras Railway perkūrimo bandymas | Kodas ir konkretus perjungimo/rollback planas parengti; perjungimas dabar draudžiamas |
 | LIVE Stripe aktyvavimas / banko išmoka | Operatorė užpildo oficialią Stripe formą; paskui tikrinami Connect/webhook ir išmokos atskiru leidimu | Šviežia GET patikra; jokio LIVE finansinio veiksmo |
 | Apskaita ir dokumentų patvirtinimas | Peržiūrėti konkretų RIO numeravimo/kreditavimo/saugojimo projektą; užbaigti privačios nuomos → įmonės tvarką arba palikti derinį blokuotą; LT ir kitų kalbų galutinis suderinimas | Rekvizitai ir A modelis įtraukti; tikros SF neišrašomos |

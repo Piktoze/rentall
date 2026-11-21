@@ -4,6 +4,9 @@ import {privateTestSettings,privateTestRequested} from './modules/private-test-m
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
 import {installIsolatedRecoveryProbe} from './modules/isolated-recovery-probe.js';
 import {createSctTestRuntime,createPersistentSctTestRuntime} from './modules/sct-test-runtime.js';
+import {commercialSctNotifications} from './modules/commercial-sct-notifications.js';
+import {createCommercialSctRuntime} from './modules/commercial-sct-runtime.js';
+import {createCommercialStripeClient} from './modules/commercial-sct-client.js';
 import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
 import {assessLegacyDirectChargeOperation} from './modules/sct-legacy-direct-charge-guard.js';
@@ -367,8 +370,10 @@ const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
-const sctRuntime=process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
- ? (process.env.PRIVATE_TEST_STORAGE_MODE==='persistent'?createPersistentSctTestRuntime:createSctTestRuntime)({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null;
+const commercialRuntime=process.env.COMMERCIAL_SCT_RUNTIME_ENABLED==='true'
+ ? await createCommercialSctRuntime({db,stripe:createCommercialStripeClient(stripeKey),env:process.env,...commercialSctNotifications({db,enqueue:enqueueTransactionalEmail})}):null;
+const sctRuntime=commercialRuntime||(process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
+ ? (process.env.PRIVATE_TEST_STORAGE_MODE==='persistent'?createPersistentSctTestRuntime:createSctTestRuntime)({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null);
 installPrivateTestRecipientOnboarding(app,{getStripe:()=>createIsolatedStripeTestClient(stripeKey)});
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
@@ -383,7 +388,7 @@ const __dirname = path.dirname(__filename);
 
 
 
-if(!privateTestRequested())seedDefaultUsers();
+if(!privateTestRequested()&&!commercialRuntime)seedDefaultUsers();
 
 function parseCookies(req){
   const out={};
@@ -846,6 +851,8 @@ app.post('/api/stripe/webhook',
     }
 
     try {
+      if(commercialRuntime){const result=await commercialRuntime.handleVerifiedEvent(event);
+       if(result.handled){markWebhookProcessed(event.id);return res.json({received:true,eventId:event.id,duplicate:result.duplicate===true});}}
       switch (event.type) {
         case 'account.updated':
           console.log('Connected account updated:', event.data.object.id);
@@ -1967,12 +1974,12 @@ app.get('/password-reset',(req,res)=>{
  res.type('html').send('<!doctype html><html lang="lt"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Slaptažodžio atkūrimas | RentInOrbit</title><main><h1>Slaptažodžio atkūrimas</h1><form><label>El. paštas <input id="resetEmail" type="email" autocomplete="email" maxlength="254"></label><label>Naujas slaptažodis <input id="resetPassword" type="password" autocomplete="new-password" minlength="8" maxlength="256"></label><button>Patvirtinti</button></form><p role="status" aria-live="polite"></p><a href="/">Grįžti ir prisijungti</a></main><script src="/password-reset.js" defer></script></html>');
 });
 app.post('/api/admin/sct-test/recipients',requireRole('admin'),async(req,res)=>{
- if(!sctRuntime)return res.status(404).end();
+ if(!sctRuntime||commercialRuntime)return res.status(404).end();
  try{res.json(await sctRuntime.registerRecipient(req.body?.email,req.body?.accountId,req.body?.entityType));}
  catch(err){res.status(409).json({code:err.code||'SCT_TEST_PROVIDER_UNAVAILABLE'});}
 });
 app.post('/api/admin/sct-test/bookings/:id/:action',requireRole('admin'),async(req,res)=>{
- if(!sctRuntime)return res.status(404).end();
+ if(!sctRuntime||commercialRuntime)return res.status(404).end();
  try{
   const {id,action}=req.params;
   if(action==='hold')return res.json(sctRuntime.setHold(id,req.body?.reason));
@@ -1981,6 +1988,20 @@ app.post('/api/admin/sct-test/bookings/:id/:action',requireRole('admin'),async(r
   if(action==='transfer')return res.json(await sctRuntime.transfer(id));
   return res.status(404).end();
  }catch(err){res.status(409).json({code:err.code||'SCT_TEST_RECONCILIATION_REQUIRED'});}
+});
+app.post('/api/admin/sct-commercial/recipients',requireRole('admin'),async(req,res)=>{
+ if(!commercialRuntime)return res.status(404).end();
+ try{res.json(await commercialRuntime.registerRecipient(req.body?.email,req.body?.accountId,req.body?.entityType));}
+ catch(err){res.status(409).json({code:err.code||'COMMERCIAL_PROVIDER_UNAVAILABLE'});}
+});
+app.post('/api/admin/sct-commercial/bookings/:id/:action',requireRole('admin'),async(req,res)=>{
+ if(!commercialRuntime)return res.status(404).end();
+ try{const {id,action}=req.params;
+  if(action==='hold')return res.json(commercialRuntime.setHold(id,req.body?.reason));
+  if(action==='reconcile')return res.json(await commercialRuntime.recover(id,req.body?.kind));
+  if(action==='retry')return res.json(await commercialRuntime.retryUncertain(id,req.body?.kind));
+  return res.status(404).end();
+ }catch(err){res.status(409).json({code:err.code||'COMMERCIAL_RECONCILIATION_REQUIRED'});}
 });
 registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail);
 
@@ -2447,6 +2468,7 @@ function directStatusResponse(status,{demo=false}={}){
 
 app.post('/api/stripe/connect/create-account', requireRole('supplier','admin'), async (req,res)=>{
   try{
+    if(commercialRuntime)return res.status(409).json({code:'COMMERCIAL_SCT_RECIPIENT_ONBOARDING_REQUIRED',error:'Commercial SCT requires a dedicated authenticated recipient onboarding flow; merchant Direct Charges accounts cannot be reused.'});
     if(demoPaymentsEnabled){
       const existing=getStripeConnectionByUserId(req.appUser.userId);
       const saved=existing||saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_merchant_direct',transferCapabilityStatus:'not_applicable',requirements:[]});
@@ -3113,7 +3135,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     });
     const bookingId = `RB-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     if(sctRuntime){
-      if(!authenticatedUser) return res.status(401).json({error:'SCT TEST requires an authenticated renter'});
+      if(!authenticatedUser) return res.status(401).json({error:'SCT requires an authenticated renter'});
       if(authoritativePrice.securityDeposit!==0)return res.status(409).json({code:'SCT_TEST_DEPOSIT_REQUIRES_SEPARATE_FLOW'});
       sctRuntime.newBookingRecipient(listingForBooking.ownerEmail);
     }
@@ -4483,7 +4505,7 @@ const server=app.listen(port,runtimeConfig.host, () => {
 let emailWorkerTimer=null;
 let sctWorkerTimer=null;
 if(sctRuntime&&!catalogOnly){
-  const sweep=()=>sctRuntime.sweep().then(result=>console.log(JSON.stringify({type:'sct_test_sweep',...result})))
+  const sweep=()=>sctRuntime.sweep().then(result=>console.log(JSON.stringify({type:commercialRuntime?'sct_commercial_sweep':'sct_test_sweep',...result})))
     .catch(error=>console.warn(JSON.stringify({type:'sct_test_sweep_failed',error:safeOperationalError(error)})));
   sctWorkerTimer=setInterval(sweep,30000);sctWorkerTimer.unref?.();
   setTimeout(sweep,1500).unref?.();

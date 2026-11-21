@@ -3,7 +3,7 @@ import {execFileSync} from 'node:child_process';
 
 // This build suite exercises the rental workflow in disposable test databases.
 // Catalog-only behavior has its own browser and HTTP CI suite.
-const rentalTestEnv={...process.env,PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
+const rentalTestEnv={...process.env,COMMERCIAL_SCT_RUNTIME_ENABLED:'false',PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_REQUIRED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false',RENTINORBIT_CATALOG_ONLY:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 if(process.env.RENTINORBIT_NOTIFICATION_TEST_RUN_ID){
   execFileSync(process.execPath,['ops/notification-delivery-evidence.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
 }
@@ -15,7 +15,7 @@ if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){
 }
 
 // Build-time suites must never inherit the deployed private database or access gate.
-process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
+process.env.COMMERCIAL_SCT_RUNTIME_ENABLED='false';process.env.PRIVATE_TEST_ENABLED='false';process.env.PRIVATE_TEST_REQUIRED='false';process.env.RENTINORBIT_SCT_TEST_RUNTIME='false';
 
 // Verify invoice drafts, Lithuanian PDF fonts and supplier billing profiles before other suites.
 const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTINORBIT_DB_PATH:'',
@@ -23,7 +23,7 @@ const invoiceTestEnv={...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',RENTIN
  RAILWAY_VOLUME_MOUNT_PATH:'',PERSISTENT_DATA_DIR:'',UPLOADS_DIR:''};
 execFileSync(process.execPath,['v203-stabilization.test.js'],{stdio:'inherit',env:invoiceTestEnv});
 // New financial commands and password recovery run only against disposable databases.
-execFileSync(process.execPath,['--test','private-test-recipient-onboarding.test.mjs','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
+execFileSync(process.execPath,['--test','commercial-sct-runtime.test.mjs','commercial-sct-restart.test.mjs','private-test-recipient-onboarding.test.mjs','private-test-access.test.mjs','password-recovery.test.mjs','sct-test-runtime.test.mjs','isolated-recovery-probe.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['private-test-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 execFileSync(process.execPath,['password-recovery-http.test.mjs'],{stdio:'inherit',env:invoiceTestEnv});
 

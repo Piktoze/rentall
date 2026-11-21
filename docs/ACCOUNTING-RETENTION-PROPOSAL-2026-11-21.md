@@ -44,10 +44,11 @@ LT rinka; A modelis 15 % / 85 %, visi Stripe kaštai tenka platformai.
 | Uždarytos paskyros nefinansiniai profilio duomenys | Pašalinti / anonimizuoti per 30 d. patvirtinus prašymą ir užbaigus atviras nuomas | Netaikoma privalomiems finansiniams/sutarčių įrodymams; teisės į prašymą atsakymas atskirai |
 | Nebevieši skelbimai ir jų nuotraukos | 90 d. po ištrynimo, jei nereikia atvirai nuomai/ginčui | Sutarčiai reikalingas minimalus įrodymas atskiriamas nuo viešos galerijos |
 | Sutartys, perdavimo ir grąžinimo įrodymai | 10 metų po prievolių užbaigimo, peržiūrint apimtį ir pagrindą prieš startą | Siūlomas reikalavimų gynimo terminas, ne teiginys, kad visiems laukams toks terminas privalomas |
-| Ginčo bylos | Iki galutinio išsprendimo; tada individuali peržiūra ir taikytinas sutarties/privalomas terminas | Kas 12 mėn. peržiūrėti teisinį sulaikymą; ne „amžinai“ |
+| Mokėjimų ir pervedimų žurnalas | 10 metų tik apskaitą ir prievolių vykdymą pagrindžiantiems duomenims | Pilnų kortelių duomenų ar Stripe slaptų raktų nesaugoti; perteklinė diagnostika nepriskiriama apskaitai |
+| Ginčo bylos | 10 metų po galutinio išsprendimo tik būtiniems reikalavimo gynimo įrodymams; ilgesnis terminas tik pagal dokumentuotą pagrindą | Tai operatorės peržiūrai siūlomas terminas, ne visiems ginčo laukams privalomas minimumas; sulaikymą peržiūrėti kas 12 mėn. |
 | SF, kreditinės ir apskaitos registrai | Ne mažiau kaip 10 metų pagal taikomas taisykles | VMI nurodytas minimumas; atskirti nuo savanoriškų profilio duomenų |
 | Infrastruktūros žurnalai | Tik pagal faktinį Railway planą ir konfigūraciją | Dabartiniame kode fizinio ištrynimo termino nekonfigūruojame ir nežadame |
-| Naujos nuolatinės saugyklos kopijos | Siūloma kas 6 val., 28 naujausi bendri DB+failų rinkinių snapshot | Tai pasiūlymas, ne dabartinis įjungtas nustatymas ar garantuotos 7 dienos; išimtys ir fizinis ištrynimas atskirai |
+| Naujos nuolatinės saugyklos kopijos | Siūloma kas 6 val., iki 28 naujausių bendrų DB+failų rinkinių, ne ilgiau kaip 7 kalendorines dienas | Tai pasiūlymas, ne dabartinis nustatymas; reikalauja naujo prefikso amžiaus ribos, šalinimo patikros ir perspėjimo, jei kopijos nepavyksta |
 
 Ištrynimo žurnale saugoti kategoriją, datą ir rezultatą, ne ištrintus duomenis.
 Atkuriant kopiją pakartotinai pritaikyti vėlesnius ištrynimo prašymus prieš
@@ -63,3 +64,18 @@ https://www.vmi.lt/evmi/apskaitos-dokumentai3
 
 Užsienio paslaugų PVM vertinimas lieka atskiras faktinių pirkimų klausimas,
 žr. `EVRK-AND-FOREIGN-VAT-2026-11-21.md`. Šis projektas jo nelaiko išspręstu.
+
+
+## Patikslinta peržiūros būsena 2026-11-21
+
+Šis projektas **nepatvirtintas**. 12 mėn. užklausoms – ankstesnis operatorės
+sprendimas. Apskaitos dokumentų / registrų ne mažiau kaip 10 metų minimumas
+nėra pasirenkamas trumpesnis terminas. Kiti lentelės terminai – siūlymai,
+kuriems reikia teisėto pagrindo, duomenų apimties ir operatorės peržiūros.
+Railway Hobby plano viešai nurodomas žurnalų prieinamumo langas – 7 d.; tai
+ne fizinio ištrynimo visose tiekėjo sistemose garantija ar visos paskyros
+šiuo metu taikomo plano nauja patikra. Privataus TEST DB kopijos vis dar išjungtos.
+
+Atkūrimo žetonas pagal kodą galioja 30 min., sunaudojamas vieną kartą;
+pasibaigę įrašai išvalomi vykdant kitą atkūrimo užklausą, todėl 30 min. nėra
+fizinio ištrynimo garantija. Šio mechanizmo nereikia maišyti su SF saugojimu.
