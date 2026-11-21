@@ -1,5 +1,31 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## Naujausia LIVE parengtis 2026-11-21 – tik peržiūra
+
+Platformos anketa pateikta ir LIVE paskyra acct_1UT4J2LlutaSFdau patvirtinta:
+charges_enabled=true, payouts_enabled=true, details_submitted=true;
+aktualių privalomų duomenų / pending_verification nėra, banko sąskaita pridėta.
+**Anketos pateikimo blokatorius pašalintas.** Ankstesnis
+`evidence/2026-11-21-live-account-followup.json` yra istorija, ne dabartinė būsena.
+
+LIVE gavėjų dar nėra (v1/v2 sąrašai tušti), webhook paskirčių nėra
+(v1/v2 sąrašai tušti). Parengta tik peržiūrai:
+`LIVE-WEBHOOK-AND-FIRST-SUPPLIER-REVIEW-2026-11-21.md`.
+Nekurta paskirtis ar gavėjas, jokios LIVE konfigūracijos / finansinės operacijos.
+
+Likę techniniai LIVE blokatoriai: platformos snapshot webhook sukūrimas ir
+pristatymo įrodymas; pirmo tikro v2 recipient savininko onboarding; atskiras
+banko payout readback ir patvarus monitoringas (dabartinis Connect switch tik
+loguoja, bankPayoutsReady tyčia false); saugus onboarding atskyrimas nuo
+komercinės vykdyklės įjungimo arba vėlesnis suderintas perjungimas su uždaru
+checkout. V2 thin įvykių gavimo kelias neįgyvendintas; snapshot handleriui jų
+nepriskirti. Nuolatinė saugykla / reguliarios kopijos, apskaita, kategorijų
+saugojimas, privataus nuomotojo → įmonės mokestiniai dokumentai ir Zoho DPA
+lieka kaip ankstesniame registre. Kopijos atkūrimo PASS jau yra ir nekartotas;
+Stripe TEST mokėjimai nekartoti.
+
+## Ankstesnė būsena ir patikrų istorija (žemiau)
+
 ## Aktualus tęsinys 2026-11-21 (senesni planai toliau – istorija)
 
 **Papildyta tikru Stripe TEST įrodymu:** esamas TEST gavėjas
