@@ -7,8 +7,10 @@
 Autentifikuotas statusas ir privati hosted onboarding nuoroda PASS;
 svečias ir kitas nuomotojas neprileidžiami; pervedimų galimybė aktyvi.
 Jokios naujos Stripe paskyros, sąlygų priėmimo ar finansinės operacijos.
-`evidence/2026-11-21-sct-authenticated-onboarding.json`. Grįžimo iš Stripe
-forma atidaro nuomotojo mokėjimų nustatymus, yra nauji 1280/390 px testai.
+`evidence/2026-11-21-sct-authenticated-onboarding.json`. Grįžimas iš Stripe
+atidaro tikrą nuomotojo išmokų darbo sritį (ne vien paslėpto skydelio open klasę).
+1280/390 px naršyklės testai PASS, be pakartojimų;
+`evidence/2026-11-21-onboarding-return-ui.json`.
 Sėkminga schema atpažįsta Stripe v2 aktyvios capability atsakymą be write
 parametro requested; finansiniam pasirengimui toliau būtinas active ir
 įvykdyti reikalavimai. Vienkartinis onboarding bandymo paleidimas išvalytas.
@@ -35,7 +37,7 @@ parametro requested; finansiniam pasirengimui toliau būtinas active ir
   platforma / režimas, recipient-only modelis, application kaštai ir patvarus
   kūrimo raktas. Svetimas accountId iš body nesuteikia prieigos. TEST savininko
   senas konfigūracijos pin neperrašomas; komercinis režimas lieka neįjungtas.
-- 5 naujos realaus vietinio HTTP onboarding patikros ir 1 šifravimo/atkūrimo
+- 6 naujos realaus vietinio HTTP onboarding patikros ir 1 šifravimo/atkūrimo
   patikra PASS. Aktyvi pervedimų galimybė neskelbiama banko išmokų patvirtinimu.
 - Esamame Railway bucket realiai atliktas šviežios kanoninės DB ir sintetinės
   PNG bendros šifruotos kopijos upload → download → restore. SHA-256 manifestas
