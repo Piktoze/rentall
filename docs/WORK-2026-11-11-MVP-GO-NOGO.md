@@ -1,5 +1,35 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## Bendros kopijos koordinavimas ir du TEST PDF – naujausias tęsinys
+
+Naujausia šaka patikrinta nuo 03faa01. Įgyvendintas realus vieno rašančio
+proceso koordinatorius: HTTP ir worker įleidimas, async drain net klientui
+nutraukus ryšį, SQLite ir uploads rašymo vartai; nauji darbai sulaikomi,
+kopijos sėkmė / klaida finally juos atnaujina. Drain timeout nepalieka
+užblokuoto įleidimo. Scheduler paruoštas 6 val. / 28 rinkinių / 7 d., bet
+NEĮJUNGTAS; pirmas tik po 6 val. nuo vėlesnio leidimo. Retention tik po upload /
+download / hash patikros, tik naujo prefikso savo objektams; fiziniam
+prastovos metu galiojančiam 7 d. lifecycle dar nesukonfigūruotas.
+
+5 koordinavimo/retention patikros ir 2 TEST PDF/HTTP patikros izoliuotose
+bazėse. TEST-RIO-2026-000001 komisinis 15 EUR ir susieta dalinė kreditinė
+TEST-RIO-2026-000002 5 EUR naudoja esamą logotipą, sintetinius rekvizitus ir
+atskirą laikiną bazę. Nuomotojo kelias: Paskyros meniu → Išmokos → TEST
+ dokumentų pavyzdžiai. Maršrutai tik privačiam TEST supplier/admin.
+
+Atnaujintas vienas ACTIVATION-REVIEW-2026-11-21.md planas su nauja
+/data/commercial-v1 DB ir uploads vieta (DABAR NEKURTA), kopijų grafiku,
+onboarding-only, Connect / platformos Snapshot seka ir rollback. Raktų
+instrukcijos COORDINATED-BACKUP-REVIEW-2026-11-21.md. Esama /data, istoriniai
+užsakymai, DNS ir LIVE finansai nepakeisti. Ankstesnis Railway restore ir
+sėkmingi realūs Stripe TEST mokėjimai nekartoti.
+
+Lieka operatorės leidimas būsimai saugyklai / kopijų grafikui, vietinė
+raktų pora ir už Railway laikymo vieta, galutinė apskaitos bei kategorijų
+saugojimo peržiūra, VMI privataus nuomotojo → įmonės ir užsienio paslaugų PVM
+atsakymai, esamo Zoho DPA užbaigimo įrodymas. RIO-2026 nepanaudojimas ir
+abipusio grąžinimo / 15-85 taisyklė JAU PATVIRTINTI; nebeklausti.
+
 ## RIO-2026 serijos faktas patvirtintas 2026-11-21
 
 Operatorė patvirtino, kad tikrų SF ir kreditinių serijoje dar nebuvo.

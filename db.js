@@ -1,3 +1,4 @@
+import {backupWrites} from './modules/backup-write-coordinator.js';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -20,7 +21,7 @@ assertProductionConfig();
 assertProductionStorage();
 const dbPath = runtimeConfig.database.path || process.env.DB_PATH || path.join(__dirname, 'rentinorbit.sqlite');
 if(dbPath!==':memory:')fs.mkdirSync(path.dirname(dbPath),{recursive:true});
-export const db = new Database(dbPath);
+export const db = backupWrites.guardDatabase(new Database(dbPath));
 export const REQUIRED_SCHEMA_VERSION=184;
 
 db.pragma('journal_mode = WAL');

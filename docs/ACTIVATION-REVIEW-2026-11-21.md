@@ -64,9 +64,11 @@
 3. Reguliarios kopijos: operatorė savo įrenginyje sugeneruoja privatų/viešą
    raktą; Railway gauna tik viešą. Suplanuoti rašymo pauzę VISIEMS rašytojams,
    SQLite backup API ir uploads vieno rinkinio manifestą, AES-GCM+RSA-OAEP,
-   turimą Railway bucket ir naują bundles-v1 prefiksą. quiesced=true nėra
-   automatinis visų rašytojų užrakinimas: prieš scheduler aktyvavimą būtina
-   praktiškai prijungti rašymo pauzės koordinavimą. Grafikas peržiūrai:
+   turimą Railway bucket ir naują bundles-v1 prefiksą. Rašymo koordinavimas
+   dabar įgyvendintas ir izoliuotai patikrintas: aktyvių HTTP/worker darbų
+   drain, uždaras naujų darbų įleidimas, SQLite ir nuotraukų vartai, finally
+   atnaujinimas net klaidos atveju. Ne vien quiesced=true. Diegimui patikrinti
+   vieną repliką / rašantį procesą ir išjungtą seną scheduler. Grafikas peržiūrai:
    kas 6 val., 28 rinkiniai / 7 d.; nevadinti jau įjungtu. Iš anksto paruošti
    vietinio parsisiuntimo komandą ir atskirą saugų laikymą už Railway ribų.
    Ankstesnis bendros kopijos restore PASS galioja, nekartotas.
@@ -102,6 +104,33 @@
    parengties pateikti galutinį mokėjimų įjungimo pakeitimą operatorės
    patvirtinimui. Šis dokumentas jo nesuteikia. Vėlesnė tikra banko išmoka
    įrodoma atskiru po_ / teisinga paskyra / paid ir gavimu banke, ne tr_ ID.
+
+## Konkretus saugyklos variantas
+
+Naudoti esamos Railway paslaugos turimą volume, bet tik naują atskirai leistą
+/data/commercial-v1/ katalogą: DB_PATH=/data/commercial-v1/commercial.sqlite,
+UPLOADS_DIR=/data/commercial-v1/uploads. Ankstesnių /data failų neperrašyti ir
+istorinių / TEST užsakymų nemigruoti. Prieš būsimą sukūrimą patikrinti naują
+markerį, katalogo tuštumą, dabartinio volume laisvą vietą, teises, vieną repliką
+ir esamą planą; jei pakankamos vietos nėra, nekurti mokamos alternatyvos be
+atskiro leidimo. Šis variantas neperka naujo volume ar paslaugos. Dabar jokie
+katalogai /data nekurti ir DB_PATH/UPLOADS_DIR nekeisti.
+
+Kopijų koordinavimo / peržiūros nustatymai ir tikslios operatorės komandos:
+COORDINATED-BACKUP-REVIEW-2026-11-21.md. Fizinio 7 d. ištrynimo visam paslaugos
+prastovos laikotarpiui S3 lifecycle neįjungtas; taikomas sėkmingų job retention.
+
+## TEST dokumentai nuomotojo paskyroje
+
+Paskyros meniu → Išmokos → TEST dokumentų pavyzdžiai. Dvi autentifikuotos
+parsisiuntimo nuorodos: /api/supplier/accounting/test-examples/invoice.pdf ir
+/api/supplier/accounting/test-examples/credit.pdf. Tik privatus Stripe TEST
+režimas ir supplier/admin. Tai bendri sintetiniai pavyzdžiai, ne kito kliento
+privatūs dokumentai. Nauja laikina SQLite, TEST-RIO-2026-000001 komisinis 15 EUR
+nuo 100 EUR nuomos; TEST-RIO-2026-000002 dalinė kreditinė 5 EUR, aiškiai susieta
+su pirmu dokumentu, likutis 10 EUR. PDF naudoja esamą RentInOrbit logotipą ir
+lietuvišką šriftą. Tikros RIO serijos ir esama programos bazė negeneruojant
+pavyzdžių nenaudojamos. Dokumentai nepažymi tikro išrašymo ar tikro mokėjimo.
 
 ## Grįžimas atgal
 

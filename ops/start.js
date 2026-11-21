@@ -19,6 +19,7 @@ try{
     maps:config.maps,
     notifications:config.notifications
   }));
+  if(process.env.ENCRYPTED_BACKUP_SCHEDULER_ENABLED==='true'&&process.env.BACKUP_SCHEDULER_ENABLED==='true')throw Error('BACKUP_SCHEDULERS_MUST_NOT_OVERLAP');
   await import('../server.js');
   if(String(process.env.BACKUP_SCHEDULER_ENABLED||'').toLowerCase()==='true'){
     const {startBackupScheduler}=await import('./backup-scheduler.js');

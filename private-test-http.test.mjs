@@ -25,9 +25,13 @@ try{
  const access=await req('/__test-access/verify',{method:'POST',body:{challenge:challenge.challenge,code}});assert.equal(access.status,200);cookie=access.headers.get('set-cookie').split(';')[0];
  const root=await req('/');assert.equal(root.status,200);assert.ok(root.headers.get('content-security-policy').includes('https://connect.stripe.com'));
  const rootHtml=await root.text();assert.ok(rootHtml.includes('Privatus TEST'));assert.ok(rootHtml.includes('Užbaigti Stripe TEST sąlygas'));
+ assert.equal((await req('/api/supplier/accounting/test-examples')).status,401);
  assert.equal((await req('/__test-access/stripe-recipient',{method:'POST',body:{}})).status,503);
  const registration=await req('/api/auth/register',{method:'POST',body:{email:'owner@example.test',password:'Synthetic-password-123456',displayName:'Synthetic owner',termsAccepted:true,role:'admin'}});assert.equal(registration.status,200,await registration.clone().text());assert.equal((await registration.json()).user.role,'admin');
  const session=registration.headers.get('set-cookie');assert.ok(session.includes('Secure'));assert.ok(!session.includes('Domain='));cookie+='; '+session.split(';')[0];
+ const examples=await req('/api/supplier/accounting/test-examples');assert.equal(examples.status,200);assert.equal((await examples.json()).documents.length,2);
+ for(const kind of ['invoice','credit']){const pdf=await req('/api/supplier/accounting/test-examples/'+kind+'.pdf');assert.equal(pdf.status,200);assert.ok(pdf.headers.get('content-type').includes('application/pdf'));assert.ok(pdf.headers.get('content-disposition').includes('TEST-RIO-2026-00000'));assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');}
+
  assert.equal((await (await req('/api/auth/me')).json()).user.role,'admin');
  const normal=await req('/api/auth/register',{method:'POST',body:{email:'renter@example.test',password:'Synthetic-password-123456',termsAccepted:true,role:'admin'}});assert.equal(normal.status,200);assert.equal((await normal.json()).user.role,'supplier');
  assert.equal((await req('/api/listings')).status,200);assert.equal((await req('/app.js')).status,200);

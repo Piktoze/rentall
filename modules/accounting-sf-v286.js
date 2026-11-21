@@ -50,21 +50,29 @@ export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TES
    doc.fontSize(17).fillColor('#164cab').text('RentInOrbit');
    doc.moveDown(.8);
  }
- doc.fontSize(20).fillColor('#142437').text('TEST – sąskaitos faktūros JUODRAŠTIS');
+ const credit=invoice.kind==='credit_note';
+ doc.fontSize(20).fillColor('#142437').text(credit?'TEST – DALINĖ KREDITINĖ':'TEST – sąskaitos faktūros JUODRAŠTIS');
  doc.moveDown(.4).fontSize(10).fillColor('#b42a2a')
    .text('NEGALIOJANTIS APSKAITOS DOKUMENTAS. NEGALIMA NAUDOTI MOKESČIŲ APSKAITOJE.');
  doc.moveDown(1).fillColor('#142437').fontSize(11)
    .text('Juodraščio identifikatorius: '+clean(invoice.document_key))
-   .text('Būsena: '+clean(invoice.status))
-   .text('Dokumento tipas: '+clean(invoice.kind))
+   .text('Numeris: '+clean(invoice.invoice_number||'TEST – nenumeruota'))
+   .text('Data: '+clean(invoice.issued_at||invoice.created_at||'TEST'))
+   .text('Būsena: '+(invoice.status==='issued'?'Numeruotas TEST pavyzdys':'TEST juodraštis'))
+   .text('Dokumento tipas: '+(credit?'Dalinė kreditinė':'Platformos komisinio sąskaita'))
    .text('Išrašytojas: '+info.issuerName)
    .text('Adresas: '+info.issuerAddress);
  if(info.certificate)doc.text('Individualios veiklos pažymos Nr.: '+info.certificate);
+ if(invoice.related_invoice_number)doc.moveDown(.3).text('Susieta pradinė sąskaita: '+clean(invoice.related_invoice_number));
+ if(invoice.reason)doc.text('Priežastis: '+clean(invoice.reason));
  doc.moveDown(.5).text('Gavėjas: '+info.recipientName)
-   .text('Paslauga: platformos tarpininkavimo paslauga (TEST)')
+   .text(credit?'Paslauga: dalinis platformos komisinio sumažinimas (TEST)':'Paslauga: platformos tarpininkavimo paslauga (TEST)')
    .text(issuer.vatMode==='not_vat_registered'?'Operatorės pateiktas statusas: ne PVM mokėtoja. PVM tarifas šiame TEST juodraštyje netaikomas.':'PVM režimas: dar nepatvirtintas šiame TEST juodraštyje')
    .moveDown(1);
- doc.fontSize(14).text('Bendra suma: '+money(invoice.amount_cents));
+ if(invoice.rental_basis_cents)doc.fontSize(10).text('TEST nuomos suma: '+money(invoice.rental_basis_cents)+'; platformos komisinis 15 %.');
+ doc.fontSize(14).text((credit?'Kredituojama suma: -':'Bendra suma: ')+money(invoice.amount_cents));
+ if(credit&&Number.isSafeInteger(invoice.original_amount_cents))doc.moveDown(.5).fontSize(10).text('Pradinis komisinis: '+money(invoice.original_amount_cents)+'; po šios kreditinės: '+money(invoice.original_amount_cents-invoice.amount_cents));
+ if(invoice.rental_basis_cents)doc.moveDown(.5).fontSize(9).text('Nuomos dokumento išrašytojas yra faktinis nuomotojas. Platforma dokumentuoja tik savo komisinį. Stripe kaštus dengia platforma.');
  doc.moveDown(2).fontSize(9).fillColor('#64748b')
    .text('Automatiškai sukurtas TEST peržiūros PDF. Tikros sąskaitos automatiškai neišrašomos ir nesiunčiamos.');
  doc.end();

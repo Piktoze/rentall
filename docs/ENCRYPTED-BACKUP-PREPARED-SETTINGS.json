@@ -1,0 +1,13 @@
+{
+  "status": "review_only_not_applied",
+  "ENCRYPTED_BACKUP_SCHEDULER_ENABLED": false,
+  "ENCRYPTED_BACKUP_PUBLIC_KEY_PEM": null,
+  "ENCRYPTED_BACKUP_SINGLE_WRITER_CONFIRMED": false,
+  "intervalHours": 6,
+  "maxCopies": 28,
+  "maxAgeDays": 7,
+  "prefix": "bundles-v1/",
+  "retentionRunsAfter": "encrypted_upload_download_hash_verification",
+  "providerLifecycleConfigured": false,
+  "realScheduleActivated": false
+}

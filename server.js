@@ -1,3 +1,6 @@
+import {installTestCommissionExamples} from './modules/test-commission-routes.js';
+import {backupWrites} from './modules/backup-write-coordinator.js';
+import {startCoordinatedBackupScheduler} from './ops/coordinated-backup-scheduler.js';
 import {createOnboardingOnly,onboardingOnlyWriteGuard} from './modules/connect-onboarding-only.js';
 import {createConnectPayoutReconciler} from './modules/connect-readiness.js';
 import {installPrivateTestRecipientOnboarding} from './modules/private-test-recipient-onboarding.js';
@@ -215,6 +218,8 @@ assertProductionConfig();
 installSctPaymentReconciliationInbox(db);
 
 const app = express();
+app.use(backupWrites.http());
+backupWrites.guardRoutes(app);
 
 // Canonical hostname for the public catalog; preserve path and query.
 // Exact match prevents redirects based on arbitrary Host/forwarded headers.
@@ -1568,6 +1573,7 @@ app.get('/api/admin/email-outbox', requireRole('admin'), (req,res)=>{
  */
 
 
+installTestCommissionExamples(app,{enabled:()=>privateTestRequested()&&stripeMode==='test',requireRole});
 app.get('/api/supplier/accounting/documents',requireRole('supplier'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
  res.setHeader('Cache-Control','no-store, private');
@@ -2805,7 +2811,7 @@ async function processExpiredBookings(){
   return expiredIds;
 }
 const BOOKING_EXPIRY_SWEEP_MS=Math.max(60000,Number(process.env.BOOKING_EXPIRY_SWEEP_MS||60000));
-const bookingExpiryTimer=catalogOnly?null:setInterval(()=>processExpiredBookings().catch(err=>console.warn('Booking expiry sweep failed',err.message)),BOOKING_EXPIRY_SWEEP_MS);
+const bookingExpiryTimer=catalogOnly?null:setInterval(()=>backupWrites.writer(()=>processExpiredBookings()).catch(err=>console.warn('Booking expiry sweep failed',err.message)),BOOKING_EXPIRY_SWEEP_MS);
 bookingExpiryTimer?.unref?.();
 
 app.post('/api/payments/create-intent', simpleRateLimit({windowMs:60000,max:20,keyPrefix:'payment'}), async (req,res)=>{
@@ -4456,6 +4462,7 @@ app.post('/api/uploads/image', simpleRateLimit({windowMs:60000,max:30,keyPrefix:
     const safeBase=String(fileName).replace(/[^a-zA-Z0-9_-]/g,'-').slice(0,40) || 'image';
     const name=`${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeBase}.${ext}`;
     const filePath=path.join(uploadsDir,name);
+    backupWrites.assertWritable();
     fs.writeFileSync(filePath,bytes);
 
     res.json({ url:`/uploads/${name}` });
@@ -4536,7 +4543,7 @@ async function runSupplierReliabilityMaintenance(){
   }finally{supplierMaintenanceRunning=false;}
 }
 if(!catalogOnly){
-  const maintain=()=>runSupplierReliabilityMaintenance().catch(err=>console.warn('Supplier maintenance failed',err.message));
+  const maintain=()=>backupWrites.writer(()=>runSupplierReliabilityMaintenance()).catch(err=>console.warn('Supplier maintenance failed',err.message));
   setTimeout(maintain,1500).unref?.();
   setInterval(maintain,5*60*1000).unref?.();
 }
@@ -4549,10 +4556,11 @@ const server=app.listen(port,runtimeConfig.host, () => {
   const config=productionConfigReport();
   console.log(JSON.stringify({type:'startup',service:'rentinorbit',version:APP_VERSION,environment:runtimeConfig.nodeEnv,host:runtimeConfig.host,port,database:{driver:databaseRuntime.driver,source:databaseRuntime.source,persistent:databaseRuntime.persistent,migrationVersion:database.migrationVersion},stripe:config.stripe,paymentProvider,email:config.email,ready:launchGate().ready}));
 });
+const encryptedBackupScheduler=startCoordinatedBackupScheduler({coordinator:backupWrites,db,uploads:uploadsDir,env:process.env});
 let emailWorkerTimer=null;
 let sctWorkerTimer=null;
 if(sctRuntime&&!catalogOnly){
-  const sweep=()=>sctRuntime.sweep().then(result=>console.log(JSON.stringify({type:commercialRuntime?'sct_commercial_sweep':'sct_test_sweep',...result})))
+  const sweep=()=>backupWrites.writer(()=>sctRuntime.sweep()).then(result=>console.log(JSON.stringify({type:commercialRuntime?'sct_commercial_sweep':'sct_test_sweep',...result})))
     .catch(error=>console.warn(JSON.stringify({type:'sct_test_sweep_failed',error:safeOperationalError(error)})));
   sctWorkerTimer=setInterval(sweep,30000);sctWorkerTimer.unref?.();
   setTimeout(sweep,1500).unref?.();
@@ -4560,7 +4568,7 @@ if(sctRuntime&&!catalogOnly){
 let emailWorkerPromise=null;
 function runEmailWorker(){
   if(emailWorkerPromise)return emailWorkerPromise;
-  emailWorkerPromise=processTransactionalEmailOutbox().finally(()=>{emailWorkerPromise=null});
+  emailWorkerPromise=backupWrites.writer(()=>processTransactionalEmailOutbox()).finally(()=>{emailWorkerPromise=null});
   return emailWorkerPromise;
 }
 if(!catalogOnly&&process.env.EMAIL_WORKER_ENABLED==='true'){
@@ -4576,6 +4584,7 @@ let shuttingDown=false;
 function gracefulShutdown(signal){
   if(shuttingDown)return;shuttingDown=true;
   console.log(JSON.stringify({type:'shutdown',signal,timestamp:new Date().toISOString()}));
+  encryptedBackupScheduler?.stop();
   clearInterval(bookingExpiryTimer);
   if(sctWorkerTimer)clearInterval(sctWorkerTimer);
   if(emailWorkerTimer)clearInterval(emailWorkerTimer);
