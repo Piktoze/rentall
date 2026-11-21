@@ -1,0 +1,19 @@
+{
+  "sourceCommit": "8f33e978d59fced8647223ec0b382ec852af374d",
+  "workflowRunId": 44877256567,
+  "jobId": 136764580062,
+  "conclusion": "success",
+  "browserTestsPassed": 31,
+  "mobileRepeatTestsPassed": 10,
+  "catalogRegressionTestsPassed": 3,
+  "viewports": [1280, 390],
+  "independentCookieContexts": true,
+  "journeys": [
+    "confirmed/paid synthetic precondition -> renter contract -> renter pickup code -> independent supplier contract -> supplier uses code -> active -> supplier return without second code -> returned visible to renter",
+    "new UI checkout -> pending unpaid -> separate supplier UI confirmation -> renter payment CTA -> UI cancellation -> zero refund and no PaymentIntent"
+  ],
+  "isolation": "Disposable CI SQLite/uploads; no existing /data, historical orders, real customers or remote financial operations",
+  "fixedDefect": "Direct booking route opened before asynchronous session state; booking card existed but was hidden. Router now refreshes authoritative session before opening it.",
+  "notProvenByThisRun": ["Authenticated journey on rentinorbit.com", "Real Stripe payment through a mobile browser", "Physical iPhone/Safari", "Bank payout", "LIVE or persistent SCT runtime"],
+  "realFinancialEvidenceRetained": "2026-11-20-sct-real-test.json (commit 7e330c2); not repeated"
+}

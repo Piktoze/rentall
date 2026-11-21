@@ -40,7 +40,7 @@ export const HELP_CENTER_COPY = {
       ['Kaip veikia reputacija?','Po realios nuomos abi pusės gali būti vertinamos. Tikros nuomos istorija ir atsiliepimai padeda bendruomenei priimti saugesnius sprendimus.']
     ],
     contactTitle:'Vis dar reikia pagalbos?',
-    contactText:'Atidaryk konkretų užsakymą ir naudok „Pranešti problemą“, jei klausimas susijęs su rezervacija. Bendrą pagalbos el. paštą paskelbsime kartu su oficialiu RentInOrbit domenu prieš viešą paleidimą.'
+    contactText:'Atidaryk konkretų užsakymą ir naudok „Pranešti problemą“, jei klausimas susijęs su rezervacija. Bendroji pagalba ir skundai: info@rentinorbit.com.'
   },
   en: {
     pageTitle:'Help & FAQ',eyebrow:'RENTINORBIT HELP CENTRE',intro:'Clear answers for renters and suppliers — from the first search to return, payout or issue resolution.',renterTitle:'For renters',supplierTitle:'For suppliers',safetyTitle:'Payments, safety & issues',
@@ -76,7 +76,7 @@ export const HELP_CENTER_COPY = {
       ['How do I report a problem?','Open the relevant booking and use the issue-reporting action. Describe what happened clearly and attach any evidence you have.'],
       ['What should I do if I suspect fraud?','Do not make an extra bank transfer, follow unknown payment links or move the conversation to another app. Stop and report the behaviour to RentInOrbit.'],
       ['How does reputation work?','After a genuine completed rental, both sides can be reviewed. Verified rental history helps the community make safer choices.']
-    ],contactTitle:'Still need help?',contactText:'For a booking-specific issue, open that booking and use Report a problem. A general support email will be published with the official RentInOrbit domain before public launch.'
+    ],contactTitle:'Still need help?',contactText:'For a booking-specific issue, open that booking and use Report a problem. General support and complaints: info@rentinorbit.com.'
   },
   es: {
     pageTitle:'Ayuda y preguntas frecuentes',eyebrow:'CENTRO DE AYUDA RENTINORBIT',intro:'Respuestas claras para clientes y proveedores: desde la primera búsqueda hasta la devolución, el cobro o la resolución de una incidencia.',renterTitle:'Para clientes',supplierTitle:'Para proveedores',safetyTitle:'Pagos, seguridad e incidencias',
@@ -112,7 +112,7 @@ export const HELP_CENTER_COPY = {
       ['¿Cómo comunico un problema?','Abre la reserva correspondiente y usa la opción de reportar incidencia. Explica claramente lo ocurrido y adjunta las pruebas disponibles.'],
       ['¿Qué hago si sospecho de fraude?','No hagas transferencias adicionales, no abras enlaces de pago dudosos y no traslades la conversación a otra aplicación. Detente y repórtalo a RentInOrbit.'],
       ['¿Cómo funciona la reputación?','Tras un alquiler real y completado, ambas partes pueden recibir valoración. El historial verificado ayuda a tomar decisiones más seguras.']
-    ],contactTitle:'¿Aún necesitas ayuda?',contactText:'Si el problema está relacionado con una reserva, ábrela y usa Reportar un problema. El email general de soporte se publicará junto con el dominio oficial de RentInOrbit antes del lanzamiento público.'
+    ],contactTitle:'¿Aún necesitas ayuda?',contactText:'Si el problema está relacionado con una reserva, ábrela y usa Reportar un problema. Soporte general y reclamaciones: info@rentinorbit.com.'
   },
   de: {
     pageTitle:'Hilfe & FAQ',eyebrow:'RENTINORBIT HILFECENTER',intro:'Klare Antworten für Mieter und Anbieter – von der ersten Suche bis zur Rückgabe, Auszahlung oder Problemlösung.',renterTitle:'Für Mieter',supplierTitle:'Für Anbieter',safetyTitle:'Zahlungen, Sicherheit & Probleme',
@@ -148,7 +148,7 @@ export const HELP_CENTER_COPY = {
       ['Wie melde ich ein Problem?','Öffne die betreffende Buchung und nutze die Problemmeldung. Beschreibe den Vorfall klar und füge vorhandene Nachweise hinzu.'],
       ['Was tun bei Betrugsverdacht?','Keine zusätzliche Überweisung ausführen, unbekannte Zahlungslinks nicht öffnen und das Gespräch nicht in eine andere App verlagern. Vorgang stoppen und RentInOrbit melden.'],
       ['Wie funktioniert die Reputation?','Nach einer echten abgeschlossenen Miete können beide Seiten bewertet werden. Verifizierte Miethistorie hilft der Community bei sichereren Entscheidungen.']
-    ],contactTitle:'Noch Fragen?',contactText:'Bei einem Problem mit einer Buchung öffne die betreffende Buchung und nutze Problem melden. Eine allgemeine Support-E-Mail wird vor dem öffentlichen Start zusammen mit der offiziellen RentInOrbit-Domain veröffentlicht.'
+    ],contactTitle:'Noch Fragen?',contactText:'Bei einem Problem mit einer Buchung öffne die betreffende Buchung und nutze Problem melden. Allgemeiner Support und Beschwerden: info@rentinorbit.com.'
   },
   ru: {
     pageTitle:'Помощь и FAQ',eyebrow:'ЦЕНТР ПОМОЩИ RENTINORBIT',intro:'Понятные ответы для арендаторов и владельцев — от первого поиска до возврата, выплаты или решения проблемы.',renterTitle:'Арендаторам',supplierTitle:'Владельцам и поставщикам',safetyTitle:'Оплата, безопасность и спорные ситуации',
@@ -184,7 +184,7 @@ export const HELP_CENTER_COPY = {
       ['Как сообщить о проблеме?','Откройте нужное бронирование и используйте функцию сообщения о проблеме. Четко опишите ситуацию и приложите имеющиеся доказательства.'],
       ['Что делать при подозрении на мошенничество?','Не делайте дополнительный перевод, не открывайте сомнительные платежные ссылки и не переносите разговор в другой мессенджер. Остановитесь и сообщите RentInOrbit.'],
       ['Как работает репутация?','После реально завершенной аренды обе стороны могут получить отзыв. Подтвержденная история помогает участникам принимать более безопасные решения.']
-    ],contactTitle:'Нужна дополнительная помощь?',contactText:'Если вопрос связан с бронированием, откройте его и используйте «Сообщить о проблеме». Общий адрес поддержки будет опубликован вместе с официальным доменом RentInOrbit до публичного запуска.'
+    ],contactTitle:'Нужна дополнительная помощь?',contactText:'Если вопрос связан с бронированием, откройте его и используйте «Сообщить о проблеме». Общая поддержка и жалобы: info@rentinorbit.com.'
   }
 };
 

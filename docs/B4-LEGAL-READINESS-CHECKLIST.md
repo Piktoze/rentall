@@ -4,6 +4,16 @@
 Tik `staging/v203`; šiame faile nieko nepublikuojama svetainės lankytojams. Operatorė nurodė, kad individualią veiklą jau turi, o jos IV/EVRK/rekvizitų įrašymą reikia atidėti **iki paskutinio paleidimo etapo**.
 
 ## Kas jau egzistuoja
+
+**2026-11-21 patikslinimas:** pilnos LT platformos papildymai įgyvendinti
+`modules/full-platform-policy.js` ir naudojami `renderPolicyPage`, kai katalogo
+režimas išjungtas. Jau gauti operatorės rekvizitai nebeklausiami. Tekste
+atskirti komisinių/nuomos dokumentai ir nurodyta tikra laikina TEST saugykla
+be veikiančių jos kopijų. Negalima ankstesnių katalogo 6 val./28 kopijų ar
+Hobby žurnalų prieigos lango vadinti naujos nuolatinės platformos faktine
+ištrynimo tvarka. Neužbaigti sprendimai surinkti į vieną
+`OPERATOR-DECISIONS-2026-11-21.md`; jiems nesuteiktas fiktyvus patvirtinimas.
+Toliau esantys 2026-11-09 punktai yra pirminis peržiūros planas.
 - LT/EN/ES/DE/RU informacinės taisyklės, privatumo ir slapukų tekstai: `modules/help-center-content-v177.js`; maršrutai `/terms`, `/privacy`, `/cookies`, `/fees` ir `/help`.
 - Privalomas paskyros registracijos sutikimas tikrinamas **serverio** lygiu (`termsAccepted=true`), o sutarties patvirtinimai saugomi atskirai tiekėjui ir nuomininkui.
 - Nuomos rezervacijos sąlygos, komisiniai, atšaukimo politika ir skundų/incidentų kelias iš dalies įgyvendinti. Automatiniai testai **neprilygsta galutinei teisinei peržiūrai**.
