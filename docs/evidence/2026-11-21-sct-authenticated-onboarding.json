@@ -1,0 +1,25 @@
+{
+  "type": "isolated_sct_onboarding_probe",
+  "runId": "db516e152d977ee264fcb14c234e0319",
+  "status": "PASS",
+  "platformAccount": "acct_1UT4JCLM72MR015z",
+  "recipientAccount": "acct_1UdAsYLM72k4RDTw",
+  "mode": "test",
+  "guestDenied": true,
+  "otherSupplierDenied": true,
+  "hostedLinkHost": "connect.stripe.com",
+  "privateNoStore": true,
+  "recipientTransfersReady": true,
+  "bankPayoutsReady": false,
+  "privateLinkPublished": false,
+  "newStripeAccounts": 0,
+  "termsAccepted": false,
+  "financialOperations": 0,
+  "existingDataTouched": false,
+  "sourceCommit": "c06be8974224bdaac8bf9aa7298abc02928f1aa3",
+  "deploymentId": "849f26c0-d521-4a3f-9825-47834ce52ea0",
+  "fieldNotes": {
+    "termsAccepted": "The probe did not accept terms. This is not a statement that the recipient's previously accepted terms are missing."
+  },
+  "scope": "New temporary canonical DB and actual existing Stripe TEST recipient; authenticated status and private hosted link only; no personal link or session secret persisted"
+}

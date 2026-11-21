@@ -2,6 +2,32 @@
 
 ## Aktualus tęsinys 2026-11-21 (senesni planai toliau – istorija)
 
+**Papildyta tikru Stripe TEST įrodymu:** esamas TEST gavėjas
+`acct_1UdAsYLM72k4RDTw`, platforma `acct_1UT4JCLM72MR015z`.
+Autentifikuotas statusas ir privati hosted onboarding nuoroda PASS;
+svečias ir kitas nuomotojas neprileidžiami; pervedimų galimybė aktyvi.
+Jokios naujos Stripe paskyros, sąlygų priėmimo ar finansinės operacijos.
+`evidence/2026-11-21-sct-authenticated-onboarding.json`. Grįžimo iš Stripe
+forma atidaro nuomotojo mokėjimų nustatymus, yra nauji 1280/390 px testai.
+Sėkminga schema atpažįsta Stripe v2 aktyvios capability atsakymą be write
+parametro requested; finansiniam pasirengimui toliau būtinas active ir
+įvykdyti reikalavimai. Vienkartinis onboarding bandymo paleidimas išvalytas.
+
+**Aktualūs likę blokatoriai:**
+1. LIVE paskyros duomenų pateikimas ir realūs LIVE gavėjai / webhook įrodymai;
+   naujausi GET duomenys `evidence/2026-11-21-live-account-followup.json`.
+2. Nuolatinės saugyklos atskirai leistas perjungimas ir reguliaraus naujo
+   DB+nuotraukų kopijavimo aktyvavimas su operatorės viešuoju raktu; privatus
+   raktas ir parsisiųstos kopijos turi būti už Railway ribų. Izoliuotas bucket
+   kopijos atkūrimo bandymas jau PASS, jo nebekartoti be priežasties.
+3. Trumpas apskaitos / serijos nepanaudojimo / paslaugos baigimo momento
+   patvirtinimas ir kategorijų saugojimo projekto peržiūra.
+4. Konkreti VMI / apskaitos išvada privataus ne verslininko → įmonės atvejui;
+   parengtas klausimas neišsiųstas, kombinacija neatblokuota. Užsienio paslaugų
+   PVM lieka atskiras ankstesnis klausimas; VMI registracija nekeičiama.
+5. Zoho esamo DPA užbaigimo įrodymas, naudotojos puslapis / būsenos aprašyti
+   ZOHO-DPA-USER-CHECK-2026-11-21.md. Pending nėra savaiminis parašo prašymas.
+
 ### Naujausias tęsinys: SCT onboarding ir tikras šifruotos kopijos atkūrimas
 
 - SCT gavėjo onboarding sujungtas su autentifikuotais create/status/hosted/embedded

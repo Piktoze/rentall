@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-11-21T13:37:15.263Z",
+  "accountId": "acct_1UT4J2LlutaSFdau",
+  "mode": "LIVE read-only",
+  "chargesEnabled": false,
+  "payoutsEnabled": false,
+  "detailsSubmitted": false,
+  "externalAccounts": 0,
+  "disabledReason": "requirements.past_due",
+  "currentlyDue": [
+    "business_profile.mcc",
+    "business_profile.product_description",
+    "business_profile.support_phone",
+    "business_profile.url",
+    "business_type",
+    "external_account",
+    "representative.address.city",
+    "representative.address.line1",
+    "representative.address.postal_code",
+    "representative.dob.day",
+    "representative.dob.month",
+    "representative.dob.year",
+    "representative.email",
+    "representative.first_name",
+    "representative.last_name",
+    "representative.phone",
+    "tos_acceptance.date",
+    "tos_acceptance.ip"
+  ],
+  "pendingVerification": [],
+  "financialOperations": 0
+}
