@@ -3,6 +3,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'node:fs';
 import path from 'node:path';
+import {operatorTaxProfile} from './operator-tax-profile.js';
 
 const fontFile=path.resolve('node_modules','dejavu-fonts-ttf','ttf','DejaVuSans.ttf');
 const brandLogoFile=path.resolve('assets','brand','rentinorbit-logo-horizontal-dark-web.png');
@@ -18,7 +19,9 @@ export function invoiceOperatorProfile(env=process.env){
   issuerName:clean(env.LEGAL_OPERATOR_NAME||''),
   issuerAddress:clean(env.LEGAL_OPERATOR_ADDRESS||''),
   individualActivityCertificate:clean(env.LEGAL_IV_CERTIFICATE||''),
-  vatMode:'pending_review',
+  vatMode:operatorTaxProfile(env).vatMode,
+  activityCode:operatorTaxProfile(env).activityCode,
+  foreignServicesVatReviewRequired:operatorTaxProfile(env).foreignServicesVatReviewRequired,
   emailShown:false
  });
 }
@@ -59,7 +62,7 @@ export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TES
  if(info.certificate)doc.text('Individualios veiklos pažymos Nr.: '+info.certificate);
  doc.moveDown(.5).text('Gavėjas: '+info.recipientName)
    .text('Paslauga: platformos tarpininkavimo paslauga (TEST)')
-   .text('PVM režimas: dar nepatvirtintas')
+   .text(issuer.vatMode==='not_vat_registered'?'Operatorės pateiktas statusas: ne PVM mokėtoja. PVM tarifas šiame TEST juodraštyje netaikomas.':'PVM režimas: dar nepatvirtintas šiame TEST juodraštyje')
    .moveDown(1);
  doc.fontSize(14).text('Bendra suma: '+money(invoice.amount_cents));
  doc.moveDown(2).fontSize(9).fillColor('#64748b')

@@ -2321,8 +2321,23 @@ const markEmailSentStmt=db.prepare(`
 const markEmailFailedStmt=db.prepare(`
   UPDATE email_outbox SET status=?, last_error=? WHERE id=?
 `);
+// Keep the same provider key across an interrupted delivery, including process restart.
+// Resend retains keys for 24h; stop at 23h rather than risk a new duplicate send.
+db.exec(`CREATE TABLE IF NOT EXISTS email_delivery_attempts(
+ outbox_id INTEGER PRIMARY KEY REFERENCES email_outbox(id),delivery_key TEXT NOT NULL UNIQUE,
+ first_attempt_ms INTEGER NOT NULL,payload_digest TEXT)`);
+export function bindTransactionalEmailPayload(id,key,digest,now=Date.now()){
+ if(!/^[a-f0-9]{64}$/.test(digest||''))throw Error('EMAIL_PAYLOAD_DIGEST_INVALID');
+ return db.transaction(()=>{
+  const row=db.prepare('SELECT * FROM email_delivery_attempts WHERE outbox_id=?').get(Number(id));
+  if(!row||row.delivery_key!==key)throw Error('EMAIL_DELIVERY_BINDING_REQUIRED');
+  if(now<row.first_attempt_ms||now-row.first_attempt_ms>=23*3600000)throw Error('EMAIL_DELIVERY_RECONCILIATION_REQUIRED');
+  if(row.payload_digest&&row.payload_digest!==digest)throw Error('EMAIL_DELIVERY_PAYLOAD_CHANGED');
+  db.prepare('UPDATE email_delivery_attempts SET payload_digest=? WHERE outbox_id=? AND payload_digest IS NULL').run(digest,Number(id));return true;
+ })();
+}
 
-export function claimTransactionalEmails({limit=20,maxAttempts=5}={}){
+export function claimTransactionalEmails({limit=20,maxAttempts=5,now=Date.now()}={}){
   const safeLimit=Math.max(1,Math.min(100,Number(limit)||20));
   const safeAttempts=Math.max(1,Math.min(20,Number(maxAttempts)||5));
   const candidates=claimPendingEmailStmt.all(safeAttempts,safeLimit);
@@ -2331,8 +2346,15 @@ export function claimTransactionalEmails({limit=20,maxAttempts=5}={}){
     for(const row of candidates){
       const changed=markEmailSendingStmt.run(row.id);
       if(changed.changes===1){
+        let attempt=db.prepare('SELECT * FROM email_delivery_attempts WHERE outbox_id=?').get(row.id);
+        if(!attempt&&Number(row.attempts)>0){markEmailFailedStmt.run('failed','EMAIL_DELIVERY_RECONCILIATION_REQUIRED',row.id);continue;}
+        if(!attempt){
+          db.prepare('INSERT INTO email_delivery_attempts(outbox_id,delivery_key,first_attempt_ms) VALUES(?,?,?)').run(row.id,'rio-mail-'+crypto.randomUUID(),now);
+          attempt=db.prepare('SELECT * FROM email_delivery_attempts WHERE outbox_id=?').get(row.id);
+        }
+        if(now<attempt.first_attempt_ms||now-attempt.first_attempt_ms>=23*3600000){markEmailFailedStmt.run('failed','EMAIL_DELIVERY_RECONCILIATION_REQUIRED',row.id);continue;}
         let payload={}; try{ payload=JSON.parse(row.payloadJson||'{}') }catch{}
-        claimed.push({...row,payload,attempts:Number(row.attempts||0)+1,status:'sending'});
+        claimed.push({...row,payload,attempts:Number(row.attempts||0)+1,status:'sending',deliveryIdempotencyKey:attempt.delivery_key,firstAttemptMs:attempt.first_attempt_ms});
       }
     }
   });

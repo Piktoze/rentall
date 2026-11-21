@@ -2,6 +2,19 @@
 
 ## Aktualus tęsinys 2026-11-21 (senesni planai toliau – istorija)
 
+**Papildyta operatorės patikslinimu:** operatorė Ieva Piktožė, IV pažyma
+751612, veiklos kodas 775200 (EVRK 2.1 / 77.52.00), šiuo metu ne PVM mokėtoja.
+Šių duomenų nebeklausti. Tarpininkavimo klasifikavimas patikrintas oficialiai;
+atskirai atviri užsienio paslaugų PVM vertinimas, apskaitos tvarka ir, jei
+operatorė teiks nuosavų daiktų nuomos paslaugą, tos papildomos veiklos kodas.
+Žr. `EVRK-AND-FOREIGN-VAT-2026-11-21.md`.
+
+Techninis papildymas: eilės laiškui prieš siuntimą išsaugomas Resend
+idempotency raktas ir turinio maiša. Perkrovimas nesukuria naujo rakto,
+pasikeitęs turinys ar >23 val. neapibrėžtumas stabdo automatinį pakartojimą.
+Seni neapibrėžti laiškai be anksčiau išsaugoto rakto taip pat neperleidžiami
+automatiškai. Naujas tikras laiškų ar finansinis bandymas dėl to nevykdomas.
+
 Sėkmingi tikri Stripe TEST A/B iš `7e330c2` nebekartojami. Modelis yra
 **Separate Charges and Transfers**, ne SEPA Credit Transfer. 85 € pervedimas
 į Stripe balansą nėra banko išmoka.
@@ -11,7 +24,7 @@ Sėkmingi tikri Stripe TEST A/B iš `7e330c2` nebekartojami. Modelis yra
 | B1 finansai | Tikras TEST mokėjimas, 85 % transfer po grąžinimo, visas refund ir pasirašyti webhookai PASS, `evidence/2026-11-20-sct-real-test.json` | Banko išmokos ir LIVE atskiras etapas; patikrintų TEST objektų nekeisti |
 | B2 sąsaja | Dvi nepriklausomos naršyklės sesijos, sutartys, vienkartinis kodas ir grąžinimas PASS 1280/390 px. Atskiras naujos rezervacijos → tiekėjo patvirtinimo → mokėjimo CTA → neapmokėto atšaukimo UI kelias PASS tais pačiais dydžiais. Pataisytas paslėptas užsakymo ekranas atidarant el. laiško nuorodą iki sesijos įkėlimo | CI naudoja izoliuotą serverį; apmokėto UI kelio pradinis `paid` yra aiškus sintetinis precondition. Tai nėra naujas Stripe UI mokėjimo ar autentifikuoto rentinorbit.com E2E įrodymas |
 | B3 pranešimai | Visi penki kategorijų laiškai Resend `delivered` ir faktiškai Gmail INBOX (ne spam). Sutvarkyta grąžinimo laiškų eilė abiem šalims; išsaugomas Resend ID. `evidence/2026-11-20-notification-delivery.json` | Šablonų pristatymo bandymas nesukuria tikros nuomos; pranešimų teisinės/apskaitos kategorijos laikomos atskirai |
-| B4 dokumentai ir SF | Pilnos LT platformos papildymai: šalių vaidmenys, A modelis, ginčai, atšaukimai, dokumentų išrašytojai, privatumas ir tikra laikina saugykla. Operatorės gauti rekvizitai naudojami iš saugios konfigūracijos. Komisinio ir visos nuomos dokumentų išrašytojai atskirti patikimais snapshot; SF lieka užblokuotos | PVM/IV veiklos ir apskaitos sprendimai, likusių kategorijų saugojimas, Zoho DPA įrodymas, galutinis LT dokumentų patvirtinimas ir atitinkamas kitų kalbų suderinimas. Vienas sąrašas `OPERATOR-DECISIONS-2026-11-21.md` |
+| B4 dokumentai ir SF | Pilnos LT platformos papildymai: šalių vaidmenys, A modelis, ginčai, atšaukimai, dokumentų išrašytojai, privatumas ir tikra laikina saugykla. Operatorės gauti rekvizitai naudojami iš saugios konfigūracijos. Komisinio ir visos nuomos dokumentų išrašytojai atskirti patikimais snapshot; SF lieka užblokuotos | Užsienio paslaugų PVM ir apskaitos sprendimai, likusių kategorijų saugojimas, Zoho DPA įrodymas, galutinis LT dokumentų patvirtinimas ir atitinkamas kitų kalbų suderinimas. Vienas sąrašas `OPERATOR-DECISIONS-2026-11-21.md` |
 | LIVE ir nuolatinė saugykla | Tik skaitymo LIVE patikra ir tik laikinuose kataloguose sėkminga DB+failų repeticija. Konkretus planas `PERSISTENT-LAUNCH-PLAN-2026-11-20.md` | Pasiekiama LIVE paskyra turi neaktyvius mokėjimus/išmokas, nėra banko ir V1 webhookų/nuomotojų. Ryšys su TEST sandbox nepatvirtintas. Dabartinė SCT vykdyklė tyčia tik TEST ir tik laikina; `deferred_supplier_transfer_implemented` lieka false iki atskiro nuolatinio vykdymo įgyvendinimo/patikros. Esamos `/data` neliesti |
 
 **Pilnos platformos NO-GO lieka.** Techninių ir teisinių saugos vartų neišjungti.

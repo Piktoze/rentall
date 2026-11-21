@@ -1,13 +1,16 @@
 # Likę operatorės duomenys ir sprendimai
 
-Jau gauti operatorės vardas, IV pažymos numeris, korespondencijos adresas,
-info@rentinorbit.com, 12 mėn. įprastų užklausų saugojimas ir A modelis.
+Jau gauti operatorės vardas Ieva Piktožė, IV pažymos numeris 751612, veiklos
+kodas 775200 (EVRK 2.1, 77.52.00), dabartinis statusas – ne PVM mokėtoja,
+korespondencijos adresas, info@rentinorbit.com, 12 mėn. įprastų užklausų saugojimas ir A modelis.
 Jų pakartotinai neprašyti. Stripe sąlygų patvirtinimas buvo tik TEST gavėjui;
 jis nepakeičia Zoho DPA ar LIVE Stripe sutarties.
 
-1. **PVM ir veikla:** ar operatorė ne PVM mokėtoja, PVM mokėtoja, ar taiko LT
-   SVS; jei taikoma – PVM kodas. Kokiai veiklai registruota IV / EVRK?
-   IV pažymos numeris pats savaime PVM statuso ar veiklos rūšies neįrodo.
+1. **PVM ir veikla – pateikti, nebeklausti:** 775200 yra nuomos tarpininkavimui
+   tinkamas EVRK 2.1 poklasis. Vien tarpininkavimui papildomas kodas nenustatytas.
+   Atskirai lieka užsienio paslaugų PVM prievolių ir galimos SVS registracijos
+   vertinimas pagal faktinius pirkimus. Ne PVM mokėtojos statusas nėra
+   prilyginamas įregistravimui SVS. Žr. `EVRK-AND-FOREIGN-VAT-2026-11-21.md`.
 2. **Apskaita:** ar apskaitą tvarkys pati operatorė, ar buhalterė. Reikia
    patvirtintos komisinio dokumentų serijos, numeravimo pradžios, išrašymo
    momento ir kreditavimo tvarkos. Privataus nuomotojo → įmonės atvejui reikia

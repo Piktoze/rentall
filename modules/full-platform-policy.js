@@ -1,11 +1,15 @@
 // Factual Lithuanian platform text. Unconfirmed tax/retention decisions stay explicit.
 // No catalog-only promises, no invented VAT status or provider deletion period.
+import {operatorTaxProfile} from './operator-tax-profile.js';
 export function fullPlatformPolicy(page,{key,lang='lt',env=process.env}={}){
  if(lang!=='lt')return page; // Other locale final review remains a launch blocker.
  const result=structuredClone(page),contact='info@rentinorbit.com';
  const identity=['LEGAL_OPERATOR_NAME','LEGAL_IV_CERTIFICATE','LEGAL_OPERATOR_ADDRESS'].map(k=>String(env[k]||'').trim());
  const operator=identity.every(Boolean)?`${identity[0]}, individualios veiklos pažyma Nr. ${identity[1]}, korespondencijos adresas: ${identity[2]}.`:'Operatoriaus rekvizitai nepatvirtinti – komercinis paleidimas blokuojamas.';
- const shared=[['Operatorius ir dokumento taikymas',[operator,`Kontaktas, skundai ir privatumo prašymai: ${contact}. Redakcija: 2026-11-20. Ši redakcija skirta pilnai rezervavimo platformai. Privačiame TEST režime operacijos yra sintetinės; jis nesuteikia leidimo vykdyti tikrų mokėjimų. Istorinių rezervacijų išsaugotos sąlygos nekeičiamos.`]]];
+ const tax=operatorTaxProfile(env);
+ const vat=tax.vatMode==='not_vat_registered'?'Operatorės pateiktas dabartinis statusas – ne PVM mokėtoja. Prievolės dėl užsienio paslaugų vertinamos atskirai; šis statusas nėra pažadas, kad registracijos nereikės ateityje.':'Operatorės PVM statusas šiai redakcijai dar turi būti patvirtintas.';
+ const activity=tax.activityCode&&tax.classification?`Veiklos kodas: ${tax.activityCode} (${tax.classification}).`:'Veiklos kodas dar nepatvirtintas.';
+ const shared=[['Operatorius ir dokumento taikymas',[operator,activity,vat,`Kontaktas, skundai ir privatumo prašymai: ${contact}. Redakcija: 2026-11-21. Ši redakcija skirta pilnai rezervavimo platformai. Privačiame TEST režime operacijos yra sintetinės; jis nesuteikia leidimo vykdyti tikrų mokėjimų. Istorinių rezervacijų išsaugotos sąlygos nekeičiamos.`]]];
  if(key==='terms'){
   result.intro='RentInOrbit tarpininkavimo, rezervavimo, nuomos sutarčių, perdavimo, grąžinimo ir ginčų taisyklės.';
   result.sections.push(['Nuomotojo statusas ir nuomos dokumentai',[
@@ -25,10 +29,12 @@ export function fullPlatformPolicy(page,{key,lang='lt',env=process.env}={}){
    'Sutartinis atšaukimo grafikas rodomas prieš užsakymą ir išsaugomas konkrečioje rezervacijoje. Nuomotojui atšaukus iki perdavimo grąžinama visa nuomos suma. Nuomininko atšaukimas vertinamas pagal rezervacijos snapshot ir privalomas teises; po perdavimo automatinis atšaukimas neleidžiamas. Banko įskaitymo termino platforma negarantuoja. Techninės klaidos ar dubliuoto nuskaičiavimo atveju kreipkitės į pagalbą.'
   ]]);
  }
- if(key==='fees')result.sections.push(['Dokumentų išrašytojas ir nepatvirtintas PVM',[
+ if(key==='fees'){
+ result.sections=result.sections.filter(([heading])=>heading!=='Mokesčiai, PVM ir sąskaitos');
+ result.sections.push(['Dokumentų išrašytojas ir PVM statusas',[
   'Iš 100 € nuomos platformos komisinis yra 15 €, nuomotojo dalis – 85 €. Platformos dokumento gavėjas yra nuomotojas už tarpininkavimo paslaugą, o ne nuomininkas už visą 100 € nuomą. Nuomos dokumento išrašytojas yra faktinis nuomotojas; įgaliojimas išrašyti jo vardu turi būti atskirai patvirtintas.',
-  'Operatorės PVM statusas, sąskaitų serija, numeravimo, kreditavimo ir apskaitos tvarka dar nepatvirtinti. Todėl tikrų sąskaitų automatinis išrašymas ir siuntimas blokuojami. Privataus nuomotojo dokumento tinkamumas įmonės apskaitai nepreziumuojamas.'
- ]]);
+  vat+' Sąskaitų serija, numeravimo, kreditavimo ir apskaitos tvarka dar nepatvirtinti. Todėl tikrų sąskaitų automatinis išrašymas ir siuntimas blokuojami. Nuomotojas atsako už savo nuomos dokumentus ir mokesčius pagal faktinį statusą. Privataus nuomotojo dokumento tinkamumas įmonės apskaitai nepreziumuojamas.'
+ ]]);}
  if(key==='privacy'){
   result.sections=result.sections.filter(([title])=>!['Su kuo duomenys gali būti dalijami','Saugojimas ir saugumas','Tavo teisės'].includes(title));
   result.sections.push(['Pagrindai ir nuomos šalių vaidmenys',[

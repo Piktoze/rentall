@@ -7,7 +7,7 @@ const rentalTestEnv={...process.env,PRIVATE_TEST_ENABLED:'false',PRIVATE_TEST_RE
 if(process.env.RENTINORBIT_NOTIFICATION_TEST_RUN_ID){
   execFileSync(process.execPath,['ops/notification-delivery-evidence.mjs'],{stdio:'inherit',timeout:120000,env:{...process.env,NODE_OPTIONS:''}});
 }
-execFileSync(process.execPath,['--test','full-platform-policy.test.mjs','email-delivery-receipt.test.mjs','invoice-issuer-plan.test.mjs','persistent-storage-rehearsal.test.mjs'],{stdio:'inherit',env:{...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',DATABASE_URL:'',RENTINORBIT_DB_PATH:'',RAILWAY_VOLUME_MOUNT_PATH:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:''}});
+execFileSync(process.execPath,['--test','full-platform-policy.test.mjs','email-delivery-receipt.test.mjs','invoice-issuer-plan.test.mjs','operator-tax-profile.test.mjs','persistent-storage-rehearsal.test.mjs'],{stdio:'inherit',env:{...rentalTestEnv,NODE_ENV:'test',DB_PATH:':memory:',DATABASE_URL:'',RENTINORBIT_DB_PATH:'',RAILWAY_VOLUME_MOUNT_PATH:'',RAILWAY_ENVIRONMENT_ID:'',RAILWAY_PROJECT_ID:'',RAILWAY_SERVICE_ID:''}});
 // Only an explicitly requested Railway staging build may run real TEST APIs.
 // Ordinary release/CI tests below use provider doubles and disposable storage.
 if(process.env.RENTINORBIT_SCT_REAL_TEST_RUN_ID){

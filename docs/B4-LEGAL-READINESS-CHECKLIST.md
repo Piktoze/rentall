@@ -33,8 +33,8 @@ Toliau esantys 2026-11-09 punktai yra pirminis peržiūros planas.
 ## Ką sąmoningai paliekame paskutiniam etapui
 - [x] Operatoriaus vardas, IV pažymos numeris, viešas korespondencijos adresas ir info@rentinorbit.com pateikti vartotojos šiame pokalbyje; jų pakartotinai neprašyti. Tai nėra visų viešų dokumentų patvirtinimas.
 - [x] Vartotoja patvirtino įprastų užklausų saugojimą 12 mėnesių po išsprendimo, išskyrus dokumentuotą teisinį poreikį. Žurnalų ir atsarginių kopijų terminai iš to neišvedami.
-- [ ] EVRK atitiktis konkrečiai pilnos platformos veiklai ir mokesčių/PVM statusas dar turi būti patvirtinti prieš komercinį paleidimą.
-- [ ] Operatoriaus mokesčių / PVM statusas ir sąskaitų išrašymo bei apskaitos organizavimas (su buhalteriu).
+- [x] Operatorės 2026-11-21 pateikti ir išskirti duomenys: IV pažyma 751612, EVRK 775200 (77.52.00, EVRK 2.1), dabartinis statusas – ne PVM mokėtoja. Klasifikatorius apima skaitmeninį nuomos tarpininkavimą. Pakartotinai neprašyti.
+- [ ] Atskirai lieka užsienio paslaugų PVM/SVS prievolių vertinimas pagal realias sąskaitas ir apskaitos/komisinio dokumentų tvarka. Dabartinis ne PVM statusas nėra garantija dėl būsimų prievolių ir neįrodo SVS registracijos.
 - [ ] Galutinės sąlygų ir privatumo politikos redakcijos patvirtinimas; „staging juodraštis“ žymos panaikinimas tik prieš viešą komercinį startą.
 - [ ] Galutinis DSA / vartotojų teisių / BDAR reikalavimų taikymo patvirtinimas konkrečiam verslo modeliui. Jei privaloma išorinė teisinė peržiūra neįvykdyta, B4 lieka NO-GO.
 

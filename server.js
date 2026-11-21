@@ -13,6 +13,7 @@ import express from 'express';
 import {assessCompanyRentalCheckout} from './modules/b2b-private-rental-gate-v287.js';
 import {assessRentalInvoicePreflight} from './modules/rental-invoice-preflight-v292.js';
 import {invoiceIssuerPlan} from './modules/invoice-issuer-plan.js';
+import {operatorTaxProfile} from './modules/operator-tax-profile.js';
 import {renderTestInvoicePdf,invoiceOperatorProfile,renderTestInvoiceEmailPreview,renderRentalTransactionConfirmationPdf} from './modules/accounting-sf-v286.js';
 import Stripe from 'stripe';
 import crypto from 'crypto';
@@ -80,6 +81,7 @@ import {
   setRentalBookingStatusAfterRefund,
   claimWebhookRetry,
   db,
+  bindTransactionalEmailPayload,
   createRentalNotification,
   listSupplierNotifications,
   listCustomerNotifications,
@@ -1578,7 +1580,7 @@ function trustedRentalInvoicePreflight(bookingId){
   terms:invoiceDelegationTerms(),
   hasOpenDispute:hasStripeRentalDisputeHold(db,bookingId)||!!db.prepare("SELECT 1 FROM rental_disputes WHERE booking_id=? AND status='open' LIMIT 1").get(booking.bookingId)
  });
- try{return {...assessment,issuerPlan:invoiceIssuerPlan({booking,listing,profile:getAccountingSupplierProfile(supplierEmail)})};}
+ try{const tax=operatorTaxProfile();return {...assessment,issuerPlan:invoiceIssuerPlan({booking,listing,profile:getAccountingSupplierProfile(supplierEmail),operatorVatMode:tax.vatMode,foreignServicesVatReviewRequired:tax.foreignServicesVatReviewRequired})};}
  catch{return {...assessment,issuerPlan:null,issuerPlanBlocker:'ACCOUNTING_SNAPSHOT_REVIEW_REQUIRED'};}
 }
 app.get('/api/admin/accounting/bookings/:bookingId/invoice-preflight',requireRole('admin'),(req,res)=>{
@@ -2133,7 +2135,9 @@ async function deliverTransactionalEmail(item){
   if(provider==='resend'){
     const apiKey=String(process.env.RESEND_API_KEY||'').trim();
     if(!apiKey||!from) throw new Error('RESEND_API_KEY and EMAIL_FROM are required');
-    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json',...(item.deliveryIdempotencyKey?{'Idempotency-Key':item.deliveryIdempotencyKey}:{})},body:JSON.stringify({from,to:[item.recipient],subject:item.subject,html:renderTransactionalEmail(item)})});
+    const bodyJson=JSON.stringify({from,to:[item.recipient],subject:item.subject,html:renderTransactionalEmail(item)});
+    if(Number.isSafeInteger(item.firstAttemptMs))bindTransactionalEmailPayload(item.id,item.deliveryIdempotencyKey,crypto.createHash('sha256').update(bodyJson).digest('hex'));
+    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json',...(item.deliveryIdempotencyKey?{'Idempotency-Key':item.deliveryIdempotencyKey}:{})},body:bodyJson});
     const text=await response.text();let body={};try{body=JSON.parse(text)}catch{}
     if(!response.ok) throw new Error(`Email provider rejected request (${response.status}): ${String(body?.message||text||'unknown error').slice(0,300)}`);
     return {provider:'resend',id:body?.id||null};
