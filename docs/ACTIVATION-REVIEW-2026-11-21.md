@@ -1,5 +1,18 @@
 # Vienas perjungimo planas – PERŽIŪRAI, NEAKTYVUOTA
 
+## Aktualus pirmo perjungimo paketas peržiūrai
+
+Vienintelis aktualus PIRMOS FAZĖS variantas:
+FIRST-SWITCH-APPROVAL-PACKAGE-2026-11-21.md. Patikrinta 438587392 B
+procesui prieinamos /data vietos ir viena replika; abu scheduler išjungti.
+Esamo Railway bucket lifecycle NEPALAIKOMAS pagal oficialią dokumentaciją.
+Pakete aiškiai išdėstyti privatūs onboarding-only vartai ir allowlist,
+nauja DB/uploads vieta, kopijos ir po prastovos taikomas valymas, trumpas
+SF/kreditinių peržiūros sąrašas ir rollback į naują izoliuotą TEST.
+Joks perjungimas / grafikas / LIVE objektas / tikras dokumentas neaktyvuotas.
+Žemiau esanti platesnio aktyvavimo istorija nėra leidimas praleisti
+šio pirmo paketo saugos sąlygas ar automatiškai kurti webhook paskirtis.
+
 ## Įgyvendinta nuo a8ed296
 
 - CONNECT_ONBOARDING_ONLY_ENABLED atskiria nuomotojo onboarding nuo komercinio

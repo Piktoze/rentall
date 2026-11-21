@@ -1,5 +1,35 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## Pirmo perjungimo paketas – naujausia faktinė patikra
+
+Naujausia pradinė šaka 5c97694; paruoštos (NEAKTYVUOTOS) atskiros privačios
+onboarding-only prieigos ir tiekėjo email allowlist apsaugos, kad išjungiant
+seną TEST OTP mechanizmą svetainė netaptų vieša. Be hash startup atmetamas;
+be privačios prieigos 401, ne allowlist nuomotojui 403 iki Stripe kvietimo.
+Demo vartotojų sėjimas šiame režime neleidžiamas. Dabartinis privatus TEST
+nepakito. 2 tikslinės vietinio HTTP / statfs injekcijos patikros PASS.
+Kodas 75b1b1f, CI 44938019236 SUCCESS, Railway
+bf4c7556-5bea-4da3-ba8e-5c8c49059813 SUCCESS.
+
+Railway read-only konfigūracija: iad numReplicas=1, 500 MB volume. Tik
+statfs('/data') 2026-11-21T18:54:45Z: procesui prieinama 438587392 B;
+capacity=454299648 B, free=448651264 B. Failų turinys neskaitytas / nekeistas.
+Efektyviai legacy ir encrypted scheduler false. Pirmam tuščios DB/uploads ir
+ribotam onboarding etapui vietos pakanka; ne neribotam būsimam katalogui.
+
+Oficialūs Railway duomenys: Bucket lifecycle configuration NEPALAIKOMA.
+Automatinio galiojimo programos prastovos metu nėra. Kopijas po prastovos
+valys programa po pirmos sėkmingos kopijos (pirmas bandymas po 6 val.), ne
+neegzistuojanti saugyklos taisyklė. Operacinė 7 d. riba nėra kietas TTL.
+
+Vienas operatorės peržiūros dokumentas:
+FIRST-SWITCH-APPROVAL-PACKAGE-2026-11-21.md; faktinė konfigūracija ir ribos
+FIRST-SWITCH-PREPARED-2026-11-21.json. Senesnės patikros žemiau – istorija.
+RIO nepanaudojimas / abipusis grąžinimas / 15-85 nebeklausiami. Tikra SF ir
+kreditinės pateikimo grandinė, apskaita, kategorijų saugojimas, VMI/PVM ir
+Zoho DPA lieka vėlesnio pilno paleidimo klausimai; nauji prašymai / laiškai
+nesiųsti. Šiuo darbu grafikas, saugykla ir LIVE finansai neaktyvuoti.
+
 ## Bendros kopijos koordinavimas ir du TEST PDF – naujausias tęsinys
 
 Naujausia šaka patikrinta nuo 03faa01. Įgyvendintas realus vieno rašančio

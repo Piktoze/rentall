@@ -1,0 +1,69 @@
+{
+  "status": "prepared_not_applied",
+  "sourceCommit": "75b1b1f8ac4460bf6fd5964f5182f332082577cf",
+  "capacity": {
+    "level": "info",
+    "type": "staging_volume_capacity_review",
+    "mount": "/data",
+    "readOnly": true,
+    "capacityBytes": 454299648,
+    "availableBytes": 438587392,
+    "freeBytes": 448651264,
+    "legacySchedulerEnabled": false,
+    "encryptedSchedulerEnabled": false,
+    "observedAt": "2026-11-21T18:54:45.634405090Z"
+  },
+  "nominalVolumeMB": 500,
+  "replicas": 1,
+  "capacitySufficientFor": "fresh empty commercial database, uploads directory, restricted onboarding only",
+  "bucket": {
+    "bucket": {
+      "id": "0def802c-5ae3-4e5f-9ecf-4d07527b5899",
+      "name": "rentinorbit-staging-backups"
+    },
+    "bucketName": "rentinorbit-staging-backups-u4n51k",
+    "endpoint": "https://t3.storageapi.dev",
+    "region": "auto",
+    "valuesRedacted": true,
+    "lifecycleSupported": false,
+    "source": "https://docs.railway.com/storage-buckets.md"
+  },
+  "retention": {
+    "intervalHours": 6,
+    "maxCopies": 28,
+    "maxAgeDays": 7,
+    "expiryWhenApplicationStopped": false,
+    "cleanupActor": "rentall coordinated scheduler after first successful verified backup",
+    "firstRunAfterRestartHours": 6,
+    "requiresOperatorAcceptance": true
+  },
+  "storage": {
+    "newRoot": "/data/commercial-v1",
+    "database": "/data/commercial-v1/commercial.sqlite",
+    "uploads": "/data/commercial-v1/uploads",
+    "created": false
+  },
+  "access": {
+    "onboardingOnlyEnabled": false,
+    "privatePilotGuardPrepared": true,
+    "supplierAllowlistPrepared": true,
+    "requiredSecretHashVariable": "CONNECT_ONBOARDING_ACCESS_SHA256",
+    "allowedEmailVariable": "CONNECT_ONBOARDING_ALLOWED_EMAILS"
+  },
+  "scheduleActivated": false,
+  "storageSwitched": false,
+  "liveRecipientCreated": false,
+  "liveWebhookCreated": false,
+  "liveFinancialOperations": 0,
+  "realInvoiceIssuanceEnabled": false,
+  "oldDataModified": false,
+  "previousFinancialOrRestoreScenariosRepeated": false,
+  "rollback": "fresh isolated TEST; preserve commercial database and Stripe bindings; prior temporary TEST state not guaranteed",
+  "verification": {
+    "workflowRun": 44938019236,
+    "workflowConclusion": "success",
+    "deploymentId": "bf4c7556-5bea-4da3-ba8e-5c8c49059813",
+    "deploymentStatus": "SUCCESS",
+    "targetedNewTests": 2
+  }
+}
