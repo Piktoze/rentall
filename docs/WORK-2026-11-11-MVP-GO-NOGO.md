@@ -25,6 +25,13 @@ naršyklės originating-context klaidos, valdomoje naršyklėje sesijų nėra.
 Dabartinė Zoho DPA būsena todėl **nepatvirtinta**, ne dar kartą spėjama Pending.
 Naujas prašymas ar pakartotinis laiškas nesiųstas.
 
+Papildomai iš naujos CI nesėkmės pašalintas konkretus laiškų defektas:
+serverio šablonams dabar apibrėžtas patikimas PUBLIC_BASE_URL. Izoliuotas HTTP
+testas tikrina, kad atšaukimo laiškas tikrai įrašomas vieną kartą ir turi
+konfigūruotą svetainės origin. Užsakymų sąraše pridėta pasenusių atsakymų
+apsauga ir saugus numatytasis filtras; dviejų paskyrų testas laukia tikro
+patvirtinimo POST atsakymo prieš skaitydamas nuomininko būseną.
+
 Apskaitos/saugojimo grafikas lieka PROPOSED, NOT APPROVED. Užklausų 12 mėn.
 jau patvirtinta; apskaitos dokumentų >=10 metų – teisės aktų minimumas;
 likusiems terminams būtina operatorės peržiūra.

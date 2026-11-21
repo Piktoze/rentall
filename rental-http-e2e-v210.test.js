@@ -246,6 +246,12 @@ try{
  status(await api(unpaidUrl,{method:'POST',cookie:supplierCookie,
    data:{reason:'Repeated unpaid cancellation'}}),409,
    'Repeated unpaid cancellation must be blocked');
+ const emailSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+  const messages=emailSnapshot.prepare('SELECT payload_json FROM email_outbox WHERE dedupe_key=?').all(`booking:${unpaidCancelId}:cancelled:email:supplier`);
+  assert.equal(messages.length,1,'Cancellation queues one supplier email even when email delivery is disabled');
+  assert.equal(new URL(JSON.parse(messages[0].payload_json).bookingUrl).origin,base,'Queued link uses the configured public origin');
+ }finally{emailSnapshot.close();}
  console.log('PASS HTTP unpaid €100 booking: authorized cancellation, €0 refund, no Stripe object, replay blocked');
  const cancelledConsent=await api('/api/rentals/bookings/'+unpaidCancelId+'/agreement/accept',{
    method:'POST',cookie:renterCookie,data:{accepted:true}

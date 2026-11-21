@@ -368,6 +368,8 @@ app.use('/api',(req,res,next)=>{
 
 const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
+// One trusted configured origin for all outbox links; never derive email URLs from a request Host.
+const PUBLIC_BASE_URL = new URL(process.env.PUBLIC_BASE_URL||appUrl).origin;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const commercialRuntime=process.env.COMMERCIAL_SCT_RUNTIME_ENABLED==='true'

@@ -74,7 +74,10 @@ for(const width of [1280,390])test(`two accounts ${width}px: new checkout, suppl
   const response=renter.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/rentals/bookings'));
   await renter.locator('#payBtn').click();const created=await response;expect(created.ok()).toBeTruthy();const body=await created.json();const id=body.booking.bookingId;
   expect(body.booking.status).toBe('pending');expect(body.booking.paymentStatus).toBe('unpaid');expect(body.booking.orderValue).toBe(100);
-  await supplier.goto(`/?view=supplier-bookings&booking=${id}`);await supplier.locator('#supplierOrderActions .backend-status-action[data-status="confirmed"]').click();
+  await supplier.goto(`/?view=supplier-bookings&booking=${id}`);
+  const confirmation=supplier.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith(`/api/rentals/bookings/${id}/status`));
+  await supplier.locator('#supplierOrderActions .backend-status-action[data-status="confirmed"]').click();
+  const confirmed=await confirmation;expect(confirmed.ok()).toBeTruthy();expect((await confirmed.json()).booking.status).toBe('confirmed');
   await renter.goto(`/?view=my-bookings&booking=${id}`);const card=renter.locator(`.customer-booking-card[data-booking-id="${id}"]`);
   await expect(card).toHaveAttribute('data-booking-status','confirmed');await expect(card.locator('.v231-pay-booking')).toBeVisible();
   await expect(card.locator('.rio-renter-code')).toHaveCount(0);

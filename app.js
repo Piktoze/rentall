@@ -5806,7 +5806,9 @@ function localizeBookingTimelineMessage(message){
     .replace(/^Test Supplier request(?:ed)? (\d+) × (.+) for (\d{4}-\d{2}-\d{2} → \d{4}-\d{2}-\d{2})\.?$/i,(_,quantity,item,dates)=>
       `${uiText('Booking request:')} ${quantity} × ${item} · ${dates}`);
 }
+let unifiedCustomerBookingsLoadVersion=0;
 async function loadUnifiedCustomerBookings(){
+  const loadVersion=++unifiedCustomerBookingsLoadVersion;
   const list=document.getElementById('customerBookingsList');
   if(!list) return;
   list.innerHTML=`<div class="customer-booking-card">${escapeHtml(uiText('Loading…'))}</div>`;
@@ -5831,7 +5833,9 @@ async function loadUnifiedCustomerBookings(){
     }
   }
 
-  const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=window.customerBookingFilter==='all'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===window.customerBookingFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} ${uiText('of')} ${allRows.length}`;
+  if(loadVersion!==unifiedCustomerBookingsLoadVersion)return;
+  const selectedFilter=window.customerBookingFilter||'all';
+  const allRows=[...records.values()].sort((a,b)=>String(b.booking.createdAt||'').localeCompare(String(a.booking.createdAt||'')));const rows=selectedFilter==='all'||typeof window.customerBookingBucket!=='function'?allRows:allRows.filter(x=>window.customerBookingBucket(x.booking)===selectedFilter);const count=document.getElementById('v127BookingCount');if(count)count.textContent=`${rows.length} ${uiText('of')} ${allRows.length}`;
   if(!rows.length){
     window.rentinorbitBookingCommandSelect?.(null);
     list.innerHTML=`<div class="customer-booking-card"><h3>${escapeHtml(uiText('No bookings yet'))}</h3><p class="muted">${escapeHtml(uiText(currentServerUser?'Bookings made with this account will appear here.':'Sign in for cross-device booking history, or open a guest booking from its secure link.'))}</p></div>`;
