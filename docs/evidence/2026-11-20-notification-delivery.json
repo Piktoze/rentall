@@ -1,0 +1,44 @@
+{
+  "type": "notification_delivery_evidence",
+  "run": "2abe0bb64f3821ecfededb19e8a59506",
+  "storage": "temporary_sqlite",
+  "financialOperations": false,
+  "messages": [
+    {
+      "templateKey": "booking_received",
+      "outboxId": 1,
+      "status": "delivered",
+      "providerId": "01a1fa1a-28e6-789c-90b5-69f4de4f8a4e"
+    },
+    {
+      "templateKey": "booking_confirmed",
+      "outboxId": 2,
+      "status": "delivered",
+      "providerId": "01a1fa1a-292c-7431-9ea8-f47ede8c9cc6"
+    },
+    {
+      "templateKey": "booking_paid",
+      "outboxId": 3,
+      "status": "delivered",
+      "providerId": "01a1fa1a-2955-792b-81ce-ac9c0d8134c2"
+    },
+    {
+      "templateKey": "booking_cancelled",
+      "outboxId": 4,
+      "status": "delivered",
+      "providerId": "01a1fa1a-2979-74e7-baff-6a082d84d110"
+    },
+    {
+      "templateKey": "booking_returned",
+      "outboxId": 5,
+      "status": "delivered",
+      "providerId": "01a1fa1a-29a1-7462-b32c-ae2c89b1534c"
+    }
+  ],
+  "delivered": true,
+  "sourceCommit": "4efe7f09876c2edfaf9a1c0a3c35a7a211ec807e",
+  "railwayDeploymentId": "d50f9278-fe7c-4eec-beb3-2186c093a3bd",
+  "gmailInboxCount": 5,
+  "gmailSpamCount": 0,
+  "scope": "Actual application templates and worker against disposable outbox; synthetic messages only. Provider delivered status independently confirmed in authorized Gmail INBOX. Not a real customer booking."
+}

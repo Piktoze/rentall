@@ -1,0 +1,21 @@
+{
+  "scope": "Read-only Stripe connector, 2026-11-20; not LIVE operations or activation",
+  "accountId": "acct_1UT4J2LlutaSFdau",
+  "livemode": true,
+  "chargesEnabled": false,
+  "payoutsEnabled": false,
+  "detailsSubmitted": false,
+  "cardPayments": "inactive",
+  "transfers": "inactive",
+  "disabledReason": "requirements.past_due",
+  "externalBankAccounts": 0,
+  "v1WebhookEndpoints": 0,
+  "v1ConnectedAccounts": 0,
+  "requiredGroups": ["business type and service description/MCC/website/support phone", "representative identity/contact/address", "external bank account", "personal terms acceptance"],
+  "testEvidenceAccountId": "acct_1UT4JCLM72MR015z",
+  "accountRelationshipVerified": false,
+  "bankPayoutVerified": false,
+  "mutationsPerformed": false,
+  "readiness": "BLOCKED",
+  "limitations": ["Connector lists this accessible LIVE account only; do not claim its relationship to the sandbox is established", "V1 endpoint listing is not proof about all possible Workbench/V2 event destinations", "No supplier onboarding or bank payout is proved by a TEST balance transfer", "Current SCT runtime explicitly rejects LIVE keys and non-temporary databases"]
+}

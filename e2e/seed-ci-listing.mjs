@@ -46,6 +46,11 @@ try{
   for(const width of [1280,390]){
     const supplier=`journey-supplier-${width}@example.test`,renter=`journey-renter-${width}@example.test`;
     for(const [email,role] of [[supplier,'supplier'],[renter,'customer']])createAppUser({email,role,password:'SyntheticJourney123!',displayName:'Synthetic TEST'});
+    const {declareSupplierTraderStatus}=await import('../db.js');
+    declareSupplierTraderStatus(db.prepare('SELECT user_id FROM app_users WHERE email=?').get(supplier).user_id,'private');
+    const checkoutListing=submitListingReview({...listing,id:`ci-checkout-${width}`,title:`CI Checkout ${width}`,quantity:2},supplier);
+    const checkoutRevision=db.prepare('SELECT revision FROM listing_reviews WHERE listing_id=?').get(checkoutListing.id).revision;
+    decideListingReview({listingId:checkoutListing.id,revision:checkoutRevision,status:'approved',adminId:'isolated-ci',validate:x=>x});
     const listingId=`ci-journey-${width}`,bookingId=`CI-UI-${width}`;
     upsertRentalListing({listingId,ownerEmail:supplier,title:'Synthetic browser journey',totalQuantity:1});
     createRentalBookingAtomic({bookingId,listingId,startDate:'2099-05-01',endDate:'2099-05-02',quantity:1,status:'confirmed',customerEmail:renter,customerName:'Synthetic renter',orderValue:100});

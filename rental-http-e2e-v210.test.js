@@ -850,6 +850,13 @@ try{
  status(await api(route+'/return-confirm',{method:'POST',cookie:supplierCookie,
    data:{returnCondition:'good'}}),409,'Return cannot be repeated');
  assert.equal(returned.body.booking.status,'returned');
+ const mailReadback=new Database(dbPath,{readonly:true});
+ try{
+  const returnMail=mailReadback.prepare("SELECT recipient,template_key FROM email_outbox WHERE dedupe_key IN (?,?)").all(`booking:${id}:status:returned`,`booking:${id}:returned:supplier`);
+  assert.equal(returnMail.length,2,'One durable return email for each actual party, including after replay');
+  assert.ok(returnMail.some(x=>x.recipient===renter&&x.template_key==='booking_returned'));
+  assert.ok(returnMail.some(x=>x.recipient===supplier&&x.template_key==='booking_returned_supplier'));
+ }finally{mailReadback.close();}
  const listingReview={bookingId:id,rating:5,comment:'Synthetic renter review'};
  for(const cookie of [supplierCookie,adminCookie,outsiderCookie,'']){
    status(await api('/api/rentals/reviews',{method:'POST',cookie,data:listingReview}),403,
