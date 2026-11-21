@@ -48,3 +48,25 @@ pagal `PERSISTENT-LAUNCH-PLAN-2026-11-20.md`; esamos `/data` dabar nekeisti.
 
 Viešas tiekėjo DPA tekstas nėra įrodymas, kad Zoho individualus prašymas
 pasirašytas, ir nėra savaiminis visų faktinių perdavimų vertinimas.
+
+## Vienoje vietoje: konkretūs šio etapo pasiūlymai peržiūrai
+
+1. **Stripe veiksmas:** https://dashboard.stripe.com/account/details – pasirinkus
+   LIVE RentAll paskyrą užpildyti „Activate your account“ / trūkstamus veiklos,
+   atstovo ir banko laukus. Jokių duomenų siųsti pokalbyje nereikia. Tai nėra
+   leidimas programoje įjungti LIVE mokėjimus. Oficialus Stripe pagalbos šaltinis
+   aktyvavimo nuorodai: https://support.stripe.com/questions/company-beneficial-ownership-and-director-requirement
+2. **Peržiūrėti vieną apskaitos/saugojimo projektą:**
+   `ACCOUNTING-RETENTION-PROPOSAL-2026-11-21.md`. Siūloma RIO metų serija nuo
+   000001 (jei nebuvo panaudota), kreditinės toje pačioje eilėje, komisinio SF
+   po paslaugos užbaigimo ir aiškus kategorijų grafikas. Nepatvirtinta, todėl
+   numerių/išrašymo/automatinio trynimo nejungiame. Pasirinkti kas patvirtina
+   apskaitą: pati operatorė ar jos buhalterė. Siūloma privataus ne verslininko
+   → įmonės nuomą kol kas palikti užblokuotą iki suderintos mokestinės tvarkos.
+3. **Zoho DPA:** pateikti tik esamo pasirašyto DPA / Completed įrodymą, kai
+   prieinamas. Naujo prašymo ar pakartotinio pagalbos laiško nereikia.
+
+Saugyklos perjungimo dabar neprašoma: pagal dabartinį nurodymą jis nevykdomas.
+Prieš būsimą konkretų perjungimą reikės atskiro leidimo naujam katalogui ir
+kopijos tikslui; mokamų išteklių be patvirtinimo nekuriame. PVM/SVS sprendimą
+priimti tik pagal atskirą faktinių pirkimų vertinimą, ne pagal šį techninį etapą.

@@ -64,7 +64,7 @@ export function isDeploymentEnvironment(env=process.env){
 export function resolveDatabaseConfig(env=process.env){
   if(privateTestRequested(env)){
     const s=privateTestSettings(env);
-    return s.valid?{ok:true,driver:'sqlite',source:'private-test',path:s.db,volumeRoot:null}:{ok:false,driver:'unsupported',source:'private-test',error:'Invalid private TEST configuration'};
+    return s.valid?{ok:true,driver:'sqlite',source:env.PRIVATE_TEST_STORAGE_MODE==='persistent'?'private-test-persistent':'private-test',path:s.db,volumeRoot:env.PRIVATE_TEST_STORAGE_MODE==='persistent'?s.root:null}:{ok:false,driver:'unsupported',source:'private-test',error:'Invalid private TEST configuration'};
   }
   const databaseUrl=String(env.DATABASE_URL||'').trim();
   const explicit=String(env.RENTINORBIT_DB_PATH||env.DB_PATH||'').trim();
@@ -86,7 +86,7 @@ export function resolveDatabaseConfig(env=process.env){
 }
 
 export function resolveUploadsConfig(env=process.env){
-  if(privateTestRequested(env))return {directory:privateTestSettings(env).uploads||'',source:'private-test',volumeRoot:null};
+  if(privateTestRequested(env)){const s=privateTestSettings(env),persistent=env.PRIVATE_TEST_STORAGE_MODE==='persistent';return {directory:s.uploads||'',source:persistent?'private-test-persistent':'private-test',volumeRoot:persistent?s.root:null};}
   const volumeRoot=String(env.RAILWAY_VOLUME_MOUNT_PATH||env.PERSISTENT_DATA_DIR||'').trim();
   const explicit=String(env.UPLOADS_DIR||'').trim();
   const directory=explicit?path.resolve(explicit):(volumeRoot?path.join(path.resolve(volumeRoot),'uploads'):path.join(rootDir,'uploads'));
@@ -226,8 +226,8 @@ export function legalLaunchReadinessReport(env=process.env){
 export function productionStorageReport(env=process.env){
   if(privateTestRequested(env)){
     const s=privateTestSettings(env);let ready=false;
-    try{if(!s.valid)throw Error();for(const p of [s.root,s.db,s.uploads])assertPrivatePath(p);fs.accessSync(s.root,fs.constants.R_OK|fs.constants.W_OK);fs.accessSync(s.uploads,fs.constants.R_OK|fs.constants.W_OK);ready=true;}catch{}
-    return {ready,deployment:isDeploymentEnvironment(env),checks:[{id:'private_test_isolated_storage',required:true,ready}],blocking:ready?[]:['private_test_isolated_storage'],database:{driver:'sqlite',source:'private-test',volumeConfigured:false}};
+    try{if(!s.valid)throw Error();if(env.PRIVATE_TEST_STORAGE_MODE!=='persistent')for(const p of [s.root,s.db,s.uploads])assertPrivatePath(p);fs.accessSync(s.root,fs.constants.R_OK|fs.constants.W_OK);fs.accessSync(s.uploads,fs.constants.R_OK|fs.constants.W_OK);ready=true;}catch{}
+    return {ready,deployment:isDeploymentEnvironment(env),checks:[{id:'private_test_isolated_storage',required:true,ready}],blocking:ready?[]:['private_test_isolated_storage'],database:{driver:'sqlite',source:resolveDatabaseConfig(env).source,volumeConfigured:env.PRIVATE_TEST_STORAGE_MODE==='persistent'}};
   }
   const deployment=isDeploymentEnvironment(env);
   const config=resolveDatabaseConfig(env);

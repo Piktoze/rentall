@@ -25,7 +25,38 @@ Sėkmingi tikri Stripe TEST A/B iš `7e330c2` nebekartojami. Modelis yra
 | B2 sąsaja | Dvi nepriklausomos naršyklės sesijos, sutartys, vienkartinis kodas ir grąžinimas PASS 1280/390 px. Atskiras naujos rezervacijos → tiekėjo patvirtinimo → mokėjimo CTA → neapmokėto atšaukimo UI kelias PASS tais pačiais dydžiais. Pataisytas paslėptas užsakymo ekranas atidarant el. laiško nuorodą iki sesijos įkėlimo | CI naudoja izoliuotą serverį; apmokėto UI kelio pradinis `paid` yra aiškus sintetinis precondition. Tai nėra naujas Stripe UI mokėjimo ar autentifikuoto rentinorbit.com E2E įrodymas |
 | B3 pranešimai | Visi penki kategorijų laiškai Resend `delivered` ir faktiškai Gmail INBOX (ne spam). Sutvarkyta grąžinimo laiškų eilė abiem šalims; išsaugomas Resend ID. `evidence/2026-11-20-notification-delivery.json` | Šablonų pristatymo bandymas nesukuria tikros nuomos; pranešimų teisinės/apskaitos kategorijos laikomos atskirai |
 | B4 dokumentai ir SF | Pilnos LT platformos papildymai: šalių vaidmenys, A modelis, ginčai, atšaukimai, dokumentų išrašytojai, privatumas ir tikra laikina saugykla. Operatorės gauti rekvizitai naudojami iš saugios konfigūracijos. Komisinio ir visos nuomos dokumentų išrašytojai atskirti patikimais snapshot; SF lieka užblokuotos | Užsienio paslaugų PVM ir apskaitos sprendimai, likusių kategorijų saugojimas, Zoho DPA įrodymas, galutinis LT dokumentų patvirtinimas ir atitinkamas kitų kalbų suderinimas. Vienas sąrašas `OPERATOR-DECISIONS-2026-11-21.md` |
-| LIVE ir nuolatinė saugykla | Tik skaitymo LIVE patikra ir tik laikinuose kataloguose sėkminga DB+failų repeticija. Konkretus planas `PERSISTENT-LAUNCH-PLAN-2026-11-20.md` | Pasiekiama LIVE paskyra turi neaktyvius mokėjimus/išmokas, nėra banko ir V1 webhookų/nuomotojų. Ryšys su TEST sandbox nepatvirtintas. Dabartinė SCT vykdyklė tyčia tik TEST ir tik laikina; `deferred_supplier_transfer_implemented` lieka false iki atskiro nuolatinio vykdymo įgyvendinimo/patikros. Esamos `/data` neliesti |
+| LIVE ir nuolatinė saugykla | Tik skaitymo LIVE patikra ir tik laikinuose kataloguose sėkminga DB+failų repeticija. Konkretus planas `PERSISTENT-LAUNCH-PLAN-2026-11-20.md` | Pasiekiama LIVE paskyra turi neaktyvius mokėjimus/išmokas, nėra banko ir V1 webhookų/nuomotojų. Ryšys su TEST sandbox nepatvirtintas. SCT vykdyklė lieka tik TEST; atskiras nuolatinis privatus TEST režimas įgyvendintas ir izoliuotai patikrintas, bet neįjungtas. Komercinio LIVE vykdymo vartas `deferred_supplier_transfer_implemented` lieka false. Esamos `/data` neliesti |
+
+### Naujausias techninis papildymas: 2026-11-21
+
+- Nuolatinis **privatus TEST** SCT režimas įgyvendintas atskira saugyklos
+  parinktimi, su naujo katalogo markeriu ir senų mokėjimų atmetimu. Dabartinė
+  Railway konfigūracija į jį NEPERJUNGTA; `/data` nepaliesta.
+- Diskinio žurnalo atkūrimas po trijų SIGKILL taškų (payment/transfer/refund)
+  ir dviejų atskirų atkūrimo procesų: PASS su vietiniu teikėjo pakaitalu.
+  Tikri Stripe TEST A/B iš 7e330c2 nekartoti. Neaiškus rezultatas be vienintelio
+  patikimo provider objekto toliau sustabdomas rankiniam suderinimui, ne aklam retry.
+- Pataisytas vykdyklės eilės badavimas: pirmi dešimt užblokuotų komandų
+  nebestabdo vėlesnių. Darbuotojo rezultatų žurnale nelieka PaymentIntent
+  `clientSecret`; tikrinamas rezultato laukų leidžiamasis sąrašas.
+- Tikras izoliuotas HTTP serveris po SIGKILL išlaiko paskyrą/sesiją/failą;
+  privačiai prieigai privalomas naujas OTP. Prieigos, admin, rolės, CSRF ir
+  užklausų dažnio apsaugos PASS. 120 paieškos užklausų / 12 lygiagrečių:
+  be 5xx. `evidence/2026-11-21-targeted-security-load.json`.
+  Tai tikslinė vietinė patikra, ne nepriklausomas pentestas ar Railway talpos garantija.
+- LIVE skaitymo įrodymai atnaujinti: `evidence/2026-11-21-live-readiness.json`.
+  Mokėjimai/išmokos išjungti, duomenys nepateikti, banko nėra. V1 webhookų ir
+  Connect sąrašai tušti; V2 paskyrų ar Workbench nebuvimas tuo neįrodytas.
+- Konkretūs apskaitos/saugojimo pasiūlymai parengti
+  `ACCOUNTING-RETENTION-PROPOSAL-2026-11-21.md`, statusas PROPOSED.
+
+| Likęs blokatorius | Konkretus užbaigimas | Kas veikia dabar |
+|---|---|---|
+| Komercinė nuolatinė mokėjimų vykdyklė | Atskiras LIVE adapteris, paskyros/sandbox ryšio ir webhook/gavėjo susiejimo įrodymas; vėlesnis kontroliuojamas įjungimas | Nuolatinio privataus TEST vykdymas ir atkūrimas patikrinti; LIVE vartas nepakeistas |
+| Nuolatinės saugyklos perjungimas ir avarinė kopija | Atskirai leistas naujas katalogas; vietos/sąnaudų patikra; bendras DB+failų manifestas ir nepriklausomas kopijos tikslas; tikras Railway perkūrimo bandymas | Kodas ir konkretus perjungimo/rollback planas parengti; perjungimas dabar draudžiamas |
+| LIVE Stripe aktyvavimas / banko išmoka | Operatorė užpildo oficialią Stripe formą; paskui tikrinami Connect/webhook ir išmokos atskiru leidimu | Šviežia GET patikra; jokio LIVE finansinio veiksmo |
+| Apskaita ir dokumentų patvirtinimas | Peržiūrėti konkretų RIO numeravimo/kreditavimo/saugojimo projektą; užbaigti privačios nuomos → įmonės tvarką arba palikti derinį blokuotą; LT ir kitų kalbų galutinis suderinimas | Rekvizitai ir A modelis įtraukti; tikros SF neišrašomos |
+| Tiekėjų sutartys / užsienio paslaugų PVM | Zoho esamo DPA užbaigimo įrodymas; atskiras faktinių užsienio paslaugų sąskaitų mokestinis vertinimas | VMI registracija nekeičiama; techniniai darbai nuo to nestabdomi |
 
 **Pilnos platformos NO-GO lieka.** Techninių ir teisinių saugos vartų neišjungti.
 DNS, Zoho/Resend įrašai, istoriniai užsakymai ir LIVE finansinės operacijos nekeičiami.

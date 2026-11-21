@@ -1,8 +1,9 @@
 // Integrated, explicitly opt-in SCT TEST runtime. No historical booking migration.
-// New financial work is restricted to a disposable database, never /data.
+// Disposable storage is the default. Persistent TEST requires a separately validated fresh-root marker; LIVE is refused.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {assertPersistentTestDatabase} from './sct-persistent-storage.js';
 import {assertPlatformCostConfiguration,calculatePlatformCostSplit} from './platform-cost-policy.js';
 import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
 import {installSctBookingBindings,reserveSctBookingBinding,bindSctPaymentIntent,getSctBookingBinding} from './sct-booking-binding.js';
@@ -20,8 +21,15 @@ export function assertSctTestStorage(db,env){
  const root=fs.realpathSync(os.tmpdir()),real=fs.realpathSync(file);
  if(!real.startsWith(root+path.sep)||real==='/data'||real.startsWith('/data/'))fail('SCT_DISPOSABLE_DATABASE_REQUIRED');
 }
-export function createSctTestRuntime({db,stripe,env,now=Date.now}){
- assertSctTestStorage(db,env);
+export function createSctTestRuntime(options){
+ assertSctTestStorage(options.db,options.env);
+ return createRuntime(options);
+}
+export function createPersistentSctTestRuntime(options){
+ assertPersistentTestDatabase(options.db,options.env);
+ return createRuntime(options);
+}
+function createRuntime({db,stripe,env,now=Date.now}){
  if(!isIsolatedStripeTestClient(stripe,env.STRIPE_SECRET_KEY))fail('SCT_TRUSTED_TEST_CLIENT_REQUIRED');
  assertPlatformCostConfiguration(env);
  const feePayer='platform';
@@ -272,21 +280,25 @@ export function createSctTestRuntime({db,stripe,env,now=Date.now}){
  }
  function setHold(id,reason){binding(id);if(typeof reason!=='string'||reason.trim().length<3)fail('SCT_HOLD_REASON_REQUIRED');
   db.prepare('UPDATE sct_test_enrollments SET hold_reason=? WHERE booking_id=?').run(reason.slice(0,500),id);return {held:true};}
+ db.exec('CREATE TABLE IF NOT EXISTS sct_worker_checks(booking_id TEXT NOT NULL,kind TEXT NOT NULL,checked_ms INTEGER NOT NULL,PRIMARY KEY(booking_id,kind))');
+ const workerResult=r=>Object.fromEntries(['status','providerId','amountCents','bankPayoutVerified'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]]));
  let sweeping=false;
  async function sweep(){
   if(sweeping)return {busy:true};sweeping=true;const results=[];
   try{
    // Recover existing provider truth first. Absence never authorizes a new create.
-   for(const c of db.prepare("SELECT booking_id,kind FROM sct_test_commands WHERE status='uncertain' ORDER BY created_ms LIMIT 10").all()){
-    try{results.push({bookingId:c.booking_id,...await recover(c.booking_id,c.kind)});}
+   for(const c of db.prepare("SELECT c.booking_id,c.kind FROM sct_test_commands c LEFT JOIN sct_worker_checks w ON w.booking_id=c.booking_id AND w.kind=c.kind WHERE c.status='uncertain' ORDER BY COALESCE(w.checked_ms,0),c.created_ms,c.booking_id LIMIT 10").all()){
+    try{results.push({bookingId:c.booking_id,...workerResult(await recover(c.booking_id,c.kind))});}
     catch(e){results.push({bookingId:c.booking_id,blocked:e.code||'SCT_PROVIDER_UNAVAILABLE'});}
+    finally{db.prepare('INSERT INTO sct_worker_checks VALUES(?,?,?) ON CONFLICT(booking_id,kind) DO UPDATE SET checked_ms=excluded.checked_ms').run(c.booking_id,c.kind,now());}
    }
-   for(const b of db.prepare(`SELECT b.booking_id FROM rental_bookings b JOIN sct_test_enrollments e USING(booking_id)
+   for(const b of db.prepare(`SELECT b.booking_id FROM rental_bookings b JOIN sct_test_enrollments e USING(booking_id) LEFT JOIN sct_worker_checks w ON w.booking_id=b.booking_id AND w.kind='eligible_transfer'
     WHERE b.status='returned' AND b.payment_status='paid' AND NOT EXISTS
      (SELECT 1 FROM sct_test_commands c WHERE c.booking_id=b.booking_id AND c.kind!='payment')
-    ORDER BY b.returned_at LIMIT 10`).all()){
-    try{results.push({bookingId:b.booking_id,...await transfer(b.booking_id)});}
+    ORDER BY COALESCE(w.checked_ms,0),b.returned_at,b.booking_id LIMIT 10`).all()){
+    try{results.push({bookingId:b.booking_id,...workerResult(await transfer(b.booking_id))});}
     catch(e){results.push({bookingId:b.booking_id,blocked:e.code||'SCT_PROVIDER_UNAVAILABLE'});}
+    finally{db.prepare("INSERT INTO sct_worker_checks VALUES(?,'eligible_transfer',?) ON CONFLICT(booking_id,kind) DO UPDATE SET checked_ms=excluded.checked_ms").run(b.booking_id,now());}
    }
    return {results};
   }finally{sweeping=false;}

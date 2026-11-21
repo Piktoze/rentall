@@ -1,0 +1,21 @@
+{
+  "scope": "local isolated HTTP; 12 concurrent readers, 120 authenticated listing requests",
+  "requests": 120,
+  "concurrency": 12,
+  "statuses": {
+    "200": 120
+  },
+  "elapsedMs": 68,
+  "p95Ms": 11,
+  "serverRestart": "SIGKILL; private gate requires fresh OTP; app session/user/file retained",
+  "security": {
+    "unauthenticatedDenied": true,
+    "adminRequiresAppSession": true,
+    "crossOriginWriteDenied": true,
+    "passwordResetRateLimited": true,
+    "listingRateLimited": true,
+    "roleEscalationDenied": true
+  },
+  "realStripeCalls": 0,
+  "realEmails": 0
+}

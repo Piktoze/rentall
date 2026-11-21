@@ -58,3 +58,60 @@ kopijos negalima naudoti pamirštant naujesnius mokėjimus.
 `persistent-storage-rehearsal.test.mjs` patikrina šviežią kanoninę schemą,
 sintetinį naudotoją, atskirą failą, uždarymo/atidarymo ir kopijos vientisumą
 tik laikinuose kataloguose. Tai repeticija, ne esamo tomo migracijos įrodymas.
+
+## 2026-11-21 konkretus parengtas privatus nuolatinis TEST režimas
+
+Šis papildymas pakeičia aukščiau nurodytą teiginį, kad privati konfigūracija
+visada ignoruoja nuolatinius kelius. Numatytasis režimas toliau laikinas.
+`createPersistentSctTestRuntime` naudoja tą patį tik TEST tikrinamą SCT branduolį;
+LIVE raktai/objektai nepriimami. Komercinio LIVE vykdyklė ir jos vartai dėl to
+nelaikomi užbaigtais. Nei naujas resursas, nei perjungimas dabar neatliktas.
+
+Vėlesnio privataus TEST perjungimo tikslus rinkinys:
+
+- `PRIVATE_TEST_STORAGE_MODE=persistent`;
+- `PRIVATE_TEST_PERSISTENT_ROOT=/data/launch-v1`;
+- išlaikyti esamą privačią OTP prieigą, TEST raktus, 1 repliką;
+- nauja tuščia `/data/launch-v1/test.sqlite` ir `/data/launch-v1/uploads`;
+- naujo katalogo `.rentinorbit-storage.json`:
+  `{"version":1,"purpose":"fresh-private-stripe-test","runId":"<dabartinis PRIVATE_TEST_RUN_ID>","database":"test.sqlite","uploads":"uploads"}`;
+- markerio `runId` nėra slaptažodis; jis susieja paruoštą saugyklą su būtent
+  šiuo bandymu. Simbolinės nuorodos ir neįtrauktų senų mokėjimų istorija atmetama.
+
+Ši parinktis **neskirta tikriems klientams ar LIVE**. Būsimam komerciniam startui
+naudoti naują atskirą saugyklos versiją ir LIVE objektų susiejimą; šio TEST katalogo
+ar sintetinių duomenų nekonvertuoti į LIVE. Iki perjungimo būtina patikrinti
+laisvą esamo tomo vietą ir naudojimo sąnaudas, neįsigyjant jokio naujo plano.
+
+### Suderinta kopija ir atkūrimas (pasiūlymas, ne įjungta konfigūracija)
+
+1. Užblokuoti naujas rašančias užklausas ir pristabdyti mokėjimų/laiškų vykdykles;
+   užbaigti vykstančius veiksmus, pažymėti neapibrėžtus žurnale. Išsaugoti tikslią
+   kodo versiją ir neslaptos konfigūracijos kontrolinį rinkinį.
+2. SQLite backup API sukurti vientisą naujos bazės kopiją; nekopijuoti vien
+   aktyvaus `.sqlite` failo ignoruojant WAL. To paties sustabdymo lange kopijuoti
+   tik naujos saugyklos uploads. Nei senos `/data` bazės, nei senų failų neliesti.
+3. Manifestas: snapshot ID, UTC laikas, schema, commit, kiekvieno failo santykinis
+   kelias, dydis, SHA-256. Patikrinti SQLite `integrity_check`, visus failų hash ir
+   kad nuotraukų nuorodos turi atitinkamus failus. Atskiros DB ir nuotraukų kopijos
+   be bendro manifesto nelaikomos viena atkurta saugykla.
+4. Kopiją laikyti atskirai nuo aktyvaus katalogo ir, komerciniam režimui,
+   turėti nepriklausomą kopiją už vieno tomo ribų. Naujo mokamo S3/bucket nekurti;
+   jei esamas nepriklausomas tikslas neprieinamas be papildomo mokesčio, prieš
+   užsakymą pateikti atskirą kainą. Vien to paties tomo kopija nėra avarijos apsauga.
+5. Atkurti į atskirą izoliuotą katalogą su išjungtais Stripe/laiškais, tikrinti
+   vientisumą ir ištrynimo žurnalo pakartotinį pritaikymą; užfiksuoti trukmę.
+6. Tik tada trumpame perjungimo lange pakeisti kelią, paleisti vieną repliką,
+   patikrinti privačią prieigą, naują įkėlimą, tikrą Railway perkūrimą ir išlikimą.
+
+Rollback prieš tikrus mokėjimus: grąžinti ankstesnį commit ir
+`PRIVATE_TEST_STORAGE_MODE=temporary`, išvalyti `PRIVATE_TEST_PERSISTENT_ROOT`,
+išlaikyti tą pačią OTP apsaugą, TEST ir domeną. Naujo katalogo automatiškai netrinti.
+Po tikrų mokėjimų šis rollback netinka – pirmiausia suderinti visus vėlesnius
+Stripe objektus ir žurnalą, kitaip atkūrus seną DB galima pakartoti pervedimą.
+
+Įrodymai: `sct-persistent-restart.test.mjs` tris atskirus procesus nutraukia
+SIGKILL po vietinio teikėjo priėmimo ir du kartus paleidžia atkūrimą. Tikras
+`ops/start.js` HTTP serveris atskirai nutraukiamas/paleidžiamas iš naujo;
+paskyra, sesija ir failas išlieka, privačiai prieigai reikia naujo OTP.
+Tai nėra jau įvykusio Railway tomo perjungimo ar LIVE finansinių operacijų įrodymas.

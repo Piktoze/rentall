@@ -141,3 +141,19 @@ test('missing or ambiguous provider evidence never permits another financial req
  await assert.rejects(g.service.recover(other,'transfer'),{code:'SCT_MANUAL_RECONCILIATION_REQUIRED'});
  await assert.rejects(g.service.transfer(other));assert.equal(g.calls.transfer,1);
 });
+
+test('blocked old commands do not starve later uncertain payments across worker sweeps',async()=>{
+ const f=fixture(),ids=[];
+ for(let n=0;n<11;n++){const id=await booking(f);ids.push(id);f.fault.payment=true;await assert.rejects(f.service.createPayment(id));}
+ const list=f.stripe.paymentIntents.list;
+ f.stripe.paymentIntents.list=async args=>{const page=await list(args);return {...page,data:page.data.filter(p=>p.metadata.bookingId===ids[10])};};
+ await f.service.sweep();await f.service.sweep();
+ assert.equal(d.db.prepare("SELECT status FROM sct_test_commands WHERE booking_id=? AND kind='payment'").get(ids[10]).status,'done');
+ assert.equal(f.calls.payment,11);
+});
+
+test('worker recovery results cannot leak a PaymentIntent client secret to operational logs',async()=>{
+ const f=fixture(),id=await booking(f);f.fault.payment=true;await assert.rejects(f.service.createPayment(id));
+ const result=await f.service.sweep();assert.equal(JSON.stringify(result).includes('synthetic_secret'),false);
+ assert.equal(JSON.stringify(result).includes('clientSecret'),false);assert.equal(f.calls.payment,1);
+});

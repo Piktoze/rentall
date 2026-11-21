@@ -3,7 +3,7 @@ import {installPrivateTestAccess} from './modules/private-test-access.js';
 import {privateTestSettings,privateTestRequested} from './modules/private-test-mode.js';
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
 import {installIsolatedRecoveryProbe} from './modules/isolated-recovery-probe.js';
-import {createSctTestRuntime} from './modules/sct-test-runtime.js';
+import {createSctTestRuntime,createPersistentSctTestRuntime} from './modules/sct-test-runtime.js';
 import {createIsolatedStripeTestClient} from './modules/isolated-stripe-test-client.js';
 import {recordStripeRentalDispute,hasStripeRentalDisputeHold} from './modules/stripe-rental-disputes.js';
 import {assessLegacyDirectChargeOperation} from './modules/sct-legacy-direct-charge-guard.js';
@@ -368,7 +368,7 @@ const appUrl = runtimeConfig.appUrl;
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
 const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const sctRuntime=process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
- ? createSctTestRuntime({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null;
+ ? (process.env.PRIVATE_TEST_STORAGE_MODE==='persistent'?createPersistentSctTestRuntime:createSctTestRuntime)({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null;
 installPrivateTestRecipientOnboarding(app,{getStripe:()=>createIsolatedStripeTestClient(stripeKey)});
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
@@ -1885,7 +1885,7 @@ app.get('/api/config', (req,res)=>{
 });
 
 async function privateTestOwnerSetup(req,user){
- if(!privateTestRequested()||runtimeConfig.database.source!=='private-test')return user;
+ if(!privateTestRequested()||!['private-test','private-test-persistent'].includes(runtimeConfig.database.source))return user;
  const s=privateTestSettings();
  if(req.privateTestIdentity?.email!==s.owner||user.email!==s.owner)return user;
  // Ownership is attested by the allowlisted mailbox gate AND the normal account password.

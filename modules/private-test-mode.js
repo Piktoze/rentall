@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {inspectPersistentTestStorage} from './sct-persistent-storage.js';
 
 export const privateTestRequested=(env=process.env)=>env.PRIVATE_TEST_ENABLED==='true';
 export function privateTestSettings(env=process.env){
@@ -13,7 +14,10 @@ export function privateTestSettings(env=process.env){
  env.RENTINORBIT_CATALOG_ONLY==='false'&&env.RENTINORBIT_SCT_TEST_RUNTIME==='true'&&
  env.RENTINORBIT_DEMO_PAYMENTS==='false'&&/^[a-f0-9]{32}$/.test(run)&&
  emails.length>0&&emails.length<=5&&emails.every(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))&&emails.includes(owner);
- const root=/^[a-f0-9]{32}$/.test(run)?path.join(os.tmpdir(),'rentinorbit-private-test',run):null;
+ const persistent=env.PRIVATE_TEST_STORAGE_MODE==='persistent';
+ if(env.PRIVATE_TEST_STORAGE_MODE&&!['temporary','persistent'].includes(env.PRIVATE_TEST_STORAGE_MODE))throw new Error('PRIVATE_TEST_STORAGE_MODE_INVALID');
+ const selected=persistent?inspectPersistentTestStorage(env):null;
+ const root=selected?.root||(/^[a-f0-9]{32}$/.test(run)?path.join(os.tmpdir(),'rentinorbit-private-test',run):null);
  return {requested,valid,emails,owner,root,db:root?path.join(root,'test.sqlite'):null,uploads:root?path.join(root,'uploads'):null};
 }
 export function assertPrivatePath(target){
@@ -30,7 +34,7 @@ export function preparePrivateTestEnvironment(env=process.env){
  const s=privateTestSettings(env);
  if(!s.requested)return;
  if(!s.valid)throw Object.assign(new Error('PRIVATE_TEST_CONFIGURATION_INVALID'),{code:'PRIVATE_TEST_CONFIGURATION_INVALID'});
- for(const p of [s.root,s.db,s.uploads])assertPrivatePath(p);
+ if(env.PRIVATE_TEST_STORAGE_MODE!=='persistent')for(const p of [s.root,s.db,s.uploads])assertPrivatePath(p);
  fs.mkdirSync(s.root,{recursive:true,mode:0o700});fs.mkdirSync(s.uploads,{recursive:true,mode:0o700});
  // No copying, migrating, opening or checkpointing the existing mounted database.
  for(const k of ['DB_BACKUP_ENABLED','BACKUP_SCHEDULER_ENABLED','BACKUP_S3_ENABLED','RENTINORBIT_ISOLATED_RECOVERY_PROBE'])env[k]='false';

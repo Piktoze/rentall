@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-11-21T08:09:16.359Z",
+  "mode": "LIVE read-only",
+  "accountId": "acct_1UT4J2LlutaSFdau",
+  "chargesEnabled": false,
+  "payoutsEnabled": false,
+  "detailsSubmitted": false,
+  "capabilities": {
+    "cardPayments": "inactive",
+    "transfers": "inactive"
+  },
+  "externalAccounts": 0,
+  "disabledReason": "requirements.past_due",
+  "requiredFields": [
+    "business_profile.mcc",
+    "business_profile.product_description",
+    "business_profile.support_phone",
+    "business_profile.url",
+    "business_type",
+    "external_account",
+    "representative.address.city",
+    "representative.address.line1",
+    "representative.address.postal_code",
+    "representative.dob.day",
+    "representative.dob.month",
+    "representative.dob.year",
+    "representative.email",
+    "representative.first_name",
+    "representative.last_name",
+    "representative.phone",
+    "tos_acceptance.date",
+    "tos_acceptance.ip"
+  ],
+  "v1WebhookEndpoints": 0,
+  "v1ConnectedAccounts": 0,
+  "limits": [
+    "V1 lists do not prove absence of Workbench V2 destinations or V2 recipient-only accounts",
+    "Relationship between connected LIVE account and the previously tested sandbox is not established",
+    "No LIVE financial operations performed"
+  ],
+  "officialActivationPage": "https://dashboard.stripe.com/account/details"
+}
