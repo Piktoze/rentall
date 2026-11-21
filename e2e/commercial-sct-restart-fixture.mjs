@@ -12,7 +12,7 @@ const {createCommercialSctRuntime}=await import('../modules/commercial-sct-runti
 
 const {createCommercialStripeClient}=await import('../modules/commercial-sct-client.js');
 const key='sk_live_synthetic_never_sent_to_stripe';
-const env={NODE_ENV:'test',STRIPE_MODE:'live',PRIVATE_TEST_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'true',COMMERCIAL_SCT_POLICY_VERSION:'sct-a-15-85-v1',COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID:'acct_commercialPlatform',COMMERCIAL_SCT_STORAGE_ROOT:root,STRIPE_SECRET_KEY:key,RENTINORBIT_SCT_TEST_RUNTIME:'false',SCT_STRIPE_FEE_PAYER:'platform'};
+const env={NODE_ENV:'test',STRIPE_MODE:'live',PRIVATE_TEST_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'true',COMMERCIAL_SCT_POLICY_VERSION:'sct-a-15-85-v1',COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID:'acct_commercialPlatform',COMMERCIAL_SCT_STORAGE_ROOT:root,STRIPE_SECRET_KEY:key,RENTINORBIT_SCT_TEST_RUNTIME:'false',SCT_STRIPE_FEE_PAYER:'platform',COMMISSION_ISSUANCE_ENABLED:'true'};
 let seq=0;
 const supplier='sct-supplier@example.test',customer='sct-renter@example.test';
 if(!d.db.prepare('SELECT 1 FROM app_users WHERE email=?').get(supplier))d.createAppUser({email:supplier,password:'SyntheticPassword123',role:'supplier'});
@@ -68,7 +68,9 @@ function returned(id){d.createRentalAgreement({bookingId:id,termsVersion:'sct-te
  d.acceptRentalAgreement(id,'supplier',{actorEmail:supplier,authMethod:'session'});
  const pin=d.issueRentalTransferCode(id,'pickup','customer');
  assert.equal(d.verifyAndConsumeRentalTransferCode(id,'pickup',pin.code).ok,true);
- d.markRentalReturned(id,'good');}
+ d.markRentalReturned(id,'good');
+ for(const [party,email] of [['customer',customer],['supplier',supplier]])d.db.prepare('INSERT OR IGNORE INTO commission_return_acceptance VALUES(?,?,?,?)').run(id,party,d.db.prepare('SELECT user_id FROM app_users WHERE email=?').get(email).user_id,new Date().toISOString());
+ d.db.prepare("INSERT OR IGNORE INTO commission_series VALUES(?,0,'synthetic_test_only')").run(new Date().getUTCFullYear());}
 
 const action=process.argv[2],kind=process.argv[3],f=await fixture();
 const idFile=path.join(root,'booking-id');

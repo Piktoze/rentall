@@ -13,7 +13,7 @@ const {createCommercialSctRuntime}=await import('./modules/commercial-sct-runtim
 after(()=>{d.closeDatabase();fs.rmSync(root,{recursive:true,force:true});});
 const {createCommercialStripeClient}=await import('./modules/commercial-sct-client.js');
 const key='sk_live_synthetic_never_sent_to_stripe';
-const env={NODE_ENV:'test',STRIPE_MODE:'live',PRIVATE_TEST_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'true',COMMERCIAL_SCT_POLICY_VERSION:'sct-a-15-85-v1',COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID:'acct_commercialPlatform',COMMERCIAL_SCT_STORAGE_ROOT:root,STRIPE_SECRET_KEY:key,RENTINORBIT_SCT_TEST_RUNTIME:'false',SCT_STRIPE_FEE_PAYER:'platform'};
+const env={NODE_ENV:'test',STRIPE_MODE:'live',PRIVATE_TEST_ENABLED:'false',COMMERCIAL_SCT_RUNTIME_ENABLED:'true',COMMERCIAL_SCT_POLICY_VERSION:'sct-a-15-85-v1',COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID:'acct_commercialPlatform',COMMERCIAL_SCT_STORAGE_ROOT:root,STRIPE_SECRET_KEY:key,RENTINORBIT_SCT_TEST_RUNTIME:'false',SCT_STRIPE_FEE_PAYER:'platform',COMMISSION_ISSUANCE_ENABLED:'true'};
 let seq=0;
 const supplier='sct-supplier@example.test',customer='sct-renter@example.test';
 d.createAppUser({email:supplier,password:'SyntheticPassword123',role:'supplier'});
@@ -66,7 +66,9 @@ function returned(id){d.createRentalAgreement({bookingId:id,termsVersion:'sct-te
  d.acceptRentalAgreement(id,'supplier',{actorEmail:supplier,authMethod:'session'});
  const pin=d.issueRentalTransferCode(id,'pickup','customer');
  assert.equal(d.verifyAndConsumeRentalTransferCode(id,'pickup',pin.code).ok,true);
- d.markRentalReturned(id,'good');}
+ d.markRentalReturned(id,'good');
+ for(const [party,email] of [['customer',customer],['supplier',supplier]])d.db.prepare('INSERT OR IGNORE INTO commission_return_acceptance VALUES(?,?,?,?)').run(id,party,d.db.prepare('SELECT user_id FROM app_users WHERE email=?').get(email).user_id,new Date().toISOString());
+ d.db.prepare("INSERT OR IGNORE INTO commission_series VALUES(?,0,'synthetic_test_only')").run(new Date().getUTCFullYear());}
 
 test('commercial policy A (offline): new booking, platform payment, two agreements, handover, return, one 85 EUR transfer',async()=>{
  const f=await fixture(),id=await booking(f);
@@ -243,4 +245,13 @@ test('account ID supplied by an administrator cannot replace authenticated recip
  const f=await fixture();d.db.prepare("UPDATE stripe_connections SET connect_api='v2_merchant_direct' WHERE user_email=?").run(supplier);
  await assert.rejects(f.service.registerRecipient(supplier,account.id,'individual'),{code:'COMMERCIAL_AUTHENTICATED_RECIPIENT_BINDING_REQUIRED'});
  assert.equal(f.calls.transfer,0);
+});
+
+test('new commercial transfer requires both return confirmations and one invoice; repeated confirmation cannot duplicate either',async()=>{
+ const f=await fixture(),id=await booking(f);await f.service.createPayment(id);f.paid(id);await f.service.settle(id);returned(id);
+ d.db.prepare("DELETE FROM commission_return_acceptance WHERE booking_id=? AND party='customer'").run(id);
+ await assert.rejects(f.service.transfer(id),{code:'COMMISSION_BOTH_RETURN_ACCEPTANCES_REQUIRED'});assert.equal(f.calls.transfer,0);assert.equal(d.db.prepare('SELECT count(*) n FROM commission_documents WHERE booking_id=?').get(id).n,0);
+ const u=d.db.prepare('SELECT user_id FROM app_users WHERE email=?').get(customer);f.service.commission.accept(id,{userId:u.user_id,email:customer});
+ await f.service.transfer(id);f.service.commission.accept(id,{userId:u.user_id,email:customer});await assert.rejects(f.service.transfer(id));
+ assert.equal(f.calls.transfer,1);assert.equal(d.db.prepare("SELECT count(*) n FROM commission_documents WHERE booking_id=? AND kind='invoice'").get(id).n,1);
 });

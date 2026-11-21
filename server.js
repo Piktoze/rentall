@@ -1,3 +1,5 @@
+import {createOnboardingOnly,onboardingOnlyWriteGuard} from './modules/connect-onboarding-only.js';
+import {createConnectPayoutReconciler} from './modules/connect-readiness.js';
 import {installPrivateTestRecipientOnboarding} from './modules/private-test-recipient-onboarding.js';
 import {installPrivateTestAccess} from './modules/private-test-access.js';
 import {privateTestSettings,privateTestRequested} from './modules/private-test-mode.js';
@@ -372,19 +374,27 @@ const port = runtimeConfig.port;
 const appUrl = runtimeConfig.appUrl;
 // One trusted configured origin for all outbox links; never derive email URLs from a request Host.
 const PUBLIC_BASE_URL = new URL(process.env.PUBLIC_BASE_URL||appUrl).origin;
+function onboardingOnlyRequested(){return process.env.CONNECT_ONBOARDING_ONLY_ENABLED==='true';}
 const stripeKey = process.env.STRIPE_SECRET_KEY || '';
-const stripe = !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
+const stripe = !onboardingOnlyRequested() && !catalogOnly && stripeKey ? new Stripe(stripeKey,{apiVersion:'2026-08-26.dahlia',appInfo:{name:'RentInOrbit',version:runtimeConfig.appVersion}}) : null;
 const commercialRuntime=process.env.COMMERCIAL_SCT_RUNTIME_ENABLED==='true'
  ? await createCommercialSctRuntime({db,stripe:createCommercialStripeClient(stripeKey),env:process.env,...commercialSctNotifications({db,enqueue:enqueueTransactionalEmail})}):null;
-const sctRuntime=commercialRuntime||(process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
+const sctRuntime=commercialRuntime||(!onboardingOnlyRequested()&&process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
  ? (process.env.PRIVATE_TEST_STORAGE_MODE==='persistent'?createPersistentSctTestRuntime:createSctTestRuntime)({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null);
+const onboardingOnlyEnabled=process.env.CONNECT_ONBOARDING_ONLY_ENABLED==='true';
+if(onboardingOnlyEnabled&&(commercialRuntime||privateTestRequested()))throw Error('CONNECT_ONBOARDING_ONLY_REQUIRES_SEPARATE_STORE');
 let sctOnboardingPromise=null;
 function getSctOnboarding(){
+ if(onboardingOnlyEnabled){
+  if(!sctOnboardingPromise)sctOnboardingPromise=createOnboardingOnly({db,stripe:createCommercialStripeClient(process.env.CONNECT_ONBOARDING_SECRET_KEY),env:{...process.env,STRIPE_MODE:'live',STRIPE_SECRET_KEY:process.env.CONNECT_ONBOARDING_SECRET_KEY,COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID:process.env.CONNECT_PLATFORM_ACCOUNT_ID}}).catch(e=>{sctOnboardingPromise=null;throw e;});
+  return sctOnboardingPromise;
+ }
  if(!sctRuntime)throw new Error('SCT_RUNTIME_REQUIRED');
  if(!sctOnboardingPromise)sctOnboardingPromise=createSctSupplierOnboarding({db,env:process.env,runtime:sctRuntime,
   stripe:commercialRuntime?createCommercialStripeClient(stripeKey):createIsolatedStripeTestClient(stripeKey)}).catch(err=>{sctOnboardingPromise=null;throw err;});
  return sctOnboardingPromise;
 }
+app.use('/api',onboardingOnlyWriteGuard(onboardingOnlyEnabled));
 installPrivateTestRecipientOnboarding(app,{getStripe:()=>createIsolatedStripeTestClient(stripeKey)});
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
@@ -737,6 +747,9 @@ function requireSupplierDirectChargeCapability(connection,res){
   return true;
 }
 
+const webhookStripe=onboardingOnlyEnabled?createCommercialStripeClient(process.env.CONNECT_ONBOARDING_SECRET_KEY):stripe;
+const webhookMode=onboardingOnlyEnabled?'live':stripeMode;
+const connectPayoutReconciler=(onboardingOnlyEnabled||sctRuntime)&&webhookStripe?createConnectPayoutReconciler({db,stripe:webhookStripe,livemode:webhookMode==='live'}):null;
 // Stripe webhook must receive RAW body.
 function expectedStripeAccountForBooking(booking){
   const listing=booking?getRentalListing(booking.listingId):null;
@@ -782,12 +795,12 @@ function validateSecurityDepositIntentBinding(pi,booking,eventAccount=null){
 app.post('/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
-    if (!stripe) {
+    if (!webhookStripe) {
       return res.status(503).send('Stripe not configured');
     }
 
     const sig = req.headers['stripe-signature'];
-    let event;
+    let event,verifiedConnectSource=false;
 
     try {
       // Platform events and Connect direct-charge events may arrive through
@@ -803,7 +816,8 @@ app.post('/api/stripe/webhook',
       let signatureError=null;
       for(const signingSecret of new Set(signingSecrets)){
         try{
-          event=stripe.webhooks.constructEvent(req.body,sig,signingSecret);
+          event=webhookStripe.webhooks.constructEvent(req.body,sig,signingSecret);
+          verifiedConnectSource=signingSecret===process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
           break;
         }catch(error){signatureError=error;}
       }
@@ -824,9 +838,12 @@ app.post('/api/stripe/webhook',
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    if(onboardingOnlyEnabled&&!event.account)return res.status(403).send('Onboarding-only: financial events disabled');
+    if(!!event.account!==verifiedConnectSource)return res.status(400).send('Stripe webhook signing source mismatch');
+    if(event.type?.startsWith('v2.')||!event.data?.object)return res.status(400).send('Snapshot event required');
     if(privateTestRequested()&&event.livemode!==false)return res.status(400).send('TEST events required');
     const eventMode = event.livemode === true ? 'live' : event.livemode === false ? 'test' : null;
-    if (eventMode !== stripeMode) {
+    if (eventMode !== webhookMode) {
       return res.status(400).send('Stripe webhook mode does not match the configured Stripe key');
     }
 
@@ -862,6 +879,7 @@ app.post('/api/stripe/webhook',
     }
 
     try {
+      if(event.account&&connectPayoutReconciler){const r=await connectPayoutReconciler(event);if(r.handled){markWebhookProcessed(event.id);return res.json({received:true,...r});}}
       if(commercialRuntime){const result=await commercialRuntime.handleVerifiedEvent(event);
        if(result.handled){markWebhookProcessed(event.id);return res.json({received:true,eventId:event.id,duplicate:result.duplicate===true});}}
       switch (event.type) {
@@ -2456,7 +2474,7 @@ app.get('/api/readiness',(req,res)=>{
   res.status(gate.ready?200:503).json({ready:gate.ready,environment:runtimeConfig.nodeEnv,checks:gate.checks,blocking:gate.blocking,database:gate.database,stripe:gate.stripe,email:gate.email,version:APP_VERSION});
 });
 
-installSctOnboardingRoutes(app,{enabled:()=>!!sctRuntime,getService:getSctOnboarding,requireRole,rateLimit:simpleRateLimit({windowMs:60000,max:12,keyPrefix:'sct-onboarding'})});
+installSctOnboardingRoutes(app,{enabled:()=>!!sctRuntime||onboardingOnlyEnabled,getService:getSctOnboarding,requireRole,rateLimit:simpleRateLimit({windowMs:60000,max:12,keyPrefix:'sct-onboarding'})});
 
 // Stripe Connect for authenticated suppliers — V195 direct-charge merchant model.
 function directStatusResponse(status,{demo=false}={}){
@@ -3720,6 +3738,18 @@ app.post('/api/rentals/bookings/:bookingId/transfer-confirm',
 
 // Supplier records physical return; no second renter PIN is required.
 // A return condition is mandatory, and a damage claim never auto-captures a deposit.
+app.get('/api/rentals/bookings/:bookingId/return-acceptance',requireRole('customer','supplier'),(req,res)=>{
+ const id=req.params.bookingId;if(!commercialRuntime||!commercialRuntime.owned(id))return res.status(404).end();
+ const b=getRentalBookingById(id),l=b&&getRentalListing(b.listingId);const email=req.appUser.email.toLowerCase();
+ const party=email===b?.customerEmail?.toLowerCase()?'customer':email===l?.ownerEmail?.toLowerCase()?'supplier':null;
+ if(!party||b.status!=='returned')return res.status(404).end();
+ const state=commercialRuntime.commission.readiness(id);res.json({...state,accepted:state.parties.some(p=>p.party===party)});
+});
+app.post('/api/rentals/bookings/:bookingId/return-acceptance',requireRole('customer','supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'return-acceptance'}),(req,res)=>{
+ if(!commercialRuntime||!commercialRuntime.owned(req.params.bookingId))return res.status(404).end();
+ if(req.body?.condition!=='good')return res.status(400).json({code:'EXPLICIT_GOOD_RETURN_ACCEPTANCE_REQUIRED'});
+ try{res.json(commercialRuntime.commission.accept(req.params.bookingId,req.appUser));}catch(e){res.status(409).json({code:e.code||'RETURN_ACCEPTANCE_FAILED'});}
+});
 app.post('/api/rentals/bookings/:bookingId/return-confirm',
   requireRole('supplier'),simpleRateLimit({windowMs:60000,max:10,keyPrefix:'return-confirm'}),(req,res)=>{
   const id=req.params.bookingId;

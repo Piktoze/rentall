@@ -1,3 +1,4 @@
+import {inspectBankPayoutReadiness} from './connect-readiness.js';
 // Authenticated SCT recipient onboarding; caller identity comes only from requireRole/session.
 import {createHash} from 'node:crypto';
 import {isIsolatedStripeTestClient} from './isolated-stripe-test-client.js';
@@ -9,7 +10,7 @@ const include=['identity','configuration.recipient','configuration.merchant','re
 export async function createSctSupplierOnboarding({db,stripe,env,runtime,now=Date.now}){
  const live=env.STRIPE_MODE==='live',mode=live?'live':'test';
  if(!runtime||!(live?isCommercialStripeClient(stripe,env.STRIPE_SECRET_KEY):env.STRIPE_MODE==='test'&&isIsolatedStripeTestClient(stripe,env.STRIPE_SECRET_KEY)))fail('SCT_ONBOARDING_TRUSTED_CLIENT_REQUIRED');
- if(live&&env.COMMERCIAL_SCT_RUNTIME_ENABLED!=='true')fail('SCT_ONBOARDING_LIVE_DISABLED');
+ if(live&&env.COMMERCIAL_SCT_RUNTIME_ENABLED!=='true'&&env.CONNECT_ONBOARDING_ONLY_ENABLED!=='true')fail('SCT_ONBOARDING_LIVE_DISABLED');
  const platform=await stripe.accounts.retrieve();
  if(!/^acct_[A-Za-z0-9]+$/.test(platform?.id||'')||(live&&platform.id!==env.COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID))fail('SCT_ONBOARDING_PLATFORM_MISMATCH');
  const connectApi='v2_recipient_sct_'+mode;
@@ -48,8 +49,11 @@ export async function createSctSupplierOnboarding({db,stripe,env,runtime,now=Dat
   const checked=inspectIsolatedSctRecipientAccount(a,{expectedAccountId:r.account_id,expectedCountry:'LT',expectedEntityType:r.entity_type});
   const requirements=Array.isArray(a.requirements?.entries)?a.requirements.entries:Array.isArray(a.requirements?.currently_due)?a.requirements.currently_due:[];
   if(!checked.blocked){connect(user,r);await runtime.registerRecipient(user.email,r.account_id,r.entity_type);}
+  const paid=db.prepare("SELECT 1 FROM sqlite_master WHERE name='connect_bank_payouts'").get()?db.prepare("SELECT payout_id,amount,currency,status FROM connect_bank_payouts WHERE account_id=? ORDER BY checked_at DESC LIMIT 1").get(r.account_id):null;
   return {state:checked.blocked?'needs_information':'active',accountId:r.account_id,connectApi,
    recipientTransfersReady:!checked.blocked,detailsSubmitted:!checked.blocked,payoutsEnabled:false,bankPayoutsReady:false,
+   ...(env.CONNECT_BANK_READBACK_ENABLED==='true'?await inspectBankPayoutReadiness(stripe,r.account_id,live):{bankPayoutReadiness:'not_checked',bankPayoutExecuted:false}),
+   bankPayoutExecuted:paid?.status==='paid',bankReceiptConfirmed:false,lastBankPayout:paid||null,
    currentlyDue:requirements.map(x=>typeof x==='string'?x:x.description||x.reference||x.type||'Stripe review required')};
  }
  async function create(user,{country,legalEntityType,onboardingRequested}={}){

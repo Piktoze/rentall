@@ -1,3 +1,4 @@
+import {createCommissionCompletion} from './commission-completion.js';
 // Prepared commercial SCT execution. Disabled until a separately approved cutover.
 // Based on the verified TEST state machine; independent LIVE tables, bindings and proof policy.
 import {createCommercialWebhookHandler} from './commercial-sct-webhooks.js';
@@ -42,6 +43,7 @@ function createRuntime({db,stripe,env,now=Date.now,onPaymentSettled=()=>{},onRef
  assertPlatformCostConfiguration(env);
  const feePayer='platform';
  installCommercialBindings(db);
+ const commission=createCommissionCompletion({db,env,now:()=>new Date(now())});
  db.exec(`CREATE TABLE IF NOT EXISTS commercial_sct_recipients(
   email TEXT PRIMARY KEY COLLATE NOCASE,account_id TEXT NOT NULL UNIQUE,entity_type TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS commercial_sct_enrollments(
@@ -120,6 +122,7 @@ function createRuntime({db,stripe,env,now=Date.now,onPaymentSettled=()=>{},onRef
   }
   if(kind==='payment'&&(b.status!=='confirmed'||!['unpaid','requires_payment_method'].includes(b.payment_status)))fail('SCT_PAYMENT_NOT_READY');
   if(kind==='payment'&&db.prepare("SELECT 1 FROM commercial_sct_commands WHERE booking_id=? AND kind!='payment'").get(id))fail('SCT_CONFLICTING_FINANCIAL_COMMAND');
+  if(kind==='transfer'&&!commission.readiness(id).bothAccepted)fail('COMMISSION_BOTH_RETURN_ACCEPTANCES_REQUIRED');
   if(kind==='transfer'&&(b.status!=='returned'||!Number.isFinite(Date.parse(b.returned_at))||Date.parse(b.returned_at)>now()||
    b.return_condition!=='good'||b.payment_status!=='paid'||b.stripe_refund_id||
    Number(b.security_deposit_amount||0)!==0))fail('SCT_RETURN_NOT_RELEASABLE');
@@ -211,7 +214,8 @@ function createRuntime({db,stripe,env,now=Date.now,onPaymentSettled=()=>{},onRef
   if(amount<=0)fail('SCT_FEES_EXCEED_SUPPLIER_SHARE');
   const payload={amount,currency:'eur',destination:b.destination,source_transaction:p.chargeId,transfer_group:id,
    metadata:{platformAccount:env.COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID,costPolicy:'sct-a-15-85-v1',bookingId:id,paymentIntentId:p.paymentIntentId,purpose:'sct_rental_supplier_transfer'}};
-  const key=claim(id,'transfer',payload);
+  // Invoice and transfer intent are committed atomically before provider I/O.
+  const key=db.transaction(()=>{commission.invoice(id);return claim(id,'transfer',payload);}).immediate();
   db.prepare('UPDATE commercial_sct_enrollments SET processor_fee_cents=?,supplier_transfer_cents=? WHERE booking_id=?').run(txn.fee,amount,id);
   const created=await stripe.transfers.create(payload,{idempotencyKey:key});
   return finish(id,'transfer',await stripe.transfers.retrieve(created.id));
@@ -366,7 +370,7 @@ function createRuntime({db,stripe,env,now=Date.now,onPaymentSettled=()=>{},onRef
    return {results};
   }finally{sweeping=false;}
  }
- const runtime={mode:'live',owned,registerRecipient,newBookingRecipient,enrollNewBooking,createPayment,settle,transfer,refund,cancelUnpaid,recover,retryUncertain,setHold,sweep};
+ const runtime={commission,mode:'live',owned,registerRecipient,newBookingRecipient,enrollNewBooking,createPayment,settle,transfer,refund,cancelUnpaid,recover,retryUncertain,setHold,sweep};
  runtime.handleVerifiedEvent=createCommercialWebhookHandler({db,stripe,runtime,platformAccount:env.COMMERCIAL_STRIPE_PLATFORM_ACCOUNT_ID});
  return runtime;
 }

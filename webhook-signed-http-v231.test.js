@@ -99,7 +99,7 @@ const read=()=>{
   outbox:database.prepare("SELECT template_key,dedupe_key FROM email_outbox WHERE dedupe_key LIKE ?").all('%'+paymentIntentId+'%')}}
  finally{database.close()}
 };
-async function post(evt,{badSignature=false,connect=false}={}){
+async function post(evt,{badSignature=false,connect=!!evt.account}={}){
  const payload=JSON.stringify(evt),t=Math.floor(Date.now()/1000);
  const hash=crypto.createHmac('sha256',connect?connectSecret:secret).update(t+'.'+payload).digest('hex');
  const response=await fetch(base+'/api/stripe/webhook',{method:'POST',
@@ -118,6 +118,10 @@ try{
  const invalid=await post(event('evt_webhook_e2e_bad_signature',accountId),{badSignature:true});
  assert.equal(invalid.status,400,'Unsigned/invalid event must be rejected');
  assert.equal(read().booking.payment_status,'requires_payment_method');
+ const crossSource=await post(event('evt_webhook_e2e_cross_source',accountId),{connect:false});
+ assert.equal(crossSource.status,400,'Platform signing secret cannot authenticate Connect event source');
+ const thin=await post({id:'evt_thin_local',type:'v2.core.account.updated',livemode:false,data:{object:{id:accountId}}});
+ assert.equal(thin.status,400,'Thin notifications cannot enter Snapshot processing');
  const wrongModeEvent={...event('evt_webhook_e2e_wrong_mode',accountId),livemode:true};
  const wrongMode=await post(wrongModeEvent,{connect:true});
  assert.equal(read().booking.payment_status,'requires_payment_method',

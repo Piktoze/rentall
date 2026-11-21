@@ -186,6 +186,7 @@
       const controls=document.createElement('div');controls.className='v172-supplier-trust-actions';
       controls.innerHTML=`<button class="secondary" type="button" data-v172-supplier-message>${esc(tr('Messages'))}</button><button class="secondary" type="button" data-v172-supplier-agreement>${esc(tr('View agreement'))}</button>${['returned','completed'].includes(booking.status)?'<button class="secondary v172-rate-renter" type="button" data-id="'+esc(bookingId)+'">'+esc(tr('Rate renter'))+'</button>':''}`;
       actions.appendChild(controls);
+      if(booking.status==='returned')window.RentInOrbitReturnCompletion?.attach(controls,bookingId);
       controls.querySelector('[data-v172-supplier-message]')?.addEventListener('click',()=>startConversation(booking.listingId,bookingId));
       controls.querySelector('[data-v172-supplier-agreement]')?.addEventListener('click',()=>openAgreement(bookingId));
     };

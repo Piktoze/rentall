@@ -25,7 +25,7 @@ export function fullPlatformPolicy(page,{key,lang='lt',env=process.env}={}){
   ]]);
   result.sections.push(['Mokėjimas, grąžinimas ir pervedimas',[
    'Mokama tik gavus būtiną nuomotojo patvirtinimą. Kiekviena šalis atskirai patvirtina išsaugotą nuomos sutartį. Nuomininkas gauna savo išdavimo kodą tik po savo sutarties patvirtinimo ir apmokėjimo; nuomotojas prieš fizinį perdavimą turi atskirai patvirtinti savo sutartį. Vienkartinis kodas nėra asmens tapatybės patikra.',
-   'Grąžinimą be antro nuomininko kodo patvirtina daiktą fiziškai gavęs nuomotojas ir nurodo būklę. 85 % dalies pervedimas leidžiamas po tinkamo grąžinimo, tikrinant mokėjimą ir nesant ginčo, užstato ar kito sulaikymo. Banko išmokos priklauso nuo Stripe paskyros patikros ir grafiko.',
+   'Daikto fizinį grąžinimą be antro kodo užfiksuoja nuomotojas. Tarpininkavimo paslauga užbaigiama tik abiem šalims atskirai patvirtinus tinkamą grąžinimą ir nesant neišspręsto ginčo, užstato ar kito išmokos sulaikymo. Tuo metu išrašoma platformos 15 % komisinio sąskaita ir inicijuojamas 85 % pervedimas į nuomotojo Stripe balansą. Stripe apdorojimo, Connect ir išmokų kaštus padengia platforma. Banko išmokos priklauso nuo Stripe paskyros patikros ir grafiko.',
    'Sutartinis atšaukimo grafikas rodomas prieš užsakymą ir išsaugomas konkrečioje rezervacijoje. Nuomotojui atšaukus iki perdavimo grąžinama visa nuomos suma. Nuomininko atšaukimas vertinamas pagal rezervacijos snapshot ir privalomas teises; po perdavimo automatinis atšaukimas neleidžiamas. Banko įskaitymo termino platforma negarantuoja. Techninės klaidos ar dubliuoto nuskaičiavimo atveju kreipkitės į pagalbą.'
   ]]);
  }

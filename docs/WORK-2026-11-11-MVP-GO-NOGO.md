@@ -1,5 +1,24 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## Naujausias techninis tęsinys – onboarding-only, banko readback, abipusis grąžinimas
+
+Įgyvendinta (dar neaktyvuota): atskiras onboarding-only režimas be finansinės
+vykdyklės, visų kitų API rašymų finansiniai vartai; autentifikuotas savo formos /
+būsenos kelias; pervedimų ir banko parengties atskyrimas; patvarus account+po_
+provider sutikrinimas ir event ID dedup; atskiri Snapshot paslapčių šaltiniai,
+režimo tikrinimas ir thin atmetimas. Nauji komerciniai pervedimai reikalauja
+abiejų šalių tinkamo grąžinimo patvirtinimų ir komisinio dokumento toje pačioje
+transakcijoje kaip transfer komanda. RIO-YYYY SF/kreditinių bendra numeracija,
+nekintantis originalas ir idempotentinės dalinės kreditinės; tikra serija
+neaktyvuota. Paslaugos baigimo momentas operatorės jau patvirtintas.
+
+Patikros ir vienas nuoseklus perjungimo/rollback/kopijų/webhook/pirmo gavėjo
+planas: ACTIVATION-REVIEW-2026-11-21.md. LIVE konfigūracija / gavėjai / mokėjimai,
+realios SF/kreditinės ir saugyklos perjungimas neįjungti. Senesnės būsenos žemiau
+paliktos istorijai. Likę: tikra LIVE infrastruktūros konfigūracija ir gavėjas,
+reguliarių kopijų rašymo pauzės koordinavimas prieš aktyvavimą, serijos faktas ir
+apskaitos / dokumentų pateikimo peržiūra, kategorijų saugojimas, VMI / PVM ir Zoho DPA.
+
 ## Naujausia LIVE parengtis 2026-11-21 – tik peržiūra
 
 Platformos anketa pateikta ir LIVE paskyra acct_1UT4J2LlutaSFdau patvirtinta:

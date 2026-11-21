@@ -786,7 +786,7 @@ async function createBookingWithSafeRetry(payload){
 
 function applyStripeLiveStatus(st){
   if(!st) return;
-  supplierPayoutVerified=Boolean(st.payoutsEnabled)||String(st.transferCapabilityStatus||'')==='active';
+  supplierPayoutVerified=st.recipientTransfersReady===true;
   syncInstantBookEligibility();
   const badge=document.getElementById('stripeStatusBadge');
   const bankBadge=document.getElementById('bankStatusBadge');
@@ -819,25 +819,28 @@ function applyStripeLiveStatus(st){
     state==='not_created' ? 'Not connected' : 'In progress');
 
   badge.className='status '+(connected?'confirmed':'pending');
-  bankBadge.textContent = uiText(st.payoutsEnabled ? 'Verified' : 'Pending');
-  bankBadge.className='status '+(st.payoutsEnabled?'confirmed':'pending');
+  const bankReady=st.bankPayoutsReady===true;
+  bankBadge.textContent = bankReady?'Banko išmokos parengtos':'Banko išmokos nepatvirtintos';
+  bankBadge.className='status '+(bankReady?'confirmed':'pending');
 
   document.getElementById('stripeIdentityText').textContent =
     uiText(submitted ? 'Submitted' : 'Not complete');
   document.getElementById('stripeBankText').textContent =
-    uiText(st.payoutsEnabled ? 'Verified for payouts' : 'Pending verification');
+    bankReady?'Banko konfigūracija patikrinta':'Reikia atskiros banko patikros';
   document.getElementById('stripePayoutText').textContent =
-    uiText(st.payoutsEnabled ? 'Enabled' : 'Not enabled');
+    st.recipientTransfersReady===true?'Pervedimai į Stripe balansą parengti':'Pervedimai į Stripe balansą neparengti';
 
   document.getElementById('stripeStepIdentity').classList.toggle('done', submitted);
-  document.getElementById('stripeStepBank').classList.toggle('done', !!st.payoutsEnabled);
-  document.getElementById('stripeStepPayout').classList.toggle('done', !!st.payoutsEnabled);
+  document.getElementById('stripeStepBank').classList.toggle('done', bankReady);
+  document.getElementById('stripeStepPayout').classList.toggle('done', bankReady);
 
   openBtn.disabled=!submitted;
+  let proof=document.getElementById('rioBankExecutionProof');if(!proof){proof=document.createElement('p');proof.id='rioBankExecutionProof';message.after(proof);}
+  proof.textContent=st.bankPayoutExecuted===true?'Stripe nurodo atliktą banko išmoką; gavimas banke tikrinamas atskirai.':'Faktinė banko išmoka nepatvirtinta.';
   message.textContent = legacyMigration ? legacyCopy[locale] : st.currentlyDue?.length
     ? `${uiText('Stripe still requires:')} ${st.currentlyDue.join(', ')}`
-    : connected && st.payoutsEnabled ? uiText('Stripe onboarding complete. Payouts are enabled.')
-    : connected ? uiText('Stripe account connected. Payouts are not yet enabled.')
+    : connected && bankReady ? 'Pervedimų ir banko išmokų konfigūracija patikrinta.'
+    : connected ? 'Pervedimai į Stripe balansą parengti; banko išmokų parengtis tikrinama atskirai.'
     : uiText('Stripe account created. Continue onboarding to complete verification.');
 }
 
@@ -851,7 +854,7 @@ async function refreshInstantBookEligibility(){
   supplierPayoutVerified=false;
   try{
     const st=await apiJson('/api/stripe/connect/status');
-    supplierPayoutVerified=Boolean(st.payoutsEnabled)||String(st.transferCapabilityStatus||'')==='active';
+    supplierPayoutVerified=st.recipientTransfersReady===true;
   }catch{}
   syncInstantBookEligibility();
 }
