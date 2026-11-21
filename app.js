@@ -863,6 +863,7 @@ async function ensureStripeAccount(){
   return apiJson('/api/stripe/connect/create-account',{
     method:'POST',
     body:JSON.stringify({
+      onboardingRequested:true,
       supplierId,
       email:s.email,
       country:s.country||'LT',

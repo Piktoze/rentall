@@ -4,6 +4,8 @@ import {privateTestSettings,privateTestRequested} from './modules/private-test-m
 import {createPasswordRecovery,decodeResetMail,RESET_REPLY} from './modules/password-recovery.js';
 import {installIsolatedRecoveryProbe} from './modules/isolated-recovery-probe.js';
 import {createSctTestRuntime,createPersistentSctTestRuntime} from './modules/sct-test-runtime.js';
+import {installSctOnboardingRoutes} from './modules/sct-onboarding-routes.js';
+import {createSctSupplierOnboarding} from './modules/sct-supplier-onboarding.js';
 import {commercialSctNotifications} from './modules/commercial-sct-notifications.js';
 import {createCommercialSctRuntime} from './modules/commercial-sct-runtime.js';
 import {createCommercialStripeClient} from './modules/commercial-sct-client.js';
@@ -376,6 +378,13 @@ const commercialRuntime=process.env.COMMERCIAL_SCT_RUNTIME_ENABLED==='true'
  ? await createCommercialSctRuntime({db,stripe:createCommercialStripeClient(stripeKey),env:process.env,...commercialSctNotifications({db,enqueue:enqueueTransactionalEmail})}):null;
 const sctRuntime=commercialRuntime||(process.env.RENTINORBIT_SCT_TEST_RUNTIME==='true'
  ? (process.env.PRIVATE_TEST_STORAGE_MODE==='persistent'?createPersistentSctTestRuntime:createSctTestRuntime)({db,stripe:createIsolatedStripeTestClient(stripeKey),env:process.env}):null);
+let sctOnboardingPromise=null;
+function getSctOnboarding(){
+ if(!sctRuntime)throw new Error('SCT_RUNTIME_REQUIRED');
+ if(!sctOnboardingPromise)sctOnboardingPromise=createSctSupplierOnboarding({db,env:process.env,runtime:sctRuntime,
+  stripe:commercialRuntime?createCommercialStripeClient(stripeKey):createIsolatedStripeTestClient(stripeKey)}).catch(err=>{sctOnboardingPromise=null;throw err;});
+ return sctOnboardingPromise;
+}
 installPrivateTestRecipientOnboarding(app,{getStripe:()=>createIsolatedStripeTestClient(stripeKey)});
 const stripeMode = stripeModeFor(stripeKey);
 const demoPaymentsEnabled=!catalogOnly && String(process.env.RENTINORBIT_DEMO_PAYMENTS ?? (process.env.RENTINORBIT_STAGING==='true'?'true':'false')).trim()==='true' && process.env.RENTINORBIT_STAGING==='true';
@@ -2447,6 +2456,8 @@ app.get('/api/readiness',(req,res)=>{
   res.status(gate.ready?200:503).json({ready:gate.ready,environment:runtimeConfig.nodeEnv,checks:gate.checks,blocking:gate.blocking,database:gate.database,stripe:gate.stripe,email:gate.email,version:APP_VERSION});
 });
 
+installSctOnboardingRoutes(app,{enabled:()=>!!sctRuntime,getService:getSctOnboarding,requireRole,rateLimit:simpleRateLimit({windowMs:60000,max:12,keyPrefix:'sct-onboarding'})});
+
 // Stripe Connect for authenticated suppliers — V195 direct-charge merchant model.
 function directStatusResponse(status,{demo=false}={}){
   const reqs=Array.isArray(status?.requirements)?status.requirements:[];
@@ -2470,7 +2481,6 @@ function directStatusResponse(status,{demo=false}={}){
 
 app.post('/api/stripe/connect/create-account', requireRole('supplier','admin'), async (req,res)=>{
   try{
-    if(commercialRuntime)return res.status(409).json({code:'COMMERCIAL_SCT_RECIPIENT_ONBOARDING_REQUIRED',error:'Commercial SCT requires a dedicated authenticated recipient onboarding flow; merchant Direct Charges accounts cannot be reused.'});
     if(demoPaymentsEnabled){
       const existing=getStripeConnectionByUserId(req.appUser.userId);
       const saved=existing||saveStripeConnection({userId:req.appUser.userId,userEmail:req.appUser.email,stripeAccountId:`acct_demo_${req.appUser.userId}`,connectApi:'demo_merchant_direct',transferCapabilityStatus:'not_applicable',requirements:[]});
@@ -2511,7 +2521,7 @@ app.post('/api/stripe/connect/create-account', requireRole('supplier','admin'), 
     saveDirectMerchantMetadata(db,{userId:req.appUser.userId,accountId:account.id,merchantCapabilityStatus:parsed.merchantCapabilityStatus,dashboard:'express',feesCollector:'stripe',lossesCollector:'stripe',onboardingStatus:parsed.state==='active'?'complete':'pending',country,entityType:legalEntityType,requirements:parsed.requirements});
     res.json(directStatusResponse(parsed));
   }catch(err){
-    console.warn('Stripe connected account creation failed',err.message);
+    console.warn('Stripe connected account creation failed',sctRuntime?String(err.code||'SCT_ONBOARDING_UNAVAILABLE'):err.message);
     res.status(400).json({error:process.env.NODE_ENV==='production'?'Unable to create Stripe connected account':err.message});
   }
 });
