@@ -1,6 +1,8 @@
 // Read-only delivery of immutable issued commission documents. No issuance/numbering API.
 import PDFDocument from 'pdfkit';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const projectRoot=fileURLToPath(new URL('../',import.meta.url));
 const base='/api/supplier/issued-commission-documents',numberPattern=/^RIO-\d{4}-\d{6}$/;
 const norm=v=>String(v||'').trim().toLowerCase();
 const object=s=>{try{const v=JSON.parse(s);return v&&typeof v==='object'&&!Array.isArray(v)?v:null;}catch{return null;}};
@@ -32,8 +34,8 @@ export async function renderIssuedCommissionPdf(d){
  const s=d.snapshot;if(!s||!numberPattern.test(d.number)||Boolean(s.syntheticPreview)!==d.syntheticPreview)throw Error('ISSUED_SNAPSHOT_REQUIRED');
  const date=new Date(d.issuedAt),pdf=new PDFDocument({size:'A4',margin:48,info:{Title:d.number,Author:s.issuer,CreationDate:date,ModDate:date}}),parts=[];
  const done=new Promise((resolve,reject)=>{pdf.on('data',b=>parts.push(b));pdf.on('end',()=>resolve(Buffer.concat(parts)));pdf.on('error',reject);});
- pdf.registerFont('LT',path.resolve('node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf')).font('LT');
- pdf.image(path.resolve('assets/brand/rentinorbit-logo-horizontal-dark-web.png'),48,36,{fit:[220,62]});pdf.y=110;
+ pdf.registerFont('LT',path.join(projectRoot,'node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf')).font('LT');
+ pdf.image(path.join(projectRoot,'assets/brand/rentinorbit-logo-horizontal-dark-web.png'),48,36,{fit:[220,62]});pdf.y=110;
  if(d.syntheticPreview)pdf.fillColor('#aa2424').fontSize(13).text('SINTETINĖ PERŽIŪRA – NEGALIOJA APSKAITAI').moveDown();
  pdf.fillColor('#142437').fontSize(19).text(d.kind==='credit'?'KREDITINĖ SĄSKAITA FAKTŪRA':'SĄSKAITA FAKTŪRA').moveDown(.5).fontSize(10);
  const line=(label,v)=>pdf.text(label+': '+String(v||'').replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,500));

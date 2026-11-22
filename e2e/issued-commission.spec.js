@@ -21,12 +21,12 @@ for(const width of [1280,390])test(`preloaded commercial archive, two credits, o
   await expect(empty).toContainText('Išrašytų komisinio dokumentų dar nėra.');await expect(empty.locator('a')).toHaveCount(0);
   const data=await (await owner.request.get('/api/supplier/issued-commission-documents')).json();
   for(const doc of data.documents){expect(doc.number).toMatch(/^RIO-2099-/);expect((await other.request.get(doc.url)).status()).toBe(404);expect((await guest.request.get(doc.url)).status()).toBe(401);
-   const downloadPromise=page.waitForEvent('download');await section.locator(`a[href="${doc.url}"]`).click();const download=await downloadPromise;expect(download.suggestedFilename()).toBe('PREVIEW-'+doc.number+'.pdf');expect(await download.failure()).toBeNull();expect(fs.readFileSync(await download.path()).subarray(0,5).toString()).toBe('%PDF-');}
+   const pdfResponse=page.waitForResponse(r=>r.url().endsWith(doc.url)&&r.request().method()==='GET');const downloadPromise=page.waitForEvent('download',{timeout:10000}).catch(()=>null);await section.locator(`a[href="${doc.url}"]`).click();expect((await pdfResponse).status()).toBe(200);const download=await downloadPromise;expect(download).not.toBeNull();expect(download.suggestedFilename()).toBe('PREVIEW-'+doc.number+'.pdf');expect(await download.failure()).toBeNull();expect(fs.readFileSync(await download.path()).subarray(0,5).toString()).toBe('%PDF-');}
   // Existing TEST path remains independent and does not return commercial-shaped archive rows.
   const testData=await (await owner.request.get('/api/supplier/commission-documents')).json();expect(testData.testOnly).toBe(true);expect(testData.documents.every(d=>d.number.startsWith('TEST-RIO-'))).toBe(true);
   expect((await owner.request.post('/api/supplier/issued-commission-documents')).status()).toBe(404);
   expect(await section.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await test.info().attach(`issued-documents-${width}`,{body:await section.screenshot(),contentType:'image/png'});
   await owner.request.post('/api/auth/logout');await page.reload();expect((await owner.request.get(data.documents[0].url)).status()).toBe(401);await expect(page.locator('#rioIssuedCommissionDocuments a')).toHaveCount(0);
- }finally{await owner.close();await other.close();await guest.close();}
+ }finally{await Promise.allSettled([owner.close(),other.close(),guest.close()]);}
 });
