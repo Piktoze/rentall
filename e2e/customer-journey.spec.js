@@ -179,21 +179,35 @@ for(const width of [320,390]){
  });
 }
 
-test('phone 390px supplier listing form and actual isolated photo upload',async({page,request})=>{
- await page.setViewportSize({width:390,height:844});
- const email=`phone-supplier-${Date.now()}@example.test`,password='Synthetic-phone-only-12345';
- expect((await request.post('/api/auth/register',{data:{email,password,role:'supplier',termsAccepted:true}})).ok()).toBeTruthy();
- await page.goto('/');await page.locator('[data-v120-mobile="account"]').click();
- await page.locator('#loginEmail').fill(email);await page.locator('#loginPassword').fill(password);
- await page.locator('#supplierLoginForm button[type="submit"]').click();
+for(const width of [1280,390])test(`supplier ${width}px registers and submits photos for moderation`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ const email=`listing-${width}-${Date.now()}@example.test`,password='Synthetic-listing-only-12345';
+ await page.goto('/');await page.locator(width<700?'[data-v120-mobile="account"]':'#supplierAuthBtn').click();
+ await page.locator('[data-auth-tab="register"]').first().click();
+ await page.locator('#regRole').selectOption('supplier');
+ await page.locator('#regBusinessName').fill('Synthetic TEST owner');await page.locator('#regContactName').fill('Synthetic owner');
+ await page.locator('#regEmail').fill(email);await page.locator('#regArea').fill('Klaipėda');
+ await page.locator('#regPassword').fill(password);await page.locator('#regTerms').check();
+ const registered=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/auth/register'));
+ await page.locator('#supplierRegisterForm button[type="submit"]').click();expect((await registered).ok()).toBeTruthy();
  await expect(page.locator('#supplier-dashboard')).toHaveClass(/unlocked/);
- await page.locator('[data-v120-mobile="account"]').click();await page.locator('#supplierActionDrawer [data-supplier-action="add"]').click();await expect(page.locator('#listingForm')).toBeVisible();
- await fitsPhone(page,'#listingForm');
+ if(width<700){await page.locator('[data-v120-mobile="account"]').click();await page.locator('#supplierActionDrawer [data-supplier-action="add"]').click();}
+ else{await page.locator('#openListingFormBtn').click();}
+ await expect(page.locator('#listingForm')).toBeVisible();await fitsPhone(page,'#listingForm');
+ const title=`Synthetic TEST listing ${width}`;
+ await page.locator('#listingTitle').fill(title);await page.locator('#listingCity').fill('Klaipėda');
+ await page.locator('#listingCategory').selectOption('tools');await page.locator('#listingPriceDay').fill('20');
+ await page.locator('#listingDescription').fill('Synthetic item used only for isolated browser checks.');
  const images=await page.evaluate(()=>['#224466','#663322'].map(color=>{
   const c=document.createElement('canvas');c.width=500;c.height=500;const ctx=c.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,500,500);return c.toDataURL('image/png').split(',')[1];
  }));
- await page.locator('#listingPhotos').setInputFiles(images.map((data,i)=>({name:`synthetic-phone-${i}.png`,mimeType:'image/png',buffer:Buffer.from(data,'base64')})));
+ await page.locator('#listingPhotos').setInputFiles(images.map((data,i)=>({name:`synthetic-${i}.png`,mimeType:'image/png',buffer:Buffer.from(data,'base64')})));
  await expect(page.locator('#listingPhotoPreview img')).toHaveCount(2);
- await fitsPhone(page,'#listingForm');await page.locator('#closeListingModal').click();
+ const submitted=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/supplier/listings'));
+ await page.locator('#listingForm button[type="submit"]').click();const response=await submitted;
+ expect(await response.text()).not.toContain('error');expect(response.ok()).toBeTruthy();
+ const item=(await response.json()).listing;
  await expect(page.locator('#listingModal')).not.toHaveClass(/open/);
+ const owned=await page.request.get('/api/supplier/listings');expect((await owned.json()).listings.some(x=>x.title===title)).toBe(true);
+ const catalog=await page.request.get('/api/listings');expect((await catalog.json()).listings.some(x=>x.id===item.id||x.title===title)).toBe(false);
 });

@@ -1,5 +1,39 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## 2026-11-22 – perjungimas atidėtas, tęsiamas privatus TEST
+
+Operatorė atšaukė pirmo riboto perjungimo vykdymą: tikro nuomotojo dar nėra.
+4565068 paketas lieka neaktyvuota istorine peržiūra. Nuomotojo email ir LIVE
+Connect rakto šiam darbui nereikia. Saugykla, grafikas, LIVE gavėjai/webhook,
+mokėjimai ir tikras dokumentų išrašymas neaktyvuojami.
+
+Pataisytas klaidinantis skelbimo formos pažadas apie matomumą iš karto:
+visomis 5 kalbomis nurodoma peržiūra ir patvirtinimas. Nauja 1280/390 px
+patikra pereina tikrą UI registraciją, 2 nuotraukų įkėlimą, skelbimo pateikimą,
+savo skelbimo buvimą ir nepatvirtinto skelbimo nebuvimą viešame API.
+Ši patikra nevykdo Stripe operacijų, naudoja tik laikiną CI DB ir uploads.
+
+Vietinės PDF/HTTP autorizacijos patikros 2/2 PASS. Vietinės naršyklės
+paleidimą blokuoja aplinkos socket() Operation not permitted; prijungtos
+naršyklės ryšys taip pat nepasiekiamas. Tai nėra produkto bandymų PASS.
+Nauja naršyklės patikra perduota staging CI; terminalus rezultatas pateikiamas
+atskirai, neinterpretuojant ankstesnio CI kaip dabartinio kodo įrodymo.
+Railway prieš pakeitimą: 884a417a SUCCESS, staging/v203, viena iad replika,
+be laukiančių pakeitimų. Finansiniai TEST ir kopijos atkūrimas nekartoti.
+
+Peržiūra privačiame domene: /__test-access → esama asmeninė prieiga →
+registracija / paskyra → Įkelti skelbimą; paieška → rezervacija; nuomotojo
+užsakymai → sutartys / perdavimas / grąžinimas; Išmokos → TEST dokumentų
+pavyzdžiai (sąskaita ir susieta dalinė kreditinė). Tai TEST pavyzdžiai,
+ne tikri išrašyti dokumentai ir ne automatinio LIVE pateikimo įrodymas.
+
+Tikro nuomotojo lauks jo asmeninis Connect formos užpildymas, tapatybės bei
+banko patikra, konkrečios paskyros pervedimų ir banko išmokų parengtis.
+Atskiri vėlesni paleidimo blokatoriai: saugyklos/kopijų aktyvavimas, LIVE
+webhook, apskaitos/saugojimo galutinė peržiūra, privataus nuomotojo → įmonės
+ir užsienio paslaugų PVM tvarka, esamo Zoho DPA užbaigimo įrodymas.
+RIO-2026 nepanaudojimas ir 15/85 taisyklė patvirtinti, nebeklausti.
+
 ## Pirmo perjungimo paketas – naujausia faktinė patikra
 
 Naujausia pradinė šaka 5c97694; paruoštos (NEAKTYVUOTOS) atskiros privačios
