@@ -3,7 +3,8 @@
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import crypto from 'node:crypto';
 import http from 'node:http';import https from 'node:https';import {spawn,execFileSync} from 'node:child_process';
 const root=process.env.RIO_DOCUMENT_E2E_ROOT;
-if(process.env.CI!=='true'||!root||!path.resolve(root).startsWith(os.tmpdir()+path.sep))throw Error('ISOLATED_DOCUMENT_FIXTURE_REQUIRED');
+const tempRoots=[os.tmpdir(),process.env.RUNNER_TEMP].filter(Boolean).map(p=>path.resolve(p));
+if(process.env.CI!=='true'||!root||!tempRoots.some(p=>path.resolve(root).startsWith(p+path.sep))||path.resolve(root).startsWith('/data/'))throw Error('ISOLATED_DOCUMENT_FIXTURE_REQUIRED');
 fs.mkdirSync(root,{recursive:true,mode:0o700});const mail=path.join(root,'mail.json'),hook=path.join(root,'provider.mjs');
 execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',root+'/key.pem','-out',root+'/cert.pem','-days','1','-subj','/CN=rentinorbit.test'],{stdio:'ignore'});
 fs.writeFileSync(hook,`import fs from 'node:fs';const real=globalThis.fetch;globalThis.fetch=(u,o)=>String(u)==='https://api.resend.com/emails'?(fs.writeFileSync(${JSON.stringify(mail+'.tmp')},o.body),fs.renameSync(${JSON.stringify(mail+'.tmp')},${JSON.stringify(mail)}),Promise.resolve(new Response(JSON.stringify({id:'11111111-1111-1111-1111-111111111111'}),{status:200}))):real(u,o);`);

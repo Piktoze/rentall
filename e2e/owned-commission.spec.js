@@ -33,7 +33,8 @@ for(const width of [1280,390])test(`own order invoice and credit, empty state an
    const file=await download.path();expect(fs.readFileSync(file).subarray(0,5).toString()).toBe('%PDF-');
   }
   await expect(otherSection.locator('a')).toHaveCount(0);const guestPage=await guest.newPage();await guestPage.goto('/?view=supplier-payouts');await expect(guestPage.locator('#rioOwnedCommissionDocuments a')).toHaveCount(0);
-  await section.getByRole('button').click();await expect(section.locator('[data-commission-booking]')).toHaveCount(1);await expect(section.locator('a')).toHaveCount(2);
+  const replay=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/supplier/commission-documents/test-order'));await section.getByRole('button').click();expect((await replay).ok()).toBeTruthy();await expect(section.locator('[data-commission-booking]')).toHaveCount(1);await expect(section.locator('a')).toHaveCount(2);
+  await section.screenshot({path:test.info().outputPath('own-order-documents.png')});
   expect(await section.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await owner.request.post('/api/auth/logout');await page.reload();expect((await owner.request.get(urls[0])).status()).toBe(401);
