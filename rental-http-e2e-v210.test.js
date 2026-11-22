@@ -581,7 +581,7 @@ try{
  assert.equal(updated.body.listing.title,'Owner updated title');
  assert.equal(updated.body.listing.reviewStatus,'pending_review');
  const oldVersion=(await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id);
- assert.equal(oldVersion.title,listingBase.title,'Only the previously approved version stays public');
+ assert.equal(oldVersion,undefined,'Current pending revision withdraws the listing until fresh approval');
  status(await decide((await pendingReview()).revision,'approved'),200,'Updated listing approved');
  assert.equal((await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id).title,'Owner updated title');
  const audit=new Database(dbPath,{readonly:true,fileMustExist:true});

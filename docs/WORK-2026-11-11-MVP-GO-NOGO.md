@@ -5,8 +5,11 @@
 Pradinė šaka 874bfa7. CI 45003970150 SUCCESS buvo padengta naujo skelbimo
 registracija / nuotraukos / pateikimas 1280 ir 390 px, bet ne pilna dviejų
 paskyrų administratoriaus sprendimo → nuomotojo informavimo → taisymo /
-pakartotinio pateikimo grandinė. Moderavimo esamas testas buvo statinis;
-katalogo paslėptų įrašų pavyzdžiai nepakeitė šios interaktyvios patikros.
+pakartotinio pateikimo grandinė. rental-http-e2e-v210.test.js jau tikrino API sprendimus, privalomą priežastį,
+istoriją ir pranešimus. Trūko būtent pilno naršyklės kelio ir native nuotraukų
+lauko pakartotiniame pateikime. Katalogo paslėptų įrašų pavyzdžiai šio kelio
+nepakeitė. Ankstesnis HTTP testas tyčia laikė seną patvirtintą versiją viešą
+redagavimo metu; pagal naują reikalavimą jis pakeistas į paslėpimo lūkestį.
 
 Pataisyta: viešumo filtras reikalauja dabartinės approved būsenos ir sutampančių
 revision / approved_revision. Ankstesnis patvirtinimas nebepalieka laukiančio
