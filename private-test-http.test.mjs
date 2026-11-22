@@ -32,8 +32,16 @@ try{
  const examples=await req('/api/supplier/accounting/test-examples');assert.equal(examples.status,200);assert.equal((await examples.json()).documents.length,2);
  for(const kind of ['invoice','credit']){const pdf=await req('/api/supplier/accounting/test-examples/'+kind+'.pdf');assert.equal(pdf.status,200);assert.ok(pdf.headers.get('content-type').includes('application/pdf'));assert.ok(pdf.headers.get('content-disposition').includes('TEST-RIO-2026-00000'));assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');}
 
+ const ownedBase='/api/supplier/commission-documents';
+ assert.deepEqual((await (await req(ownedBase)).json()).documents,[]);
+ const ownedOrder=await (await req(ownedBase+'/test-order',{method:'POST',body:{}})).json();
+ assert.equal(ownedOrder.documents.length,2);assert.equal(ownedOrder.booking.stripeOperationsPerformed,false);
+ for(const document of ownedOrder.documents){assert.equal((await req(document.url)).status,200);}
  assert.equal((await (await req('/api/auth/me')).json()).user.role,'admin');
  const normal=await req('/api/auth/register',{method:'POST',body:{email:'renter@example.test',password:'Synthetic-password-123456',termsAccepted:true,role:'admin'}});assert.equal(normal.status,200);assert.equal((await normal.json()).user.role,'supplier');
+ const otherCookie=cookie.split(';')[0]+'; '+normal.headers.get('set-cookie').split(';')[0];
+ for(const document of ownedOrder.documents)assert.equal((await req(document.url,{headers:{cookie:otherCookie}})).status,404);
+ assert.deepEqual((await (await req(ownedBase,{headers:{cookie:otherCookie}})).json()).documents,[]);
  assert.equal((await req('/api/listings')).status,200);assert.equal((await req('/app.js')).status,200);
  const readiness=await (await req('/api/readiness')).json();assert.equal(readiness.database.persistent,false);
  assert.equal((await req('/api/auth/forgot-password',{method:'POST',body:{email:'owner@example.test'}})).status,202);

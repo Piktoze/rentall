@@ -63,6 +63,8 @@ export async function renderTestInvoicePdf(invoice,{issuer={},recipientName='TES
    .text('Išrašytojas: '+info.issuerName)
    .text('Adresas: '+info.issuerAddress);
  if(info.certificate)doc.text('Individualios veiklos pažymos Nr.: '+info.certificate);
+ if(invoice.booking_id)doc.text('TEST užsakymo numeris: '+clean(invoice.booking_id));
+ if(invoice.service_completed_at)doc.text('Paslaugos užbaigimo data: '+clean(invoice.service_completed_at));
  if(invoice.related_invoice_number)doc.moveDown(.3).text('Susieta pradinė sąskaita: '+clean(invoice.related_invoice_number));
  if(invoice.reason)doc.text('Priežastis: '+clean(invoice.reason));
  doc.moveDown(.5).text('Gavėjas: '+info.recipientName)

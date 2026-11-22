@@ -1,5 +1,37 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## 2026-11-22 – savo užsakymo TEST komisinio dokumentai
+
+Pradinė šaka b13a9f6. Bendri PDF pavyzdžiai nebuvo savo užsakymo dokumentų
+pateikimo įrodymas. Įgyvendintas atskiras TEST-only read-only commission_documents
+skaitytuvas: nuomotojo email turi sutapti su užsakymo savininku IR nekintamos
+pradinės sąskaitos gavėjo snapshot. Kreditinė siejama per originalo ID/numerį;
+PDF URL negali pakeisti gavėjo. LIVE dokumentai šiame kelyje neaptarnaujami.
+
+Išmokose pridėta „Mano užsakymų komisinio dokumentai (TEST)“: užsakymo ID,
+SF / kreditinės numeriai, sumos, data, originalo ryšys, atskiri PDF. Tuščia
+būsena aiški; keičiantis autentifikacijai išvalomas vaizdas ir atmetami pasenę
+atsakymai. Privatus TEST naudotojas pats gali vieną kartą sukurti savo
+sintetinį užbaigtą užsakymą atskiroje /tmp SQLite bazėje: abiejų grąžinimas,
+100 EUR sintetinė apmokėjimo prielaida (jokios Stripe operacijos), 15 EUR SF
+ir susieta 5 EUR dalinė kreditinė. Pakartojimas grąžina tuos pačius dokumentus.
+Pagrindinės programos DB, tikra RIO serija ir esama /data nekeičiamos. Failai
+laikini, po perkrovimo peržiūros pavyzdį reikia sukurti iš naujo.
+
+Vietinės tikros HTTP / izoliuotos SQLite patikros ir esamų TEST PDF patikros:
+4/4 PASS; pilno privataus serverio HTTP patikra PASS, įskaitant kitą nuomotoją.
+Naujas atskiras naršyklės bandymas naudoja visą programą, vietinį HTTPS,
+tikrus OTP ir app sesijų vartus, du nepriklausomus nuomotojus, neprisijungusį
+lankytoją, 1280/390 px, tikrus PDF atsisiuntimus; dokumentų API naršyklėje
+neimituojamas. CI terminalus rezultatas fiksuojamas po bandymo, ne iš anksto.
+Nekartojami realūs Stripe TEST mokėjimai ar ankstesnis Railway kopijos restore.
+
+Operatorės peržiūra: /__test-access → esama privati prieiga → prisijungti prie
+nuomotojo TEST paskyros → Išmokos → Mano užsakymų komisinio dokumentai (TEST)
+→ Sukurti mano sintetinį užbaigtą TEST užsakymą → konkretaus užsakymo sąskaitos
+ir kreditinės „Atsisiųsti PDF“. Tai užsakymo dokumentų pateikimo TEST kelias,
+ne tikros SF aktyvavimas, ne banko pervedimo ar tikro apmokėjimo įrodymas.
+
 ## 2026-11-22 – perjungimas atidėtas, tęsiamas privatus TEST
 
 Operatorė atšaukė pirmo riboto perjungimo vykdymą: tikro nuomotojo dar nėra.

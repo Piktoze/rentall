@@ -116,7 +116,7 @@ jobs:
       - name: Verify private TEST access and isolated production storage
         run: node --test private-test-access.test.mjs private-test-recipient-onboarding.test.mjs && node private-test-http.test.mjs
       - name: Verify deferred supplier transfer policy and LIVE payment gate
-        run: node --test onboarding-pilot-access.test.mjs backup-write-coordination.test.mjs test-commission-samples-http.test.mjs connect-prelaunch.test.mjs encrypted-backup-bundle.test.mjs sct-supplier-onboarding-http.test.mjs commercial-sct-runtime.test.mjs commercial-sct-restart.test.mjs sct-persistent-restart.test.mjs persistent-storage-rehearsal.test.mjs password-recovery.test.mjs sct-test-runtime.test.mjs isolated-recovery-probe.test.mjs operator-tax-profile.test.mjs full-platform-policy.test.mjs invoice-issuer-plan.test.mjs email-delivery-receipt.test.mjs && node password-recovery-http.test.mjs && node sct-persistent-http-security.test.mjs
+        run: node --test supplier-commission-documents.test.mjs onboarding-pilot-access.test.mjs backup-write-coordination.test.mjs test-commission-samples-http.test.mjs connect-prelaunch.test.mjs encrypted-backup-bundle.test.mjs sct-supplier-onboarding-http.test.mjs commercial-sct-runtime.test.mjs commercial-sct-restart.test.mjs sct-persistent-restart.test.mjs persistent-storage-rehearsal.test.mjs password-recovery.test.mjs sct-test-runtime.test.mjs isolated-recovery-probe.test.mjs operator-tax-profile.test.mjs full-platform-policy.test.mjs invoice-issuer-plan.test.mjs email-delivery-receipt.test.mjs && node password-recovery-http.test.mjs && node sct-persistent-http-security.test.mjs
       - name: Verify previous financial safety regressions
         run: node --test deferred-supplier-transfer.test.mjs live-launch-gate-v243.test.mjs supplier-transfer-command-journal.test.mjs isolated-test-supplier-transfer-executor.test.mjs isolated-sct-platform-payment.test.mjs isolated-test-sct-stripe-adapter.test.mjs isolated-sct-payment-webhook-binding.test.mjs sct-payment-reconciliation-inbox.test.mjs sct-booking-binding.test.mjs isolated-sct-test-payment-coordinator.test.mjs isolated-sct-test-payment-reconciler.test.mjs sct-test-payment-settlement.test.mjs isolated-sct-test-reconciliation-coordinator.test.mjs sct-legacy-direct-charge-guard.test.mjs isolated-sct-test-full-refund.test.mjs isolated-sct-test-refund-executor.test.mjs isolated-sct-test-supplier-transfer-readiness.test.mjs isolated-sct-recipient-account-gate.test.mjs isolated-sct-recipient-onboarding-plan.test.mjs isolated-sct-test-recipient-creator.test.mjs isolated-sct-recipient-uncertain-reconciliation.test.mjs isolated-sct-test-recipient-onboarding-session.test.mjs
       - name: Run real Chromium browser E2E, no live services
@@ -127,6 +127,12 @@ jobs:
       - name: Verify authenticated Stripe return in a fresh isolated server process
         # Keep the production login rate limit intact; prior journey logins use its budget.
         run: npx playwright test e2e/sct-onboarding-return.spec.js e2e/test-document-downloads.spec.js --config=e2e/playwright.config.js --retries=0
+      - name: Verify own-order documents behind real private TEST gate and separate accounts
+        env:
+          RIO_DOCUMENT_E2E_ROOT: ${{ runner.temp }}/rio-owned-document-browser
+        run: |
+          echo '127.0.0.1 rentinorbit.test' | sudo tee -a /etc/hosts > /dev/null
+          npx playwright test --config=e2e/owned-commission.config.js
       - name: Lithuanian mobile search 10 times with retries disabled
         run: npx playwright test e2e/isolated-ci.spec.js --config=e2e/playwright.config.js --grep 'mobile navigation and public pages support lt$' --repeat-each=10 --workers=1 --retries=0
       - name: Verify read-only catalog in Chromium and over HTTP
@@ -161,6 +167,7 @@ jobs:
           name: isolated-browser-e2e-report
           path: |
             e2e/report/
+            e2e/report-owned-commission/
             e2e/test-results/
             test-results/
           if-no-files-found: warn
