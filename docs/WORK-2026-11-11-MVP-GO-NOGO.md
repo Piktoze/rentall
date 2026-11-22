@@ -1,5 +1,43 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## 2026-11-22 – skelbimų moderavimo trūkstamos grandies patikra
+
+Pradinė šaka 874bfa7. CI 45003970150 SUCCESS buvo padengta naujo skelbimo
+registracija / nuotraukos / pateikimas 1280 ir 390 px, bet ne pilna dviejų
+paskyrų administratoriaus sprendimo → nuomotojo informavimo → taisymo /
+pakartotinio pateikimo grandinė. Moderavimo esamas testas buvo statinis;
+katalogo paslėptų įrašų pavyzdžiai nepakeitė šios interaktyvios patikros.
+
+Pataisyta: viešumo filtras reikalauja dabartinės approved būsenos ir sutampančių
+revision / approved_revision. Ankstesnis patvirtinimas nebepalieka laukiančio
+ar atmesto naujo varianto paieškoje. Patvirtintos ankstesnės turinio versijos
+neperrašomos laukiant sprendimo; istorija išsaugoma. Redaguojant paliekamos
+2–5 išsaugotos nuotraukos: native required netrukdo pakartotiniam pateikimui;
+naujam skelbimui required atkuriamas, serverio ir JS nuotraukų validacija
+lieka. Nuomotojo inventoriuje aiškiai nurodoma laukti sprendimo arba pataisyti
+nurodytą priežastį ir pateikti iš naujo.
+
+Naujas izoliuotas DB testas PASS: pending → approved → pakeitimas/pending →
+rejected → pataisymas/pending → approved; pasenusi administratoriaus revision
+atmetama 409; trys sprendimai lieka istorijoje. Foto validacijos patikra PASS.
+Naujas naršyklės testas tik trūkstamiems moderavimo scenarijams, 1280/390 px,
+naudoja tikrą privatų HTTPS, tikras atskiras admin/supplier sesijas, nuotraukų
+failus ir API. Pradinio UI įkėlimo nereprodukuoja – jis jau padengtas ankstesniu
+CI. Tikrina administratoriaus patvirtinimą / privalomą atmetimo priežastį,
+nuomotojo Refresh ir sprendimą, taisymą be pakartotinio nuotraukų įkėlimo,
+paieškos matomumą kiekvienoje būsenoje ir pasenusio sprendimo blokavimą.
+Naršyklės ir Railway terminalus rezultatas įrašomas po patikros.
+
+Privačiam pristatymui vertinama kontroliuojama TEST demonstracija su
+sintetiniais duomenimis; tai nėra komercinio paleidimo leidimas. Atskiro
+naujo žmogaus savarankiškai prieigai reikėtų privataus pakvietimo, o ne
+viešai atverti vartus. Tikro nuomotojo duomenų šiam darbui nereikia.
+Komerciniam paleidimui lieka esamo registro saugyklos / kopijų aktyvavimas,
+LIVE webhook ir realaus gavėjo patikra, tikros apskaitos / išrašymo leidimai,
+saugojimo ir VMI/PVM / Zoho DPA klausimai. Šio darbo metu saugykla, esama
+/data, DNS, LIVE finansai ir tikras išrašymas nekeičiami; ankstesni tikri
+Stripe TEST mokėjimai ir Railway kopijos atkūrimas nekartojami.
+
 ## 2026-11-22 – būsimo komercinio dokumentų pateikimo parengtis
 
 Pradinė šaka aec3fc4. TEST dokumentų kelias paliktas atskiras. Paruoštas

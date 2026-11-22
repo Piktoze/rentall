@@ -1428,6 +1428,7 @@ document.getElementById('openListingFormBtn')?.addEventListener('click',()=>{
   if(!currentSupplier()){ openAuth('register'); return; }
   editingListing=null;
   document.getElementById('listingForm').reset();
+  document.getElementById('listingPhotos').required=true;
   pendingListingPhotoUrls=[];
   document.getElementById('listingPhotoPreview').textContent='';
   document.getElementById('listingMsg').textContent='';
@@ -3788,6 +3789,7 @@ async function loadAdminDashboard(){
     if(!listings.length)reviewQueue.textContent='Skelbimų, laukiančių patvirtinimo, nėra.';
     for(const {listingId,revision,listing} of listings){
       const item=document.createElement('details');
+      item.dataset.reviewListing=listingId;
       const heading=document.createElement('summary');
       heading.textContent=listing.title;
       const details=document.createElement('pre');
@@ -6410,8 +6412,8 @@ async function loadSupplierInventoryV94(){
     set('v94ListingCount',String(v94SupplierListings.length));set('v94UnitCount',String(units));
     set('v94AvgRate',money(avg));set('v94DailyCapacity',money(capacity));
     window.dispatchEvent(new CustomEvent('rentinorbit:supplier-inventory',{detail:{listings:v94SupplierListings.map(l=>({id:l.id,title:l.title,status:l.status,active:l.active,quantity:Number(l.quantity||0),priceDay:Number(l.priceDay||0)}))}}));
-    body.innerHTML=v94SupplierListings.map(l=>`<tr>
-      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small><small>${escapeHtml(({pending_review:'Laukia patvirtinimo',approved:'Patvirtintas',rejected:'Atmestas'})[l.reviewStatus]||'Laukia patvirtinimo')}</small>${l.reviewReason?'<small>'+escapeHtml(l.reviewReason)+'</small>':''}</td>
+    body.innerHTML=v94SupplierListings.map(l=>`<tr data-inventory-listing="${escapeHtml(l.id)}">
+      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small><small>${escapeHtml(({pending_review:'Laukia patvirtinimo',approved:'Patvirtintas',rejected:'Atmestas'})[l.reviewStatus]||'Laukia patvirtinimo')}</small>${l.reviewReason?'<small>'+escapeHtml(l.reviewReason)+'</small>':''}<small class="rio-review-next-step">${l.reviewStatus==='rejected'?'Pataisyk nurodytus trūkumus ir pateik skelbimą peržiūrai iš naujo.':l.reviewStatus==='approved'?'Skelbimas patvirtintas. Pakeitimai bus peržiūrėti iš naujo.':'Skelbimas paieškoje nerodomas. Palauk administratoriaus sprendimo.'}</small></td>
       <td><b>${Math.max(0,Number(l.quantity||0))}</b> vnt.</td>
       <td>${money(Number(l.priceDay||0))}</td><td>${Number(l.priceWeek||0)>0?money(Number(l.priceWeek)):'—'}</td>
       <td>${Number(l.deposit||0)>0?money(Number(l.deposit)):'Nėra'}</td>
@@ -6438,6 +6440,7 @@ async function loadSupplierInventoryV94(){
         if(field&&listing[key]!=null)field.value=listing[key];
       }
       pendingListingPhotoUrls=[...(listing.photos||[])];
+      document.getElementById('listingPhotos').required=pendingListingPhotoUrls.length<2;
       document.getElementById('listingPhotoPreview').textContent=pendingListingPhotoUrls.length+' išsaugotos nuotraukos';
     }));
     body.querySelectorAll('.v94-calendar-jump').forEach(btn=>btn.addEventListener('click',async()=>{

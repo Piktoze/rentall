@@ -1542,7 +1542,7 @@ db.exec(`
 `);
 
 const publicListingFilter=`EXISTS (SELECT 1 FROM listing_reviews r WHERE r.listing_id=rental_listings.listing_id
-      AND r.approved_revision IS NOT NULL)
+      AND r.status='approved' AND r.revision=r.approved_revision)
     AND COALESCE(moderation_status,'active')='active'
     AND COALESCE(lifecycle_status,'active')='active'
     AND (availability_confirmed_at IS NULL OR datetime(availability_confirmed_at) >= datetime('now','-30 days'))`;
