@@ -2077,3 +2077,13 @@ body:not(.supplier-drawer-open) {overscroll-behavior-y:auto;}
   #checkoutModal #closeCheckout{z-index:10!important;width:44px!important;height:44px!important}
   #checkoutModal .checkout-progress{margin-right:52px}
 }
+
+/* Trader declaration: long select options must not enlarge the mobile grid. */
+#rioTraderPanel{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+#rioTraderPanel .auth-form{min-width:0;grid-template-columns:minmax(0,1fr)}
+#rioTraderPanel .form-grid,#rioTraderPanel .form-grid>label{min-width:0}
+#rioTraderPanel select,#rioTraderPanel input:not([type="checkbox"]),#rioTraderPanel textarea,#rioTraderPanel button{min-width:0;max-width:100%;box-sizing:border-box}
+#rioTraderPanel select,#rioTraderPanel input:not([type="checkbox"]),#rioTraderPanel textarea{width:100%}
+#rioTraderPanel button{white-space:normal}
+#rioTraderPanel .panel-head{flex-wrap:wrap}
+#rioTraderPanel .panel-head>div{min-width:0}

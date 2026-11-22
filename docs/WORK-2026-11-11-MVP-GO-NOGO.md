@@ -25,6 +25,12 @@ tikrus OTP ir app sesijų vartus, du nepriklausomus nuomotojus, neprisijungusį
 lankytoją, 1280/390 px, tikrus PDF atsisiuntimus; dokumentų API naršyklėje
 neimituojamas. CI terminalus rezultatas fiksuojamas po bandymo, ne iš anksto.
 Nekartojami realūs Stripe TEST mokėjimai ar ankstesnis Railway kopijos restore.
+1280 px dokumentų kelias praėjo. 390 px dokumentai / autorizacija praėjo,
+tačiau viso puslapio pločio patikra aptiko veiklos statuso formos select
+min-content išsiplėtimą už ekrano. Pataisytas būtent rioTraderPanel grid
+minmax(0,1fr), laukų min-width ir max-width; overflow neslepiamas.
+Galutinis telefono rezultatas fiksuojamas po naujo CI.
+
 
 Operatorės peržiūra: /__test-access → esama privati prieiga → prisijungti prie
 nuomotojo TEST paskyros → Išmokos → Mano užsakymų komisinio dokumentai (TEST)
