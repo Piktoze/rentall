@@ -17,7 +17,7 @@ const env={...process.env,NODE_ENV:'production',NODE_OPTIONS:'',PORT:'34444',HOS
  SCT_STRIPE_FEE_PAYER:'platform',PLATFORM_FEE_PERCENT:'15',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_synthetic_placeholder_123456',STRIPE_PUBLISHABLE_KEY:'pk_test_synthetic_placeholder_123456',STRIPE_WEBHOOK_SECRET:'whsec_synthetic_placeholder_123456',STRIPE_CONNECT_WEBHOOK_SECRET:'whsec_synthetic_placeholder_123456',
  EMAIL_PROVIDER:'resend',EMAIL_FROM:'TEST <info@example.test>',RESEND_API_KEY:'re_synthetic_placeholder_123456',EMAIL_WORKER_ENABLED:'true',EMAIL_WORKER_TOKEN:crypto.randomBytes(32).toString('hex'),SMS_PROVIDER:'disabled',PUSH_PROVIDER:'disabled',MAPS_PROVIDER:'stub',STRIPE_CONNECT_V2_PROVISIONING:'true',SUPPORT_EMAIL:'info@example.test',
  COMMERCIAL_SCT_RUNTIME_ENABLED:'false',CONNECT_ONBOARDING_ONLY_ENABLED:'false',ENCRYPTED_BACKUP_SCHEDULER_ENABLED:'false',DB_BACKUP_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',BACKUP_S3_ENABLED:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
-const child=spawn(process.execPath,['--import',hook,'ops/start.js'],{env,stdio:['ignore','inherit','inherit']});
+const child=spawn(process.execPath,['--import',hook,'ops/start.js'],{env,cwd:new URL('../',import.meta.url),stdio:['ignore','inherit','inherit']});
 let closing=false;
 const proxy=https.createServer({key:fs.readFileSync(root+'/key.pem'),cert:fs.readFileSync(root+'/cert.pem')},(req,res)=>{
  const upstream=http.request({hostname:'127.0.0.1',port:34444,path:req.url,method:req.method,headers:{...req.headers,'x-forwarded-proto':'https'}},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res);});
