@@ -36,6 +36,26 @@ nežinomomis ir naudoja miesto fallback; tikros nulinės koordinatės išsaugomo
 Atskira tuščių, dalinių ir nulinių koordinačių patikra PASS. Terminalus naujos
 naršyklės ir Railway rezultatas įrašomas po patikros.
 
+Galutinė tikslinė naršyklės patikra kodui a335c13: CI 45005621445 nauji
+1280 / 390 px moderavimo scenarijai 2/2 PASS, retries=0. Įrodyta pradinė
+pending būsena, admin approval, paieškos matomumas, patvirtinto skelbimo
+redagavimas ir paslėpimas, reject su privaloma priežastimi, nuomotojo Refresh,
+priežastis / kitas veiksmas, taisymas be naujų nuotraukų, resubmit, pasenusio
+revision 409 ir naujas approval su veikiančia paieška. Tiekėjas nepasiekia
+admin eilės (403). DB ir koordinačių tikslinės patikros 2/2 PASS; nuotraukų
+validacija PASS. Railway 57030723-5866-48a0-b1c0-9bc79c7a2866 SUCCESS.
+Viso CI terminali būsena pateikiama operatorės ataskaitoje.
+
+PRIVATI DEMONSTRACIJA: pagal šį etapą ir ankstesnį patikrintą TEST kelią,
+svetainę galima parodyti potencialiam nuomotojui operatorės valdomoje
+privačioje TEST sesijoje, naudojant sintetines paskyras / skelbimus. Moderavimo
+kelio techninių blokatorių neliko. Tai nesuteikia pašaliniam savarankiškos
+prieigos: tokiai prieigai reikėtų atskiro privataus pakvietimo / leidimo.
+Jo šiame etape nekuriame ir tikro nuomotojo duomenų neprašome. Po naujo
+laikinos TEST saugyklos proceso demonstracinius duomenis gali reikėti paruošti
+įprastu registracijos / skelbimo pateikimo keliu; tai ne komercinės saugyklos
+perjungimas. Tikri skelbimai / finansinės operacijos nepaleidžiami.
+
 Privačiam pristatymui vertinama kontroliuojama TEST demonstracija su
 sintetiniais duomenimis; tai nėra komercinio paleidimo leidimas. Atskiro
 naujo žmogaus savarankiškai prieigai reikėtų privataus pakvietimo, o ne
