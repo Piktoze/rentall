@@ -1,5 +1,58 @@
 # RentInOrbit – aktualus pilno paleidimo blokatorių registras
 
+## 2026-11-22 – būsimo komercinio dokumentų pateikimo parengtis
+
+Pradinė šaka aec3fc4. TEST dokumentų kelias paliktas atskiras. Paruoštas
+GET-only /api/supplier/issued-commission-documents sąrašas ir PDF pagal ID,
+nuomotojo Išmokų skiltis, sąskaitos ir kelių susietų kreditinių pateikimas.
+Jokių POST išrašymo / kreditavimo / numeravimo endpoint nėra.
+
+Prieiga remiasi išsaugotu originalo recipientUserId IR recipientEmail,
+užsakymo ID, kreditinės source_id ir originalo numeriu. Dabartinis skelbimo
+savininkas ar pakeisti profilio rekvizitai PDF neperrašo. Būsimoms naujoms
+komisinio sąskaitoms papildytas nekintamas snapshot su bookingId ir gavėjo
+paskyros ID; istoriniai įrašai nemigruojami. Nepilnas / neatitinkantis snapshot
+neaptarnaujamas; jokio savavališko istorinių dokumentų priskyrimo.
+
+PDF generuojamas tik iš išsaugotų išrašytojo / gavėjo rekvizitų, paslaugos ir
+išrašymo datų, sumų bei originalo ryšio. Vienodi duomenys duoda identišką PDF.
+Dabartinis patvirtintas ne PVM mokėtojos režimas atpažįstamas iš snapshot;
+kitų PVM režimų be papildomos peržiūros automatiškai neinterpretuojame.
+Komercinis skaitytuvas nepriima TEST-RIO, TEST kelias nekeičiamas.
+
+COMMISSION_DOCUMENT_DELIVERY_ENABLED yra atskiras skaitymo leidimas,
+nepriklausomas nuo naujo išrašymo ir mokėjimų vykdyklės: jau išrašyti dokumentai
+vėliau galės likti pasiekiami sustabdžius naujus mokėjimus / išrašymą.
+DABAR ši vėliava nenustatyta; PRIVATE_TEST_ENABLED=true visada išjungia tikrą
+komercinį pateikimą. RIO-2026 ir tikras išrašymas neaktyvuoti.
+
+Bandymas: iš anksto SQL paruošti sintetiniai RIO-2099 archyvo įrašai atskiroje
+/tmp SQLite bazėje, atidaromoje readonly. Tikras RIO-2026 skaitiklis / serijų
+lentelė net nesukuriama. Peržiūros PDF pažymėti SINTETINĖ PERŽIŪRA ir
+PREVIEW failo vardu. Sąskaita 15 EUR, dvi kreditinės 5 ir 2 EUR; papildomas
+TEST-RIO įrašas turi būti atmestas. Ruošiant įrašus nekviečiami invoice(),
+credit() ar approveSeries(). Testas tikrina failo baitų nekintamumą po GET.
+Vietiniai nauji skaitymo/PDF/HTTP ir susiję regresiniai bandymai: 34/34 PASS.
+Naršyklės patikra paleidžiama izoliuotame CI: ta pati komercinio skaitymo
+maršrutų realizacija, tikros privataus app sesijos, atskiras readonly archyvas,
+1280/390 px, tuščia kita paskyra, kito nuomotojo / svečio blokavimas, tikri
+atsisiuntimai. CI adapteris neaktyvuoja komercinio režimo Railway; galutinis
+rezultatas fiksuojamas po bandymo. Dokumentų el. laiškai nesiunčiami.
+
+TECHNIŠKAI PARUOŠTA: istorinių rekvizitų projekcija, paskyros autorizacija,
+SF/kreditinių ryšys, PDF ir UI; skaitymas nekeičia ledger ir nekuria numerių.
+PRIEŠ PIRMĄ TIKRĄ SF: galutinė apskaitos/kreditavimo ir dokumentų rekvizitų
+peržiūra; patvirtintas kategorijų saugojimas; leidimas nuolatinei saugyklai /
+reguliarioms šifruotoms kopijoms; gavėjo patikrinti rekvizitai konkrečiam
+užsakymui; atskiras aiškus numeracijos ir tikro išrašymo aktyvavimo leidimas
+(COMMISSION_ACCOUNTING_REVIEWED / COMMISSION_NUMBERING_ACTIVATION_APPROVED /
+COMMISSION_ISSUANCE_ENABLED). RIO-2026 nepanaudojimas / startas 000001, 15/85,
+platformos Stripe kaštai ir abipusio tinkamo grąžinimo momentas JAU patvirtinti;
+pakartotinai neklausti. Privataus nuomotojo → įmonės tvarka lieka užblokuota
+iki VMI/apskaitos išsprendimo. Užsienio paslaugų PVM ir esamas Zoho DPA lieka
+atskiri bendro paleidimo klausimai; šis darbas jų nelaiko techniniu GET
+įgyvendinimo blokatoriumi. Tikro nuomotojo duomenų šiame etape nereikia.
+
 ## 2026-11-22 – savo užsakymo TEST komisinio dokumentai
 
 Pradinė šaka b13a9f6. Bendri PDF pavyzdžiai nebuvo savo užsakymo dokumentų

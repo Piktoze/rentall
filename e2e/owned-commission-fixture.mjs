@@ -19,10 +19,12 @@ const env={...process.env,NODE_ENV:'production',NODE_OPTIONS:'',PORT:'34444',HOS
  COMMERCIAL_SCT_RUNTIME_ENABLED:'false',CONNECT_ONBOARDING_ONLY_ENABLED:'false',ENCRYPTED_BACKUP_SCHEDULER_ENABLED:'false',DB_BACKUP_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',BACKUP_S3_ENABLED:'false',RENTINORBIT_ISOLATED_RECOVERY_PROBE:'false'};
 const child=spawn(process.execPath,['--import',hook,'ops/start.js'],{env,cwd:new URL('../',import.meta.url),stdio:['ignore','inherit','inherit']});
 let closing=false;
+const issuedPreview=process.env.RIO_ISSUED_DOCUMENT_PREVIEW_FIXTURE==='true'?await (await import('./issued-document-preview-proxy.mjs')).prepareIssuedPreviewProxy({mailPath:mail}):null;
 const proxy=https.createServer({key:fs.readFileSync(root+'/key.pem'),cert:fs.readFileSync(root+'/cert.pem')},(req,res)=>{
+ if(issuedPreview&&req.url.split('?')[0].startsWith('/api/supplier/issued-commission-documents'))return issuedPreview.handle(req,res);
  const upstream=http.request({hostname:'127.0.0.1',port:34444,path:req.url,method:req.method,headers:{...req.headers,'x-forwarded-proto':'https'}},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res);});
  upstream.on('error',()=>{res.statusCode=503;res.end();});req.pipe(upstream);
 });
 proxy.listen(34443,'127.0.0.1');
-function stop(){if(closing)return;closing=true;proxy.close();child.kill('SIGTERM');}
+function stop(){if(closing)return;closing=true;issuedPreview?.cleanup();proxy.close();child.kill('SIGTERM');}
 process.on('SIGTERM',stop);process.on('SIGINT',stop);child.on('exit',code=>{proxy.close();fs.rmSync(path.join(os.tmpdir(),'rentinorbit-private-test',run),{recursive:true,force:true});process.exit(closing?0:code||1);});

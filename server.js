@@ -1,3 +1,4 @@
+import {installIssuedCommissionDocuments,issuedDeliveryEnabled} from './modules/issued-commission-documents.js';
 import {installSupplierCommissionDocuments} from './modules/supplier-commission-documents.js';
 import {onboardingPilotAccess,onboardingPilotSupplierAllowed} from './modules/onboarding-pilot-access.js';
 import {stagingCapacityReview} from './modules/staging-capacity-review.js';
@@ -1580,6 +1581,7 @@ app.get('/api/admin/email-outbox', requireRole('admin'), (req,res)=>{
 installTestCommissionExamples(app,{enabled:()=>privateTestRequested()&&stripeMode==='test',requireRole});
 const ownedCommissionDocuments=installSupplierCommissionDocuments(app,{enabled:()=>privateTestRequested()&&stripeMode==='test',requireRole,db});
 process.once('exit',()=>ownedCommissionDocuments.cleanup());
+installIssuedCommissionDocuments(app,{enabled:()=>issuedDeliveryEnabled(process.env),requireRole,getDb:()=>db});
 app.get('/api/supplier/accounting/documents',requireRole('supplier'),(req,res)=>{
  if(process.env.RENTINORBIT_STAGING!=='true')return res.status(404).end();
  res.setHeader('Cache-Control','no-store, private');
