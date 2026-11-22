@@ -29,7 +29,13 @@ Nekartojami realūs Stripe TEST mokėjimai ar ankstesnis Railway kopijos restore
 tačiau viso puslapio pločio patikra aptiko veiklos statuso formos select
 min-content išsiplėtimą už ekrano. Pataisytas būtent rioTraderPanel grid
 minmax(0,1fr), laukų min-width ir max-width; overflow neslepiamas.
-Galutinis telefono rezultatas fiksuojamas po naujo CI.
+Galutinė realaus privataus HTTPS / dviejų app paskyrų naršyklės patikra
+CI 45002048662 kodui d3737f5: abu 1280 / 390 px scenarijai PASS.
+Savininko PDF atsisiunčiami; kitas nuomotojas 404; be app prisijungimo 401;
+kita paskyra be dokumentų rodo tuščią būseną; po logout nebelieka nuorodų.
+Telefonas: skiltis ir visas puslapis telpa ekrane. Dokumentų API naršyklėje
+nebuvo imituotas; vietinis laiškų tiekėjo double tik išdavė privataus OTP kodą.
+Viso CI terminalus rezultatas pateikiamas operatorės ataskaitoje.
 
 
 Operatorės peržiūra: /__test-access → esama privati prieiga → prisijungti prie
