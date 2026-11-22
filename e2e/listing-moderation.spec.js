@@ -5,7 +5,7 @@ test.beforeAll(async({request})=>{
  const challenge=await (await request.post('/__test-access/request',{data:{email:'gate@example.test'}})).json();await expect.poll(()=>fs.existsSync(file)).toBe(true);
  const code=JSON.parse(fs.readFileSync(file)).html.match(/<strong>(\d{8})<\/strong>/)[1];expect((await request.post('/__test-access/verify',{data:{challenge:challenge.challenge,code}})).ok()).toBeTruthy();
  gate=(await request.storageState()).cookies.find(c=>c.name==='__Host-rio_test');
- const registered=await request.post('/api/auth/register',{data:{email:'gate@example.test',password:'SyntheticModeration123!',role:'supplier',termsAccepted:true}});expect(registered.ok()).toBeTruthy();expect((await registered.json()).user.role).toBe('admin');adminCookies=(await request.storageState()).cookies;
+ let registered=await request.post('/api/auth/register',{data:{email:'gate@example.test',password:'SyntheticModeration123!',role:'supplier',termsAccepted:true}});if(registered.status()===409)registered=await request.post('/api/auth/login',{data:{email:'gate@example.test',password:'SyntheticModeration123!'}});expect(registered.ok()).toBeTruthy();expect((await registered.json()).user.role).toBe('admin');adminCookies=(await request.storageState()).cookies;
 });
 for(const width of [1280,390])test(`uncovered moderation decisions, approved edit withdrawal, rejection and resubmit ${width}px`,async({browser})=>{
  const options={baseURL:'https://rentinorbit.test:34443',ignoreHTTPSErrors:true,extraHTTPHeaders:{Origin:'https://rentinorbit.test:34443'},viewport:{width,height:900}};

@@ -29,7 +29,12 @@ failus ir API. Pradinio UI įkėlimo nereprodukuoja – jis jau padengtas ankste
 CI. Tikrina administratoriaus patvirtinimą / privalomą atmetimo priežastį,
 nuomotojo Refresh ir sprendimą, taisymą be pakartotinio nuotraukų įkėlimo,
 paieškos matomumą kiekvienoje būsenoje ir pasenusio sprendimo blokavimą.
-Naršyklės ir Railway terminalus rezultatas įrašomas po patikros.
+Naršyklė aptiko papildomą realų gedimą: pakartotinai patvirtintas redaguotas
+skelbimas API jau viešas, bet paieška jo neranda, nes null koordinatės buvo
+interpretuojamos kaip (0,0). listingCoordinates dabar null / blank laiko
+nežinomomis ir naudoja miesto fallback; tikros nulinės koordinatės išsaugomos.
+Atskira tuščių, dalinių ir nulinių koordinačių patikra PASS. Terminalus naujos
+naršyklės ir Railway rezultatas įrašomas po patikros.
 
 Privačiam pristatymui vertinama kontroliuojama TEST demonstracija su
 sintetiniais duomenimis; tai nėra komercinio paleidimo leidimas. Atskiro

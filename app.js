@@ -5341,8 +5341,8 @@ function normalizeCityKey(v){
 }
 
 function listingCoordinates(listing){
-  const lat=Number(listing.latitude);
-  const lng=Number(listing.longitude);
+  const lat=listing.latitude==null||String(listing.latitude).trim()===''?NaN:Number(listing.latitude);
+  const lng=listing.longitude==null||String(listing.longitude).trim()===''?NaN:Number(listing.longitude);
   if(Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180){
     return [lat,lng];
   }

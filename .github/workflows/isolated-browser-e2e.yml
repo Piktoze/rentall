@@ -5,6 +5,8 @@ on:
     branches: [staging/v203]
     paths:
       - "e2e/**"
+      - "listing-moderation-lifecycle.test.mjs"
+      - "listing-coordinate-fallback.test.mjs"
       - "index.html"
       - "styles.css"
       - "brand-v193.css"
@@ -124,7 +126,7 @@ jobs:
           RIO_DOCUMENT_E2E_ROOT: ${{ runner.temp }}/rio-listing-moderation-browser
         run: |
           echo '127.0.0.1 rentinorbit.test' | sudo tee -a /etc/hosts > /dev/null
-          node --test listing-moderation-lifecycle.test.mjs
+          node --test listing-moderation-lifecycle.test.mjs listing-coordinate-fallback.test.mjs
           npx playwright test --config=e2e/listing-moderation.config.js
       - name: Verify own-order documents behind real private TEST gate and separate accounts
         env:
