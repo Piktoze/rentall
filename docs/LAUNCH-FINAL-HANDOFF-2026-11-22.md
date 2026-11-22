@@ -17,7 +17,39 @@ abipusio grąžinimo momentas patvirtinti. Šių sprendimų pakartotinai nepraš
 | Saugykla ir kopijos | Patvirtintas perjungimas, nauja komercinė vieta, viešasis šifravimo raktas ir kopijų laikymo už Railway vieta. Patikrintas pirmas suplanuotas archyvas. 7 d. valymo riba taikoma po sėkmingos kopijos, ne prastovos metu. |
 | LIVE nuomotojas ir webhook | Nuomotojas pildo savo Connect formą; Stripe patvirtinami paskyros reikalavimai ir pervedimų bei banko išmokų parengtis atskirai. LIVE webhook paskirtys konfigūruojamos atskiru leidimu ir patikrinamas pristatymas. Mokėjimų aktyvavimas atskiras. |
 
-## Kopijuojamas paklausimo projektas dėl užsienio paslaugų
+## Operatorės sprendimas dėl VMI ir kopijų parengimas
+
+GPM išlaidoms pasirinktas 30 % būdas. Operatorės nurodymu žemiau esantys VMI
+paklausimų projektai neteikiami ir tiekėjų dokumentai nesiunčiami. Užsienio
+paslaugų PVM prievolė pagal faktinius pirkimus šiuo sprendimu neįvertinta.
+Privataus ne verslininko nuomotojo → įmonės derinys lieka užblokuotas.
+Komisinio pajamų dokumentavimo ir išrašymo kontrolė nesikeičia.
+
+Zoho paskyra atidaryta iki prisijungimo lango. DPA būseną galima perskaityti
+tik operatorės prisijungtoje paskyroje.
+
+### Kopijų raktas vietiniame Mac terminale
+
+Raktų porą galima sugeneruoti be repo, Node.js ir S3 prieigos. Komanda sustoja,
+jei katalogas jau egzistuoja, kad neperrašytų raktų. Patikrintas OpenSSL RSA
+PKCS#8 privatus ir SPKI viešasis formatas laikinoje aplinkoje.
+
+```sh
+(
+  set -eu
+  umask 077
+  mkdir "$HOME/Documents/RentInOrbit-raktai"
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$HOME/Documents/RentInOrbit-raktai/private.pem"
+  openssl pkey -in "$HOME/Documents/RentInOrbit-raktai/private.pem" -pubout -out "$HOME/Documents/RentInOrbit-raktai/public.pem"
+)
+```
+
+Kopijoms reikės pasirinktos vietos už Railway ribų. Privataus rakto
+nekelti į Railway ir nesiųsti pokalbyje. Tik viešasis `public.pem` naudojamas
+Railway šifravimo konfigūracijai. Ši instrukcija neperjungia saugyklos ir
+neįjungia kopijų grafiko.
+
+## Nepateiktas paklausimo projektas dėl užsienio paslaugų (istorijai)
 
 Laba diena,
 
