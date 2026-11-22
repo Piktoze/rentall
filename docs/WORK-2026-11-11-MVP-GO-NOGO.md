@@ -16,8 +16,12 @@ savo skelbimo buvimą ir nepatvirtinto skelbimo nebuvimą viešame API.
 Vietinės PDF/HTTP autorizacijos patikros 2/2 PASS. Vietinės naršyklės
 paleidimą blokuoja aplinkos socket() Operation not permitted; prijungtos
 naršyklės ryšys taip pat nepasiekiamas. Tai nėra produkto bandymų PASS.
-Nauja naršyklės patikra perduota staging CI; terminalus rezultatas pateikiamas
-atskirai, neinterpretuojant ankstesnio CI kaip dabartinio kodo įrodymo.
+Kodas 46094ff: CI 44999754971 naršyklės pagrindinis kelias ir atskiras
+Connect grįžimo / TEST PDF parsisiuntimo etapas PASS. Tikra UI registracija,
+nuotraukos ir moderuojamas pateikimas patikrinti 1280 ir 390 px. Tikras vietinis
+HTTP dviejų paskyrų perdavimo/grąžinimo ir ginčo kelias PASS; privačios prieigos
+ir PDF patikros 4/4 PASS. Railway 36108dec-fa2d-4ce1-a584-9a847f585d02
+SUCCESS. Viso CI terminalus rezultatas pateikiamas operatorės ataskaitoje.
 Railway prieš pakeitimą: 884a417a SUCCESS, staging/v203, viena iad replika,
 be laukiančių pakeitimų. Finansiniai TEST ir kopijos atkūrimas nekartoti.
 
