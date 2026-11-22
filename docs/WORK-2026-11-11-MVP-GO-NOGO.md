@@ -39,6 +39,17 @@ maršrutų realizacija, tikros privataus app sesijos, atskiras readonly archyvas
 atsisiuntimai. CI adapteris neaktyvuoja komercinio režimo Railway; galutinis
 rezultatas fiksuojamas po bandymo. Dokumentų el. laiškai nesiunčiami.
 
+Faktinė nauja patikra: kodas 48cbacc, CI 45003970150 komercinių dokumentų
+1280/390 px scenarijai 2/2 PASS. Sąskaita ir abi kreditinės atsisiunčiamos;
+kita paskyra 404, be app sesijos 401, aiški tuščia būsena, TEST įrašai atmetami.
+Ištaisytas PDF šrifto/logotipo kelias pagal modulio vietą, todėl atsisiuntimai
+veikia nepriklausomai nuo proceso paleidimo katalogo. Pakartota vietinė patikra
+paleidus iš e2e katalogo: 3/3 PASS. Railway 6eb0ae2d-e8e0-4ec9-a2bb-e1ba1b6b7b97
+SUCCESS. Faktinis komercinis skaitymo režimas domene NEAKTYVUOTAS;
+šio UI peržiūra vyko izoliuotame CI su tikromis app sesijomis ir readonly
+sintetiniu archyvu, ne su tikromis sąskaitomis. Viso CI terminali būsena
+pateikiama operatorės ataskaitoje. Esamas privatus TEST dokumentų kelias lieka.
+
 TECHNIŠKAI PARUOŠTA: istorinių rekvizitų projekcija, paskyros autorizacija,
 SF/kreditinių ryšys, PDF ir UI; skaitymas nekeičia ledger ir nekuria numerių.
 PRIEŠ PIRMĄ TIKRĄ SF: galutinė apskaitos/kreditavimo ir dokumentų rekvizitų
