@@ -260,7 +260,7 @@ test('commercial booking route checks listing declaration before inventory or pa
  const server=fs.readFileSync(new URL('./server.js',import.meta.url),'utf8');
  const route=server.split("app.post('/api/rentals/bookings',")[1].split("const agreement=createRentalAgreement(")[0];
  const transaction=route.indexOf('const result = db.transaction(');
- const gate=route.indexOf('if(commercialRuntime&&(!revision||!currentDeclarations.length))');
+ const gate=route.indexOf("if((commercialRuntime||(process.env.NODE_ENV==='test'&&process.env.RENTINORBIT_TEST_REQUIRE_LISTING_RISK==='true'))&&(!revision||!currentDeclarations.length))");
  const inventory=route.indexOf('const created=createRentalBookingAtomic(');
  const enrollment=route.indexOf('sctRuntime.enrollNewBooking(');
  const archive=route.indexOf("INSERT INTO booking_listing_revision_evidence_v1");
