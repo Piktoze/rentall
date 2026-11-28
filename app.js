@@ -4222,7 +4222,35 @@ async function serverLogin(email,password){
   return data.user;
 }
 
+async function collectSupplierAccountRisk(){
+  const terms=await apiJson('/api/supplier/account-risk-terms');
+  if(!Array.isArray(terms.statements)||terms.statements.length!==4)throw Error('Nuomotojo sąlygos nepasiekiamos.');
+  return new Promise(resolve=>{
+    const dialog=document.createElement('dialog');
+    dialog.style.cssText='width:min(540px,92vw);max-height:85vh;overflow:auto;padding:24px;border:1px solid #aaa;border-radius:12px;background:#fff;color:#172019';
+    const form=document.createElement('form'),h=document.createElement('h2');
+    h.textContent='Nuomotojo atsakomybės patvirtinimas';form.append(h);
+    const boxes=terms.statements.map(statement=>{
+      const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:flex-start;margin:16px 0';
+      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.required=true;
+      label.append(checkbox,document.createTextNode(statement));form.append(label);return checkbox;
+    });
+    const back=document.createElement('button');back.type='button';back.textContent='Grįžti';
+    const submit=document.createElement('button');submit.type='submit';submit.textContent='Patvirtinti';submit.className='primary';submit.disabled=true;
+    boxes.forEach(box=>box.addEventListener('change',()=>{submit.disabled=!boxes.every(x=>x.checked)}));
+    form.append(back,submit);dialog.append(form);document.body.append(dialog);
+    let result=null;
+    form.addEventListener('submit',e=>{e.preventDefault();if(!boxes.every(x=>x.checked))return;result={version:terms.version,answers:boxes.map(x=>x.checked)};dialog.close();});
+    back.addEventListener('click',()=>dialog.close());
+    dialog.addEventListener('close',()=>{dialog.remove();resolve(result)},{once:true});dialog.showModal();
+  });
+}
 async function serverRegister(payload){
+  if(payload.role!=='customer'){
+    const supplierAccountRisk=await collectSupplierAccountRisk();
+    if(!supplierAccountRisk)throw Error('Registracija nepatvirtinta.');
+    payload={...payload,supplierAccountRisk};
+  }
   const data=await apiJson('/api/auth/register',{
     method:'POST',
     body:JSON.stringify(payload)
@@ -4245,7 +4273,7 @@ async function initializeSupplierInvitation(){
     const form=document.getElementById('supplierActivationForm');
     form?.addEventListener('submit',async e=>{
       e.preventDefault(); const msg=document.getElementById('supplierActivationMsg');
-      try{const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({token,password:document.getElementById('supplierActivationPassword').value,termsAccepted:document.getElementById('supplierActivationTerms')?.checked===true})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent=uiText('Account activated. Now confirm that your prepared listings are still available.');await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
+      try{const supplierAccountRisk=await collectSupplierAccountRisk();if(!supplierAccountRisk)return;const result=await apiJson('/api/supplier/activation',{method:'POST',body:JSON.stringify({supplierAccountRisk,token,password:document.getElementById('supplierActivationPassword').value,termsAccepted:document.getElementById('supplierActivationTerms')?.checked===true})});serverUser=result.user;currentServerUser=result.user;localStorage.setItem('rentinorbit_server_user',JSON.stringify(result.user));msg.textContent=uiText('Account activated. Now confirm that your prepared listings are still available.');await hydrateListingsFromServer();setTimeout(()=>{modal?.classList.remove('open');location.href='/?view=supplier-listings&confirm-prelaunch=1';},700);}catch(err){msg.textContent=err.message;}
     });
   }catch(err){if(summary) summary.textContent=err.message;modal?.classList.add('open');}
 }
