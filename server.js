@@ -938,6 +938,9 @@ app.post('/api/stripe/webhook',
           }
           // Out-of-order refund updates must not reopen terminal states,
           // including failed or canceled refunds requiring manual review.
+          // Archive only authenticated, account-bound and amount-bound events.
+          // Record before the state update, allowing the existing retry path to recover.
+          recordBoundDirectRefundEvidence(event,bookingId,providerRefund,providerStatus,amountCents);
           if(!shouldApplyRefundStatus(booking.refundStatus,providerStatus)) break;
           setStripeRefundDetails(bookingId,{
             refundId:providerRefund.id,
@@ -3527,6 +3530,7 @@ function buildBookingEvidence(id){
     listingConsentBinding:(()=>{const row=db.prepare('SELECT evidence_json FROM booking_listing_revision_evidence_v1 WHERE booking_id=?').get(id);return row?JSON.parse(row.evidence_json):{status:'historical-booking-not-pinned'};})(),
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     supplierCancellationOutcomes:db.prepare('SELECT evidence_json FROM supplier_cancellation_outcome_v1 WHERE booking_id=? ORDER BY recorded_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
+    refundWebhookEvidence:db.prepare('SELECT evidence_json FROM booking_refund_webhook_evidence_v1 WHERE booking_id=? ORDER BY recorded_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     handoverEvidence:db.prepare("SELECT purpose,party,created_at AS createdAt,consumed_at AS consumedAt FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer' AND consumed_at IS NOT NULL ORDER BY purpose").all(id),
     returnEvidence:b?{recordedReturnedAt:b.returnedAt,condition:b.returnCondition,notes:b.returnNotes,timestampMayReflectCompletion:true}:null,
@@ -3770,6 +3774,17 @@ db.exec(`CREATE TABLE IF NOT EXISTS supplier_cancellation_evidence_v1 (
 db.exec(`CREATE TABLE IF NOT EXISTS supplier_cancellation_outcome_v1 (
  event_id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, evidence_json TEXT NOT NULL, recorded_at TEXT NOT NULL
 )`);
+db.exec(`CREATE TABLE IF NOT EXISTS booking_refund_webhook_evidence_v1 (
+ event_id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, evidence_json TEXT NOT NULL, recorded_at TEXT NOT NULL
+)`);
+function recordBoundDirectRefundEvidence(event,bookingId,refund,status,amountCents){
+ const recordedAt=new Date().toISOString();
+ const evidence={eventId:event.id,eventType:event.type,bookingId,refundId:refund.id,
+   paymentIntentId:refund.payment_intent,status,amountCents,currency:'eur',
+   livemode:event.livemode===true,recordedAt,source:'verified and booking-bound direct refund webhook'};
+ db.prepare('INSERT OR IGNORE INTO booking_refund_webhook_evidence_v1(event_id,booking_id,evidence_json,recorded_at) VALUES(?,?,?,?)')
+   .run(event.id,bookingId,JSON.stringify(evidence),recordedAt);
+}
 function recordSupplierCancellationOutcome(intent,result){
  if(!intent||!result?.booking)return;
  const b=result.booking,recordedAt=new Date().toISOString();
