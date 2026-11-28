@@ -906,10 +906,10 @@ try{
  assert.equal(publicReviews.body.reviews[0].bookingId,undefined,'Public reviews must not expose private booking IDs');
  console.log('PASS renter-only listing review, duplicate rejection and private booking ID redaction');
  // After handover or return, cancellation/refund must be blocked; disputes remain available.
- status(await api(route+'/cancel',{method:'POST',cookie:supplierCookie,
+ status(await api(route+'/cancel',{method:'POST',cookie:supplierCookie,syntheticClientIp:'192.0.2.81',
    data:{reason:'Attempt to cancel after physical return'}}),409,
    'Supplier cannot cancel and refund a returned rental');
- status(await api(route+'/cancel',{method:'POST',cookie:renterCookie,
+ status(await api(route+'/cancel',{method:'POST',cookie:renterCookie,syntheticClientIp:'192.0.2.82',
    data:{reason:'Attempt to cancel after physical return'}}),409,
    'Renter cannot cancel and refund a returned rental');
  const disputeOpened=await api('/api/rentals/disputes',{method:'POST',cookie:renterCookie,
