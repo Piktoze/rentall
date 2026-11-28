@@ -3469,6 +3469,46 @@ function persistSupplierRiskConsent(bookingId,user,submitted){
       JSON.stringify({...challenge,answers:submitted.answers,acceptedAt,authMethod:'session'}),acceptedAt);
   return true;
 }
+// Retention review is deliberately read-only. No deletion is authorized here.
+function bookingEvidenceRetention(id){
+ const b=getRentalBookingById(id);
+ if(!b)return null;
+ const holds=[];
+ const terminal=['completed','cancelled','declined','expired'].includes(b.status);
+ if(!terminal)holds.push('OBLIGATIONS_NOT_COMPLETED');
+ const disputes=db.prepare('SELECT status,resolved_at FROM rental_disputes WHERE booking_id=?').all(id);
+ if(disputes.some(d=>d.status!=='resolved'||!d.resolved_at))holds.push('DISPUTE_UNRESOLVED');
+ const payment=String(b.paymentStatus||'').toLowerCase();
+ const refund=String(b.refundStatus||'').toLowerCase();
+ const payout=String(b.payoutStatus||'').toLowerCase();
+ if(!['unpaid','paid','refunded','cancelled','canceled','failed','not_required'].includes(payment))holds.push('PAYMENT_REVIEW_REQUIRED');
+ if(refund&&!['succeeded','refunded','not_required','none'].includes(refund))holds.push('REFUND_REVIEW_REQUIRED');
+ if(Number(b.securityDepositAmount||0)>0&&!['released','captured'].includes(b.securityDepositStatus))holds.push('DEPOSIT_UNRESOLVED');
+ if(b.status==='completed'&&!['paid','refunded'].includes(payment))holds.push('COMPLETION_PAYMENT_REVIEW_REQUIRED');
+ if(b.status==='completed'&&Number(b.supplierAmount||0)>0&&!['paid','completed','transferred'].includes(payout))holds.push('PAYOUT_REVIEW_REQUIRED');
+ if(['cancelled','declined','expired'].includes(b.status)&&payment==='paid')holds.push('TERMINAL_PAID_BOOKING_REVIEW_REQUIRED');
+ if(payout&&!['not_ready','not_required','none','paid','completed','transferred'].includes(payout))holds.push('PAYOUT_STATE_REVIEW_REQUIRED');
+ const candidates=[b.updatedAt,b.returnedAt,b.cancelledAt,b.payoutCompletedAt,b.securityDepositResolvedAt,...disputes.map(d=>d.resolved_at)].filter(Boolean);
+ const dates=candidates.map(x=>Date.parse(x));
+ if(!dates.length||dates.some(x=>!Number.isFinite(x)))holds.push('CLOSURE_DATE_UNVERIFIED');
+ const from=holds.length?null:new Date(Math.max(...dates));
+ let reviewAt=null;
+ if(from){
+  const d=new Date(from);const month=d.getUTCMonth();d.setUTCFullYear(d.getUTCFullYear()+10);
+  if(d.getUTCMonth()!==month)d.setUTCDate(0);
+  reviewAt=d.toISOString();
+ }
+ return {bookingId:id,policyVersion:'rio-contract-evidence-review-v1',minimumYears:10,
+   basis:'provisional contract evidence review; not a blanket retention rule',
+   status:holds.length?'hold':Date.parse(reviewAt)<=Date.now()?'review_due':'retained',
+   holds,provisionalClosureAt:from?.toISOString()||null,reviewAt,
+   automaticDeletion:false,legalAndFinancialReviewRequired:true};
+}
+app.get('/api/admin/rentals/:bookingId/evidence/retention',requireRole('admin'),(req,res)=>{
+ const result=bookingEvidenceRetention(String(req.params.bookingId));
+ if(!result)return res.status(404).end();
+ res.set('Cache-Control','no-store, private').json(result);
+});
 function buildBookingEvidence(id){
   const b=getRentalBookingById(id);
   const risk=db.prepare('SELECT evidence_json FROM supplier_risk_consent_v1 WHERE booking_id=?').get(id);
