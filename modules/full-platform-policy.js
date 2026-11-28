@@ -185,7 +185,15 @@ function extendedLocalizedPolicy(page,{key,lang,env}){
  const vat=copy.vat[operatorTaxProfile(env).vatMode==='not_vat_registered'?0:1];
  result.sections.unshift([copy.operator,[identity.every(Boolean)?identity[0]+', '+copy.certificate+' '+identity[1]+', '+copy.address+': '+identity[2]+'.':copy.missing,vat,copy.revision]]);
  if(key==='terms')result.sections.push(...structuredClone(copy.terms));
- if(key==='fees')result.sections.push([copy.fees[0],[copy.fees[1],vat]]);
- if(key==='privacy')result.sections.push(...structuredClone(copy.privacy));
+ if(key==='fees'){
+   const outdated={es:'Precio piloto para proveedores',de:'Pilotpreis für Anbieter',ru:'Пилотная цена для поставщиков'}[lang];
+   result.sections=result.sections.filter(([heading])=>heading!==outdated);
+   result.sections.push([copy.fees[0],[copy.fees[1],vat]]);
+ }
+ if(key==='privacy'){
+   const outdated={es:['Destinatarios y conservación','Tus derechos'],de:['Empfänger und Aufbewahrung','Deine Rechte'],ru:['Кому и на какой срок','Ваши права']}[lang];
+   result.sections=result.sections.filter(([heading])=>!outdated.includes(heading));
+   result.sections.push(...structuredClone(copy.privacy));
+ }
  return result;
 }
