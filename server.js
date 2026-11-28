@@ -3277,7 +3277,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     }
     const result = db.transaction(()=>{
     const {revision,listingSha256,declarations,currentDeclarations}=approvedListingRiskEvidence(listingId,listingForBooking.ownerEmail);
-    if(commercialRuntime&&(!revision||!currentDeclarations.length))
+    if((commercialRuntime||(process.env.NODE_ENV==='test'&&process.env.RENTINORBIT_TEST_REQUIRE_LISTING_RISK==='true'))&&(!revision||!currentDeclarations.length))
       throw Object.assign(new Error('Nuomotojas turi atnaujinti skelbimą ir patvirtinti atsakomybės sąlygas prieš priimant naujas rezervacijas.'),{code:'LISTING_RISK_RECONFIRMATION_REQUIRED'});
     const created=createRentalBookingAtomic({
       bookingId,
