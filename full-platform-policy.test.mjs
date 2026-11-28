@@ -46,3 +46,24 @@ test('ES DE RU commercial drafts contain critical obligations and preserve sourc
   }
  }
 });
+
+test('commercial translations remove obsolete pilot pricing and privacy placeholders',()=>{
+ const env={LEGAL_OPERATOR_NAME:'Synthetic operator',LEGAL_IV_CERTIFICATE:'TEST-123',LEGAL_OPERATOR_ADDRESS:'Synthetic address'};
+ const obsolete={
+ es:{fees:'Precio piloto para proveedores',privacy:/los plazos definitivos se fijarán antes del lanzamiento|La identidad y contacto definitivo del responsable se publicarán/},
+ de:{fees:'Pilotpreis für Anbieter',privacy:/genaue Fristen folgen vor Launch|Verantwortlicher und Datenschutzkontakt werden vor öffentlichem Start veröffentlicht/},
+ ru:{fees:'Пилотная цена для поставщиков',privacy:/точные сроки будут закреплены до запуска|Данные оператора и контакт по приватности будут опубликованы до публичного запуска/}
+ };
+ for(const [lang,expected] of Object.entries(obsolete)){
+   const feeBase=getPolicyPage(lang,'fees'),privacyBase=getPolicyPage(lang,'privacy');
+   const before=JSON.stringify([feeBase,privacyBase]);
+   const fees=fullPlatformPolicy(feeBase,{lang,key:'fees',env});
+   const privacy=fullPlatformPolicy(privacyBase,{lang,key:'privacy',env});
+   assert.ok(feeBase.sections.some(([heading])=>heading===expected.fees));
+   assert.ok(!fees.sections.some(([heading])=>heading===expected.fees));
+   assert.match(JSON.stringify(privacyBase),expected.privacy);
+   assert.doesNotMatch(JSON.stringify(privacy),expected.privacy);
+   assert.match(JSON.stringify(privacy),/info@rentinorbit\.com/);
+   assert.equal(JSON.stringify([feeBase,privacyBase]),before);
+ }
+});
