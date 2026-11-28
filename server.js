@@ -2413,7 +2413,7 @@ app.post('/api/supplier/trader-profile',requireRole('supplier','admin'),
 });
 
 app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
-  res.json({listings:listOwnerRentalListings(req.appUser.email)});
+  res.json({listings:listOwnerRentalListings(req.appUser.email).map(listing=>({...listing,listingRiskReconfirmationRequired:!approvedListingRiskEvidence(listing.id,req.appUser.email).currentDeclarations.length}))});
 });
 
 const LISTING_RISK_VERSION='rio-listing-risk-lt-v1';
@@ -2435,6 +2435,14 @@ app.get('/api/supplier/listing-risk-terms',requireRole('supplier','admin'),(req,
 });
 function validListingRisk(value){
  return value?.version===LISTING_RISK_VERSION&&Array.isArray(value.answers)&&value.answers.length===LISTING_RISK_STATEMENTS.length&&value.answers.every(x=>x===true);
+}
+function approvedListingRiskEvidence(listingId,ownerEmail){
+ const review=db.prepare('SELECT revision,approved_revision,status,draft_json FROM listing_reviews WHERE listing_id=?').get(String(listingId));
+ const revision=review?.status==='approved'&&review.revision===review.approved_revision?review.revision:null;
+ const listingSha256=revision?crypto.createHash('sha256').update(review.draft_json).digest('hex'):null;
+ const declarations=revision?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=? ORDER BY accepted_at,event_id').all(String(listingId),revision).map(row=>JSON.parse(row.evidence_json)).filter(ev=>ev.listingSha256===listingSha256&&String(ev.actorEmail).toLowerCase()===String(ownerEmail).toLowerCase()):[];
+ const currentDeclarations=declarations.filter(ev=>validListingRisk(ev)&&Array.isArray(ev.statements)&&JSON.stringify(ev.statements)===JSON.stringify(LISTING_RISK_STATEMENTS));
+ return {revision,listingSha256,declarations,currentDeclarations};
 }
 app.post('/api/supplier/listings', requireRole('supplier','admin'), requireSupplierAccountRisk, (req,res)=>{
   try{
@@ -3291,16 +3299,8 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       holdMinutes:Number(process.env.BOOKING_HOLD_MINUTES || 30)
     });
     if(sctRuntime)sctRuntime.enrollNewBooking(bookingId,listingForBooking.ownerEmail);
-    const review=db.prepare('SELECT revision,approved_revision,status,draft_json FROM listing_reviews WHERE listing_id=?').get(String(listingId));
-    const revision=review?.status==='approved'&&review.revision===review.approved_revision?review.revision:null;
+    const {revision,listingSha256,declarations,currentDeclarations}=approvedListingRiskEvidence(listingId,listingForBooking.ownerEmail);
     const capturedAt=new Date().toISOString();
-    const listingSha256=revision?crypto.createHash('sha256').update(review.draft_json).digest('hex'):null;
-    const declarations=revision?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=? ORDER BY accepted_at,event_id').all(String(listingId),revision).map(row=>JSON.parse(row.evidence_json)).filter(ev=>ev.listingSha256===listingSha256&&String(ev.actorEmail).toLowerCase()===String(listingForBooking.ownerEmail).toLowerCase()):[];
-    // Commercial bookings must bind the approved listing revision to the
-    // owner's current affirmative declaration. The transaction rolls back
-    // inventory reservation and SCT enrollment when the evidence is missing.
-    const currentDeclarations=declarations.filter(ev=>ev.version===LISTING_RISK_VERSION&&validListingRisk(ev)&&
-      Array.isArray(ev.statements)&&JSON.stringify(ev.statements)===JSON.stringify(LISTING_RISK_STATEMENTS));
     if(commercialRuntime&&(!revision||!currentDeclarations.length))
       throw Object.assign(new Error('Nuomotojas turi atnaujinti skelbimą ir patvirtinti atsakomybės sąlygas prieš priimant naujas rezervacijas.'),{code:'LISTING_RISK_RECONFIRMATION_REQUIRED'});
     const binding={bookingId,listingId,revision,listingSha256,capturedAt,declarations,
