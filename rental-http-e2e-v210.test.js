@@ -888,9 +888,21 @@ try{
  console.log('PASS HTTP supplier decline restricted to pending: approved paid booking unchanged');
  // A supplier-initiated cancellation after a completed demo payment must
  // refund the full amount once and reject further cancellation/refund attempts.
+ // Move only this synthetic paid fixture's scheduled start into the past.
+ // The item remains unhanded-over (confirmed), so supplier cancellation must work.
+ const lateCancelDb=new Database(dbPath);
+ try{
+   const before=lateCancelDb.prepare('SELECT status,payment_status FROM rental_bookings WHERE booking_id=?').get(payId);
+   assert.equal(before.status,'confirmed');
+   assert.equal(before.payment_status,'paid');
+   lateCancelDb.prepare('UPDATE rental_bookings SET rental_start_at=? WHERE booking_id=?').run('2020-01-01T00:00:00.000Z',payId);
+ }finally{lateCancelDb.close();}
+ const renterLateCancel=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',cookie:renterCookie,syntheticClientIp:'192.0.2.91',data:{reason:'Synthetic late renter cancellation'}});
+ status(renterLateCancel,409,'Legacy renter cutoff remains enforced');
+ assert.equal(renterLateCancel.body.code,'INVALID_TRANSITION');
  const refunded=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
    cookie:supplierCookie,data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'unavailable',accepted:true}}});
- status(refunded,200,'Supplier cancels paid booking');
+ status(refunded,200,'Supplier cancels paid booking after scheduled start but before handover');
  assert.equal(refunded.body.refundAmount,100,'Supplier cancellation refunds all €100');
  assert.equal(refunded.body.booking.status,'cancelled');
  const refundReplay=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
