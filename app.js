@@ -1517,6 +1517,7 @@ document.getElementById('listingForm')?.addEventListener('submit',async e=>{
   if(submit)submit.disabled=true;
   const message=document.getElementById('listingMsg');
   try{
+    await ensureSupplierAccountRisk();
     await apiJson('/api/supplier/listings',{method:'POST',body:JSON.stringify({listing})});
     message.textContent='Skelbimas pateiktas peržiūrai.';
     closeListingModalAccessible();
@@ -3089,6 +3090,7 @@ async function updateBackendBookingStatus(bookingId,status,reason=null){
   const request=(async()=>{
     let supplierRiskConsent;
     if(status==='confirmed'){
+      await ensureSupplierAccountRisk();
       const url='/api/rentals/bookings/'+encodeURIComponent(bookingId)+'/supplier-risk-consent';
       const data=await apiJson(url);
       supplierRiskConsent=await new Promise(resolve=>{
@@ -4222,6 +4224,18 @@ async function serverLogin(email,password){
   return data.user;
 }
 
+let supplierAccountRiskPending=null;
+async function ensureSupplierAccountRisk(){
+  if(supplierAccountRiskPending)return supplierAccountRiskPending;
+  supplierAccountRiskPending=(async()=>{
+    const status=await apiJson('/api/supplier/account-risk-status');
+    if(status.accepted)return;
+    const consent=await collectSupplierAccountRisk();
+    if(!consent)throw Error('Nuomotojo atsakomybės sąlygos nepatvirtintos.');
+    await apiJson('/api/supplier/account-risk-consent',{method:'POST',body:JSON.stringify(consent)});
+  })();
+  try{return await supplierAccountRiskPending;}finally{supplierAccountRiskPending=null;}
+}
 async function collectSupplierAccountRisk(){
   const terms=await apiJson('/api/supplier/account-risk-terms');
   if(!Array.isArray(terms.statements)||terms.statements.length!==4)throw Error('Nuomotojo sąlygos nepasiekiamos.');
@@ -6686,7 +6700,7 @@ async function injectSupplierFreshnessControl(){
   const box=document.createElement('div'); box.className='v182-freshness-control';
   box.innerHTML=`<div><strong data-i18n-text="Keep your listings live">${escapeHtml(uiText('Keep your listings live'))}</strong><span data-i18n-text="Confirm regularly that prices, quantities and availability are still correct.">${escapeHtml(uiText('Confirm regularly that prices, quantities and availability are still correct.'))}</span></div><button class="primary" id="confirmSupplierListingsBtn" type="button" data-i18n-text="Confirm all listings are current">${escapeHtml(uiText('Confirm all listings are current'))}</button>`;
   section.prepend(box);
-  box.querySelector('button').addEventListener('click',async()=>{try{const result=await apiJson('/api/supplier/listings/confirm-current',{method:'POST',body:'{}'});showToast(`${result.confirmed} listings confirmed and eligible to go live`,'success');await hydrateListingsFromServer();}catch(err){showToast(err.message,'error');}});
+  box.querySelector('button').addEventListener('click',async()=>{try{await ensureSupplierAccountRisk();const result=await apiJson('/api/supplier/listings/confirm-current',{method:'POST',body:'{}'});showToast(`${result.confirmed} listings confirmed and eligible to go live`,'success');await hydrateListingsFromServer();}catch(err){showToast(err.message,'error');}});
 }
 setTimeout(()=>injectSupplierFreshnessControl(),700);
 
