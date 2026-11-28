@@ -2411,6 +2411,22 @@ app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
   res.json({listings:listOwnerRentalListings(req.appUser.email)});
 });
 
+const LISTING_RISK_VERSION='rio-listing-risk-lt-v1';
+const LISTING_RISK_STATEMENTS=Object.freeze([
+ 'Patvirtinu, kad turiu teisę nuomoti šį daiktą.',
+ 'Patvirtinu, kad pateikiau teisingą informaciją apie daikto būklę, komplektaciją ir saugų naudojimą.',
+ 'Savanoriškai prisiimu su šio daikto nuoma susijusią riziką. RentInOrbit neteikia draudimo ir negarantuoja nuostolių atlyginimo; tai nepanaikina privalomų platformos pareigų pagal įstatymus.'
+]);
+db.exec(`CREATE TABLE IF NOT EXISTS supplier_listing_risk_evidence_v1 (
+ event_id TEXT PRIMARY KEY, listing_id TEXT NOT NULL, revision TEXT NOT NULL,
+ actor_user_id TEXT NOT NULL, evidence_json TEXT NOT NULL, accepted_at TEXT NOT NULL
+)`);
+app.get('/api/supplier/listing-risk-terms',requireRole('supplier','admin'),(req,res)=>{
+ res.set('Cache-Control','no-store, private').json({version:LISTING_RISK_VERSION,statements:LISTING_RISK_STATEMENTS});
+});
+function validListingRisk(value){
+ return value?.version===LISTING_RISK_VERSION&&Array.isArray(value.answers)&&value.answers.length===LISTING_RISK_STATEMENTS.length&&value.answers.every(x=>x===true);
+}
 app.post('/api/supplier/listings', requireRole('supplier','admin'), requireSupplierAccountRisk, (req,res)=>{
   try{
     const safeListing=validateSupplierListingInput({...req.body?.listing,bookingMode:'request'});
@@ -2419,8 +2435,21 @@ app.post('/api/supplier/listings', requireRole('supplier','admin'), requireSuppl
     if(safeListing.bookingMode==='instant' && req.appUser.role!=='admin' && !payoutVerified){
       return res.status(409).json({error:'Instant Book is available after payout identity/account verification is complete.',code:'INSTANT_BOOK_REQUIRES_VERIFICATION'});
     }
-    ensureSupplierOnboarding(req.appUser.email,{active:true});
-    const listing=submitListingReview({...safeListing,lifecycleStatus:'active'},req.appUser.email);
+    if(req.appUser.role!=='supplier')return res.status(403).json({code:'LISTING_OWNER_CONSENT_REQUIRED',error:'Skelbimą turi pateikti pats nuomotojas.'});
+    if(!validListingRisk(req.body?.listingRiskConsent))return res.status(409).json({code:'LISTING_RISK_CONSENT_REQUIRED',error:'Patvirtinkite atsakomybę už konkretų daiktą.'});
+    const listing=db.transaction(()=>{
+      ensureSupplierOnboarding(req.appUser.email,{active:true});
+      const submitted=submitListingReview({...safeListing,lifecycleStatus:'active'},req.appUser.email);
+      const review=db.prepare('SELECT revision,draft_json FROM listing_reviews WHERE listing_id=?').get(submitted.id);
+      if(!review?.revision)throw Error('Skelbimo redakcija nerasta.');
+      const acceptedAt=new Date().toISOString(),eventId=crypto.randomUUID();
+      const evidence={eventId,listingId:submitted.id,revision:review.revision,actorUserId:String(req.appUser.userId),
+        actorEmail:String(req.appUser.email),version:LISTING_RISK_VERSION,statements:LISTING_RISK_STATEMENTS,
+        answers:req.body.listingRiskConsent.answers,listingSha256:crypto.createHash('sha256').update(review.draft_json).digest('hex'),acceptedAt};
+      db.prepare('INSERT INTO supplier_listing_risk_evidence_v1 (event_id,listing_id,revision,actor_user_id,evidence_json,accepted_at) VALUES(?,?,?,?,?,?)')
+        .run(eventId,submitted.id,review.revision,String(req.appUser.userId),JSON.stringify(evidence),acceptedAt);
+      return submitted;
+    }).immediate();
     res.json({listing});
   }catch(err){res.status(400).json({error:err.message});}
 });
