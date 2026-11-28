@@ -3526,6 +3526,7 @@ function buildBookingEvidence(id){
     listingConsentHistoryBeforeApproval:listingEvidence,
     listingConsentBinding:(()=>{const row=db.prepare('SELECT evidence_json FROM booking_listing_revision_evidence_v1 WHERE booking_id=?').get(id);return row?JSON.parse(row.evidence_json):{status:'historical-booking-not-pinned'};})(),
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
+    supplierCancellationOutcomes:db.prepare('SELECT evidence_json FROM supplier_cancellation_outcome_v1 WHERE booking_id=? ORDER BY recorded_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     handoverEvidence:db.prepare("SELECT purpose,party,created_at AS createdAt,consumed_at AS consumedAt FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer' AND consumed_at IS NOT NULL ORDER BY purpose").all(id),
     returnEvidence:b?{recordedReturnedAt:b.returnedAt,condition:b.returnCondition,notes:b.returnNotes,timestampMayReflectCompletion:true}:null,
@@ -3766,6 +3767,20 @@ db.exec(`CREATE TABLE IF NOT EXISTS supplier_cancellation_evidence_v1 (
   event_id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, actor_user_id TEXT NOT NULL,
   evidence_json TEXT NOT NULL, accepted_at TEXT NOT NULL
 )`);
+db.exec(`CREATE TABLE IF NOT EXISTS supplier_cancellation_outcome_v1 (
+ event_id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, evidence_json TEXT NOT NULL, recorded_at TEXT NOT NULL
+)`);
+function recordSupplierCancellationOutcome(intent,result){
+ if(!intent||!result?.booking)return;
+ const b=result.booking,recordedAt=new Date().toISOString();
+ const evidence={eventId:intent.eventId,bookingId:intent.bookingId,recordedAt,
+   source:'cancellation handler result; provider settlement may follow asynchronously',
+   status:b.status,paymentStatus:b.paymentStatus,refundStatus:b.refundStatus??null,
+   refundAmount:Number(result.refundAmount||0),refundId:b.stripeRefundId??null,
+   paymentIntentId:b.stripePaymentIntentId??null};
+ db.prepare('INSERT OR IGNORE INTO supplier_cancellation_outcome_v1(event_id,booking_id,evidence_json,recorded_at) VALUES(?,?,?,?)')
+   .run(intent.eventId,intent.bookingId,JSON.stringify(evidence),recordedAt);
+}
 function recordSupplierCancellationIntent(booking,user,submitted){
   if(!booking||!user?.userId||user.role!=='supplier'||!canSupplierManageBooking(user,booking.bookingId)||
     submitted?.version!==SUPPLIER_CANCEL_VERSION||submitted?.accepted!==true||
@@ -3807,6 +3822,12 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
       {forceFullRefund:supplierInitiated}
     );
     if(!result) return res.status(404).json({error:'Booking not found'});
+    // Do not turn a completed financial operation into a retriable HTTP failure
+    // solely because the supplementary evidence write failed.
+    if(supplierCancellation){
+      try{recordSupplierCancellationOutcome(supplierCancellation,result);}
+      catch(err){console.error(JSON.stringify({type:'supplier_cancellation_outcome_write_failed',bookingId:supplierCancellation.bookingId,eventId:supplierCancellation.eventId}));}
+    }
     const booking=result.booking;
     const listing=booking ? getRentalListing(booking.listingId) : null;
     // A Stripe refund may be pending after the rental is cancelled.
