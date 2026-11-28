@@ -3855,7 +3855,29 @@ function mountAdminEvidenceArchive(){
     const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=title;
     button.addEventListener('click',()=>download(format));actions.append(button);buttons.push(button);
   }
-  panel.append(heading,label,input,actions,status);host.before(panel);
+  const retention=document.createElement('div');retention.setAttribute('aria-live','polite');retention.style.cssText='margin-top:12px;overflow-wrap:anywhere';
+  const retentionButton=document.createElement('button');retentionButton.type='button';retentionButton.className='secondary';retentionButton.textContent='Patikrinti saugojimo terminą';
+  actions.append(retentionButton);buttons.push(retentionButton);
+  input.addEventListener('input',()=>{retention.replaceChildren();status.textContent='';});
+  const holdLabels={OBLIGATIONS_NOT_COMPLETED:'Neužbaigti sutartiniai įsipareigojimai',DISPUTE_UNRESOLVED:'Neišspręstas ginčas',PAYMENT_REVIEW_REQUIRED:'Reikia patikrinti mokėjimą',REFUND_REVIEW_REQUIRED:'Reikia patikrinti pinigų grąžinimą',DEPOSIT_UNRESOLVED:'Neišspręstas užstatas',COMPLETION_PAYMENT_REVIEW_REQUIRED:'Nepatvirtinta galutinė mokėjimo būsena',PAYOUT_REVIEW_REQUIRED:'Reikia patikrinti nuomotojo išmoką',TERMINAL_PAID_BOOKING_REVIEW_REQUIRED:'Atšaukta arba pasibaigusi apmokėta rezervacija',PAYOUT_STATE_REVIEW_REQUIRED:'Neaiški išmokos būsena',CLOSURE_DATE_UNVERIFIED:'Nepatvirtinta įsipareigojimų pabaigos data'};
+  retentionButton.addEventListener('click',async()=>{
+    const id=input.value.trim();if(!id){status.textContent='Įveskite rezervacijos numerį.';input.focus();return;}
+    buttons.forEach(b=>b.disabled=true);retention.replaceChildren();status.textContent='Tikrinamas saugojimo terminas…';
+    try{
+      const result=await apiJson('/api/admin/rentals/'+encodeURIComponent(id)+'/evidence/retention');
+      if(input.value.trim()!==id)return;
+      const line=(label,value)=>{const p=document.createElement('p');const strong=document.createElement('strong');strong.textContent=label+': ';p.append(strong,document.createTextNode(value));retention.append(p);};
+      const date=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleDateString('lt-LT',{timeZone:'Europe/Vilnius'}):'Nenustatyta';
+      line('Saugojimo būsena',({hold:'Terminas dar nepradėtas arba būtina papildoma patikra',retained:'Saugojimo laikotarpis dar nepasibaigęs',review_due:'Reikalinga saugojimo pagrindo peržiūra'})[result.status]||'Nežinoma');
+      line('Preliminari įsipareigojimų pabaiga',date(result.provisionalClosureAt));
+      line('Numatoma saugojimo peržiūra',date(result.reviewAt));
+      for(const code of Array.isArray(result.holds)?result.holds:[])line('Patikros priežastis',holdLabels[code]||String(code));
+      line('Automatinis ištrynimas','Neatliekamas. Būtina teisinė ir finansinė peržiūra.');
+      status.textContent='Saugojimo informacija gauta.';
+    }catch(err){if(input.value.trim()===id)status.textContent=err.status===404?'Rezervacija nerasta.':err.message;}
+    finally{buttons.forEach(b=>b.disabled=false);}
+  });
+  panel.append(heading,label,input,actions,status,retention);host.before(panel);
 }
 async function loadAdminDashboard(){
   const data=await apiJson('/api/admin/dashboard');
