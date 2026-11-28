@@ -3599,11 +3599,32 @@ renderUniversalListings=function(items=loadUniversalListings()){
 };
 
 async function cancelLiveBooking(bookingId){
-  const reason=window.prompt(uiText('Cancellation reason (customer receives a full rental-price refund):'),'')||null;
-  return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/cancel`,{
-    method:'POST',
-    body:JSON.stringify({reason})
+  const details=await new Promise(resolve=>{
+    const dialog=document.createElement('dialog');
+    dialog.style.cssText='width:min(540px,92vw);max-height:85vh;overflow:auto;padding:24px;border:1px solid #aaa;border-radius:12px;background:#fff;color:#172019';
+    const form=document.createElement('form');
+    const h=document.createElement('h2');h.textContent='Atšaukti rezervaciją';form.append(h);
+    const p=document.createElement('p');p.textContent='Rezervacija '+bookingId+'. Pasirinkite atšaukimo priežastį.';form.append(p);
+    const reasons=[['changed','Persigalvojau dėl nuomos'],['unavailable','Daiktas nebepasiekiamas'],['damaged','Daiktas sugedo'],['trust','Nesijaučiu užtikrintas dėl nuomos'],['personal','Asmeninės priežastys'],['other','Kita priežastis']];
+    const select=document.createElement('select');select.required=true;select.setAttribute('aria-label','Atšaukimo priežastis');
+    select.append(new Option('Pasirinkite priežastį',''));
+    reasons.forEach(([id,label])=>select.append(new Option(label,id)));form.append(select);
+    const other=document.createElement('textarea');other.hidden=true;other.maxLength=500;other.placeholder='Nurodykite priežastį';form.append(other);
+    const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:flex-start;margin:16px 0';
+    const check=document.createElement('input');check.type='checkbox';check.required=true;
+    label.append(check,document.createTextNode('Patvirtinu, kad rezervaciją atšaukiu savo iniciatyva ir suprantu, kad nuomininkui grąžinama visa sumokėta nuomos suma.'));form.append(label);
+    const back=document.createElement('button');back.type='button';back.textContent='Grįžti';
+    const submit=document.createElement('button');submit.type='submit';submit.textContent='Atšaukti rezervaciją';submit.className='primary';
+    const sync=()=>{other.hidden=select.value!=='other';other.required=!other.hidden;submit.disabled=!select.value||!check.checked||(!other.hidden&&!other.value.trim());};
+    select.addEventListener('change',sync);other.addEventListener('input',sync);check.addEventListener('change',sync);sync();
+    form.append(back,submit);dialog.append(form);document.body.append(dialog);
+    let result=null;
+    form.addEventListener('submit',e=>{e.preventDefault();sync();if(submit.disabled)return;result={supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:select.value,otherReason:select.value==='other'?other.value.trim():null,accepted:true}};dialog.close();});
+    back.addEventListener('click',()=>dialog.close());
+    dialog.addEventListener('close',()=>{dialog.remove();resolve(result)},{once:true});dialog.showModal();
   });
+  if(!details)return null;
+  return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/cancel`,{method:'POST',body:JSON.stringify(details)});
 }
 
 let pendingReturnDialog=null;
@@ -3682,6 +3703,7 @@ document.addEventListener('click',async e=>{
     cancelBtn.disabled=true;
     try{
       const result=await cancelLiveBooking(cancelBtn.dataset.bookingId);
+      if(!result)return;
       alert(`${uiText('Booking cancelled. Customer refund:')} ${money(result.refundAmount||0)}.`);
       await refreshLiveSupplierBookings();
       await renderBookings();
