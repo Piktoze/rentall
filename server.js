@@ -1974,6 +1974,16 @@ function recordSupplierAccountRisk(user,source){
 app.get('/api/supplier/account-risk-terms',(req,res)=>{
   res.set('Cache-Control','no-store').json({version:SUPPLIER_ACCOUNT_RISK_VERSION,statements:SUPPLIER_ACCOUNT_RISK_TEXT});
 });
+function supplierAccountRiskAccepted(user){
+  return !!user?.userId&&!!db.prepare('SELECT 1 FROM supplier_account_risk_evidence_v1 WHERE actor_user_id=? AND version=?').get(String(user.userId),SUPPLIER_ACCOUNT_RISK_VERSION);
+}
+function requireSupplierAccountRisk(req,res,next){
+  if(req.appUser?.role==='admin'||supplierAccountRiskAccepted(req.appUser))return next();
+  return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Pirmiausia patvirtinkite nuomotojo atsakomybės sąlygas.'});
+}
+app.get('/api/supplier/account-risk-status',requireRole('supplier','admin'),(req,res)=>{
+  res.set('Cache-Control','no-store, private').json({accepted:req.appUser.role==='admin'||supplierAccountRiskAccepted(req.appUser),version:SUPPLIER_ACCOUNT_RISK_VERSION});
+});
 app.post('/api/supplier/account-risk-consent',requireRole('supplier'),(req,res)=>{
   if(!validSupplierAccountRisk(req.body))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Patvirtinkite nuomotojo atsakomybės sąlygas.'});
   recordSupplierAccountRisk(req.appUser,'existing-supplier-session');
@@ -2401,7 +2411,7 @@ app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
   res.json({listings:listOwnerRentalListings(req.appUser.email)});
 });
 
-app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
+app.post('/api/supplier/listings', requireRole('supplier','admin'), requireSupplierAccountRisk, (req,res)=>{
   try{
     const safeListing=validateSupplierListingInput({...req.body?.listing,bookingMode:'request'});
     const payoutConnection=getDirectMerchantConnectionByEmail(db,req.appUser.email);
@@ -3398,7 +3408,7 @@ function supplierRiskChallenge(bookingId,user){
   const digest=crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   return {...payload,digest,summary:[context.bookingId,context.listingTitle,context.customerName||context.customerEmail,context.startDate+' – '+context.endDate,context.quantity+' vnt.',context.total+' '+context.currency].join(' · ')};
 }
-app.get('/api/rentals/bookings/:bookingId/supplier-risk-consent',requireRole('supplier'),(req,res)=>{
+app.get('/api/rentals/bookings/:bookingId/supplier-risk-consent',requireRole('supplier'),requireSupplierAccountRisk,(req,res)=>{
   const challenge=supplierRiskChallenge(req.params.bookingId,req.appUser);
   if(!challenge)return res.status(409).json({code:'SUPPLIER_RISK_NOT_AVAILABLE',error:'Rezervacijos patvirtinti negalima.'});
   res.set('Cache-Control','no-store, private');res.json(challenge);
@@ -3436,6 +3446,7 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       return res.status(403).json({error:'Forbidden'});
     }
     const requestedStatus=req.body?.status || 'confirmed';
+    if(requestedStatus==='confirmed'&&req.appUser.role==='supplier'&&!supplierAccountRiskAccepted(req.appUser))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Pirmiausia patvirtinkite nuomotojo atsakomybės sąlygas.'});
     // Cancellation must always pass through the dedicated provider-aware
     // endpoint; a direct status change would bypass Stripe refund/deposit
     // reconciliation and could release inventory without returning funds.
@@ -4242,7 +4253,7 @@ app.post('/api/supplier/activation', simpleRateLimit({windowMs:15*60*1000,max:12
     res.json(result);
   }catch(err){res.status(err.code==='INVITE_INVALID'||err.code==='INVITE_EXPIRED'?404:400).json({error:err.message,code:err.code||null});}
 });
-app.post('/api/supplier/listings/confirm-current', requireRole('supplier','admin'), (req,res)=>{
+app.post('/api/supplier/listings/confirm-current', requireRole('supplier','admin'), requireSupplierAccountRisk, (req,res)=>{
   try{res.json(confirmSupplierListings(req.appUser.email,{listingIds:req.body?.listingIds||null}));}catch(err){res.status(400).json({error:err.message});}
 });
 
