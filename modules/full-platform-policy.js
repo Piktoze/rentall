@@ -2,6 +2,7 @@
 // No catalog-only promises, no invented VAT status or provider deletion period.
 import {operatorTaxProfile} from './operator-tax-profile.js';
 export function fullPlatformPolicy(page,{key,lang='lt',env=process.env}={}){
+ if(lang==='en')return englishPlatformPolicy(page,{key,env});
  if(lang!=='lt')return page; // Other locale final review remains a launch blocker.
  const result=structuredClone(page),contact='info@rentinorbit.com';
  const identity=['LEGAL_OPERATOR_NAME','LEGAL_IV_CERTIFICATE','LEGAL_OPERATOR_ADDRESS'].map(k=>String(env[k]||'').trim());
@@ -75,4 +76,57 @@ export function fullPlatformPolicy(page,{key,lang='lt',env=process.env}={}){
  }
  if(key==='cookies')result.sections=result.sections.map(([title,paras])=>[title,paras.map(p=>p.replace('Šiuo metu pagrindinis puslapis naudoja Google Fonts ir Leaflet bibliotekos išteklius iš išorinio tiekėjo;','Pagrindinio HTML Google Fonts nuorodos pašalintos. Naudojami Leaflet bibliotekos ištekliai iš išorinio tiekėjo;'))]);
  result.sections.unshift(...shared);return result;
+}
+
+ // English commercial review draft: preserve the selected language and existing policy structure.
+function englishPlatformPolicy(page,{key,env}){
+ const result=structuredClone(page);
+ const identity=['LEGAL_OPERATOR_NAME','LEGAL_IV_CERTIFICATE','LEGAL_OPERATOR_ADDRESS'].map(k=>String(env[k]||'').trim());
+ const tax=operatorTaxProfile(env);
+ const vat=tax.vatMode==='not_vat_registered'?'The operator reports that she is not currently VAT registered. Obligations arising from foreign services require separate assessment.':'The operator’s VAT status remains subject to confirmation.';
+ result.sections.unshift(['Operator and scope',[
+ identity.every(Boolean)?identity[0]+', individual activity certificate No. '+identity[1]+', correspondence address: '+identity[2]+'.':'Operator details are not confirmed; commercial launch remains blocked.',
+ vat,'Contact, complaints and privacy requests: info@rentinorbit.com. Revision: 28 November 2026, commercial launch review draft. Private TEST transactions are synthetic. Historical booking terms are not amended.'
+ ]]);
+ if(key==='terms')result.sections.push(
+ ['Supplier status and rental documents',[
+ 'The rental contract is between the actual supplier and renter; the marketplace commission service is separate. A profile selection alone does not determine trader status. Mandatory consumer rights apply when renting from a trader. Company rentals from private or unverified suppliers remain blocked until tax and accounting arrangements are resolved.',
+ 'RentInOrbit issues documentation for its own commission only. The actual supplier issues rental invoices when required, or duly authorises another party. A booking confirmation or Stripe receipt is not automatically a rental invoice.'
+ ]],
+ ['Supplier declarations and liability',[
+ 'Suppliers choose voluntarily whether to list an item and accept each booking. Separate explicit declarations are required at supplier registration or activation, listing submission and booking approval. Existing suppliers must accept current account declarations before new activity.',
+ 'RentInOrbit provides no item insurance and guarantees no compensation for damage, theft, loss or non-return. Suppliers assess risk and arrange insurance themselves. Renters are responsible for damage, loss or non-return attributable to them under the contract and applicable law, excluding ordinary wear. Claims must be supported by evidence. Parties address compensation claims to one another first, without limiting statutory rights, the dispute process or RentInOrbit’s own mandatory responsibilities.',
+ 'Declarations do not constitute qualified electronic signatures, identity guarantees or blanket waivers of legal claims.'
+ ]],
+ ['Prohibited listings and moderation',[
+ 'Weapons, ammunition, explosives, controlled drugs and medicines, stolen goods, counterfeits, hazardous chemicals, radioactive materials, identity documents, payment cards and access to third-party accounts are prohibited. Unsafe, defective or safety-recalled products and items requiring special permits are prohibited until appropriate permit verification is available. This is a platform restriction list, not an exhaustive list of statutory prohibitions.',
+ 'Listings are reviewed before publication. Administrators may reject, restrict or remove non-compliant listings. Suppliers receive the reason according to the applicable procedure and may contact info@rentinorbit.com with the listing identifier. Approval does not guarantee safety or ownership.'
+ ]],
+ ['Booking, cancellation and settlement',[
+ 'Payment follows supplier approval. Both parties separately accept the stored rental agreement before handover. A one-time renter code records handover, not identity verification. The supplier records physical return without a second renter code; commercial completion requires separate return confirmations from both parties and no unresolved dispute or financial hold.',
+ 'Supplier cancellation before handover requires a reason and explicit confirmation. The full paid rental amount is refunded without a separate platform cancellation penalty. A refund request is not proof of settlement. Renter cancellation follows the stored booking policy and mandatory rights. After handover, return or dispute procedures apply.',
+ 'The platform earns 15% commission and initiates the 85% supplier transfer after eligible completion. RentInOrbit covers Stripe processing, Connect and payout costs. A Stripe balance transfer is not a bank payout. Actual invoice issuance and LIVE operations require launch approval.',
+ 'Open disputes and unresolved financial obligations block new supplier transfers. Previously executed transfers require separate reconciliation. Consumers may submit written complaints to the relevant trader; applicable Lithuanian consumer complaints must receive a reasoned response within 14 days. VVTAT (vvtat.lrv.lt), VTIS (vtis.lt) and courts remain available where applicable.'
+ ]]);
+ if(key==='fees'){
+ result.sections=result.sections.filter(([title])=>!['Supplier pilot pricing','Taxes, VAT and invoices'].includes(title));
+ result.sections.push(['Commission and invoices',[
+ 'On a EUR 100 rental the platform commission is EUR 15 and the supplier share is EUR 85. RentInOrbit covers Stripe processing, Connect and payout costs. The platform invoices only its commission to the supplier; the actual supplier is responsible for rental documentation and tax obligations.',
+ vat,'Actual automated invoices and LIVE payments remain blocked until the required approvals and configuration are completed.'
+ ]]);
+ }
+ if(key==='privacy'){
+ result.sections=result.sections.filter(([title])=>!['Retention and security','Your rights','Who may receive data'].includes(title));
+ result.sections.push(['Legal bases and recipients',[
+ 'Contract performance and pre-contractual steps, legal obligations and documented legitimate interests are relevant GDPR legal bases under Article 6(1)(b), (c) and (f). Marketing requires a separate appropriate basis. Rental parties receive only necessary booking information; suppliers are independently responsible for their own processing.',
+ 'Railway hosts the service (last confirmed region: US iad); Resend handles transactional email, Zoho EU hosts support email, Porkbun manages domain and DNS, and Stripe handles payments and supplier verification. Stripe may act as controller or processor depending on the service. Account-specific agreements and international transfer safeguards require final review; Zoho DPA completion is not confirmed. Leaflet/unpkg and OpenStreetMap requests may disclose IP and technical data.'
+ ]],['Evidence and retention',[
+ 'Supplier declarations and agreement evidence may include actor identifiers, exact wording, versions, answers, timestamps, listing and booking references and hashes. Administrator archives may contain PDFs and transaction evidence; secret handover codes are excluded.',
+ 'A provisional ten-year review period applies to minimally necessary contractual evidence from fulfilment of obligations. Unresolved disputes and financial operations require further review. This is not a blanket personal-data retention period or automatic deletion guarantee. Ordinary support requests are retained for 12 months after resolution unless documented legal needs require longer.',
+ 'Private TEST data is synthetic. Backup availability, provider log access and deletion periods depend on actual configuration. Final category-specific retention grounds and deletion procedures require commercial launch review.'
+ ]],['Your rights',[
+ 'Contact info@rentinorbit.com for access, correction, erasure, restriction, objection or portability where applicable. Identity verification is proportionate; responses are normally due within one month, subject to lawful extensions. Complaints may be submitted to VDAI (vdai.lrv.lt). Statutory obligations and documented legal claims may limit erasure.'
+ ]]);
+ }
+ return result;
 }
