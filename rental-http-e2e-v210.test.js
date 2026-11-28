@@ -606,6 +606,24 @@ try{
  const resubmitted=await pendingReview();
  status(await decide(pending.revision,'approved'),409,'Stale revision cannot be approved');
  status(await decide(resubmitted.revision,'approved'),200,'Admin approves exact revision');
+ const riskState=async()=>{const response=await api('/api/supplier/listings',{cookie:supplierCookie});status(response,200,'Supplier risk state available');return response.body.listings.find(x=>x.id===listingBase.id).listingRiskReconfirmationRequired;};
+ assert.equal(await riskState(),false,'Approved revision with matching declaration needs no reconfirmation');
+ const riskFixtureDb=new Database(dbPath);
+ try{
+   const records=riskFixtureDb.prepare('SELECT event_id,evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=?').all(listingBase.id,resubmitted.revision);
+   assert.ok(records.length);
+   const write=riskFixtureDb.prepare('UPDATE supplier_listing_risk_evidence_v1 SET evidence_json=? WHERE event_id=?');
+   try{
+     for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,listingSha256:'0'.repeat(64)}),row.event_id);}
+     assert.equal(await riskState(),true,'Mismatched listing digest requires reconfirmation');
+     for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,answers:[true,false,true]}),row.event_id);}
+     assert.equal(await riskState(),true,'Partial declaration requires reconfirmation');
+     for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,actorEmail:otherSupplier}),row.event_id);}
+     assert.equal(await riskState(),true,'Another supplier declaration cannot satisfy owner gate');
+   }finally{for(const row of records)write.run(row.evidence_json,row.event_id);}
+   assert.equal(await riskState(),false,'Restored valid evidence clears reconfirmation flag');
+ }finally{riskFixtureDb.close();}
+
  const sync=await api('/api/rentals/listings/sync',{method:'POST',cookie:supplierCookie,
    data:{listings:[{...listingBase,title:'Unreviewed sync edit',photos}]}});
  status(sync,200,'Legacy inventory sync cannot publish changes');
@@ -711,7 +729,9 @@ try{
  assert.equal(updated.body.listing.reviewStatus,'pending_review');
  const oldVersion=(await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id);
  assert.equal(oldVersion,undefined,'Current pending revision withdraws the listing until fresh approval');
+ assert.equal(await riskState(),true,'Pending updated revision requires approval before booking');
  status(await decide((await pendingReview()).revision,'approved'),200,'Updated listing approved');
+ assert.equal(await riskState(),false,'Fresh approved revision clears reconfirmation flag');
  assert.equal((await api('/api/listings')).body.listings.find(x=>x.id===listingBase.id).title,'Owner updated title');
  const audit=new Database(dbPath,{readonly:true,fileMustExist:true});
  try{
