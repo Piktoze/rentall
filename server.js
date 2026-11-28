@@ -3275,7 +3275,11 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       if(authoritativePrice.securityDeposit!==0)return res.status(409).json({code:'SCT_TEST_DEPOSIT_REQUIRES_SEPARATE_FLOW'});
       sctRuntime.newBookingRecipient(listingForBooking.ownerEmail);
     }
-    const result = db.transaction(()=>{const created=createRentalBookingAtomic({
+    const result = db.transaction(()=>{
+    const {revision,listingSha256,declarations,currentDeclarations}=approvedListingRiskEvidence(listingId,listingForBooking.ownerEmail);
+    if(commercialRuntime&&(!revision||!currentDeclarations.length))
+      throw Object.assign(new Error('Nuomotojas turi atnaujinti skelbimą ir patvirtinti atsakomybės sąlygas prieš priimant naujas rezervacijas.'),{code:'LISTING_RISK_RECONFIRMATION_REQUIRED'});
+    const created=createRentalBookingAtomic({
       bookingId,
       listingId,
       startDate,
@@ -3299,10 +3303,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       holdMinutes:Number(process.env.BOOKING_HOLD_MINUTES || 30)
     });
     if(sctRuntime)sctRuntime.enrollNewBooking(bookingId,listingForBooking.ownerEmail);
-    const {revision,listingSha256,declarations,currentDeclarations}=approvedListingRiskEvidence(listingId,listingForBooking.ownerEmail);
     const capturedAt=new Date().toISOString();
-    if(commercialRuntime&&(!revision||!currentDeclarations.length))
-      throw Object.assign(new Error('Nuomotojas turi atnaujinti skelbimą ir patvirtinti atsakomybės sąlygas prieš priimant naujas rezervacijas.'),{code:'LISTING_RISK_RECONFIRMATION_REQUIRED'});
     const binding={bookingId,listingId,revision,listingSha256,capturedAt,declarations,
       status:revision?(declarations.length?'revision-and-consent-captured':'revision-captured-consent-missing'):'legacy-revision-unavailable'};
     db.prepare('INSERT INTO booking_listing_revision_evidence_v1 (booking_id,listing_id,revision,evidence_json,captured_at) VALUES(?,?,?,?,?)')
