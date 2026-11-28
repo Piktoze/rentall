@@ -3296,6 +3296,13 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     const capturedAt=new Date().toISOString();
     const listingSha256=revision?crypto.createHash('sha256').update(review.draft_json).digest('hex'):null;
     const declarations=revision?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=? ORDER BY accepted_at,event_id').all(String(listingId),revision).map(row=>JSON.parse(row.evidence_json)).filter(ev=>ev.listingSha256===listingSha256&&String(ev.actorEmail).toLowerCase()===String(listingForBooking.ownerEmail).toLowerCase()):[];
+    // Commercial bookings must bind the approved listing revision to the
+    // owner's current affirmative declaration. The transaction rolls back
+    // inventory reservation and SCT enrollment when the evidence is missing.
+    const currentDeclarations=declarations.filter(ev=>ev.version===LISTING_RISK_VERSION&&validListingRisk(ev)&&
+      Array.isArray(ev.statements)&&JSON.stringify(ev.statements)===JSON.stringify(LISTING_RISK_STATEMENTS));
+    if(commercialRuntime&&(!revision||!currentDeclarations.length))
+      throw Object.assign(new Error('Nuomotojas turi atnaujinti skelbimą ir patvirtinti atsakomybės sąlygas prieš priimant naujas rezervacijas.'),{code:'LISTING_RISK_RECONFIRMATION_REQUIRED'});
     const binding={bookingId,listingId,revision,listingSha256,capturedAt,declarations,
       status:revision?(declarations.length?'revision-and-consent-captured':'revision-captured-consent-missing'):'legacy-revision-unavailable'};
     db.prepare('INSERT INTO booking_listing_revision_evidence_v1 (booking_id,listing_id,revision,evidence_json,captured_at) VALUES(?,?,?,?,?)')
@@ -3410,6 +3417,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
 
     res.json({...result,price:authoritativePrice,agreement});
   } catch (err) {
+    if(err.code==='LISTING_RISK_RECONFIRMATION_REQUIRED')return res.status(409).json({code:err.code,error:err.message});
     if (err.code === 'INSUFFICIENT_AVAILABILITY') {
       return res.status(409).json({
         error: err.message,
