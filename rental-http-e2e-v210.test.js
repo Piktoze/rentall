@@ -40,7 +40,7 @@ createRentalBookingAtomic({bookingId:pendingId,listingId:'api-e2e-listing',
   startDate:'2099-07-01',endDate:'2099-07-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'API Renter',orderValue:100});
 createRentalAgreement({bookingId:pendingId,termsVersion:'e2e-full-lifecycle-v1',
-  snapshot:{listingTitle:'Temporary API test item',total:100,startDate:'2099-07-01',endDate:'2099-07-02'}});
+  snapshot:{listingId:'api-e2e-listing',listingTitle:'Temporary API test item',supplierEmail:supplier,customerEmail:renter,customerName:'API Renter',quantity:1,currency:'EUR',total:100,startDate:'2099-07-01',endDate:'2099-07-02'}});
 const payId='api-e2e-payment';
 const payFixture=createRentalBookingAtomic({bookingId:payId,listingId:'api-e2e-listing',
   startDate:'2099-06-05',endDate:'2099-06-06',quantity:1,status:'confirmed',
@@ -66,6 +66,7 @@ db.prepare("UPDATE rental_listings SET booking_mode='instant' WHERE listing_id=?
 createRentalBookingAtomic({bookingId:'api-e2e-instant-pending',listingId:'api-e2e-instant',
   startDate:'2099-08-01',endDate:'2099-08-02',quantity:1,status:'pending',
   customerEmail:renter,customerName:'Instant test renter',orderValue:100});
+createRentalAgreement({bookingId:'api-e2e-instant-pending',termsVersion:'e2e-instant-v1',snapshot:{listingId:'api-e2e-instant',listingTitle:'Instant mode fixture',supplierEmail:supplier,customerEmail:renter,customerName:'Instant test renter',quantity:1,currency:'EUR',total:100,startDate:'2099-08-01',endDate:'2099-08-02'}});
 
 // Synthetic returned €100 rental awaiting a €50 deposit resolution.
 const unsettledDepositId='api-e2e-deposit-unsettled';
