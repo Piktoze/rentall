@@ -230,11 +230,27 @@ try{
  status(await api(unpaidUrl,{method:'POST',cookie:outsiderCookie,
    data:{reason:'Unauthorized unpaid cancellation'}}),403,
    'Unrelated customer cannot cancel unpaid booking');
+ const missingCancellationConsent=await api(unpaidUrl,{method:'POST',cookie:supplierCookie,data:{reason:'No explicit consent'}});
+ status(missingCancellationConsent,409,'Supplier cancellation requires explicit consent');
+ assert.equal(missingCancellationConsent.body.code,'SUPPLIER_CANCELLATION_CONSENT_REQUIRED');
+ const invalidCancellationConsent=await api(unpaidUrl,{method:'POST',cookie:supplierCookie,data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'other',otherReason:'',accepted:true}}});
+ status(invalidCancellationConsent,409,'Other cancellation reason requires explanation');
  const unpaidCancellation=await api(unpaidUrl,{method:'POST',cookie:supplierCookie,
-   data:{reason:'Supplier cancels unpaid synthetic booking'}});
+   data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'changed',accepted:true}}});
  status(unpaidCancellation,200,'Supplier cancels unpaid booking without Stripe objects');
  assert.equal(unpaidCancellation.body.refundAmount,0,'Unpaid cancellation must refund €0');
  assert.equal(unpaidCancellation.body.booking?.status,'cancelled');
+ const cancelEvidenceDb=new Database(dbPath,{readonly:true,fileMustExist:true});
+ try{
+   const rows=cancelEvidenceDb.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=?').all(unpaidCancelId);
+   assert.equal(rows.length,1,'Only the valid affirmative cancellation intent is stored');
+   const evidence=JSON.parse(rows[0].evidence_json);
+   assert.equal(evidence.accepted,true);
+   assert.equal(evidence.actorEmail,supplier);
+   assert.equal(evidence.reasonCode,'changed');
+   assert.ok(evidence.acceptedAt);
+ }finally{cancelEvidenceDb.close();}
+
  const unpaidSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
  try{
    const row=unpaidSnapshot.prepare(
@@ -275,7 +291,7 @@ try{
  const parallelUrl='/api/rentals/bookings/'+parallelCancelId+'/cancel';
  const parallelResults=await Promise.all([0,1].map(i=>api(parallelUrl,{
    method:'POST',cookie:supplierCookie,
-   data:{reason:'Parallel cancellation attempt '+i}
+   data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'changed',accepted:true}}
  })));
  assert.deepEqual(parallelResults.map(x=>x.status).sort((a,b)=>a-b),[200,409],
    'Concurrent cancellation must allow one transition only');
@@ -291,7 +307,7 @@ try{
  console.log('PASS HTTP parallel unpaid cancellation: one 200, one 409, zero refund');
  const missingIntentCancellation=await api(
    '/api/rentals/bookings/'+missingIntentId+'/cancel',{
-     method:'POST',cookie:supplierCookie,syntheticClientIp:'192.0.2.77',data:{reason:'Missing Stripe intent reconciliation probe'}
+     method:'POST',cookie:supplierCookie,syntheticClientIp:'192.0.2.77',data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'changed',accepted:true}}
    });
  status(missingIntentCancellation,400,'Paid Stripe booking without PaymentIntent cannot be auto-refunded');
  assert.equal(missingIntentCancellation.body.code,'PAYMENT_INTENT_MISSING');
@@ -310,7 +326,7 @@ try{
  // an authorized security deposit. Check persisted state, not only HTTP error.
  for(const bookingId of [offlinePaidId,offlineDepositId]){
    const rejected=await api('/api/rentals/bookings/'+bookingId+'/cancel',{
-     method:'POST',cookie:supplierCookie,data:{reason:'Provider unavailable test'}
+     method:'POST',cookie:supplierCookie,data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'unavailable',accepted:true}}
    });
    status(rejected,400,'Stripe-unavailable provider cancellation must fail closed');
    const snapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
@@ -781,7 +797,7 @@ try{
  // A supplier-initiated cancellation after a completed demo payment must
  // refund the full amount once and reject further cancellation/refund attempts.
  const refunded=await api('/api/rentals/bookings/'+payId+'/cancel',{method:'POST',
-   cookie:supplierCookie,data:{reason:'Supplier cannot fulfil rental'}});
+   cookie:supplierCookie,data:{supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'unavailable',accepted:true}}});
  status(refunded,200,'Supplier cancels paid booking');
  assert.equal(refunded.body.refundAmount,100,'Supplier cancellation refunds all €100');
  assert.equal(refunded.body.booking.status,'cancelled');
