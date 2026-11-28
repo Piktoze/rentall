@@ -2369,7 +2369,7 @@ app.get('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
 
 app.post('/api/supplier/listings', requireRole('supplier','admin'), (req,res)=>{
   try{
-    const safeListing=validateSupplierListingInput(req.body?.listing||{});
+    const safeListing=validateSupplierListingInput({...req.body?.listing,bookingMode:'request'});
     const payoutConnection=getDirectMerchantConnectionByEmail(db,req.appUser.email);
     const payoutVerified=directMerchantReady(payoutConnection);
     if(safeListing.bookingMode==='instant' && req.appUser.role!=='admin' && !payoutVerified){
@@ -3161,6 +3161,7 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
     if(!inventoryListing || !listingForBooking || listingForBooking.moderationStatus==='blocked' || inventoryListing.lifecycleStatus!=='active'){
       return res.status(404).json({error:'Listing not found'});
     }
+    if(listingForBooking.bookingMode==='instant')return res.status(409).json({code:'MANUAL_SUPPLIER_APPROVAL_REQUIRED',error:'Šį skelbimą nuomotojas turi atnaujinti į rezervaciją pagal užklausą.'});
     const legalKind=String(customerLegalKind||'');
     if(!['individual','company'].includes(legalKind))return res.status(400).json({error:'Pasirinkite, ar nuomininkas yra privatus asmuo, ar įmonė.',code:'CUSTOMER_LEGAL_KIND_INVALID'});
     if(legalKind==='company' && (!String(customerCompanyName||'').trim()||String(customerCompanyName).length>180))return res.status(400).json({error:'Įrašykite įmonės pavadinimą.',code:'CUSTOMER_COMPANY_NAME_REQUIRED'});
@@ -3337,6 +3338,63 @@ app.get('/api/rentals/bookings', requireRole('supplier','admin'), (req,res)=>{
   }
 });
 
+// Supplier's voluntary decision is independently archived before approval/payment side effects.
+const SUPPLIER_RISK_VERSION='rio-supplier-risk-lt-v1';
+const SUPPLIER_RISK_STATEMENTS=Object.freeze([
+  'Patvirtinu, kad savanoriškai sutinku išnuomoti nurodytą daiktą šiam nuomininkui šiomis rezervacijos sąlygomis.',
+  'Suprantu, kad pats sprendžiu dėl nuomos ir prisiimu su savo daikto nuoma susijusią riziką.',
+  'Suprantu, kad RentInOrbit neteikia draudimo ir negarantuoja žalos, vagystės, praradimo ar negrąžinimo nuostolių atlyginimo. Savo daikto draudimu pasirūpinu pats, jei jo pageidauju.',
+  'Suprantu, kad pretenzijas dėl daikto sugadinimo, vagystės, praradimo ar negrąžinimo sprendžiu tiesiogiai su nuomininku; tai nepanaikina privalomų platformos pareigų pagal įstatymus.'
+]);
+db.exec(`CREATE TABLE IF NOT EXISTS supplier_risk_consent_v1 (
+  booking_id TEXT PRIMARY KEY, actor_user_id TEXT NOT NULL, actor_email TEXT NOT NULL,
+  version TEXT NOT NULL, digest TEXT NOT NULL, evidence_json TEXT NOT NULL,
+  accepted_at TEXT NOT NULL
+)`);
+function supplierRiskChallenge(bookingId,user){
+  const b=getRentalBookingById(bookingId), ag=getRentalAgreement(bookingId);
+  if(!b||!ag||b.status!=='pending'||user?.role!=='supplier'||!user.userId||!canSupplierManageBooking(user,bookingId))return null;
+  const s=ag.snapshot||{};
+  if(String(s.supplierEmail||'').toLowerCase()!==String(user.email||'').toLowerCase())return null;
+  const context={bookingId:String(bookingId),listingId:s.listingId,listingTitle:s.listingTitle,
+    supplierEmail:s.supplierEmail,customerName:s.customerName,customerEmail:s.customerEmail,
+    startDate:s.startDate,endDate:s.endDate,quantity:s.quantity,total:s.total,currency:s.currency,
+    termsVersion:ag.termsVersion,agreementSha256:crypto.createHash('sha256').update(JSON.stringify(s)).digest('hex')};
+  const payload={version:SUPPLIER_RISK_VERSION,statements:SUPPLIER_RISK_STATEMENTS,context,actorUserId:String(user.userId)};
+  const digest=crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  return {...payload,digest,summary:[context.bookingId,context.listingTitle,context.customerName||context.customerEmail,context.startDate+' – '+context.endDate,context.quantity+' vnt.',context.total+' '+context.currency].join(' · ')};
+}
+app.get('/api/rentals/bookings/:bookingId/supplier-risk-consent',requireRole('supplier'),(req,res)=>{
+  const challenge=supplierRiskChallenge(req.params.bookingId,req.appUser);
+  if(!challenge)return res.status(409).json({code:'SUPPLIER_RISK_NOT_AVAILABLE',error:'Rezervacijos patvirtinti negalima.'});
+  res.set('Cache-Control','no-store, private');res.json(challenge);
+});
+function persistSupplierRiskConsent(bookingId,user,submitted){
+  const challenge=supplierRiskChallenge(bookingId,user);
+  if(!challenge||submitted?.version!==challenge.version||submitted?.digest!==challenge.digest||
+    !Array.isArray(submitted?.answers)||submitted.answers.length!==challenge.statements.length||
+    !submitted.answers.every(answer=>answer===true))return false;
+  const existing=db.prepare('SELECT digest,actor_user_id FROM supplier_risk_consent_v1 WHERE booking_id=?').get(bookingId);
+  if(existing)return existing.digest===challenge.digest&&existing.actor_user_id===String(user.userId);
+  const acceptedAt=new Date().toISOString();
+  db.prepare('INSERT INTO supplier_risk_consent_v1 (booking_id,actor_user_id,actor_email,version,digest,evidence_json,accepted_at) VALUES(?,?,?,?,?,?,?)')
+    .run(bookingId,String(user.userId),String(user.email),challenge.version,challenge.digest,
+      JSON.stringify({...challenge,answers:submitted.answers,acceptedAt,authMethod:'session'}),acceptedAt);
+  return true;
+}
+app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=>{
+  const id=String(req.params.bookingId),b=getRentalBookingById(id);
+  const risk=db.prepare('SELECT evidence_json FROM supplier_risk_consent_v1 WHERE booking_id=?').get(id);
+  if(!b&&!risk)return res.status(404).end();
+  res.set('Cache-Control','no-store, private');
+  res.attachment('rentinorbit-rental-evidence.json').json({
+    bookingId:id,supplierRiskConsent:risk?JSON.parse(risk.evidence_json):null,
+    agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
+    booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
+      listingId:b.listingId,startDate:b.startDate,endDate:b.endDate,quantity:b.quantity,orderValue:b.orderValue}:null
+  });
+});
+
 app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admin'), async (req,res)=>{
   try{
     if(!canSupplierManageBooking(req.appUser,req.params.bookingId)){
@@ -3378,6 +3436,10 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
       if(!approvalState)return res.status(404).json({error:'Booking not found'});
       if(approvalState.status!=='pending')
         return res.status(409).json({error:'Ši rezervacija jau patvirtinta arba nebegali būti patvirtinta.',code:'APPROVAL_REPLAY_BLOCKED'});
+    }
+
+    if(requestedStatus==='confirmed' && !persistSupplierRiskConsent(req.params.bookingId,req.appUser,req.body?.supplierRiskConsent)){
+      return res.status(409).json({code:'SUPPLIER_RISK_CONSENT_REQUIRED',error:'Nuomotojas turi pats patvirtinti visus nuomos rizikos teiginius.'});
     }
 
     if(requestedStatus==='declined'){
