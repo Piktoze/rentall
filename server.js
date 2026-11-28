@@ -1948,6 +1948,38 @@ async function privateTestOwnerSetup(req,user){
  return {...user,role:'admin'};
 }
 
+const SUPPLIER_ACCOUNT_RISK_VERSION='rio-supplier-account-risk-lt-v1';
+const SUPPLIER_ACCOUNT_RISK_TEXT=Object.freeze([
+  'Patvirtinu, kad savanoriškai vykdau daiktų nuomą.',
+  'Suprantu, kad pats sprendžiu dėl savo daiktų nuomos ir prisiimu su ja susijusią riziką.',
+  'Suprantu, kad RentInOrbit neteikia draudimo ir negarantuoja nuostolių dėl daikto sugadinimo, vagystės, praradimo ar negrąžinimo atlyginimo.',
+  'Pretenzijas dėl daikto sprendžiu tiesiogiai su nuomininku; tai nepanaikina privalomų platformos pareigų pagal įstatymus.'
+]);
+db.exec(`CREATE TABLE IF NOT EXISTS supplier_account_risk_evidence_v1 (
+  actor_user_id TEXT NOT NULL, version TEXT NOT NULL, evidence_json TEXT NOT NULL, accepted_at TEXT NOT NULL,
+  PRIMARY KEY(actor_user_id,version)
+)`);
+function validSupplierAccountRisk(value){
+  return value?.version===SUPPLIER_ACCOUNT_RISK_VERSION&&Array.isArray(value.answers)&&
+    value.answers.length===SUPPLIER_ACCOUNT_RISK_TEXT.length&&value.answers.every(x=>x===true);
+}
+function recordSupplierAccountRisk(user,source){
+  if(!user?.userId)throw Error('Supplier identity unavailable');
+  const acceptedAt=new Date().toISOString();
+  const evidence={actorUserId:String(user.userId),actorEmail:String(user.email),version:SUPPLIER_ACCOUNT_RISK_VERSION,
+    statements:SUPPLIER_ACCOUNT_RISK_TEXT,answers:SUPPLIER_ACCOUNT_RISK_TEXT.map(()=>true),acceptedAt,source};
+  db.prepare('INSERT OR IGNORE INTO supplier_account_risk_evidence_v1 (actor_user_id,version,evidence_json,accepted_at) VALUES(?,?,?,?)')
+    .run(String(user.userId),SUPPLIER_ACCOUNT_RISK_VERSION,JSON.stringify(evidence),acceptedAt);
+}
+app.get('/api/supplier/account-risk-terms',(req,res)=>{
+  res.set('Cache-Control','no-store').json({version:SUPPLIER_ACCOUNT_RISK_VERSION,statements:SUPPLIER_ACCOUNT_RISK_TEXT});
+});
+app.post('/api/supplier/account-risk-consent',requireRole('supplier'),(req,res)=>{
+  if(!validSupplierAccountRisk(req.body))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Patvirtinkite nuomotojo atsakomybės sąlygas.'});
+  recordSupplierAccountRisk(req.appUser,'existing-supplier-session');
+  res.json({accepted:true});
+});
+
 app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'auth-register'}), async (req,res)=>{
   try{
     const {email,password,displayName=null,businessName=null,country=null,city=null,role='supplier'}=req.body||{};
@@ -1958,7 +1990,8 @@ app.post('/api/auth/register', simpleRateLimit({windowMs:15*60*1000,max:12,keyPr
       return res.status(400).json({error:'Password must contain at least 8 characters'});
     }
     const safeRole=role==='customer'?'customer':'supplier';
-    let user=createAppUser({email,password,role:safeRole,displayName,businessName,country,city});
+    if(safeRole==='supplier'&&!validSupplierAccountRisk(req.body?.supplierAccountRisk))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Patvirtinkite nuomotojo atsakomybės sąlygas.'});
+    let user=db.transaction(()=>{const created=createAppUser({email,password,role:safeRole,displayName,businessName,country,city});if(safeRole==='supplier')recordSupplierAccountRisk(created,'registration');return created;})();
     user=await privateTestOwnerSetup(req,user);
     if(safeRole==='supplier') ensureSupplierOnboarding(user.email,{active:true});
     const session=createAppSession(user.userId);
@@ -2050,7 +2083,8 @@ registerPrivacyRequestRoutes(app, db, requireAuth, enqueueTransactionalEmail);
 
 app.post('/api/auth/enable-supplier', requireRole('customer','supplier','admin'), (req,res)=>{
   try{
-    const user=enableSupplierForUser(req.appUser.userId);
+    if(!validSupplierAccountRisk(req.body?.supplierAccountRisk))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Patvirtinkite nuomotojo atsakomybės sąlygas.'});
+    const user=db.transaction(()=>{const changed=enableSupplierForUser(req.appUser.userId);recordSupplierAccountRisk(changed,'enable-supplier');return changed;})();
     res.json({user});
   }catch(err){res.status(400).json({error:err.message});}
 });
@@ -4202,7 +4236,8 @@ app.get('/api/supplier/activation/:token', simpleRateLimit({windowMs:60000,max:6
 app.post('/api/supplier/activation', simpleRateLimit({windowMs:15*60*1000,max:12,keyPrefix:'supplier-activation'}), (req,res)=>{
   try{
     if(req.body?.termsAccepted!==true) return res.status(400).json({error:'Platform terms must be accepted before supplier activation',code:'TERMS_ACCEPTANCE_REQUIRED'});
-    const result=activateSupplierInvite(req.body?.token,{password:req.body?.password});
+    if(!validSupplierAccountRisk(req.body?.supplierAccountRisk))return res.status(409).json({code:'SUPPLIER_ACCOUNT_RISK_REQUIRED',error:'Patvirtinkite nuomotojo atsakomybės sąlygas.'});
+    const result=db.transaction(()=>{const activated=activateSupplierInvite(req.body?.token,{password:req.body?.password});recordSupplierAccountRisk(activated.user,'invitation');return activated;})();
     const session=createAppSession(result.user.userId); setSessionCookie(res,session.token);
     res.json(result);
   }catch(err){res.status(err.code==='INVITE_INVALID'||err.code==='INVITE_EXPIRED'?404:400).json({error:err.message,code:err.code||null});}
