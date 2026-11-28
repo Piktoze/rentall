@@ -612,6 +612,7 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
   return cancelBookingSingleFlight(bookingId,async()=>{
   const booking=getRentalBookingById(bookingId);
   if(!booking) return null;
+  if(!['pending','confirmed'].includes(String(booking.status||'')))throw Object.assign(new Error('Cancellation unavailable after handover or completion. Open a dispute instead.'),{code:'INVALID_TRANSITION'});
   if(sctRuntime?.owned(bookingId)){
     if(['unpaid','requires_payment_method'].includes(booking.paymentStatus)){
       await sctRuntime.cancelUnpaid(bookingId);
@@ -637,9 +638,9 @@ async function cancelBookingWithPaymentHandling(bookingId,reason,{forceFullRefun
   }
   const startDate=String(booking.startDate||'');
   const startInstant=new Date(booking.rentalStartAt || startDate+'T00:00:00Z');
-  // Legacy bookings record a date but not a time; conservatively prevent
-  // cancellation after that calendar date starts in UTC.
-  if(!Number.isNaN(startInstant.getTime()) && Date.now()>=startInstant.getTime()){
+  // Keep the renter's legacy time cutoff; supplier-initiated full refunds
+  // remain available before handover, even after the scheduled start.
+  if(!forceFullRefund && !Number.isNaN(startInstant.getTime()) && Date.now()>=startInstant.getTime()){
     const err=new Error('Rental start date has passed; automatic cancellation is unavailable. Open a dispute instead.');
     err.code='INVALID_TRANSITION';
     throw err;
