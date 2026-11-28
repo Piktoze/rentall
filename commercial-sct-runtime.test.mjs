@@ -255,3 +255,16 @@ test('new commercial transfer requires both return confirmations and one invoice
  await f.service.transfer(id);f.service.commission.accept(id,{userId:u.user_id,email:customer});await assert.rejects(f.service.transfer(id));
  assert.equal(f.calls.transfer,1);assert.equal(d.db.prepare("SELECT count(*) n FROM commission_documents WHERE booking_id=? AND kind='invoice'").get(id).n,1);
 });
+
+test('commercial booking route checks listing declaration before inventory or payment enrollment',()=>{
+ const server=fs.readFileSync(new URL('./server.js',import.meta.url),'utf8');
+ const route=server.split("app.post('/api/rentals/bookings',")[1].split("const agreement=createRentalAgreement(")[0];
+ const transaction=route.indexOf('const result = db.transaction(');
+ const gate=route.indexOf('if(commercialRuntime&&(!revision||!currentDeclarations.length))');
+ const inventory=route.indexOf('const created=createRentalBookingAtomic(');
+ const enrollment=route.indexOf('sctRuntime.enrollNewBooking(');
+ const archive=route.indexOf("INSERT INTO booking_listing_revision_evidence_v1");
+ const commit=route.indexOf('}).immediate()');
+ assert.ok(transaction>=0&&transaction<gate&&gate<inventory&&inventory<enrollment&&enrollment<archive&&archive<commit);
+ assert.match(route.slice(gate,inventory),/LISTING_RISK_RECONFIRMATION_REQUIRED/);
+});
