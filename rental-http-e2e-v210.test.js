@@ -315,6 +315,14 @@ try{
    assert.equal(evidence.actorEmail,supplier);
    assert.equal(evidence.reasonCode,'changed');
    assert.ok(evidence.acceptedAt);
+   const outcome=cancelEvidenceDb.prepare('SELECT evidence_json FROM supplier_cancellation_outcome_v1 WHERE event_id=? AND booking_id=?').get(evidence.eventId,unpaidCancelId);
+   assert.ok(outcome,'Successful unpaid cancellation must be linked to the declaration');
+   const recorded=JSON.parse(outcome.evidence_json);
+   assert.equal(recorded.eventId,evidence.eventId);
+   assert.equal(recorded.bookingId,unpaidCancelId);
+   assert.equal(recorded.status,'cancelled');
+   assert.equal(recorded.refundAmount,0);
+   assert.equal(recorded.refundId,null);
  }finally{cancelEvidenceDb.close();}
 
  const unpaidSnapshot=new Database(dbPath,{readonly:true,fileMustExist:true});
@@ -911,6 +919,18 @@ try{
  const afterRefund=await api('/api/payments/create-intent',{method:'POST',
    cookie:renterCookie,data:{bookingId:payId}});
  status(afterRefund,409,'Refunded booking cannot restart checkout');
+ const cancellationArchive=await api('/api/admin/rentals/'+payId+'/evidence',{cookie:adminCookie});
+ status(cancellationArchive,200,'Admin can review linked cancellation outcome');
+ assert.equal(cancellationArchive.body.supplierCancellationIntents.length,1);
+ assert.equal(cancellationArchive.body.supplierCancellationOutcomes.length,1);
+ const intent=cancellationArchive.body.supplierCancellationIntents[0];
+ const outcome=cancellationArchive.body.supplierCancellationOutcomes[0];
+ assert.equal(outcome.eventId,intent.eventId);
+ assert.equal(outcome.bookingId,payId);
+ assert.equal(outcome.status,'cancelled');
+ assert.equal(outcome.refundAmount,100);
+ assert.equal(intent.priorPaymentStatus,'paid');
+ assert.match(outcome.source,/provider settlement may follow asynchronously/);
  console.log('PASS HTTP demo paid €100 refund and duplicate cancellation protection');
 
  // A valid guest token must not become an identity override for an unrelated signed-in user.
