@@ -18,3 +18,27 @@ test('encrypted SQLite+photo manifest restores exact contents; wrong key and tam
   await assert.rejects(createEncryptedBundle({db,uploads,output:path.join(root,'no-pause.enc'),publicKey:keys.publicKey,quiesced:false}));
  }finally{db.close();fs.rmSync(root,{recursive:true,force:true});}
 });
+
+import {Readable} from 'node:stream';
+import {r2BackupConfig,verifyEncryptedReplica,startCoordinatedBackupScheduler} from './ops/coordinated-backup-scheduler.js';
+test('R2 replica is opt-in, EU-only and does not replace primary configuration',()=>{
+ const env={BACKUP_R2_ENABLED:'true',BACKUP_R2_ACCESS_KEY_ID:'synthetic-id',BACKUP_R2_SECRET_ACCESS_KEY:'synthetic-secret',BACKUP_R2_BUCKET:'rentinorbit-backups-eu',BACKUP_R2_ENDPOINT:'https://'+'a'.repeat(32)+'.eu.r2.cloudflarestorage.com',BACKUP_S3_BUCKET:'primary'};
+ assert.equal(r2BackupConfig({...env,BACKUP_R2_ENABLED:'false'}),null);
+ const result=r2BackupConfig(env);assert.equal(result.BACKUP_S3_BUCKET,'rentinorbit-backups-eu');assert.equal(result.BACKUP_S3_REGION,'auto');assert.equal(env.BACKUP_S3_BUCKET,'primary');
+ for(const endpoint of [env.BACKUP_R2_ENDPOINT.replace('.eu.','.'),env.BACKUP_R2_ENDPOINT+'/bucket',env.BACKUP_R2_ENDPOINT.replace('https:','http:'),env.BACKUP_R2_ENDPOINT+'?x=1'])assert.throws(()=>r2BackupConfig({...env,BACKUP_R2_ENDPOINT:endpoint}),/BACKUP_R2_EU_ENDPOINT_REQUIRED/);
+ assert.throws(()=>r2BackupConfig({...env,BACKUP_R2_BUCKET:'other'}));assert.throws(()=>r2BackupConfig({...env,BACKUP_R2_SECRET_ACCESS_KEY:''}));
+ assert.equal(startCoordinatedBackupScheduler({env:{...env,ENCRYPTED_BACKUP_SCHEDULER_ENABLED:'false'}}),null);
+});
+test('replica requires downloaded bytes to match encrypted source hash',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rio-r2-replica-'));
+ try{
+ const bytes=Buffer.from('synthetic encrypted bytes'),output=path.join(root,'source.enc');fs.writeFileSync(output,bytes);
+ const proof={bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')};
+ let stored;const calls=[];
+ const client={async send(command){calls.push(command.constructor.name);if(command.constructor.name==='PutObjectCommand'){const chunks=[];for await(const chunk of command.input.Body)chunks.push(chunk);stored=Buffer.concat(chunks);return {};}return {Body:Readable.from([stored])};}};
+ await verifyEncryptedReplica({client,bucket:'synthetic',objectKey:'bundles-v1/test.enc',output,downloaded:path.join(root,'verified.enc'),proof});
+ assert.deepEqual(calls,['PutObjectCommand','GetObjectCommand']);assert.deepEqual(stored,bytes);
+ const tampered={async send(command){if(command.constructor.name==='PutObjectCommand'){for await(const chunk of command.input.Body){}return {};}const wrong=Buffer.from(bytes);wrong[0]^=1;return {Body:Readable.from([wrong])};}};
+ await assert.rejects(verifyEncryptedReplica({client:tampered,bucket:'synthetic',objectKey:'bundles-v1/test.enc',output,downloaded:path.join(root,'tampered.enc'),proof}),/ENCRYPTED_BACKUP_DOWNLOAD_HASH_MISMATCH/);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
