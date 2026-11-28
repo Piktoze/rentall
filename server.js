@@ -2421,6 +2421,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS supplier_listing_risk_evidence_v1 (
  event_id TEXT PRIMARY KEY, listing_id TEXT NOT NULL, revision TEXT NOT NULL,
  actor_user_id TEXT NOT NULL, evidence_json TEXT NOT NULL, accepted_at TEXT NOT NULL
 )`);
+db.exec(`CREATE TABLE IF NOT EXISTS booking_listing_revision_evidence_v1 (
+ booking_id TEXT PRIMARY KEY, listing_id TEXT NOT NULL, revision TEXT,
+ evidence_json TEXT NOT NULL, captured_at TEXT NOT NULL
+)`);
 app.get('/api/supplier/listing-risk-terms',requireRole('supplier','admin'),(req,res)=>{
  res.set('Cache-Control','no-store, private').json({version:LISTING_RISK_VERSION,statements:LISTING_RISK_STATEMENTS});
 });
@@ -3282,6 +3286,15 @@ app.post('/api/rentals/bookings', simpleRateLimit({windowMs:60000,max:12,keyPref
       holdMinutes:Number(process.env.BOOKING_HOLD_MINUTES || 30)
     });
     if(sctRuntime)sctRuntime.enrollNewBooking(bookingId,listingForBooking.ownerEmail);
+    const review=db.prepare('SELECT revision,approved_revision,status,draft_json FROM listing_reviews WHERE listing_id=?').get(String(listingId));
+    const revision=review?.status==='approved'&&review.revision===review.approved_revision?review.revision:null;
+    const capturedAt=new Date().toISOString();
+    const listingSha256=revision?crypto.createHash('sha256').update(review.draft_json).digest('hex'):null;
+    const declarations=revision?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=? ORDER BY accepted_at,event_id').all(String(listingId),revision).map(row=>JSON.parse(row.evidence_json)).filter(ev=>ev.listingSha256===listingSha256&&String(ev.actorEmail).toLowerCase()===String(listingForBooking.ownerEmail).toLowerCase()):[];
+    const binding={bookingId,listingId,revision,listingSha256,capturedAt,declarations,
+      status:revision?(declarations.length?'revision-and-consent-captured':'revision-captured-consent-missing'):'legacy-revision-unavailable'};
+    db.prepare('INSERT INTO booking_listing_revision_evidence_v1 (booking_id,listing_id,revision,evidence_json,captured_at) VALUES(?,?,?,?,?)')
+      .run(String(bookingId),String(listingId),revision,JSON.stringify(binding),capturedAt);
     return created;}).immediate();
     const agreement=createRentalAgreement({
       bookingId,
@@ -3467,7 +3480,7 @@ app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=
     bookingId:id,supplierRiskConsent:riskEvidence,
     supplierAccountConsentsBeforeApproval:accountEvidence,
     listingConsentHistoryBeforeApproval:listingEvidence,
-    listingConsentBinding:'historical candidates only; exact booked revision not yet pinned',
+    listingConsentBinding:(()=>{const row=db.prepare('SELECT evidence_json FROM booking_listing_revision_evidence_v1 WHERE booking_id=?').get(id);return row?JSON.parse(row.evidence_json):{status:'historical-booking-not-pinned'};})(),
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
