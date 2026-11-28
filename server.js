@@ -3460,8 +3460,14 @@ app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=
   const risk=db.prepare('SELECT evidence_json FROM supplier_risk_consent_v1 WHERE booking_id=?').get(id);
   if(!b&&!risk)return res.status(404).end();
   res.set('Cache-Control','no-store, private');
+  const riskEvidence=risk?JSON.parse(risk.evidence_json):null;
+  const accountEvidence=riskEvidence?.actorUserId?db.prepare('SELECT evidence_json FROM supplier_account_risk_evidence_v1 WHERE actor_user_id=? AND accepted_at<=? ORDER BY accepted_at').all(String(riskEvidence.actorUserId),String(riskEvidence.acceptedAt||'')).map(row=>JSON.parse(row.evidence_json)):[];
+  const listingEvidence=riskEvidence?.actorUserId&&b?.listingId?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND actor_user_id=? AND accepted_at<=? ORDER BY accepted_at,event_id').all(String(b.listingId),String(riskEvidence.actorUserId),String(riskEvidence.acceptedAt||'')).map(row=>JSON.parse(row.evidence_json)):[];
   res.attachment('rentinorbit-rental-evidence.json').json({
-    bookingId:id,supplierRiskConsent:risk?JSON.parse(risk.evidence_json):null,
+    bookingId:id,supplierRiskConsent:riskEvidence,
+    supplierAccountConsentsBeforeApproval:accountEvidence,
+    listingConsentHistoryBeforeApproval:listingEvidence,
+    listingConsentBinding:'historical candidates only; exact booked revision not yet pinned',
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
