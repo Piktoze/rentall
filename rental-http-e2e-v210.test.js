@@ -193,6 +193,36 @@ try{
 
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // Retention review must never authorize deletion and must fail closed for unresolved obligations.
+ const retentionUrl='/api/admin/rentals/'+encodeURIComponent(unsettledDepositId)+'/evidence/retention';
+ status(await api(retentionUrl),401,'Anonymous retention review denied');
+ for(const cookie of [renterCookie,supplierCookie,outsiderCookie])status(await api(retentionUrl,{cookie}),403,'Non-admin retention review denied');
+ const heldRetention=await api(retentionUrl,{cookie:adminCookie});
+ status(heldRetention,200,'Admin retention review');
+ assert.equal(heldRetention.body.status,'hold');
+ assert.ok(heldRetention.body.holds.includes('OBLIGATIONS_NOT_COMPLETED'));
+ assert.ok(heldRetention.body.holds.includes('DEPOSIT_UNRESOLVED'));
+ assert.equal(heldRetention.body.reviewAt,null);
+ assert.equal(heldRetention.body.automaticDeletion,false);
+ assert.equal(heldRetention.cacheControl,'no-store, private');
+ const retentionDb=new Database(dbPath);
+ try{
+   const old=retentionDb.prepare('SELECT status,payment_status,refund_status,payout_status,security_deposit_amount,updated_at,returned_at,cancelled_at,payout_completed_at,security_deposit_resolved_at FROM rental_bookings WHERE booking_id=?').get(unsettledDepositId);
+   const closed='2015-02-28T12:00:00.000Z';
+   retentionDb.prepare("UPDATE rental_bookings SET status='cancelled',payment_status='unpaid',refund_status=NULL,payout_status='not_ready',security_deposit_amount=0,updated_at=?,returned_at=NULL,cancelled_at=?,payout_completed_at=NULL,security_deposit_resolved_at=NULL WHERE booking_id=?").run(closed,closed,unsettledDepositId);
+   const due=await api(retentionUrl,{cookie:adminCookie});
+   status(due,200,'Closed historical booking retention review');
+   assert.equal(due.body.provisionalClosureAt,closed);
+   assert.equal(due.body.reviewAt,'2025-02-28T12:00:00.000Z');
+   assert.equal(due.body.status,'review_due');
+   assert.equal(due.body.automaticDeletion,false);
+   retentionDb.prepare("UPDATE rental_bookings SET refund_status='pending' WHERE booking_id=?").run(unsettledDepositId);
+   const refundHold=await api(retentionUrl,{cookie:adminCookie});
+   assert.equal(refundHold.body.status,'hold');
+   assert.ok(refundHold.body.holds.includes('REFUND_REVIEW_REQUIRED'));
+   retentionDb.prepare('UPDATE rental_bookings SET status=@status,payment_status=@payment_status,refund_status=@refund_status,payout_status=@payout_status,security_deposit_amount=@security_deposit_amount,updated_at=@updated_at,returned_at=@returned_at,cancelled_at=@cancelled_at,payout_completed_at=@payout_completed_at,security_deposit_resolved_at=@security_deposit_resolved_at WHERE booking_id=@booking_id').run({...old,booking_id:unsettledDepositId});
+ }finally{retentionDb.close();}
+ console.log('PASS HTTP retention review: admin-only, unresolved obligations, ten-year review, refund hold and no automatic deletion');
  // Archive generation uses the real HTTP route and the isolated synthetic database.
  const evidenceUrl='/api/admin/rentals/'+encodeURIComponent(unsettledDepositId)+'/evidence';
  const requestPdf=cookie=>fetch(base+evidenceUrl+'/pdf',{method:'POST',headers:cookie?{cookie}:{}});
