@@ -453,8 +453,9 @@ try{
  // New public listing must have two to five real uploaded photo files.
  const listingBase={id:'photo-e2e-listing',title:'Photo integration fixture',
    city:'Vilnius',quantity:1,priceDay:12,bookingMode:'request'};
- const publish=photos=>api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
-   data:{listing:{...listingBase,photos,coverPhoto:photos[0]||''}}});
+ const listingRiskConsent={version:'rio-listing-risk-lt-v1',answers:[true,true,true]};
+ const publish=(photos,consent=listingRiskConsent)=>api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
+   data:{listingRiskConsent:consent,listing:{...listingBase,photos,coverPhoto:photos[0]||''}}});
  const accountRisk={version:'rio-supplier-account-risk-lt-v1',answers:[true,true,true,true]};
  const missingAccountRisk=await publish([]);
  status(missingAccountRisk,409,'Existing supplier cannot publish without account risk consent');
@@ -481,6 +482,10 @@ try{
  status(await publish([photos[0]]),400,'One uploaded photo denied');
  status(await publish([...photos,...photos,...photos]),400,'Six uploaded photos denied');
  status(await publish(['/uploads/missing-a.png','/uploads/missing-b.png']),400,'Missing uploaded image denied');
+ const missingListingRisk=await publish(photos,null);
+ status(missingListingRisk,409,'Listing without specific consent denied');
+ assert.equal(missingListingRisk.body.code,'LISTING_RISK_CONSENT_REQUIRED');
+ status(await publish(photos,{...listingRiskConsent,answers:[true,false,true]}),409,'Partial listing consent denied');
  const published=await publish(photos);
  status(published,200,'Two uploaded photos permit listing publication');
  assert.equal(published.body.listing.photos.length,2);
@@ -591,7 +596,7 @@ try{
  console.log('PASS HTTP supplier trader declaration: identity, consent and unverified public classification');
  const anotherSupplierCookie=await signIn(otherSupplier);
  const attemptedTakeover=await api('/api/supplier/listings',{method:'POST',cookie:anotherSupplierCookie,
-   data:{listing:{...listingBase,title:'Unauthorized takeover',photos,coverPhoto:photos[0]}}});
+   data:{listingRiskConsent,listing:{...listingBase,title:'Unauthorized takeover',photos,coverPhoto:photos[0]}}});
  status(attemptedTakeover,400,'Other supplier must not overwrite listing ID');
  const ownerStillOwns=await api('/api/supplier/listings',{cookie:supplierCookie});
  status(ownerStillOwns,200,'Original supplier listing list');
@@ -605,7 +610,7 @@ try{
  status(await api('/api/supplier/listings/'+listingBase.id+'/archive',{method:'POST',cookie:anotherSupplierCookie}),
    404,'Other supplier cannot archive listing');
  const updated=await api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
-   data:{listing:{...listingBase,title:'Owner updated title',photos,coverPhoto:photos[0]}}});
+   data:{listingRiskConsent,listing:{...listingBase,title:'Owner updated title',photos,coverPhoto:photos[0]}}});
  status(updated,200,'Owner can edit listing with valid photos');
  assert.equal(updated.body.listing.title,'Owner updated title');
  assert.equal(updated.body.listing.reviewStatus,'pending_review');
@@ -617,6 +622,15 @@ try{
  try{
    const decisions=audit.prepare('SELECT * FROM listing_review_history WHERE listing_id=?').all(listingBase.id);
    assert.equal(decisions.length,3);
+   const consents=audit.prepare('SELECT * FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? ORDER BY accepted_at').all(listingBase.id);
+   assert.ok(consents.length>=3);
+   assert.equal(new Set(consents.map(row=>row.revision)).size,3);
+   for(const row of consents){
+     const evidence=JSON.parse(row.evidence_json);
+     assert.equal(evidence.revision,row.revision);
+     assert.deepEqual(evidence.answers,[true,true,true]);
+     assert.match(evidence.listingSha256,/^[a-f0-9]{64}$/);
+   }
    assert.ok(decisions.every(row=>row.admin_id&&row.decided_at));
    assert.equal(JSON.parse(decisions.find(row=>row.status==='approved').reviewed_json).title,listingBase.title);
  }finally{audit.close();}
