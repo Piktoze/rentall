@@ -607,8 +607,16 @@ try{
    data:{bookingId:'api-e2e-instant-pending',outcome:'succeeded'}});
  status(instantDemoPending,409,'Instant mode cannot complete demo payment before supplier approval');
  assert.equal(instantDemoPending.body.code,'SUPPLIER_CONFIRMATION_REQUIRED');
- status(await api('/api/rentals/bookings/api-e2e-instant-pending/status',{method:'POST',
-   cookie:supplierCookie,data:{status:'confirmed'}}),200,'Supplier can confirm instant-mode request');
+ const instantRoute='/api/rentals/bookings/api-e2e-instant-pending';
+ const deniedRisk=await api(instantRoute+'/status',{method:'POST',cookie:supplierCookie,data:{status:'confirmed'}});
+ status(deniedRisk,409,'Approval without risk consent blocked');
+ assert.equal(deniedRisk.body.code,'SUPPLIER_RISK_CONSENT_REQUIRED');
+ status(await api(instantRoute+'/supplier-risk-consent',{cookie:renterCookie}),403,'Renter cannot obtain supplier risk challenge');
+ const instantRisk=await api(instantRoute+'/supplier-risk-consent',{cookie:supplierCookie});
+ status(instantRisk,200,'Supplier receives booking-specific challenge');
+ const riskAnswers=instantRisk.body.statements.map(()=>true);
+ status(await api(instantRoute+'/status',{method:'POST',cookie:supplierCookie,data:{status:'confirmed',supplierRiskConsent:{version:instantRisk.body.version,digest:instantRisk.body.digest,answers:[true,false,true,true]}}}),409,'Partial consent blocked');
+ status(await api(instantRoute+'/status',{method:'POST',cookie:supplierCookie,data:{status:'confirmed',supplierRiskConsent:{version:instantRisk.body.version,digest:instantRisk.body.digest,answers:riskAnswers}}}),200,'Supplier explicitly confirms request');
  const instantUnlocked=await api('/api/payments/create-intent',{method:'POST',cookie:renterCookie,
    data:{bookingId:'api-e2e-instant-pending'}});
  status(instantUnlocked,200,'Instant mode payment unlocked only after supplier confirmation');
@@ -621,8 +629,10 @@ try{
    data:{bookingId:pendingId}});
  status(pendingCheckout,409,'Pending request checkout must be blocked');
  assert.equal(pendingCheckout.body.code,'SUPPLIER_CONFIRMATION_REQUIRED');
+ const pendingRisk=await api('/api/rentals/bookings/'+pendingId+'/supplier-risk-consent',{cookie:supplierCookie});
+ status(pendingRisk,200,'Pending booking risk challenge');
  const approved=await api('/api/rentals/bookings/'+pendingId+'/status',{method:'POST',
-   cookie:supplierCookie,data:{status:'confirmed'}});
+   cookie:supplierCookie,data:{status:'confirmed',supplierRiskConsent:{version:pendingRisk.body.version,digest:pendingRisk.body.digest,answers:pendingRisk.body.statements.map(()=>true)}}});
  status(approved,200,'Supplier approval without prior card authorization');
  const beforePaymentTrust=await api('/api/rentals/bookings/'+pendingId+'/trust',{cookie:renterCookie});
  status(beforePaymentTrust,200,'Renter sees agreement after supplier booking approval');
