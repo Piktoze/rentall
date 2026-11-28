@@ -3086,10 +3086,39 @@ const backendBookingStatusRequests=new Map();
 async function updateBackendBookingStatus(bookingId,status,reason=null){
   const key=`${bookingId}:${status}`;
   if(backendBookingStatusRequests.has(key)) return backendBookingStatusRequests.get(key);
-  const request=apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/status`,{
-    method:'POST',
-    body:JSON.stringify({status,reason})
-  }).finally(()=>backendBookingStatusRequests.delete(key));
+  const request=(async()=>{
+    let supplierRiskConsent;
+    if(status==='confirmed'){
+      const url='/api/rentals/bookings/'+encodeURIComponent(bookingId)+'/supplier-risk-consent';
+      const data=await apiJson(url);
+      supplierRiskConsent=await new Promise(resolve=>{
+        const dialog=document.createElement('dialog');
+        dialog.style.cssText='width:min(540px,92vw);max-height:85vh;overflow:auto;padding:24px;border:1px solid #aaa;border-radius:12px;color:#172019;background:#fff';
+        const form=document.createElement('form');
+        const h=document.createElement('h2');h.textContent='Patvirtinti nuomos užklausą';form.append(h);
+        const summary=document.createElement('p');summary.textContent=data.summary;form.append(summary);
+        const boxes=data.statements.map(statement=>{
+          const label=document.createElement('label');label.style.cssText='display:flex;align-items:flex-start;gap:10px;margin:16px 0';
+          const box=document.createElement('input');box.type='checkbox';box.required=true;box.style.cssText='width:20px;height:20px;flex-shrink:0';
+          label.append(box,document.createTextNode(statement));form.append(label);return box;
+        });
+        const note=document.createElement('p');note.textContent='Patvirtinimas nepanaikina privalomų platformos pareigų pagal įstatymus.';form.append(note);
+        const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Atšaukti';cancel.className='secondary';
+        const submit=document.createElement('button');submit.type='submit';submit.textContent='Patvirtinti rezervaciją';submit.className='primary';submit.disabled=true;
+        boxes.forEach(b=>b.addEventListener('change',()=>{submit.disabled=!boxes.every(x=>x.checked)}));
+        form.append(cancel,submit);dialog.append(form);document.body.append(dialog);
+        let result=null;
+        form.addEventListener('submit',e=>{e.preventDefault();if(!boxes.every(x=>x.checked))return;result={version:data.version,digest:data.digest,answers:boxes.map(x=>x.checked)};dialog.close()});
+        cancel.addEventListener('click',()=>dialog.close());
+        dialog.addEventListener('close',()=>{dialog.remove();resolve(result)},{once:true});
+        dialog.showModal();
+      });
+      if(!supplierRiskConsent)throw Error('Rezervacija nepatvirtinta.');
+    }
+    return apiJson(`/api/rentals/bookings/${encodeURIComponent(bookingId)}/status`,{
+      method:'POST',body:JSON.stringify({status,reason,supplierRiskConsent})
+    });
+  })().finally(()=>backendBookingStatusRequests.delete(key));
   backendBookingStatusRequests.set(key,request);
   return request;
 }
