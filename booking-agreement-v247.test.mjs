@@ -9,10 +9,14 @@ const start=server.indexOf('const agreement=createRentalAgreement({');
 const end=server.indexOf('if(isEmail(effectiveCustomerEmail))',start);
 assert.ok(start>=0&&end>start,'Booking agreement snapshot creation exists');
 const booking=server.slice(start,end);
-assert.match(booking,/termsVersion:'rentinorbit-rental-v3'/);
+assert.match(booking,/termsVersion:'rentinorbit-rental-v4'/);
 for(const term of [
  'Nuomotojas patvirtina, kad turi teisę nuomoti',
  'Nuomininkas naudoja daiktą pagal paskirtį',
+ 'RentInOrbit neteikia daikto draudimo',
+ 'Nuomininkas atsako už jo atsakomybei pagal sutartį',
+ 'Nuomotojui atšaukus iki daikto perdavimo, grąžinama visa apmokėta nuomos suma',
+ 'netaikant atskiros platformos atšaukimo baudos',
  'Abi šalys atskirai patvirtina',
  'Kodas galioja iki panaudojimo',
  'Grąžinimą RentInOrbit sistemoje patvirtina nuomotojas',
@@ -32,4 +36,4 @@ assert.match(server,/if\(isSupplier\|\|\(!isAccountCustomer&&!isGuestCustomer\)\
  'Supplier cannot obtain renter handover code');
 assert.ok(POLICY_COPY.lt.terms.sections.some(([title])=>title.includes('Rezervacija ir sutartis')),
  'LT public terms need a booking agreement section');
-console.log('PASS booking agreement v3: bilateral obligations, immutable snapshot, separate signatures, handover and consumer protections');
+console.log('PASS booking agreement v4: bilateral obligations, immutable snapshot, separate signatures, handover and consumer protections');
