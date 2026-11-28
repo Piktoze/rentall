@@ -3389,6 +3389,7 @@ app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=
   res.set('Cache-Control','no-store, private');
   res.attachment('rentinorbit-rental-evidence.json').json({
     bookingId:id,supplierRiskConsent:risk?JSON.parse(risk.evidence_json):null,
+    supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
       listingId:b.listingId,startDate:b.startDate,endDate:b.endDate,quantity:b.quantity,orderValue:b.orderValue}:null
@@ -3572,6 +3573,28 @@ app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admi
 });
 
 
+const SUPPLIER_CANCEL_VERSION='rio-supplier-cancel-lt-v1';
+const SUPPLIER_CANCEL_STATEMENT='Patvirtinu, kad rezervaciją atšaukiu savo iniciatyva ir suprantu, kad nuomininkui grąžinama visa sumokėta nuomos suma.';
+const SUPPLIER_CANCEL_REASONS=Object.freeze({changed:'Persigalvojau dėl nuomos',unavailable:'Daiktas nebepasiekiamas',damaged:'Daiktas sugedo',trust:'Nesijaučiu užtikrintas dėl nuomos',personal:'Asmeninės priežastys',other:'Kita priežastis'});
+db.exec(`CREATE TABLE IF NOT EXISTS supplier_cancellation_evidence_v1 (
+  event_id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, actor_user_id TEXT NOT NULL,
+  evidence_json TEXT NOT NULL, accepted_at TEXT NOT NULL
+)`);
+function recordSupplierCancellationIntent(booking,user,submitted){
+  if(!booking||!user?.userId||user.role!=='supplier'||!canSupplierManageBooking(user,booking.bookingId)||
+    submitted?.version!==SUPPLIER_CANCEL_VERSION||submitted?.accepted!==true||
+    typeof submitted.reasonCode!=='string'||!Object.hasOwn(SUPPLIER_CANCEL_REASONS,submitted.reasonCode))return null;
+  const other=submitted.reasonCode==='other'&&typeof submitted.otherReason==='string'?submitted.otherReason.trim():null;
+  if(submitted.reasonCode==='other'&&(!other||other.length>500))return null;
+  const eventId=crypto.randomUUID(),acceptedAt=new Date().toISOString();
+  const evidence={eventId,bookingId:booking.bookingId,actorUserId:String(user.userId),actorEmail:String(user.email),
+    version:SUPPLIER_CANCEL_VERSION,statement:SUPPLIER_CANCEL_STATEMENT,accepted:true,
+    reasonCode:submitted.reasonCode,reasonLabel:SUPPLIER_CANCEL_REASONS[submitted.reasonCode],otherReason:other,
+    priorStatus:booking.status,priorPaymentStatus:booking.paymentStatus,acceptedAt,authMethod:'session'};
+  db.prepare('INSERT INTO supplier_cancellation_evidence_v1 (event_id,booking_id,actor_user_id,evidence_json,accepted_at) VALUES(?,?,?,?,?)')
+    .run(eventId,booking.bookingId,String(user.userId),JSON.stringify(evidence),acceptedAt);
+  return evidence;
+}
 app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60000,max:12,keyPrefix:'booking-cancel'}), async (req,res)=>{
   try{
     if(!bookingAccessAllowed(req,req.params.bookingId)){
@@ -3585,9 +3608,16 @@ app.post('/api/rentals/bookings/:bookingId/cancel', simpleRateLimit({windowMs:60
     if(bookingBeforeCancellation && ['active','returned','completed'].includes(String(bookingBeforeCancellation.status||'').toLowerCase())){
       return res.status(409).json({error:'Cannot cancel after handover, return or completion. Open a dispute instead.',code:'CANCELLATION_LOCKED_AFTER_HANDOVER'});
     }
+    if(!bookingBeforeCancellation||!['pending','confirmed'].includes(String(bookingBeforeCancellation.status||'')))
+      return res.status(409).json({code:'INVALID_TRANSITION',error:'Rezervacija nebeatšaukiama.'});
+    let supplierCancellation=null;
+    if(actor?.role==='supplier'&&supplierInitiated){
+      supplierCancellation=recordSupplierCancellationIntent(bookingBeforeCancellation,actor,req.body?.supplierCancellation);
+      if(!supplierCancellation)return res.status(409).json({code:'SUPPLIER_CANCELLATION_CONSENT_REQUIRED',error:'Pasirinkite atšaukimo priežastį ir patvirtinkite savo sprendimą.'});
+    }
     const result=await cancelBookingWithPaymentHandling(
       req.params.bookingId,
-      req.body?.reason || null,
+      supplierCancellation?.reasonLabel || req.body?.reason || null,
       {forceFullRefund:supplierInitiated}
     );
     if(!result) return res.status(404).json({error:'Booking not found'});
