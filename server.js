@@ -1,3 +1,4 @@
+import EvidencePDFDocument from 'pdfkit';
 import {installIssuedCommissionDocuments,issuedDeliveryEnabled} from './modules/issued-commission-documents.js';
 import {installSupplierCommissionDocuments} from './modules/supplier-commission-documents.js';
 import {onboardingPilotAccess,onboardingPilotSupplierAllowed} from './modules/onboarding-pilot-access.js';
@@ -3468,15 +3469,14 @@ function persistSupplierRiskConsent(bookingId,user,submitted){
       JSON.stringify({...challenge,answers:submitted.answers,acceptedAt,authMethod:'session'}),acceptedAt);
   return true;
 }
-app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=>{
-  const id=String(req.params.bookingId),b=getRentalBookingById(id);
+function buildBookingEvidence(id){
+  const b=getRentalBookingById(id);
   const risk=db.prepare('SELECT evidence_json FROM supplier_risk_consent_v1 WHERE booking_id=?').get(id);
-  if(!b&&!risk)return res.status(404).end();
-  res.set('Cache-Control','no-store, private');
+  if(!b&&!risk)return null;
   const riskEvidence=risk?JSON.parse(risk.evidence_json):null;
   const accountEvidence=riskEvidence?.actorUserId?db.prepare('SELECT evidence_json FROM supplier_account_risk_evidence_v1 WHERE actor_user_id=? AND accepted_at<=? ORDER BY accepted_at').all(String(riskEvidence.actorUserId),String(riskEvidence.acceptedAt||'')).map(row=>JSON.parse(row.evidence_json)):[];
   const listingEvidence=riskEvidence?.actorUserId&&b?.listingId?db.prepare('SELECT evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND actor_user_id=? AND accepted_at<=? ORDER BY accepted_at,event_id').all(String(b.listingId),String(riskEvidence.actorUserId),String(riskEvidence.acceptedAt||'')).map(row=>JSON.parse(row.evidence_json)):[];
-  res.attachment('rentinorbit-rental-evidence.json').json({
+  return {
     bookingId:id,supplierRiskConsent:riskEvidence,
     supplierAccountConsentsBeforeApproval:accountEvidence,
     listingConsentHistoryBeforeApproval:listingEvidence,
@@ -3485,8 +3485,46 @@ app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
       listingId:b.listingId,startDate:b.startDate,endDate:b.endDate,quantity:b.quantity,orderValue:b.orderValue}:null
-  });
+  };
+}
+
+db.exec(`CREATE TABLE IF NOT EXISTS booking_evidence_pdf_v1 (
+ booking_id TEXT NOT NULL, source_sha256 TEXT NOT NULL, pdf_sha256 TEXT NOT NULL,
+ pdf_bytes BLOB NOT NULL, generated_at TEXT NOT NULL, PRIMARY KEY(booking_id,source_sha256)
+)`);
+app.get('/api/admin/rentals/:bookingId/evidence',requireRole('admin'),(req,res)=>{
+ const evidence=buildBookingEvidence(String(req.params.bookingId));
+ if(!evidence)return res.status(404).end();
+ res.set('Cache-Control','no-store, private').attachment('rentinorbit-rental-evidence.json').json(evidence);
 });
+app.post('/api/admin/rentals/:bookingId/evidence/pdf',requireRole('admin'),async(req,res)=>{
+ try{
+  const id=String(req.params.bookingId),evidence=buildBookingEvidence(id);
+  if(!evidence)return res.status(404).end();
+  const source=JSON.stringify(evidence,null,2);
+  const sourceHash=crypto.createHash('sha256').update(source).digest('hex');
+  const lookup=()=>db.prepare('SELECT * FROM booking_evidence_pdf_v1 WHERE booking_id=? AND source_sha256=?').get(id,sourceHash);
+  let row=lookup();
+  if(!row){
+   const doc=new EvidencePDFDocument({size:'A4',margin:48,info:{Title:'RentInOrbit – rezervacijos įrodymų išrašas',Author:'RentInOrbit'}});
+   const chunks=[];doc.on('data',p=>chunks.push(p));
+   const done=new Promise((resolve,reject)=>{doc.on('error',reject);doc.on('end',()=>resolve(Buffer.concat(chunks)));});
+   doc.font('node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf');
+   doc.fontSize(18).text('RentInOrbit – rezervacijos įrodymų išrašas');
+   doc.moveDown().fontSize(10).text('Administratoriaus dokumentas. Ne sąskaita faktūra ir ne kvalifikuotas elektroninis parašas.');
+   doc.text('Rezervacija: '+id).text('Šaltinio SHA-256: '+sourceHash).moveDown();
+   doc.fontSize(9).text(source,{lineGap:2});
+   doc.end();const bytes=await done;
+   const pdfHash=crypto.createHash('sha256').update(bytes).digest('hex');
+   db.prepare('INSERT OR IGNORE INTO booking_evidence_pdf_v1 VALUES(?,?,?,?,?)').run(id,sourceHash,pdfHash,bytes,new Date().toISOString());
+   row=lookup();
+  }
+  if(crypto.createHash('sha256').update(row.pdf_bytes).digest('hex')!==row.pdf_sha256)throw Error('Evidence PDF integrity mismatch');
+  res.set('Cache-Control','no-store, private').set('X-Evidence-SHA256',row.pdf_sha256).set('X-Evidence-Source-SHA256',sourceHash);
+  res.attachment('rentinorbit-rental-evidence.pdf').type('application/pdf').send(row.pdf_bytes);
+ }catch(err){console.warn(JSON.stringify({type:'evidence_pdf_error',error:safeOperationalError(err)}));res.status(500).json({error:'Įrodymų PDF laikinai nepasiekiamas'});}
+});
+
 
 app.post('/api/rentals/bookings/:bookingId/status', requireRole('supplier','admin'), async (req,res)=>{
   try{
