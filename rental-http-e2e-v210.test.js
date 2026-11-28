@@ -924,13 +924,13 @@ try{
  assert.equal(cancellationArchive.body.supplierCancellationIntents.length,1);
  assert.equal(cancellationArchive.body.supplierCancellationOutcomes.length,1);
  const intent=cancellationArchive.body.supplierCancellationIntents[0];
- const outcome=cancellationArchive.body.supplierCancellationOutcomes[0];
- assert.equal(outcome.eventId,intent.eventId);
- assert.equal(outcome.bookingId,payId);
- assert.equal(outcome.status,'cancelled');
- assert.equal(outcome.refundAmount,100);
+ const archivedOutcome=cancellationArchive.body.supplierCancellationOutcomes[0];
+ assert.equal(archivedOutcome.eventId,intent.eventId);
+ assert.equal(archivedOutcome.bookingId,payId);
+ assert.equal(archivedOutcome.status,'cancelled');
+ assert.equal(archivedOutcome.refundAmount,100);
  assert.equal(intent.priorPaymentStatus,'paid');
- assert.match(outcome.source,/provider settlement may follow asynchronously/);
+ assert.match(archivedOutcome.source,/provider settlement may follow asynchronously/);
  console.log('PASS HTTP demo paid €100 refund and duplicate cancellation protection');
 
  // A valid guest token must not become an identity override for an unrelated signed-in user.
