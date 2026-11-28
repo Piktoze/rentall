@@ -13,7 +13,7 @@ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'rentinorbit-api-e2e-'));
 const dbPath=path.join(folder,'integration.sqlite');
 const env={...process.env,DB_PATH:dbPath,UPLOADS_DIR:path.join(folder,'uploads'),NODE_ENV:'test',RENTINORBIT_STAGING:'true',
   RENTINORBIT_DEMO_PAYMENTS:'true',RENTINORBIT_PREAUTH_ENABLED:'true',EMAIL_WORKER_ENABLED:'false',BACKUP_SCHEDULER_ENABLED:'false',
-  RENTALL_SEED_DEMO_USERS:'false',TRUST_PROXY_HOPS:'1'};
+  RENTALL_SEED_DEMO_USERS:'false',TRUST_PROXY_HOPS:'1',RENTINORBIT_TEST_REQUIRE_LISTING_RISK:'true',COMMERCIAL_SCT_RUNTIME_ENABLED:'false',RENTINORBIT_SCT_TEST_RUNTIME:'false'};
 for(const k of ['RAILWAY_ENVIRONMENT_ID','RAILWAY_PROJECT_ID','RAILWAY_SERVICE_ID',
   'RAILWAY_VOLUME_MOUNT_PATH','PERSISTENT_DATA_DIR','DATABASE_URL','RENTINORBIT_DB_PATH',
   'STRIPE_SECRET_KEY','STRIPE_PUBLISHABLE_KEY','STRIPE_WEBHOOK_SECRET','RESEND_API_KEY',
@@ -613,15 +613,32 @@ try{
    const records=riskFixtureDb.prepare('SELECT event_id,evidence_json FROM supplier_listing_risk_evidence_v1 WHERE listing_id=? AND revision=?').all(listingBase.id,resubmitted.revision);
    assert.ok(records.length);
    const write=riskFixtureDb.prepare('UPDATE supplier_listing_risk_evidence_v1 SET evidence_json=? WHERE event_id=?');
+   const probeDate=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+   const probeEnd=new Date(Date.now()+8*86400000).toISOString().slice(0,10);
+   const probe=()=>api('/api/rentals/bookings',{method:'POST',cookie:renterCookie,syntheticClientIp:'192.0.2.95',data:{listingId:listingBase.id,startDate:probeDate,endDate:probeEnd,termsAccepted:true}});
+   const snapshot=()=>riskFixtureDb.prepare('SELECT booking_id,status,payment_status FROM rental_bookings WHERE listing_id=? ORDER BY booking_id').all(listingBase.id);
+   const baseline=snapshot();
+   const assertBlocked=async()=>{const response=await probe();status(response,409,'Booking without valid listing declaration blocked');assert.equal(response.body.code,'LISTING_RISK_RECONFIRMATION_REQUIRED');assert.deepEqual(snapshot(),baseline,'Rejected booking must not allocate inventory or create payment state');};
+
    try{
      for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,listingSha256:'0'.repeat(64)}),row.event_id);}
      assert.equal(await riskState(),true,'Mismatched listing digest requires reconfirmation');
+     await assertBlocked();
      for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,answers:[true,false,true]}),row.event_id);}
      assert.equal(await riskState(),true,'Partial declaration requires reconfirmation');
+     await assertBlocked();
      for(const row of records){const ev=JSON.parse(row.evidence_json);write.run(JSON.stringify({...ev,actorEmail:otherSupplier}),row.event_id);}
      assert.equal(await riskState(),true,'Another supplier declaration cannot satisfy owner gate');
+     await assertBlocked();
    }finally{for(const row of records)write.run(row.evidence_json,row.event_id);}
    assert.equal(await riskState(),false,'Restored valid evidence clears reconfirmation flag');
+   const acceptedBooking=await probe();
+   status(acceptedBooking,200,'Valid listing declaration permits reservation');
+   assert.equal(snapshot().length,baseline.length+1);
+   const captured=riskFixtureDb.prepare('SELECT evidence_json FROM booking_listing_revision_evidence_v1 WHERE booking_id=?').get(acceptedBooking.body.booking.bookingId);
+   assert.equal(JSON.parse(captured.evidence_json).status,'revision-and-consent-captured');
+   console.log('PASS HTTP listing declaration gate: rejected requests leave inventory unchanged; valid revision permits reservation');
+
  }finally{riskFixtureDb.close();}
 
  const sync=await api('/api/rentals/listings/sync',{method:'POST',cookie:supplierCookie,
