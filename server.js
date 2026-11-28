@@ -3531,6 +3531,15 @@ function buildBookingEvidence(id){
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     supplierCancellationOutcomes:db.prepare('SELECT evidence_json FROM supplier_cancellation_outcome_v1 WHERE booking_id=? ORDER BY recorded_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     refundWebhookEvidence:db.prepare('SELECT evidence_json FROM booking_refund_webhook_evidence_v1 WHERE booking_id=? ORDER BY recorded_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
+    sctTestFinancialEvidence:(()=>{
+      // SCT command storage is optional in runtimes without SCT enabled.
+      if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_test_commands'").get())return {status:'not_available',operations:[]};
+      const rows=db.prepare('SELECT kind,status,provider_id,created_ms FROM sct_test_commands WHERE booking_id=? ORDER BY created_ms,kind').all(id);
+      return {status:rows.length?'recorded':'not_recorded',mode:'test',
+        source:'persisted SCT command state; done refund and transfer commands require provider readback; transfer is not bank payout',
+        operations:rows.map(row=>({kind:row.kind,status:row.status,providerId:row.provider_id||null,
+          commandCreatedAt:Number.isFinite(row.created_ms)&&Math.abs(row.created_ms)<=8640000000000000?new Date(row.created_ms).toISOString():null}))};
+    })(),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
     handoverEvidence:db.prepare("SELECT purpose,party,created_at AS createdAt,consumed_at AS consumedAt FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer' AND consumed_at IS NOT NULL ORDER BY purpose").all(id),
     returnEvidence:b?{recordedReturnedAt:b.returnedAt,condition:b.returnCondition,notes:b.returnNotes,timestampMayReflectCompletion:true}:null,
