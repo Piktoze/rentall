@@ -233,6 +233,27 @@ try{
  }
  const sourceEvidence=await api(evidenceUrl,{cookie:adminCookie});
  status(sourceEvidence,200,'Admin can read booking evidence');
+ // Optional SCT storage must not break ordinary booking archives.
+ assert.ok(['not_available','not_recorded'].includes(sourceEvidence.body.sctTestFinancialEvidence.status));
+ assert.deepEqual(sourceEvidence.body.sctTestFinancialEvidence.operations,[]);
+ const sctEvidenceDb=new Database(dbPath);
+ try{
+   const tableExists=!!sctEvidenceDb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sct_test_commands'").get();
+   if(!tableExists)sctEvidenceDb.exec("CREATE TABLE sct_test_commands (booking_id TEXT NOT NULL,kind TEXT NOT NULL,command_key TEXT NOT NULL UNIQUE,payload_json TEXT NOT NULL,status TEXT NOT NULL,provider_id TEXT UNIQUE,created_ms INTEGER NOT NULL,PRIMARY KEY(booking_id,kind))");
+   const insert=sctEvidenceDb.prepare("INSERT INTO sct_test_commands(booking_id,kind,command_key,payload_json,status,provider_id,created_ms) VALUES(?,?,?,?,?,?,?)");
+   insert.run(unsettledDepositId,'refund','synthetic-private-command-key','{"privateFixture":"synthetic-secret-not-for-export"}','done','re_syntheticarchive',1700000000000);
+   const archived=await api(evidenceUrl,{cookie:adminCookie});
+   status(archived,200,'SCT evidence available in admin archive');
+   const sct=archived.body.sctTestFinancialEvidence;
+   assert.equal(sct.status,'recorded');
+   assert.equal(sct.mode,'test');
+   assert.deepEqual(sct.operations,[{kind:'refund',status:'done',providerId:'re_syntheticarchive',commandCreatedAt:'2023-11-14T22:13:20.000Z'}]);
+   assert.doesNotMatch(JSON.stringify(sct),/synthetic-private-command-key|synthetic-secret-not-for-export|payload_json|command_key/);
+   sctEvidenceDb.prepare("DELETE FROM sct_test_commands WHERE booking_id=? AND kind='refund'").run(unsettledDepositId);
+   if(!tableExists)sctEvidenceDb.exec("DROP TABLE sct_test_commands");
+ }finally{sctEvidenceDb.close();}
+ console.log('PASS SCT archive: optional storage, allowlisted provider evidence and private command data excluded');
+
  const sourceSha=evidenceHash('sha256').update(JSON.stringify(sourceEvidence.body,null,2)).digest('hex');
  const pdf=await requestPdf(adminCookie);
  assert.equal(pdf.status,200,await pdf.clone().text().then(t=>t.slice(0,200)));
