@@ -1,6 +1,7 @@
 // Real HTTP multi-account rental handover test. Runs on a disposable local database.
 // No Railway volume, remote Stripe, production, email worker or external endpoints.
 import assert from 'node:assert/strict';
+import {createHash as evidenceHash} from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -192,6 +193,41 @@ try{
 
  const renterCookie=await signIn(renter),supplierCookie=await signIn(supplier),
    outsiderCookie=await signIn(outsider),adminCookie=await signIn(administrator);
+ // Archive generation uses the real HTTP route and the isolated synthetic database.
+ const evidenceUrl='/api/admin/rentals/'+encodeURIComponent(unsettledDepositId)+'/evidence';
+ const requestPdf=cookie=>fetch(base+evidenceUrl+'/pdf',{method:'POST',headers:cookie?{cookie}:{}});
+ assert.equal((await requestPdf('')).status,401);
+ for(const cookie of [renterCookie,supplierCookie,outsiderCookie]){
+   assert.equal((await requestPdf(cookie)).status,403);
+   assert.equal((await api(evidenceUrl,{cookie})).status,403);
+ }
+ const sourceEvidence=await api(evidenceUrl,{cookie:adminCookie});
+ status(sourceEvidence,200,'Admin can read booking evidence');
+ const sourceSha=evidenceHash('sha256').update(JSON.stringify(sourceEvidence.body,null,2)).digest('hex');
+ const pdf=await requestPdf(adminCookie);
+ assert.equal(pdf.status,200,await pdf.clone().text().then(t=>t.slice(0,200)));
+ assert.match(pdf.headers.get('content-type')||'',/application\/pdf/);
+ assert.equal(pdf.headers.get('cache-control'),'no-store, private');
+ const bytes=Buffer.from(await pdf.arrayBuffer());
+ assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
+ const pdfSha=evidenceHash('sha256').update(bytes).digest('hex');
+ assert.equal(pdf.headers.get('x-evidence-sha256'),pdfSha);
+ assert.equal(pdf.headers.get('x-evidence-source-sha256'),sourceSha);
+ const repeat=await requestPdf(adminCookie);
+ assert.equal(repeat.status,200);
+ assert.deepEqual(Buffer.from(await repeat.arrayBuffer()),bytes);
+ const archiveDb=new Database(dbPath);
+ try{
+   const stored=archiveDb.prepare('SELECT * FROM booking_evidence_pdf_v1 WHERE booking_id=?').all(unsettledDepositId);
+   assert.equal(stored.length,1);
+   assert.equal(stored[0].source_sha256,sourceSha);
+   assert.equal(stored[0].pdf_sha256,pdfSha);
+   archiveDb.prepare('UPDATE booking_evidence_pdf_v1 SET pdf_bytes=? WHERE booking_id=?').run(Buffer.from('tampered'),unsettledDepositId);
+   assert.equal((await requestPdf(adminCookie)).status,500,'Tampered PDF must not be delivered');
+   archiveDb.prepare('UPDATE booking_evidence_pdf_v1 SET pdf_bytes=? WHERE booking_id=?').run(bytes,unsettledDepositId);
+ }finally{archiveDb.close();}
+ assert.equal((await fetch(base+'/api/admin/rentals/missing-evidence-booking/pdf',{method:'POST',headers:{cookie:adminCookie}})).status,404);
+ console.log('PASS HTTP evidence PDF: admin-only, source hash, byte hash, immutable replay and tampering rejection');
  // Completion must not misrepresent a still-held security deposit as settled.
  const depositCompletionUrl='/api/rentals/bookings/'+unsettledDepositId+'/status';
  const depositCompletion=async()=>api(depositCompletionUrl,{method:'POST',cookie:supplierCookie,
