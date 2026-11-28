@@ -1518,7 +1518,9 @@ document.getElementById('listingForm')?.addEventListener('submit',async e=>{
   const message=document.getElementById('listingMsg');
   try{
     await ensureSupplierAccountRisk();
-    await apiJson('/api/supplier/listings',{method:'POST',body:JSON.stringify({listing})});
+    const listingRiskConsent=await collectSupplierAccountRisk('/api/supplier/listing-risk-terms','Atsakomybė už nuomojamą daiktą',3);
+    if(!listingRiskConsent)return;
+    await apiJson('/api/supplier/listings',{method:'POST',body:JSON.stringify({listing,listingRiskConsent})});
     message.textContent='Skelbimas pateiktas peržiūrai.';
     closeListingModalAccessible();
     editingListing=null;
@@ -4236,14 +4238,14 @@ async function ensureSupplierAccountRisk(){
   })();
   try{return await supplierAccountRiskPending;}finally{supplierAccountRiskPending=null;}
 }
-async function collectSupplierAccountRisk(){
-  const terms=await apiJson('/api/supplier/account-risk-terms');
-  if(!Array.isArray(terms.statements)||terms.statements.length!==4)throw Error('Nuomotojo sąlygos nepasiekiamos.');
+async function collectSupplierAccountRisk(endpoint='/api/supplier/account-risk-terms',heading='Nuomotojo atsakomybės patvirtinimas',count=4){
+  const terms=await apiJson(endpoint);
+  if(!Array.isArray(terms.statements)||terms.statements.length!==count)throw Error('Nuomotojo sąlygos nepasiekiamos.');
   return new Promise(resolve=>{
     const dialog=document.createElement('dialog');
     dialog.style.cssText='width:min(540px,92vw);max-height:85vh;overflow:auto;padding:24px;border:1px solid #aaa;border-radius:12px;background:#fff;color:#172019';
     const form=document.createElement('form'),h=document.createElement('h2');
-    h.textContent='Nuomotojo atsakomybės patvirtinimas';form.append(h);
+    h.textContent=heading;form.append(h);
     const boxes=terms.statements.map(statement=>{
       const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:flex-start;margin:16px 0';
       const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.required=true;
