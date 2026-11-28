@@ -455,6 +455,18 @@ try{
    city:'Vilnius',quantity:1,priceDay:12,bookingMode:'request'};
  const publish=photos=>api('/api/supplier/listings',{method:'POST',cookie:supplierCookie,
    data:{listing:{...listingBase,photos,coverPhoto:photos[0]||''}}});
+ const accountRisk={version:'rio-supplier-account-risk-lt-v1',answers:[true,true,true,true]};
+ const missingAccountRisk=await publish([]);
+ status(missingAccountRisk,409,'Existing supplier cannot publish without account risk consent');
+ assert.equal(missingAccountRisk.body.code,'SUPPLIER_ACCOUNT_RISK_REQUIRED');
+ status(await api('/api/supplier/account-risk-consent',{method:'POST',cookie:supplierCookie,data:{...accountRisk,answers:[true,false,true,true]}}),409,'Partial account risk consent denied');
+ status(await api('/api/supplier/account-risk-consent',{method:'POST',cookie:renterCookie,data:accountRisk}),403,'Renter cannot consent as supplier');
+ for(const cookie of [supplierCookie,otherSupplierCookie]){
+   status(await api('/api/supplier/account-risk-consent',{method:'POST',cookie,data:accountRisk}),200,'Existing supplier explicitly accepts risk');
+   const riskStatus=await api('/api/supplier/account-risk-status',{cookie});
+   status(riskStatus,200,'Account risk status readable');
+   assert.equal(riskStatus.body.accepted,true);
+ }
  status(await publish([]),400,'No-photo listing denied');
  status(await publish(['/uploads/not-present.png']),400,'Single-photo listing denied');
  const tinyPng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/Y4kAAAAASUVORK5CYII=';
