@@ -6577,13 +6577,13 @@ async function loadSupplierInventoryV94(){
     set('v94AvgRate',money(avg));set('v94DailyCapacity',money(capacity));
     window.dispatchEvent(new CustomEvent('rentinorbit:supplier-inventory',{detail:{listings:v94SupplierListings.map(l=>({id:l.id,title:l.title,status:l.status,active:l.active,quantity:Number(l.quantity||0),priceDay:Number(l.priceDay||0)}))}}));
     body.innerHTML=v94SupplierListings.map(l=>`<tr data-inventory-listing="${escapeHtml(l.id)}">
-      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small><small>${escapeHtml(({pending_review:'Laukia patvirtinimo',approved:'Patvirtintas',rejected:'Atmestas'})[l.reviewStatus]||'Laukia patvirtinimo')}</small>${l.reviewReason?'<small>'+escapeHtml(l.reviewReason)+'</small>':''}<small class="rio-review-next-step">${l.reviewStatus==='rejected'?'Pataisyk nurodytus trūkumus ir pateik skelbimą peržiūrai iš naujo.':l.reviewStatus==='approved'?'Skelbimas patvirtintas. Pakeitimai bus peržiūrėti iš naujo.':'Skelbimas paieškoje nerodomas. Palauk administratoriaus sprendimo.'}</small></td>
+      <td><b>${escapeHtml(l.title||'Nuomojamas daiktas')}</b><small>${escapeHtml(l.category||'')}</small><small>${escapeHtml(({pending_review:'Laukia patvirtinimo',approved:'Patvirtintas',rejected:'Atmestas'})[l.reviewStatus]||'Laukia patvirtinimo')}</small>${l.reviewReason?'<small>'+escapeHtml(l.reviewReason)+'</small>':''}<small class="rio-review-next-step">${l.reviewStatus==='rejected'?'Pataisyk nurodytus trūkumus ir pateik skelbimą peržiūrai iš naujo.':l.reviewStatus==='approved'?'Skelbimas patvirtintas. Pakeitimai bus peržiūrėti iš naujo.':'Skelbimas paieškoje nerodomas. Palauk administratoriaus sprendimo.'}</small>${l.reviewStatus==='approved'&&l.listingRiskReconfirmationRequired===true?'<small class="rio-review-next-step" role="status"><strong>Reikia patvirtinti atsakomybės sąlygas.</strong> Redaguokite skelbimą, patvirtinkite visus atsakomybės teiginius ir pateikite peržiūrai iš naujo. Iki patvirtinimo naujos komercinės rezervacijos negalimos.</small>':''}</td>
       <td><b>${Math.max(0,Number(l.quantity||0))}</b> vnt.</td>
       <td>${money(Number(l.priceDay||0))}</td><td>${Number(l.priceWeek||0)>0?money(Number(l.priceWeek)):'—'}</td>
       <td>${Number(l.deposit||0)>0?money(Number(l.deposit)):'Nėra'}</td>
       <td>${escapeHtml([l.city,l.country].filter(Boolean).join(', ')||'—')}</td>
       <td><div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="secondary v94-edit-listing" data-listing="${escapeHtml(l.id)}" type="button">Redaguoti ir pateikti peržiūrai</button>
+        <button class="secondary v94-edit-listing" data-listing="${escapeHtml(l.id)}" type="button">${l.reviewStatus==='approved'&&l.listingRiskReconfirmationRequired===true?'Atnaujinti atsakomybės deklaraciją':'Redaguoti ir pateikti peržiūrai'}</button>
         <button class="secondary v94-calendar-jump" data-listing="${escapeHtml(l.id)}" type="button">Atidaryti kalendorių</button>
         <button class="secondary v94-archive-listing" data-listing="${escapeHtml(l.id)}" type="button">Pašalinti skelbimą</button>
       </div></td>
