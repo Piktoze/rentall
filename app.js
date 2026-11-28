@@ -3811,8 +3811,55 @@ setTimeout(()=>renderUniversalListings(),120);
 
 
 // --- V28: platform admin / moderation / disputes ---
+function mountAdminEvidenceArchive(){
+  if(document.getElementById('adminEvidenceArchive'))return;
+  const kpi=document.getElementById('adminKpiBookings');
+  const host=document.getElementById('adminListingsBody')?.closest('table')?.parentElement;
+  if(!kpi||!host)return;
+  const panel=document.createElement('section');panel.id='adminEvidenceArchive';
+  panel.style.cssText='padding:16px;margin:16px 0;border:1px solid #d1d5db;border-radius:12px';
+  const heading=document.createElement('h3');heading.textContent='Rezervacijos dokumentų archyvas';
+  const label=document.createElement('label');label.textContent='Rezervacijos numeris';
+  const input=document.createElement('input');input.id='adminEvidenceBookingId';input.type='text';input.maxLength=200;input.autocomplete='off';input.required=true;
+  label.htmlFor=input.id;
+  const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  const actions=document.createElement('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:12px';
+  const buttons=[];
+  async function download(format){
+    const id=input.value.trim();if(!id){status.textContent='Įveskite rezervacijos numerį.';input.focus();return;}
+    buttons.forEach(b=>b.disabled=true);status.textContent='Ruošiamas dokumentas…';
+    let objectUrl;
+    try{
+      const route='/api/admin/rentals/'+encodeURIComponent(id)+'/evidence'+(format==='pdf'?'/pdf':'');
+      const response=await fetch(route,{method:format==='pdf'?'POST':'GET',credentials:'same-origin',cache:'no-store'});
+      if(!response.ok){
+        const body=await response.json().catch(()=>({}));
+        throw Error(response.status===404?'Rezervacija nerasta.':response.status===403||response.status===401?'Prieiga draudžiama.':body.error||'Dokumentas nepasiekiamas.');
+      }
+      const type=response.headers.get('content-type')||'';
+      if(!type.includes(format==='pdf'?'application/pdf':'application/json'))throw Error('Netinkamas dokumento formatas.');
+      const blob=await response.blob();
+      const hash=response.headers.get('x-evidence-sha256');
+      if(format==='pdf'&&hash&&globalThis.crypto?.subtle){
+        const digest=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());
+        const hex=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+        if(hex!==hash)throw Error('Dokumento vientisumo patikra nepavyko.');
+      }
+      objectUrl=URL.createObjectURL(blob);
+      const link=document.createElement('a');link.href=objectUrl;link.download='rentinorbit-'+id.replace(/[^a-zA-Z0-9_-]/g,'_')+'-evidence.'+format;
+      document.body.append(link);link.click();link.remove();
+      status.textContent='Dokumentas parengtas atsisiųsti.'+(hash?' SHA-256: '+hash:'');
+    }catch(err){status.textContent=err.message;}finally{buttons.forEach(b=>b.disabled=false);if(objectUrl)setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);}
+  }
+  for(const [format,title] of [['pdf','Atsisiųsti PDF'],['json','Atsisiųsti JSON']]){
+    const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=title;
+    button.addEventListener('click',()=>download(format));actions.append(button);buttons.push(button);
+  }
+  panel.append(heading,label,input,actions,status);host.before(panel);
+}
 async function loadAdminDashboard(){
   const data=await apiJson('/api/admin/dashboard');
+  mountAdminEvidenceArchive();
   document.getElementById('adminKpiListings').textContent=data.kpis.listings;
   document.getElementById('adminKpiActiveListings').textContent=data.kpis.activeListings;
   document.getElementById('adminKpiBookings').textContent=data.kpis.bookings;
