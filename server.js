@@ -3483,6 +3483,17 @@ function buildBookingEvidence(id){
     listingConsentBinding:(()=>{const row=db.prepare('SELECT evidence_json FROM booking_listing_revision_evidence_v1 WHERE booking_id=?').get(id);return row?JSON.parse(row.evidence_json):{status:'historical-booking-not-pinned'};})(),
     supplierCancellationIntents:db.prepare('SELECT evidence_json FROM supplier_cancellation_evidence_v1 WHERE booking_id=? ORDER BY accepted_at,event_id').all(id).map(row=>JSON.parse(row.evidence_json)),
     agreement:getRentalAgreement(id),agreementAcceptance:getRentalAgreementAcceptanceAudit(id),
+    handoverEvidence:db.prepare("SELECT purpose,party,created_at AS createdAt,consumed_at AS consumedAt FROM rental_party_transfer_codes WHERE booking_id=? AND party='customer' AND consumed_at IS NOT NULL ORDER BY purpose").all(id),
+    returnEvidence:b?{recordedReturnedAt:b.returnedAt,condition:b.returnCondition,notes:b.returnNotes,timestampMayReflectCompletion:true}:null,
+    financialEvidence:b?{source:'recorded booking state; not independent provider confirmation',
+      paymentProvider:b.paymentProvider,paymentStatus:b.paymentStatus,paymentIntentId:b.stripePaymentIntentId,
+      orderValue:b.orderValue,platformFeeAmount:b.platformFeeAmount,supplierAmount:b.supplierAmount,
+      refundAmount:b.refundAmount,refundStatus:b.refundStatus,refundId:b.stripeRefundId,cancelledAt:b.cancelledAt,
+      payoutStatus:b.payoutStatus,payoutAmount:b.payoutAmount,payoutReference:b.payoutReference,
+      payoutReadyAt:b.payoutReadyAt,payoutCompletedAt:b.payoutCompletedAt,
+      securityDepositAmount:b.securityDepositAmount,securityDepositStatus:b.securityDepositStatus,
+      securityDepositResolvedAt:b.securityDepositResolvedAt}:null,
+    disputeEvidence:db.prepare('SELECT dispute_id AS disputeId,opened_by AS openedBy,status,created_at AS createdAt,resolved_at AS resolvedAt FROM rental_disputes WHERE booking_id=? ORDER BY created_at,dispute_id').all(id),
     booking:b?{status:b.status,paymentStatus:b.paymentStatus,refundAmount:b.refundAmount,
       listingId:b.listingId,startDate:b.startDate,endDate:b.endDate,quantity:b.quantity,orderValue:b.orderValue}:null
   };
