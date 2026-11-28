@@ -27,3 +27,22 @@ test('LT and EN commercial drafts disclose matching critical obligations without
   }
  }
 });
+
+test('ES DE RU commercial drafts contain critical obligations and preserve source documents',()=>{
+ const env={LEGAL_OPERATOR_NAME:'Synthetic operator',LEGAL_IV_CERTIFICATE:'TEST-123',LEGAL_OPERATOR_ADDRESS:'Synthetic address'};
+ const checks={
+ es:{terms:[/15 %/,/85 %/,/no ofrece seguro/,/se reembolsa íntegramente/,/sin penalización adicional/,/armas/,/14 días/],privacy:[/diez años/,/12 meses/,/DPA de Zoho/,/hashes/],fees:[/15 EUR/,/85 EUR/]},
+ de:{terms:[/15 %/,/85 %/,/keine Sachversicherung/,/vollständig ohne separate Plattformstrafe erstattet/,/Waffen/,/14 Tagen/],privacy:[/zehn Jahren/,/zwölf Monate/,/Zoho-DPA/,/Hashwerte/],fees:[/15 EUR/,/85 EUR/]},
+ ru:{terms:[/15 %/,/85 %/,/не страхует имущество/,/возвращается полностью без отдельного штрафа/,/оружие/,/14 дней/],privacy:[/десять лет/,/12 месяцев/,/DPA Zoho/,/хеши/],fees:[/15 EUR/,/85 EUR/]}
+ };
+ for(const [lang,pages] of Object.entries(checks)){
+  for(const [key,patterns] of Object.entries(pages)){
+   const base=getPolicyPage(lang,key),before=JSON.stringify(base);
+   const rendered=JSON.stringify(fullPlatformPolicy(base,{lang,key,env}));
+   for(const pattern of patterns)assert.match(rendered,pattern,lang+' '+key);
+   assert.match(rendered,/Synthetic operator/);
+   assert.match(rendered,/TEST-123/);
+   assert.equal(JSON.stringify(base),before);
+  }
+ }
+});
