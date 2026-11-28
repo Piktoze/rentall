@@ -325,7 +325,7 @@ try{
  assert.equal(preflight.status,200);
  assert.ok((await preflight.json()).blockers.includes('RENTAL_REFUNDED_OR_DISPUTED'));
  const cancellation=await fetch(base+'/api/rentals/bookings/'+bookingId+'/cancel',{
-   method:'POST',headers:{cookie,'content-type':'application/json'},body:'{}'
+   method:'POST',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({supplierCancellation:{version:'rio-supplier-cancel-lt-v1',reasonCode:'changed',accepted:true}})
  });
  assert.equal(cancellation.status,409);
  assert.equal((await cancellation.json()).code,'STRIPE_DISPUTE_RECONCILIATION_REQUIRED');
